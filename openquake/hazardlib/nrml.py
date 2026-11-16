@@ -240,7 +240,7 @@ validators = {
     'magnitude': valid.positivefloat,
     'lon': valid.longitude,
     'lat': valid.latitude,
-    'depth': valid.float_,
+    'depth': valid.depth,
     'upperSeismoDepth': valid.float_,
     'lowerSeismoDepth': valid.float_,
     'posList': valid.posList,
@@ -328,18 +328,21 @@ validators = {
 }
 
 
-def read_source_models(fnames, converter):
+def read_source_models(fnames, converter, stride=None):
     """
     :param fnames:
         list of source model files
     :param converter:
         a :class:`openquake.hazardlib.sourceconverter.SourceConverter` instance
+    :param stride:
+        if given, a pair (k, n) to keep only the k-th source over n
     :yields:
         SourceModel instances
     """
     for fname in fnames:
         if fname.endswith(('.xml', '.nrml')):
-            sm = to_python(fname, converter)
+            [node] = read(fname, stride=stride)
+            sm = node_to_obj(node, fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
         sm.fname = fname
@@ -359,15 +362,19 @@ def read_source_models(fnames, converter):
         yield sm
 
 
-def read(source, stop=None):
+def read(source, stop=None, stride=None):
     """
     Convert a NRML file into a validated Node object. Keeps
     the entire tree in memory.
 
     :param source:
         a file name or file object open for reading
+    :param stop:
+        the tag where to stop the parsing (if any)
+    :param stride:
+        if given, a pair (k, n) to keep only the k-th source over n
     """
-    vparser = ValidatingXmlParser(validators, stop)
+    vparser = ValidatingXmlParser(validators, stop, stride)
     nrml = vparser.parse_file(source)
     if striptag(nrml.tag) != 'nrml':
         raise ValueError('%s: expected a node of kind nrml, got %s' %
@@ -407,12 +414,12 @@ def write(nodes, output=sys.stdout, fmt='%.7E', gml=True, xmlns=None,
         read(output)  # validate the written file
 
 
-def to_string(node):
+def to_string(node, fmt='%.7E'):
     """
-    Convert a node into a string in NRML format
+    Convert a node into a string in NRML format, using the given float format
     """
     with io.BytesIO() as f:
-        write([node], f)
+        write([node], f, fmt=fmt)
         return f.getvalue().decode('utf-8')
 
 

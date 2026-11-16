@@ -23,4 +23,5 @@ class AeloPage(EnginePage):
         expect(modal).not_to_be_visible()
 
     def run_aelo_calc(self):
-        self.page.locator("#submit_aelo_calc").click()
+        self._submit_calculation(
+            self.page.locator('#submit_aelo_calc'), '/v1/calc/aelo_run')

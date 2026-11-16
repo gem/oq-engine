@@ -17,10 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module
-:mod:`openquake.hazardlib.gsim.gupta_2010`
-exports
-:class:`Gupta2010SSlab`
+Module exports :class:`Gupta2010SSlab`
 """
 
 from openquake.hazardlib import const

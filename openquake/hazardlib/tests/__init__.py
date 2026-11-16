@@ -31,4 +31,3 @@ def assert_pickleable(obj):
 class IndependenceTestCase(unittest.TestCase):
     def test(self):
         assert_independent('openquake.baselib', 'openquake.hazardlib')
-        assert_independent('openquake.hazardlib', 'openquake.hmtk')

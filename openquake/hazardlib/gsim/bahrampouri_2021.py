@@ -205,10 +205,8 @@ def _get_arias_intensity_second_term(ctx, C, trt):
     """
     This is the second term in Eq. 5
     """
-    t1 = []
-    for i, x in enumerate(ctx.vs30):
-        g = np.exp(C['c3']*(min(ctx.vs30[i], 1100)-280))
-        t1.append(g)
+    # the Vs30 is capped at 1100 m/s before computing the site factor
+    t1 = np.exp(C['c3']*(np.minimum(ctx.vs30, 1100)-280))
     t2 = np.exp(C['c3']*(1100-280))
     tmp = (np.exp(_get_arias_intensity_term(ctx, C, trt))+C['c4'])/C['c4']
     t3 = np.log(tmp)

@@ -32,6 +32,7 @@ from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
     PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
+from openquake.hazardlib.site import SiteCollection
 
 
 class MultiSurfaceOld(BaseSurface):
@@ -617,7 +618,6 @@ class MultiSurfaceOld(BaseSurface):
         <.base.BaseSurface.get_rx_distance>`
         for spec of input and result values.
         """
-        from openquake.hazardlib.site import SiteCollection
         if isinstance(mesh, SiteCollection):
             coo = numpy.array([[p.location.longitude, p.location.latitude]
                               for p in mesh])
@@ -643,7 +643,6 @@ class MultiSurfaceOld(BaseSurface):
         <.base.BaseSurface.get_ry0_distance>`
         for spec of input and result values.
         """
-        from openquake.hazardlib.site import SiteCollection
         if isinstance(mesh, SiteCollection):
             coo = numpy.array([[p.location.longitude, p.location.latitude]
                               for p in mesh])

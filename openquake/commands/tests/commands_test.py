@@ -37,7 +37,7 @@ from openquake.baselib.general import gettemp
 from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.tests.flake8_test import check_newlines
-from openquake.hazardlib import tests
+from openquake.hazardlib import tests, InvalidFile
 from openquake import commonlib
 from openquake.commonlib.datastore import read
 from openquake.commonlib.readinput import get_params, jobs_from_inis
@@ -293,6 +293,25 @@ class RunShowExportTestCase(unittest.TestCase):
         [wf] = read_many(ses_toml, dict(description='test_workflow'))
         self.assertEqual(wf.checkout, {'EUR': 'master', 'MIE': 'master'})
 
+    def test_workflow_params(self):
+        ini = pathlib.Path(case_4a.__file__).parent / 'job_hazard.ini'
+        # TOML strings interpret backslashes in Windows paths as escapes.
+        ini = ini.as_posix()
+        # strict is overridable
+        wf_toml = gettemp(f'[workflow]\ndescription = "wf"\n\n'
+                          f'[Job]\nini = "{ini}"\nstrict = false\n',
+                          suffix='.toml')
+        [wf] = read_many(wf_toml, {})
+        self.assertEqual(wf.inis[0]['strict'], 'False')
+        # a non-overridable parameter raises an error
+        wf_toml = gettemp(f'[workflow]\ndescription = "wf"\n\n'
+                          f'[Job]\nini = "{ini}"\nvs30_strict = false\n',
+                          suffix='.toml')
+        with self.assertRaises(InvalidFile) as ctx:
+            read_many(wf_toml, {})
+        self.assertIn('[Job] contains parameters that cannot be '
+                      'overridden: vs30_strict', str(ctx.exception))
+
     def test_workflow_run(self):
         base = pathlib.Path(case_4a.__file__).parent
         wf_id = run_workflow(base / 'jobs.toml',
@@ -354,7 +373,7 @@ class RunShowExportTestCase(unittest.TestCase):
         job_ini = os.path.join(
             os.path.dirname(eb_case_1.__file__), 'job_ruptures.ini')
         with Print.patch():
-            calc_id = sap.runline(f'openquake.commands run {job_ini} -c 0')
+            calc_id = sap.runline(f'openquake.commands run {job_ini} --ct 0')
         tempdir = tempfile.mkdtemp()
         with Print.patch():
             sap.runline("openquake.commands extract ruptures "

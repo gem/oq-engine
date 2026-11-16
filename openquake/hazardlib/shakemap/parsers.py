@@ -429,6 +429,34 @@ def local_time_to_time_event(local_time):
     return 'transit'
 
 
+WEEKDAYS = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
+            'Saturday', 'Sunday')
+
+
+def format_event_time(local_timestamp):
+    """
+    Format the local timestamp of the event, adding the day of the week
+    and the offset with respect to UTC
+
+    >>> format_event_time('2023-02-06 04:17:34+03:00')
+    'Monday 2023-02-06 04:17:34 (UTC+03:00)'
+    >>> format_event_time('2021-08-14 08:29:08-04:00')
+    'Saturday 2021-08-14 08:29:08 (UTC-04:00)'
+    >>> format_event_time('')
+    'unknown'
+    """
+    if not local_timestamp or local_timestamp == 'None':
+        return 'unknown'
+    dt = datetime.fromisoformat(local_timestamp)
+    # the day names are hardcoded since strftime('%A') depends on the locale
+    txt = f"{WEEKDAYS[dt.weekday()]} {dt.strftime('%Y-%m-%d %H:%M:%S')}"
+    if dt.tzinfo is None:
+        logging.warning('Timestamp has no timezone information')
+        return txt
+    offset = dt.strftime('%z')  # e.g. +0300
+    return f'{txt} (UTC{offset[:3]}:{offset[3:]})'
+
+
 def _build_vals(channels):
     vals = pd.Series([], dtype='object')
     for row, rec_station in channels.iterrows():

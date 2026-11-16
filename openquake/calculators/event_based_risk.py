@@ -26,10 +26,11 @@ from scipy import sparse
 
 from openquake.baselib import hdf5, performance, general, config
 from openquake.hazardlib import stats, InvalidFile
+from openquake.risklib import riskmodels
 from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
-    total_losses, insurance_losses, MultiEventRNG, LOSSID)
-from openquake.calculators import base, event_based
+    total_losses, insurance_losses, MultiEventRNG, LOSSID, LOSSTYPE)
+from openquake.calculators import base, event_based, views
 from openquake.calculators.post_risk import (
     PostRiskCalculator, post_aggregate, fix_dtypes, fix_investigation_time)
 
@@ -45,6 +46,51 @@ TWO32 = U64(2 ** 32)
 # AE_MAX chosen so that China runs with 3 GB per core
 AE_MAX = 1.2E8
 get_n_occ = operator.itemgetter(1)
+
+
+@views.view.add('calc_risk')
+def view_calc_risk(token, dstore):
+    """
+    Compute the risk_by_event table starting from GMFs
+    """
+    _, event_id = token.split(':')
+    oq = dstore['oqparam']
+    assetcol = dstore['assetcol']
+    set_oqparam(oq, assetcol, dstore)
+    crmodel = riskmodels.CompositeRiskModel.read(dstore, oq)
+    gmf_df = dstore.read_df('gmf_data')
+    gmf_df = gmf_df[gmf_df.eid == int(event_id)]
+    ws = dstore['weights']
+    rlz_id = dstore['events']['rlz_id']
+    aggids, _ = assetcol.build_aggids(oq.aggregate_by)
+    agg_keys = numpy.concatenate(
+        [dstore['agg_keys'][:], numpy.array([b'total'])])
+    ARK = (oq.A, len(ws), oq.K)
+    if oq.ignore_master_seed or oq.ignore_covs:
+        rng = None
+    else:
+        rng = MultiEventRNG(oq.master_seed, gmf_df.eid.unique(),
+                            int(oq.asset_correlation))
+
+    mon = performance.Monitor()
+    outs = []  # gen_outputs(gmf_df, crmodel, rng, mon)
+    sids = gmf_df.sid.to_numpy()
+    assets = assetcol.to_dframe()
+    for taxo in assets.taxonomy.unique():
+        adf = assets[assets.taxonomy == taxo]
+        df = gmf_df[numpy.isin(sids, adf.site_id.unique())]
+        if len(df) == 0:  # common enough
+            continue
+        out = crmodel.get_output(adf, df, oq._sec_losses, rng)
+        outs.append(out)
+    _avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, oq.ideduc, mon)
+    del alt['event_id']
+    del alt['variance']
+    alt['type'] = LOSSTYPE[alt.loss_id]
+    del alt['loss_id']
+    alt['agg_keys'] = general.decode(agg_keys[alt.agg_id])
+    del alt['agg_id']
+    return alt
 
 
 def size_mb(df):

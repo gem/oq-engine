@@ -18,16 +18,20 @@
 
 import os
 import sys
+import shutil
 import collections
 import numpy
 import pandas
+from openquake.baselib import writers
 from openquake.hazardlib import nrml
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
+from openquake.calculators.export.hazard import workflow_hmaps_array
 
 aac = numpy.testing.assert_allclose
 F64 = numpy.float64
+OVERWRITE = os.environ.get('OQ_OVERWRITE')
 
 
 def get_diff_idxs(array, rtol, atol):
@@ -86,10 +90,9 @@ class Comparator(object):
         if imt not in imtls:
             sys.exit('%s not found. The available IMTs are %s' %
                      (imt, list(imtls)))
-        imti = {imt: i for i, imt in enumerate(imtls)}
-        m = imti[imt]
+        # the extractor already selects the IMT, so m is always 0
         what += '?kind=mean&imt=' + imt
-        arrays = [extractor.get(what).mean[sids, m, :]]
+        arrays = [extractor.get(what).mean[sids, 0, :]]
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
@@ -97,7 +100,7 @@ class Comparator(object):
                 aac(oq.imtls[imt], imtls[imt], rtol, atol)
             elif what.startswith('hmaps'):  # array NMP
                 aac(oq.poes, poes, rtol, atol)
-            arrays.append(extractor.get(what).mean[sids, m, :])
+            arrays.append(extractor.get(what).mean[sids, 0, :])
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, L)
 
@@ -116,8 +119,8 @@ class Comparator(object):
             high_sites.append(extractor.get('high_sites').array)
             arrays.append(get_mean(extractor, what, sids, oq0.imtls, p))
             extractor.close()
-        hsites = numpy.logical_and(*high_sites)
-        sids, = numpy.where(hsites)
+        hsites = numpy.logical_and(*high_sites)[sids]
+        sids = sids[hsites]
         return numpy.array([a[hsites] for a in arrays]), sids  # shape (C, N, M*P)
 
     def getgmf(self, what, imt, sids):
@@ -510,16 +513,25 @@ def compare_asce(dir1: str, dir2: str, atol: float=1E-3, rtol: float=1E-3):
     """
     compare_asce('asce', 'expected') exits with 0
     if all file are equal within the tolerance, otherwise with 1.
+
+    If the environment variable OQ_OVERWRITE is set, the expected files in
+    dir2 are overwritten with the corresponding files in dir1.
     """
     err = 0
-    for fname in os.listdir(dir2):
+    for fname in sorted(os.listdir(dir2)):
         if fname.endswith('.org'):
+            fname1 = os.path.join(dir1, fname)
             fname2 = os.path.join(dir2, fname)
-            if not os.path.exists(fname2):
-                print(f"{fname2} does not exist, cannot compare")
+            if not os.path.exists(fname1):
+                print(f"{fname1} does not exist, cannot compare")
+                err += 1
+                continue
+            if OVERWRITE:
+                shutil.copyfile(fname1, fname2)
+                print(f"Overwritten {fname2}")
                 continue
             print(f"Comparing {fname}")
-            df1 = read_org_df(os.path.join(dir1, fname))
+            df1 = read_org_df(fname1)
             df2 = read_org_df(fname2)
             equal = []
             for col in df1.columns:
@@ -551,6 +563,84 @@ def compare_vfuncs(file1: str, file2: str, atol: float=1E-3, rtol: float=1E-3):
         aac(dic1[key].mean_loss_ratios, dic2[key].mean_loss_ratios, rtol, atol)
 
 
+def compare_workflow(expected_dir: str = '.', calc_id=-1, *,
+                     atol: float = 1E-3, rtol: float = 0):
+    """
+    Compare the mean hazard maps of a workflow with the CSV files in
+    expected_dir, as exported by `oq export hazard_map-mean-475y` and
+    similar. Exits with 0 if all the values are equal within the tolerance,
+    otherwise with the number of files with differences.
+
+    The expected files are the ones written by `oq export`, one per dataset
+    with the workflow ID in the name, e.g. `hazard_map-mean-475y_19714.csv`
+    for the dataset `hazard_map-mean-475y` of the workflow 19714. Only the
+    files whose name starts with `hazard_map-` are compared, and the dataset
+    is the file name without the `_<id>` suffix. A file whose dataset is not
+    in the workflow counts as a difference.
+
+    If the workflow ID is omitted (-1, the default) the last workflow run is
+    used, as recorded in ~/.last-workflow. A path to a datastore can be used
+    instead of the workflow ID.
+
+    If the environment variable OQ_OVERWRITE is set, the expected files are
+    overwritten with the workflow results instead of being compared.
+
+    Examples: `oq compare workflow expected_hmaps 19714`
+              `oq compare workflow expected_hmaps`
+              `oq compare workflow expected_hmaps ~/oqdata/calc_19714.hdf5`
+    """
+    if isinstance(calc_id, str) and calc_id.isdigit():
+        calc_id = int(calc_id)
+    if calc_id == -1:
+        calc_id = datastore.last_workflow_id()
+    dstore = datastore.read(calc_id)
+    err = 0
+    for fname in sorted(os.listdir(expected_dir)):
+        if not (fname.startswith('hazard_map-') and fname.endswith('.csv')):
+            continue
+        # 'hazard_map-mean-475y_19714.csv' -> 'hazard_map-mean-475y'
+        base, _, idx = fname[:-len('.csv')].rpartition('_')
+        key = base if idx.isdigit() else fname[:-len('.csv')]
+        if key not in dstore.hdf5:
+            print(f"{key} is not in the workflow, cannot compare")
+            err += 1
+            continue
+        print(f"Comparing {fname}")
+        arr = workflow_hmaps_array(dstore, key)
+        if OVERWRITE:
+            writers.write_csv(os.path.join(expected_dir, fname), arr,
+                              comment=dstore.metadata)
+            print(f"Overwritten {fname}")
+            continue
+        exp = pandas.read_csv(os.path.join(expected_dir, fname), skiprows=1)
+        if len(exp) != len(arr):
+            print(f"{len(exp)} rows in {fname}, {len(arr)} in the workflow")
+            err += 1
+            continue
+        masks = {}  # column -> boolean array of the rows with differences
+        for col in arr.dtype.names:
+            if col == 'calc_id':  # an identifier, changing at every run
+                continue
+            if arr[col].dtype.kind == 'U':  # the model names
+                masks[col] = arr[col] != exp[col].to_numpy().astype(str)
+            else:
+                a = arr[col].astype(numpy.float64)
+                b = exp[col].to_numpy().astype(numpy.float64)
+                masks[col] = numpy.abs(a - b) > atol + (a + b) / 2 * rtol
+        bad = numpy.logical_or.reduce(list(masks.values()))
+        if bad.any():
+            err += 1
+            i = int(numpy.argmax(bad))  # the first row with differences
+            print(f"{bad.sum()} rows differ in {fname}, the first one is "
+                  f"model {arr['model'][i]} (calc_id {arr['calc_id'][i]}) "
+                  f"at lon {arr['lon'][i]}, lat {arr['lat'][i]}:")
+            for col, mask in masks.items():
+                if mask[i]:
+                    print(f"  {col}: workflow {arr[col][i]}, "
+                          f"expected {exp[col][i]}")
+    sys.exit(err)
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
@@ -566,7 +656,20 @@ main = dict(rups=compare_rups,
             sitecol=compare_sitecol,
             oqparam=compare_oqparam,
             asce=compare_asce,
-            vfuncs=compare_vfuncs)
+            vfuncs=compare_vfuncs,
+            workflow=compare_workflow)
+
+compare_asce.dir1 = 'directory with the ASCE files'
+compare_asce.dir2 = 'directory with the expected ASCE files'
+compare_asce.atol = 'absolute tolerance'
+compare_asce.rtol = 'relative tolerance'
+
+compare_workflow.expected_dir = 'directory with the exported CSV files'
+compare_workflow.calc_id = (
+    'workflow calculation ID or path to the datastore '
+    '(default: the last one)')
+compare_workflow.atol = 'absolute tolerance'
+compare_workflow.rtol = 'relative tolerance'
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,

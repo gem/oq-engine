@@ -22,7 +22,7 @@
 |case\_24|Test collapsing rjb-independent GMPE|
 |case\_25|Test negative depths|
 |case\_26|Test YoungsCoppersmith1985MFD|
-|case\_27|Nankai mutex model, including disaggregation|
+|case\_27|Nankai mutex model, including disaggregation and uncertainty sets|
 |case\_27\_other|Nankai mutex model with disagg\_by\_src and atomic groups with different source names|
 |case\_27\_labels|Nankai mutex model with site\_labels|
 |case\_28|Test hypoDepthDist (and down-dip fractions for hypo placement) with a simple fault source|
@@ -73,6 +73,7 @@
 |case\_77|Tests Modifiable GMPE with Tabular GMM|
 |case\_78|Tests Modifiable GMPE with NegativeBinomialTOM|
 |case\_78\_mfd\_variants|Tests NegativeBinomialTOM sources with MFD variants in a logic tree|
+|case\_79|Tests ModifiableGMPE with apply\_swiss\_site\_specific\_amplification\_sa alongside the unmodified EdwardsFah2013Foreland10Bars|
 |case\_80|Tests New Madrid cluster with rup\_mutex|
 |case\_81|Tests a Tabular GMM and a non-tabular GMM both with extra parameters specified within mixture models|
 |case\_82|tests two mps, only one with reqv that should collapse points|
@@ -91,3 +92,4 @@
 |case\_95|Tests that the TRT of a padding source far away does not affect the collapsing of the point sources
 |case\_96|Test a source with an uncertainty and magnitudes partially outside the integration distance
 |case\_97|Logic tree with IMT-dependent weights not aligned with the IMTs of the calculation (fastmean vs standard)
+|case\_98|Tests the horiz\_comp\_to job.ini parameter

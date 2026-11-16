@@ -42,6 +42,7 @@ from openquake.calculators.base import dcache
 from openquake.calculators.checkers import assert_close
 from openquake.calculators.views import text_table
 from openquake._unc.propagate_uncertainties import propagate
+from openquake._unc.utils import probabilities_to_rates
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()
@@ -73,7 +74,6 @@ class ResultsCalculationTestCase01(unittest.TestCase):
     def test_against_oq(self):
         # Convolution Vs OQ
 
-
         # Convolution
         fname = os.path.join(TFF, 'data_calc', 'test_case01_convolution.ini')
         tmpdir = tempfile.mkdtemp()
@@ -91,11 +91,11 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         self.res_conv = h.get_stats([-1, 0.50])
 
         # Testing the mean
-        expected_mea = -np.log(1 - mean)
-        aac(expected_mea, self.res_conv[:, 0], rtol=5e-3)
+        expected_mea = probabilities_to_rates(mean, oqp.investigation_time)
+        aac(expected_mea, self.res_conv[:, 0], rtol=2e-3)
 
         # Testing the median
-        expected_med = -np.log(1 - median)
+        expected_med = probabilities_to_rates(median, oqp.investigation_time)
         aac(expected_med, self.res_conv[:, 1], rtol=1e-1)
 
         if PLOTTING:
@@ -105,12 +105,14 @@ class ResultsCalculationTestCase01(unittest.TestCase):
             self.plot3(expected_mea, expected_med)
 
     def plot1(self, expected_mea):
-        # ------------------------------------------------------------ FIGURE 1
-        fig, axs = plt.subplots(1, 1)
+        """ Figure 1 """
+        _, ax1 = plt.subplots(1, 1)
 
         self.n_rlz = self.dstore['hcurves-rlzs'].shape[1]
         for i_rlz in range(0, self.n_rlz):
-            poe = -np.log(1 - self.dstore['hcurves-rlzs'][0, i_rlz, 0, :])
+            poe = probabilities_to_rates(
+                self.dstore['hcurves-rlzs'][0, i_rlz, 0, :],
+                self.dstore['oqparam'].investigation_time)
             plt.plot(self.imls, poe, '-', color='lightblue', alpha=0.8)
 
         # Plot mean from oq
@@ -120,25 +122,44 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         # Plot convolution results
         lab = 'Mean from POINT'
         plt.plot(self.imls, self.res_conv[:, 0], 'o', mfc='none', label=lab)
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.legend()
-        plt.xlabel('Intensity measure level, IML [g]')
-        plt.ylabel('Annual Frequency of exceedance, AFoE []')
-        plt.title('Test Case 01 - Mean PGA')
-        plt.grid(which='major', ls='--', color='grey')
-        plt.grid(which='minor', ls=':', color='lightgrey')
+
+        # Second axis
+        ax2 = ax1.twinx()
+
+        # Plot Ratio
+        lab = 'Computed / Expected'
+        ratio = self.res_conv[:, 0] / expected_mea
+        plt.plot(self.imls, ratio, '--', label=lab, color='white', lw=3)
+        plt.plot(self.imls, ratio, '--', label=lab, color='green', lw=1.5)
+
+        # Set axes and labels
+        ax1.set_xscale('log')
+        ax1.set_yscale('log')
+        ax2.set_yscale('log')
+        ax2.yaxis.set_major_formatter('{x:.5f}')
+        ax2.yaxis.set_minor_formatter('{x:.5f}')
+        ax2.tick_params(axis='y', which='both',
+                        labelrotation=45, labelsize=7)
+        ax1.legend()
+        ax1.set_xlabel('Intensity measure level, IML [g]')
+        ax1.set_ylabel('Annual Frequency of exceedance, AFoE []')
+        ax2.set_ylabel('(AFoE Computed) / (AFoE Expected)')
+        ax1.set_title('Test Case 01 - Mean PGA')
+        ax1.grid(which='major', ls='--', color='grey')
+        ax1.grid(which='minor', ls=':', color='lightgrey')
         tmp = os.path.join(TFF, 'figs', 'calc_test-case01_mean.png')
         plt.savefig(tmp)
         plt.show()
 
     def plot2(self, expected_med):
         # ------------------------------------------------------------ FIGURE 2
-        fig, axs = plt.subplots(1, 1)
+        _, axs = plt.subplots(1, 1)
 
         self.n_rlz = self.dstore['hcurves-rlzs'].shape[1]
         for i_rlz in range(0, self.n_rlz):
-            poe = -np.log(1 - self.dstore['hcurves-rlzs'][0, i_rlz, 0, :])
+            poe = probabilities_to_rates(
+                self.dstore['hcurves-rlzs'][0, i_rlz, 0, :],
+                self.dstore['oqparam'].investigation_time)
             plt.plot(self.imls, poe, '-', color='lightblue', alpha=0.8)
 
         lbl = 'OQ Full Path Enumeration'
@@ -160,11 +181,13 @@ class ResultsCalculationTestCase01(unittest.TestCase):
 
     def plot3(self, expected_mea, expected_med):
         # Plotting mean and median and percentiles
-        fig, axs = plt.subplots(1, 1)
+        _, axs = plt.subplots(1, 1)
 
         # All realizations
         for i_rlz in range(0, self.n_rlz):
-            poe = -np.log(1 - self.dstore['hcurves-rlzs'][0, i_rlz, 0, :])
+            poe = probabilities_to_rates(
+                self.dstore['hcurves-rlzs'][0, i_rlz, 0, :],
+                self.dstore['oqparam'].investigation_time)
             if i_rlz == 0:
                 plt.plot(self.imls, poe, '-', color='lightblue', alpha=0.8,
                          label='LT realization')
@@ -176,10 +199,14 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         plt.plot(self.imls, expected_mea, '-',
                      label='Mean from OQ Full Path Enumeration')
         lab = '16th percentile from POINT'
-        expected_pct = -np.log(1 - self.dstore['hcurves-stats'][0, 1, 0, :])
+        expected_pct = probabilities_to_rates(
+            self.dstore['hcurves-stats'][0, 1, 0, :],
+            self.dstore['oqparam'].investigation_time)
         plt.plot(self.imls, expected_pct, '--r', mfc='none', label=lab, lw=1)
         lab = '84th percentile from POINT'
-        expected_pct = -np.log(1 - self.dstore['hcurves-stats'][0, 3, 0, :])
+        expected_pct = probabilities_to_rates(
+            self.dstore['hcurves-stats'][0, 3, 0, :],
+            self.dstore['oqparam'].investigation_time)
         plt.plot(self.imls, expected_pct, '-.r', mfc='none',
                  label=lab, lw=1)
 
@@ -222,6 +249,9 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             TFF, 'data_calc', 'test_case02_expected_convolution.hdf5')
         with hdf5.File(fname, "r") as f:
             aae(computed_mtx, f["histograms"][:], decimal=2)
+            aae(h.zero_mass, f["zero_mass"][:])
+        aac(np.nansum(computed_mtx, axis=0) + h.zero_mass,
+            np.ones(len(h.pmfs)), rtol=0, atol=1e-13)
 
         # Mean and median from convolution
         res_conv = h.get_stats([-1, 0.50])
@@ -447,7 +477,8 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         # Read oq mean result
         dstore = dcache.get(str(TFF / 'data_calc/test_case01/job_all.ini'))
         mean = dstore['hcurves-stats'][0, 0, 0, :]
-        afe = -np.log(1 - mean)
+        afe = probabilities_to_rates(
+            mean, dstore['oqparam'].investigation_time)
 
         # Convolution
         fname_c = os.path.join(TFF, 'data_calc', 'test_case01_convolution.ini')

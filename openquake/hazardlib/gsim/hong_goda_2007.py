@@ -16,7 +16,7 @@
 # you should have received a copy of the gnu affero general public license
 # along with openquake. if not, see <http://www.gnu.org/licenses/>.
 """
-module exports :class:`HongGoda2007RotD100`.
+Module exports :class:`HongGoda2007RotD100`
 """
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

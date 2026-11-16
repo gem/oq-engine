@@ -19,85 +19,7 @@ import zipfile
 import logging
 from openquake.baselib.general import CallableDict
 from openquake.baselib.writers import write_csv
-
-
-DISPLAY_NAME = {
-    'asce07': 'ASCE 7 Parameters',
-    'asce41': 'ASCE 41 Parameters',
-    'asce41_sa_final': 'ASCE 41 Response Spectra',
-    'spectra_asce41': 'ASCE 41 Calculations',
-    'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
-    'job': 'job.zip',
-    'asset_risk': 'Exposure + Risk',
-    'exposure': 'Exposure',
-    'exposure_by_liquefaction_lse':
-        'Exposure grouped by Region and by Liquefaction LSE',
-    'exposure_by_landslide_lse':
-        'Exposure grouped by Region and by Landslide LSE',
-    'gmf_data': 'Ground Motion Fields',
-    'damages-rlzs': 'Asset Risk Distributions',
-    'damages-stats': 'Asset Risk Statistics',
-    'mean_rates_by_src': 'Hazard Curves per Source',
-    'mean_disagg_by_src': 'Mag-Dist-Eps Disaggregation per Source',
-    'risk_by_event': 'Aggregated Risk By Event',
-    'events': 'Events',
-    'event_based_mfd': 'Annual Frequency of Events',
-    'avg_losses-rlzs': 'Average Asset Losses',
-    'avg_losses-stats': 'Average Asset Losses Statistics',
-    'loss_curves-rlzs': 'Asset Loss Curves',
-    'loss_curves-stats': 'Asset Loss Curves Statistics',
-    'loss_maps-rlzs': 'Asset Loss Maps',
-    'loss_maps-stats': 'Asset Loss Maps Statistics',
-    'aggexp_tags': 'Aggregated Exposure Values',
-    'aggrisk': 'Aggregate Risk',
-    'aggrisk-stats': 'Aggregate Risk Statistics',
-    'agg_risk': 'Total Risk',
-    'avg_losses_by': 'Average Losses By',
-    'aggcurves': 'Aggregate Risk Curves',
-    'aggcurves-stats': 'Aggregate Risk Curves Statistics',
-    'avg_gmf': 'Average Ground Motion Field',
-    'bcr-rlzs': 'Benefit Cost Ratios',
-    'bcr-stats': 'Benefit Cost Ratios Statistics',
-    'cs-stats': 'Mean Conditional Spectra',
-    'mce': 'MCE calculations',
-    'mce_governing': 'ASCE 7 MCEr Response Spectrum',
-    'median_spectra': 'Median Spectra per Site and PoE',
-    'median_spectrum_disagg': 'Median Spectrum Disaggregation',
-    'mmi_tags': 'Exposure grouped by Admin1 and MMI',
-    'reinsurance-avg_policy': 'Average Reinsurance By Policy',
-    'reinsurance-avg_portfolio': 'Average Reinsurance',
-    'reinsurance-risk_by_event': 'Reinsurance By Event',
-    'reinsurance-aggcurves': 'Aggregated Reinsurance Curves',
-    'ruptures': 'Earthquake Ruptures',
-    'site_model': 'Site Model',
-    'hcurves': 'Hazard Curves',
-    'hmaps': 'Hazard Maps',
-    'hmaps-stats': 'Hazard Maps Statistics',
-    'uhs': 'Uniform Hazard Spectra',
-    'disagg-rlzs': 'Disaggregation Outputs Per Realization',
-    'disagg-stats': 'Statistical Disaggregation Outputs',
-    'realizations': 'Realizations',
-    'rtgm': 'Risk Targeted Ground Motion',
-    'src_loss_table': 'Source Loss Table',
-    'fullreport': 'Full Report',
-    'input': 'Input Files',
-    'infra-avg_loss': 'Average Infrastructure Loss',
-    'infra-node_el': 'Efficiency Loss Of Nodes',
-    'infra-taz_cl': 'Connectivity Loss Of TAZ Nodes',
-    'infra-dem_cl': 'Connectivity Loss Of Demand Nodes',
-    'infra-event_ccl': 'Complete Connectivity Loss By Event',
-    'infra-event_pcl': 'Partial Connectivity Loss By Event',
-    'infra-event_wcl': 'Weighted Connectivity Loss By Event',
-    'infra-event_efl': 'Efficiency Loss by Event',
-    'inter-avg_loss': 'Average Infrastructure Loss with Interdependencies',
-    'inter-node_el': 'Efficiency Loss Of Nodes with Interdependencies',
-    'inter-taz_cl': 'Connectivity Loss Of TAZ Nodes with Interdependencies',
-    'inter-dem_cl': 'Connectivity Loss Of Demand Nodes with Interdependencies',
-    'inter-event_ccl': 'Complete Connectivity Loss By Event with Interdependencies',
-    'inter-event_pcl': 'Partial Connectivity Loss By Event with Interdependencies',
-    'inter-event_wcl': 'Weighted Connectivity Loss By Event with Interdependencies',
-    'inter-event_efl': 'Efficiency Loss by Event with Interdependencies',
-}
+from openquake.risklib.scientific import TIME_EVENTS
 
 
 AGGRISK_FIELD_DESCRIPTION = {
@@ -106,10 +28,18 @@ AGGRISK_FIELD_DESCRIPTION = {
     'structural': 'Structural loss (USD)',
     'economic': 'Economic loss (USD)',
     'occupants': 'Fatalities',
+    'occupants_day': 'Daytime fatalities',
+    'occupants_night': 'Night-time fatalities',
+    'occupants_transit': 'Transit-hours fatalities',
+    'occupants_avg': 'Average fatalities',
     'area': 'Floor area lost (m²)',
     'number': 'Buildings destroyed',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
+    'injured_day': 'Daytime injured people',
+    'injured_night': 'Night-time injured people',
+    'injured_transit': 'Transit-hours injured people',
+    'injured_avg': 'Average injured people',
     'affectedpop': 'Affected population',
     'embodied_carbon': 'Embodied carbon loss (tCO₂e)',
     'value': 'Exposed value',
@@ -121,19 +51,56 @@ AGGRISK_FIELD_DESCRIPTION = {
 }
 
 
+INJURED = ('Seriously or critically injured people according to the'
+           ' Abbreviated Injury Severity (www.aisinjuryscale.org)')
+
 AGGRISK_FIELD_EXPLANATION = {
     'affectedpop': ('Population living in buildings that sustained at least'
                     ' moderate damage'),
     'area': ('Total floor area (in m²) of buildings that sustained complete'
              ' damage'),
-    'injured': ('Seriously or critically injured people according to the'
-                ' Abbreviated Injury Severity (www.aisinjuryscale.org)'),
+    'injured': INJURED,
+    # injured_day, injured_night, injured_transit
+    **{f'injured_{te}': INJURED for te in TIME_EVENTS},
     'number': ('Number of buildings that sustained a level of damage beyond'
                ' repair (extensive damage or higher)'),
     'occupants': 'Number of fatalities',
+    # occupants_day, occupants_night, occupants_transit
+    **{f'occupants_{te}': 'Number of fatalities' for te in TIME_EVENTS},
     'residents': ('Population living in buildings that sustained at least'
                   ' extensive damage'),
     'economic': ('Sum of structural and contents economic loss (in USD)'),
+}
+
+
+# meaning of the exposed value, depending on the loss type
+EXPOSED_VALUE_EXPLANATION = {
+    'residents': ('Population that lives in the area included in the impact'
+                  ' analysis'),
+    'area': ('Total floor area of buildings, including all storeys, in the'
+             ' area included in the impact analysis'),
+    'occupants': ('Population assumed to be inside the building stock in the'
+                  ' area included in the impact analysis when the event'
+                  ' occurs'),
+    'number': ('Number of buildings in the area included in the impact'
+               ' analysis'),
+    'economic': ('Replacement value of buildings and their contents in the'
+                 ' area included in the impact analysis'),
+}
+
+
+# meaning of the statistics reported for each impact metric
+REPORTED_VALUE_EXPLANATION = {
+    'lossmea': ('Arithmetic mean of the estimated impact values, accounting'
+                ' for the uncertainties propagated through the impact'
+                ' analysis'),
+    'q50': ('The 50th percentile of the estimated impact distribution. Half'
+            ' of the estimated impact values are below the median and half'
+            ' are above it'),
+    'q05': ('Value below which 5% of the estimated impact values fall. It'
+            ' represents the lower end of the range of plausible impacts'),
+    'q95': ('Value below which 95% of the estimated impact values fall. It'
+            ' represents the upper end of the range of plausible impacts'),
 }
 
 

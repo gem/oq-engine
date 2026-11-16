@@ -399,7 +399,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
         tmp = gettemp(extract(self.calc.datastore, 'ruptures').array)
-        self.assertEqualFiles('expected/ruptures_full.csv', tmp, delta=1E-6)
+        self.assertEqualFiles('expected/ruptures_full.csv', tmp, delta=1E-6,
+                              check_text=True)
 
         # check MFD
         [f] = export(('event_based_mfd', 'csv'), self.calc.datastore)

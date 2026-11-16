@@ -169,7 +169,8 @@ class CostCalculator(object):
                 lt = lt[:-4]  # rstrip _ins
             if lt == 'number':
                 unit = 'units'
-            elif lt in ('affectedpop', 'injured', 'occupants', 'residents'):
+            elif lt.startswith(('occupants', 'injured')) or lt in (
+                    'affectedpop', 'residents'):
                 unit = 'people'
             elif lt == 'embodied_carbon':
                 unit = 'CO2eqv'
@@ -405,7 +406,15 @@ class AssetCollection(object):
         aids_by_tag = general.AccumDict(accum=set())
         for aid, ass in enumerate(self):
             for tagname in self.tagnames:
-                tag = self.tagcol.get_tag(tagname, ass[tagname])
+                # tagcol.id and tagcol.site_id start with '?', e.g.
+                # ['?', '0', '1', '2'], so the 0-based ids are shifted by 1
+                if tagname == 'id':
+                    tagidx = ass['ordinal'] + 1
+                elif tagname == 'site_id':
+                    tagidx = ass['site_id'] + 1
+                else:
+                    tagidx = ass[tagname]
+                tag = self.tagcol.get_tag(tagname, tagidx)
                 aids_by_tag[tag].add(aid)
         return aids_by_tag
 
@@ -801,7 +810,7 @@ class AssetCollection(object):
         # NB: the loss types do not contain spaces, so we can store them
         # together as a single space-separated string
         op = decode(self.occupancy_periods)
-        attrs = {'time_event': self.time_event,
+        attrs = {'time_event': self.time_event or '',
                  'occupancy_periods': op,
                  'tot_sites': self.tot_sites,
                  'fields': ' '.join(self.fields),
@@ -812,7 +821,7 @@ class AssetCollection(object):
 
     def __fromh5__(self, dic, attrs):
         self.occupancy_periods = attrs['occupancy_periods']
-        self.time_event = attrs['time_event']
+        self.time_event = attrs['time_event'] or None
         self.tot_sites = attrs['tot_sites']
         self.fields = attrs['fields'].split()
         self.occfields = attrs['occfields'].split()

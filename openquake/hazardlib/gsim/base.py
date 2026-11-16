@@ -33,8 +33,8 @@ import numpy
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import const
+from openquake.hazardlib.const import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
-from openquake.hazardlib.contexts import KNOWN_DISTANCES
 
 
 ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
@@ -297,8 +297,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     non_verified = False
     experimental = False
     adapted = False
-    conditional = False
-    from_mgmpe = False
+    conditional = False  # must be instantiated from ModifiableGMPE
+    from_mgmpe = False  # instantiated using ModifiableGMPE
 
     @classmethod
     def __init_subclass__(cls):
@@ -353,6 +353,30 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         if self._toml:
             return self._toml
         return '[%s]' % self.__class__.__name__
+
+
+def check_sites(gsims, sitecol):
+    """
+    Raise a ValueError if some site has a vs30 outside the VS30_RANGE
+    of a GSIM instantiated with vs30_strict=True, before starting the
+    calculation.
+
+    :param gsims: a list of GSIM instances
+    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection`
+    """
+    for gsim in gsims:
+        if not getattr(gsim, 'vs30_strict', False):
+            continue
+        vmin, vmax = gsim.VS30_RANGE
+        vs30 = sitecol.vs30
+        bad = (vs30 < vmin) | (vs30 > vmax)
+        if bad.any():
+            raise ValueError(
+                f'{gsim.__class__.__name__} is calibrated for {vmin} <= '
+                f'Vs30 <= {vmax} m/s, but {bad.sum()} site(s) have Vs30 '
+                f'in the range [{vs30.min()}, {vs30.max()}]; fix the '
+                'site model or set vs30_strict=False to clamp the '
+                'out-of-range values')
 
 
 def to_distribution_values(vals, imt):

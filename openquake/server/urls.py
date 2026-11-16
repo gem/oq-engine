@@ -23,7 +23,7 @@ from django.views.generic.base import RedirectView
 
 from openquake.server import views
 from openquake.server.db.tag_admin import tag_admin_site
-from openquake.server.internal_api import internal_urlpatterns
+from openquake.server.internal_api import v0_urlpatterns
 
 urlpatterns = []
 if settings.WEBUI:
@@ -38,18 +38,11 @@ if settings.WEBUI:
                 url='%s/engine/' % settings.WEBUI_PATHPREFIX,
                 permanent=True))]
     urlpatterns += [
-        re_path(r'^$', RedirectView.as_view(
-            url='%s/engine/' % settings.WEBUI_PATHPREFIX,
-            permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
                 views.web_engine_get_outputs, name="outputs"),
         re_path(r'^engine/license$', views.license,
                 name="license"),
-        re_path(r'^v1/valid/', views.validate_nrml),
-        re_path(r'^v1/available_gsims$', views.get_available_gsims),
-        re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
-                name="ini_defaults"),
     ]
     if settings.APPLICATION_MODE != 'PUBLIC':
         urlpatterns += [
@@ -62,25 +55,12 @@ if settings.WEBUI:
             re_path(r'^engine/aelo_changelog$',
                     views.aelo_changelog,
                     name="aelo_changelog"),
-            re_path(r'^v1/aelo_site_classes$', views.aelo_site_classes,
-                    name="aelo_site_classes"),
         ]
     elif settings.APPLICATION_MODE == 'IMPACT':
         urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_impact$',
                     views.web_engine_get_outputs_impact,
                     name="outputs_impact"),
-            re_path(r'^v1/get_impact_form_defaults$', views.get_impact_form_defaults,
-                    name="impact_form_defaults"),
-            re_path(r'^v1/impact_get_stations_from_usgs$',
-                    views.impact_get_stations_from_usgs,
-                    name="impact_get_stations_from_usgs"),
-            re_path(r'^v1/impact_get_shakemap_versions$',
-                    views.impact_get_shakemap_versions,
-                    name="impact_get_shakemap_versions"),
-            re_path(r'^v1/impact_get_nodal_planes_and_info$',
-                    views.impact_get_nodal_planes_and_info,
-                    name="impact_get_nodal_planes_and_info"),
         ]
 
     for app_full in settings.STANDALONE_APPS:
@@ -92,39 +72,10 @@ if settings.WEBUI:
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
             '%s.urls' % app, namespace='%s' % app_name)))
 
+# the public v1 API lives in the webui app
+urlpatterns += [path('', include('openquake.server.webui.urls'))]
+
 if settings.APPLICATION_MODE != 'TOOLS_ONLY':
-    urlpatterns += [
-        re_path(r'^v1/engine_version$', views.get_engine_version),
-        re_path(r'^v1/authentication/status$',
-                views.get_authentication_status),
-        re_path(r'^v1/engine_latest_version$',
-                views.get_engine_latest_version),
-        re_path(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
-        re_path(r'^v1/valid/', views.validate_nrml),
-        re_path(r'^v1/available_gsims$', views.get_available_gsims),
-        re_path(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
-        re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
-                name="ini_defaults"),
-    ]
-
-    # it is useful to disable the default redirect if the usage is via API only
-    # 'collectstatic' and related configurationis on the reverse proxy
-    # are also not required anymore for an API-only usage
-    if settings.WEBUI:
-        urlpatterns += [
-            re_path(r'^$', RedirectView.as_view(
-                url='%s/engine/' % settings.WEBUI_PATHPREFIX,
-                permanent=True)),
-            re_path(r'^engine/?$', views.web_engine, name="index"),
-            re_path(r'^engine/(\d+)/outputs$',
-                    views.web_engine_get_outputs, name="outputs"),
-        ]
-        if settings.APPLICATION_MODE == 'AELO':
-            urlpatterns.append(
-                re_path(r'^engine/(\d+)/outputs_aelo$',
-                        views.web_engine_get_outputs_aelo,
-                        name="outputs_aelo"))
-
     if settings.LOCKDOWN:
         from django.contrib import admin
         from django.contrib.auth.views import (
@@ -211,11 +162,14 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
     if settings.WEBUI_PATHPREFIX != "":
         urlpatterns = [path(r'%s/' % settings.WEBUI_PATHPREFIX.strip('/'),
                             include(urlpatterns))]
-    else:
-        urlpatterns = urlpatterns
 
-    # the internal API is always served at the root, as before
-    urlpatterns += internal_urlpatterns
+    # the internal routes are always served at the root, as before
+    if settings.WEBUI:
+        urlpatterns += [
+            re_path(r'^v1/calc_info/(\d+)$', views.v1_calc_info),
+            re_path(r'^v1/calc_list/count$', views.v1_calc_list_count),
+        ]
+    urlpatterns += v0_urlpatterns
 
     # To enable gunicorn debug without Nginx (to serve static files)
     # uncomment the following lines

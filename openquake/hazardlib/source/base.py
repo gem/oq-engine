@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
+import math
 import zlib
 from dataclasses import dataclass
 import numpy
@@ -35,6 +36,8 @@ from openquake.hazardlib.source.rupture import (
     EBRupture)
 
 U32 = numpy.uint32
+# ts is the set of realizations with the same uncertainties (see get_ts_sets)
+ts_samples_dt = numpy.dtype([('trt_smr', U32), ('samples', U32), ('ts', U32)])
 F64 = numpy.float64
 I64 = numpy.int64
 TWO30 = I64(2**30)
@@ -253,6 +256,32 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             return (0,)
         return tuple(self.ts_samples['trt_smr'])
 
+    def get_ts_samples(self):
+        """
+        :returns: the ts_samples of the source as a structured array
+        """
+        ts_samples = self.ts_samples
+        if isinstance(ts_samples, list):
+            ts_samples = numpy.concatenate(ts_samples, dtype=ts_samples_dt)
+        return ts_samples
+
+    def get_ts_sets(self):
+        """
+        :returns: a tuple of tuples of trt_smr, the sets of realizations with
+            the same uncertainties applied to the source; there is a single
+            set if the uncertainties are the same in all the realizations
+
+        NB: the sets are stored in the field ts of the ts_samples by
+            build_groups, i.e. for the sources modified by the uncertainties;
+            the sources without uncertainties have ts=0 everywhere and a
+            single set.
+        """
+        if self.ts_samples is None:  # in hazardlib
+            return ((0,),)
+        ts_samples = self.get_ts_samples()
+        return tuple(tuple(ts_samples['trt_smr'][ts_samples['ts'] == ts])
+                     for ts in numpy.unique(ts_samples['ts']))
+
     def serial(self, ses_seed):
         """
         :returns: a random seed derived from source_id and ses_seed
@@ -335,18 +364,26 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 mags.add(rup.mag)
         return sorted(mags)
 
+    def get_raw_mags(self):
+        """
+        :returns: the magnitudes of the ruptures contained, with repetitions
+        """
+        if hasattr(self, 'mags'):  # MultiFaultSource
+            return self.mags
+        elif hasattr(self, 'data'):  # nonparametric
+            return [item[0].mag for item in self.data]
+        return [item[0] for item in self.get_annual_occurrence_rates()]
+
     def get_magstrs(self):
         """
         :returns: the magnitudes of the ruptures contained as strings
         """
-        if hasattr(self, 'mags'):  # MultiFaultSource
-            mags = {magstr(mag) for mag in self.mags}
-        elif hasattr(self, 'data'):  # nonparametric
-            mags = {magstr(item[0].mag) for item in self.data}
-        else:
-            mags = {magstr(item[0]) for item in
-                    self.get_annual_occurrence_rates()}
-        return sorted(mags)
+        return sorted({magstr(mag) for mag in self.get_raw_mags()})
+
+    def is_splittable(self):
+        """Return whether this source can be split into independent parts."""
+        return (self.__class__.__iter__ is not BaseSeismicSource.__iter__
+                and getattr(self, 'mutex_weight', 1) == 1 and self.splittable)
 
     def __iter__(self):
         """
@@ -388,13 +425,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                              (modification, type(self).__name__))
         meth = getattr(self, 'modify_%s' % modification)
         meth(**parameters)
-
-    def to_xml(self):
-        """
-        Convert the source into an XML string, very useful for debugging
-        """
-        from openquake.hazardlib import nrml, sourcewriter
-        return nrml.to_string(sourcewriter.obj_to_node(self))
 
     def __repr__(self):
         """
@@ -487,6 +517,71 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         by the source from the underlying MFD.
         """
         return self.mfd.get_min_max_mag()
+
+    def modify_set_recurrow(self, recurrow):
+        """
+        Modify the recurrence parameters by values given in a dict.
+
+        Params are read from the recurrow dict, preferring bg-prefixed keys
+        e.g., bg_b_value, bg_ref_mag, bg_rate) so a single alt3-style
+        recurRow branch can carry different but correlated bg and fault
+        parameters; otherwise the unprefixed alt1/alt2 keys are used.
+
+        How it works is determined by if rate_split_bg_frac is present:
+
+        - Alt1/Alt3 (no rate_split_bg_frac): Build the TE or AC MFD from
+          the row params and use it as it is.
+
+        - Alt2 (rate_split_bg_frac present): Build the same MFD, then
+          piecewise-scale bins at or above Mmax-1 by rate_split_bg_frac (bg
+          side of the alt2 partition between the area source and its faults
+          and make an EvenlyDiscretizedMFD.
+
+        NOTE: This is currently only intended for support of the BC Hydro
+        NVA SSC logic tree. We may expand it to become a more general
+        capability.
+
+        :param recurrow:
+            Dict of values to use in given type of MFD e.g.b_value, ref_mag,
+            rate). Alt3-style rows use prefixes of "bg" for the same keys.
+        """
+        # Constants for BC Hydro NVA model
+        b_ac = 0.3
+        delta_mac = 1.0
+        # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
+        gamma_eff = 0.9185
+        # the job parameter width_of_mfd_bin, 0.1 if not set
+        bin_width = getattr(self, 'width_of_mfd_bin', 0.1)
+
+        # Get params from recurRow, preferring bg-prefixed keys (alt3)
+        mmax = self.mmax
+        recur_model = self.recur_model
+        bval = float(recurrow.get("bg_b_value", recurrow.get("b_value")))
+        ref_mag = float(recurrow.get("bg_ref_mag", recurrow.get("ref_mag")))
+        rate = float(recurrow.get("bg_rate", recurrow.get("rate")))
+
+        # Build the MFD
+        if recur_model == "TE":
+            a_val = math.log10(rate) + bval * ref_mag
+            self.mfd = mfd.TruncatedGRMFD(
+                min_mag=ref_mag, max_mag=mmax,
+                bin_width=bin_width, a_val=a_val, b_val=bval)
+        else:
+            assert recur_model == "AC"
+            self.mfd = mfd.AlternativeCharacteristicMFD(
+                min_mag=ref_mag, max_mag=mmax, b_GR=bval, b_AC=b_ac,
+                bin_width=bin_width, gamma=gamma_eff, delta_m_AC=delta_mac,
+                total_rate=rate)
+
+        # Piecewise partition above Mmax-1 if a rate_split_bg_frac is active
+        bg_frac = getattr(self, 'rate_split_bg_frac', None)
+        if bg_frac is not None:
+            bins = self.mfd.get_annual_occurrence_rates()
+            threshold = mmax - 1.0
+            occ = [(r * bg_frac if m >= threshold - bin_width / 4 else r)
+                   for m, r in bins]
+            self.mfd = mfd.EvenlyDiscretizedMFD(
+                min_mag=bins[0][0], bin_width=bin_width, occurrence_rates=occ)
 
     def modify_set_msr(self, new_msr):
         """

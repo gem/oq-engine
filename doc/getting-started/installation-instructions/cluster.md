@@ -151,9 +151,6 @@ nodes at each new calculation, *provided the user openquake has ssh
 access to the workers*.  Please note that you must list explicitly the
 workers that you want to use.
 
-NB: when using the zmq mechanism you should not touch the parameter
-`serialize_jobs` and keep it at its default value of `true`.
-
 ### Configuring the WebUI service
 
 The required systemd service is configured by the universal installer into the folder /etc/systemd/system/

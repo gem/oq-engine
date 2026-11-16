@@ -17,13 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module
-:mod:`openquake.hazardlib.gsim.raghukanth_iyengar_2007`
-exports
-:class:`RaghukanthIyengar2007`
-:class:`RaghukanthIyengar2007KoynaWarna`
-:class:`RaghukanthIyengar2007Southern`
-:class:`RaghukanthIyengar2007WesternCentral`
+Module exports :class:`RaghukanthIyengar2007`
+               :class:`RaghukanthIyengar2007KoynaWarna`
+               :class:`RaghukanthIyengar2007Southern`
+               :class:`RaghukanthIyengar2007WesternCentral`
 """
 import warnings
 import numpy as np

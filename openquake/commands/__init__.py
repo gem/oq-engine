@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.baselib.general import engine_version
-
-# __version__ includes the git hash in development installations
-__version__ = engine_version()
+# NB: __version__, including the git hash in development installations,
+# is set by oq() in __main__.py and not here, since calling engine_version
+# at import time would run git every time openquake.commands is imported

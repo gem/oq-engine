@@ -836,7 +836,11 @@ def _edges_sort_by_mean_depth(msh):
     mdep = []
     for irow in range(msh.shape[0]):
         tidx = np.isfinite(msh[irow, :, 2])
-        mdep.append(np.mean(msh[irow, tidx, 2]))
+        # empty rows (no finite depth) go last, avoiding a mean of nothing
+        if tidx.any():
+            mdep.append(np.mean(msh[irow, tidx, 2]))
+        else:
+            mdep.append(np.inf)
     mdep = np.array(mdep)
     idx = mdep.argsort()
     msh[:, :, 0] = msh[idx, :, 0]

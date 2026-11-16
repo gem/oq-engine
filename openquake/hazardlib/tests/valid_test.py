@@ -65,6 +65,8 @@ class ValidationTestCase(unittest.TestCase):
             valid.longitude('181')
         with self.assertRaises(ValueError):
             valid.longitude('-181')
+        with self.assertRaises(ValueError):
+            valid.longitude('nan')
 
     def test_latitude(self):
         self.assertEqual(valid.latitude('1'), 1.0)
@@ -73,6 +75,14 @@ class ValidationTestCase(unittest.TestCase):
             valid.latitude('91')
         with self.assertRaises(ValueError):
             valid.latitude('-91')
+        with self.assertRaises(ValueError):
+            valid.latitude('nan')
+
+    def test_depth(self):
+        self.assertEqual(valid.depth('-1.5'), -1.5)
+        for value in ('nan', 'inf'):
+            with self.assertRaises(ValueError):
+                valid.depth(value)
 
     def test_positiveint(self):
         self.assertEqual(valid.positiveint('1'), 1)

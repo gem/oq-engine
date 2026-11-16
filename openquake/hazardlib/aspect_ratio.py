@@ -71,19 +71,20 @@ def get_aspect_ratio(node):
     
     if func_type == 'linear_piecewise':
         npoints = len(arf.mag_points)
-        if npoints != 2:
+        if npoints < 2:
             raise ValueError(
-                f"Should be two elements [(MinAR, MinMmin), (MaxAR, Mmax)] "
-                f"in linear_piecewise kind of ruptAspectRatio ({npoints})")
+                f"linear_piecewise aspectRatioFunction requires at least "
+                f"two mag_point entries ({npoints} given)")
         points = [(float(p['mag']), float(p['aratio'])) for p in arf.mag_points]
         if any(m <= 0 for m, _ in points):
             raise ValueError(
                 f"aspectRatioFunction magnitudes must be positive: "
                 f"{[m for m, _ in points]}")
-        if points[0][0] >= points[1][0]:
+        mags = [m for m, _ in points]
+        if any(a >= b for a, b in zip(mags, mags[1:])):
             raise ValueError(
-                f"aspectRatioFunction points must be in ascending magnitude "
-                f"order: mag[0]={points[0][0]} >= mag[1]={points[1][0]}")
+                f"aspectRatioFunction points must be in strictly ascending "
+                f"magnitude order: {mags}")
         return MagDepAspectRatio("linear_piecewise", points)
 
     raise ValueError(f"Unsupported aspectRatioFunction type: {func_type}")

@@ -61,7 +61,7 @@ class TruncatedGRMFD(BaseMFD):
     """
     MODIFICATIONS = {'increment_max_mag', 'set_max_mag', 'increment_b',
                      'set_ab', 'set_ab_max_mag', 'set_bGR',
-                     'increment_max_mag_no_mo_balance'}
+                     'increment_max_mag_no_mo_balance', 'set_min_mag'}
 
     def __init__(self, min_mag, max_mag, bin_width, a_val, b_val):
         self.min_mag = min_mag
@@ -246,6 +246,18 @@ class TruncatedGRMFD(BaseMFD):
         is done after assigning a new value to ``max_mag``.
         """
         self.max_mag = value
+
+    def modify_set_min_mag(self, value):
+        """
+        Apply absolute minimum magnitude modification.
+
+        :param value:
+            A float value to assign to ``min_mag``.
+
+        No specific recalculation of other Gutenberg-Richter parameters
+        is done after assigning a new value to ``min_mag``.
+        """
+        self.min_mag = value
 
     def modify_set_bGR(self, b_val: float):
         """

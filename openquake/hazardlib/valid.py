@@ -33,8 +33,10 @@ import numpy
 
 from openquake.baselib.general import distinct, pprod
 from openquake.baselib import hdf5
-from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
+from openquake.hazardlib import imt, gsim, pmf, site, tom
 from openquake.hazardlib.codes import SOURCE_CODES
+from openquake.hazardlib.scalerel import (
+    SCALEREL as SCALEREL, mag_scale_rel as mag_scale_rel)
 from openquake.hazardlib.gsim.base import registry, gsim_aliases, fix_toml
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
@@ -49,8 +51,6 @@ RENAMED_SEPS = {
     'GrantEtAl2016RockSlopeFailure': "Jibson2007ALandslides"}
 
 PRECISION = pmf.PRECISION
-
-SCALEREL = scalerel._get_available_class(scalerel.BaseMSR)
 
 GSIM = gsim.get_available_gsims()
 
@@ -583,6 +583,8 @@ def longitude(value):
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
         raise ValueError('longitude %s < -180' % lon)
+    elif numpy.isnan(lon):  # would give NaN hypocenters
+        raise ValueError('longitude is NaN')
     return lon
 
 
@@ -601,6 +603,8 @@ def latitude(value):
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
         raise ValueError('latitude %s < -90' % lat)
+    elif numpy.isnan(lat):  # would give NaN hypocenters
+        raise ValueError('latitude is NaN')
     return lat
 
 
@@ -620,7 +624,20 @@ def latitudes(value):
     return [latitude(v) for v in value.split(',')]
 
 
-depth = float_
+def depth(value):
+    """
+    :param value: input string
+    :returns: a finite float (NaN would give NaN hypocenters)
+
+    >>> depth('nan')
+    Traceback (most recent call last):
+    ...
+    ValueError: depth nan is not finite
+    """
+    dep = float_(value)
+    if not numpy.isfinite(dep):
+        raise ValueError('depth %s is not finite' % dep)
+    return dep
 
 
 def lon_lat(value):
@@ -722,6 +739,21 @@ def positivefloat(value):
     if f < 0:
         raise ValueError('float %s < 0' % f)
     return f
+
+
+def positivefloat_or_auto(value):
+    """
+    :param value: input string
+    :returns: positive float or the string "auto"
+
+    >>> positivefloat_or_auto('auto')
+    'auto'
+    >>> positivefloat_or_auto('50')
+    50.0
+    """
+    if value == 'auto':
+        return value
+    return positivefloat(value)
 
 
 def positivefloats(value):
@@ -1104,29 +1136,6 @@ def list_of_dict(value):
 
 
 # ########################### SOURCES/RUPTURES ############################# #
-
-def mag_scale_rel(value):
-    """
-    :param value:
-        a Magnitude-Scale relationship in hazardlib
-    :returns:
-        the corresponding hazardlib object
-
-    Parametric MSR classes are supported with TOML syntax; for instance
-
-    >>> mag_scale_rel("CScalingMSR.C=4.7")
-    <CScalingMSR>
-    """
-    value = value.strip()
-    if '.' in value or '[' in value:
-        [(value, kwargs)] = toml.loads(value).items()
-    else:
-        kwargs = {}
-    if value not in SCALEREL:
-        raise ValueError(
-            "'%s' is not a recognized magnitude-scale relationship" % value)
-    return SCALEREL[value](**kwargs)
-
 
 def pmf(value):
     """
@@ -1608,18 +1617,25 @@ def basename(src, splitchars='.:'):
     return src_id
 
 
-def corename(src):
+def corename(src, splitchars='!:;.'):
     """
     :param src: source object or source name
+    :param splitchars: the characters starting a suffix to remove
     :returns: the core name of a source
+
+    >>> corename('SC_10:124!b_1')
+    'SC_10'
+    >>> corename('SC_10:124!b_1', '!')  # the ID as written in the logic tree
+    'SC_10:124'
     """
     src = src if isinstance(src, str) else src.source_id
     # @ section of multifault source
-    # ! source model logic tree branch
+    # ! source model logic tree branch (see source_reader.add_bangs; the
+    #   "!" cannot appear in the original IDs)
     # : component of mutex source
     # ; alternate logictree version of a source
     # . component of split source
-    return re.split('[!:;.]', src)[0]
+    return re.split('[%s]' % re.escape(splitchars), src)[0]
 
 
 def fragmentno(src):

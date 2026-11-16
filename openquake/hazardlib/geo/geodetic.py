@@ -66,7 +66,8 @@ def distances_to_arc(lon, lat, azi, lons, lats):
     return (np.pi / 2. - angle) * EARTH_RADIUS
 
 
-def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
+def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS,
+                      dtype=F32):
     """
     Calculate the geodetic distance between two points or two collections
     of points.
@@ -79,12 +80,13 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
 
     :returns:
         Distance in km, floating point scalar or numpy array of such.
-        NB: to save memory, arrays are computed as float32
+        NB: to save memory, arrays are computed as float32 by default;
+        pass dtype=float when double precision is needed.
     """
     if isinstance(lons1, float):
         return fast_distance(lons1, lats1, lons2, lats2)
     lons1, lats1, lons2, lats2 = _prepare_coords(
-        lons1, lats1, lons2, lats2, F32)
+        lons1, lats1, lons2, lats2, np.dtype(dtype).type)
     arr = np.sin((lats1 - lats2) / 2.0) ** 2.0
     arr += np.cos(lats1) * np.cos(lats2) * np.sin((lons1 - lons2) / 2.0) ** 2.0
     return diameter * np.arcsin(np.sqrt(arr))
@@ -394,32 +396,33 @@ def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
     Find a list of specified number of points between two given ones that are
     equally spaced along the great circle arc connecting given points.
 
-    :param float lon1, lat1, depth1:
+    :param lon1, lat1, depth1:
         Coordinates of a point to start from. The first point in a resulting
         list has these coordinates.
-    :param float lon2, lat2, depth2:
+    :param lon2, lat2, depth2:
         Coordinates of a point to finish at. The last point in a resulting
         list has these coordinates.
     :param npoints:
         Integer number of points to return. First and last points count,
         so if there have to be two intervals, ``npoints`` should be 3.
     :returns:
-        Tuple of three 1d numpy arrays: longitudes, latitudes and depths
-        of resulting points respectively.
+        Tuple of arrays of longitudes, latitudes and depths. Scalar
+        endpoints give 1d arrays; array endpoints broadcast together,
+        with the sample points along the last axis.
 
     Finds distance between two reference points and calls
     :func:`npoints_towards`.
     """
-    hdist = geodetic_distance(lon1, lat1, lon2, lat2)
-    vdist = depth2 - depth1
+    hdist = geodetic_distance(lon1, lat1, lon2, lat2, dtype=float)
+    vdist = np.asarray(depth2) - np.asarray(depth1)
     rlons, rlats, rdepths = npoints_towards(
         lon1, lat1, depth1, azimuth(lon1, lat1, lon2, lat2),
         hdist, vdist, npoints
     )
     # the last point should be left intact
-    rlons[-1] = lon2
-    rlats[-1] = lat2
-    rdepths[-1] = depth2
+    rlons[..., -1] = lon2
+    rlats[..., -1] = lat2
+    rdepths[..., -1] = depth2
     return rlons, rlats, rdepths
 
 
@@ -428,7 +431,7 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     Find a list of specified number of points starting from a given one
     along a great circle arc with a given azimuth measured in a given point.
 
-    :param float lon, lat, depth:
+    :param lon, lat, depth:
         Coordinates of a point to start from. The first point in a resulting
         list has these coordinates.
     :param azimuth:
@@ -443,19 +446,23 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
         Integer number of points to return. First and last points count,
         so if there have to be two intervals, ``npoints`` should be 3.
     :returns:
-        Tuple of three 1d numpy arrays: longitudes, latitudes and depths
-        of resulting points respectively.
+        Tuple of arrays of longitudes, latitudes and depths. Inputs
+        broadcast together, with sample points along the last axis.
 
     Implements "completely general but more complicated algorithm" from
     http://williams.best.vwh.net/avform.htm#LL
     """
     assert npoints > 1
+    lon0, lat0, depth0 = lon, lat, depth
+    # Give array inputs a sample axis; scalar inputs need no broadcasting.
+    params = lon, lat, depth, azimuth, hdist, vdist
+    if any(not np.isscalar(value) for value in params):
+        lon, lat, depth, azimuth, hdist, vdist = [
+            arr[..., None] for arr in np.broadcast_arrays(*params)]
     rlon, rlat = np.radians(lon), np.radians(lat)
     tc = np.radians(360 - azimuth)
-    hdists = np.arange(npoints, dtype=float)
-    hdists *= (hdist / EARTH_RADIUS) / (npoints - 1)
-    vdists = np.arange(npoints, dtype=float)
-    vdists *= vdist / (npoints - 1)
+    hdists = np.arange(npoints) * ((hdist / EARTH_RADIUS) / (npoints - 1))
+    vdists = np.arange(npoints) * (vdist / (npoints - 1))
 
     sin_dists = np.sin(hdists)
     cos_dists = np.cos(hdists)
@@ -473,9 +480,9 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     depths = vdists + depth
 
     # the first point should be left intact
-    lons[0] = lon
-    lats[0] = lat
-    depths[0] = depth
+    lons[..., 0] = lon0
+    lats[..., 0] = lat0
+    depths[..., 0] = depth0
 
     return lons, lats, depths
 

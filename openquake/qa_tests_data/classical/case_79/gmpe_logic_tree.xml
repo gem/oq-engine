@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchSet branchSetID="bs1"
+                            uncertaintyType="gmpeModel"
+                            applyToTectonicRegionType="Active Shallow Crust">
+            <logicTreeBranch branchID="unmodified">
+                <uncertaintyModel>EdwardsFah2013Foreland10Bars</uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="swiss_site_specific">
+                <uncertaintyModel>
+                    [ModifiableGMPE]
+                    gmpe.EdwardsFah2013Foreland10Bars = {}
+                    apply_swiss_site_specific_amplification_sa = {periods = [0.2, 0.4, 0.6]}
+                </uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>

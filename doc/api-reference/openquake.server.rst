@@ -7,7 +7,7 @@ Subpackages
 .. toctree::
 
     openquake.server.db
-    openquake.server.v1
+    openquake.server.webui
 
 Submodules
 ----------
@@ -64,6 +64,14 @@ openquake.server.internal_api module
 ------------------------------------
 
 .. automodule:: openquake.server.internal_api
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.server.services module
+--------------------------------
+
+.. automodule:: openquake.server.services
     :members:
     :undoc-members:
     :show-inheritance:

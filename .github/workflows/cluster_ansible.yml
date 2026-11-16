@@ -11,7 +11,7 @@ jobs:
 
   zmq_cluster:
     name: OQ cluster with ansible and molecule
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         distro:

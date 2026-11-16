@@ -1,4 +1,4 @@
-#,,,,,,"generated_by='OpenQuake engine 3.26.0-gitdad8eb2fff', start_date='2026-06-19T01:20:50', checksum=689282330, risk_investigation_time=50.0, num_events=72, effective_time=160.0, limit_states=''"
+#,,,,,,"generated_by='OpenQuake engine 3.27.0-git13836d22e2', start_date='2026-10-27T09:19:41', checksum=1382661001, risk_investigation_time=50.0, num_events=72, effective_time=160.0, limit_states=''"
 return_period,loss_type,rlz_id,loss_aep_value,loss_aep_ratio,loss_oep_value,loss_oep_ratio
 1,business_interruption,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,business_interruption,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
@@ -19,12 +19,12 @@ return_period,loss_type,rlz_id,loss_aep_value,loss_aep_ratio,loss_oep_value,loss
 2,structural,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 5,structural,0,3.98653E+02,5.69504E-03,2.70087E+02,3.85839E-03
 10,structural,0,4.55156E+02,6.50223E-03,4.12046E+02,5.88638E-03
-20,structural,0,7.14352E+02,1.02050E-02,4.55156E+02,6.50223E-03
+20,structural,0,7.14353E+02,1.02050E-02,4.55156E+02,6.50223E-03
 1,occupants,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,occupants,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-5,occupants,0,5.56712E-03,1.98826E-04,4.30398E-03,1.53714E-04
-10,occupants,0,7.58842E-03,2.71015E-04,5.25432E-03,1.87654E-04
-20,occupants,0,1.31476E-02,4.69558E-04,5.56712E-03,1.98826E-04
+5,occupants,0,5.56728E-03,1.98831E-04,4.30409E-03,1.53718E-04
+10,occupants,0,7.58853E-03,2.71019E-04,5.25465E-03,1.87666E-04
+20,occupants,0,1.31482E-02,4.69579E-04,5.56728E-03,1.98831E-04
 1,structural+nonstructural+contents,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,structural+nonstructural+contents,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 5,structural+nonstructural+contents,0,4.09930E+03,1.95205E-02,4.00208E+03,1.90575E-02
@@ -53,13 +53,13 @@ return_period,loss_type,rlz_id,loss_aep_value,loss_aep_ratio,loss_oep_value,loss
 1,occupants,1,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,occupants,1,3.04799E-03,1.08857E-04,2.79670E-03,9.98822E-05
 5,occupants,1,6.40558E-03,2.28771E-04,3.38113E-03,1.20755E-04
-10,occupants,1,9.12650E-03,3.25946E-04,4.85773E-03,1.73490E-04
-20,occupants,1,9.35620E-03,3.34150E-04,5.17470E-03,1.84811E-04
+10,occupants,1,9.12671E-03,3.25954E-04,4.85787E-03,1.73495E-04
+20,occupants,1,9.35620E-03,3.34150E-04,5.17490E-03,1.84818E-04
 1,structural+nonstructural+contents,1,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,structural+nonstructural+contents,1,2.29973E+03,1.09511E-02,2.06380E+03,9.82760E-03
 5,structural+nonstructural+contents,1,7.61862E+03,3.62791E-02,3.61483E+03,1.72135E-02
 10,structural+nonstructural+contents,1,9.92666E+03,4.72698E-02,7.61862E+03,3.62791E-02
-20,structural+nonstructural+contents,1,1.78624E+04,8.50591E-02,1.46013E+04,6.95302E-02
+20,structural+nonstructural+contents,1,1.78624E+04,8.50590E-02,1.46013E+04,6.95302E-02
 1,business_interruption,2,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,business_interruption,2,1.61846E+02,1.15605E-02,1.61846E+02,1.15605E-02
 5,business_interruption,2,2.26796E+02,1.61997E-02,2.14242E+02,1.53030E-02
@@ -81,10 +81,10 @@ return_period,loss_type,rlz_id,loss_aep_value,loss_aep_ratio,loss_oep_value,loss
 10,structural,2,3.79037E+02,5.41482E-03,3.79037E+02,5.41482E-03
 20,structural,2,9.02688E+02,1.28955E-02,9.02688E+02,1.28955E-02
 1,occupants,2,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-2,occupants,2,3.30812E-03,1.18147E-04,3.29926E-03,1.17831E-04
-5,occupants,2,4.48472E-03,1.60169E-04,4.45124E-03,1.58973E-04
-10,occupants,2,9.50832E-03,3.39583E-04,4.61178E-03,1.64706E-04
-20,occupants,2,1.12788E-02,4.02815E-04,6.22223E-03,2.22222E-04
+2,occupants,2,3.30828E-03,1.18153E-04,3.29936E-03,1.17834E-04
+5,occupants,2,4.48488E-03,1.60174E-04,4.45134E-03,1.58976E-04
+10,occupants,2,9.50851E-03,3.39590E-04,4.61194E-03,1.64712E-04
+20,occupants,2,1.12792E-02,4.02827E-04,6.22242E-03,2.22229E-04
 1,structural+nonstructural+contents,2,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,structural+nonstructural+contents,2,2.97406E+03,1.41622E-02,2.97406E+03,1.41622E-02
 5,structural+nonstructural+contents,2,5.24698E+03,2.49856E-02,3.91328E+03,1.86347E-02
@@ -114,7 +114,7 @@ return_period,loss_type,rlz_id,loss_aep_value,loss_aep_ratio,loss_oep_value,loss
 2,occupants,3,2.53641E-03,9.05860E-05,2.53641E-03,9.05860E-05
 5,occupants,3,6.45809E-03,2.30646E-04,4.22705E-03,1.50966E-04
 10,occupants,3,6.66302E-03,2.37965E-04,4.80705E-03,1.71680E-04
-20,occupants,3,1.31467E-02,4.69524E-04,7.31641E-03,2.61301E-04
+20,occupants,3,1.31467E-02,4.69524E-04,7.31642E-03,2.61301E-04
 1,structural+nonstructural+contents,3,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,structural+nonstructural+contents,3,2.73432E+03,1.30206E-02,2.21523E+03,1.05487E-02
 5,structural+nonstructural+contents,3,5.78245E+03,2.75355E-02,3.76595E+03,1.79331E-02
@@ -144,7 +144,7 @@ return_period,loss_type,rlz_id,loss_aep_value,loss_aep_ratio,loss_oep_value,loss
 2,occupants,5,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 5,occupants,5,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 10,occupants,5,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-20,occupants,5,4.56746E-03,1.63124E-04,4.56746E-03,1.63124E-04
+20,occupants,5,4.56757E-03,1.63127E-04,4.56757E-03,1.63127E-04
 1,structural+nonstructural+contents,5,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,structural+nonstructural+contents,5,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 5,structural+nonstructural+contents,5,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
@@ -174,7 +174,7 @@ return_period,loss_type,rlz_id,loss_aep_value,loss_aep_ratio,loss_oep_value,loss
 2,occupants,7,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 5,occupants,7,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 10,occupants,7,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-20,occupants,7,3.00438E-02,1.07299E-03,3.00438E-02,1.07299E-03
+20,occupants,7,3.00441E-02,1.07300E-03,3.00441E-02,1.07300E-03
 1,structural+nonstructural+contents,7,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,structural+nonstructural+contents,7,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 5,structural+nonstructural+contents,7,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00

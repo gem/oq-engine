@@ -36,7 +36,13 @@ done
 
 # run the other demos
 for ini in $(find $1 -name job.tmp.ini | sort); do
-    oq engine --run $ini --exports csv,hdf5
+    if [[ $ini == *MedianSpectrum* ]]; then
+        # the median_spectrum_disagg CSV export is very slow and is
+        # covered by the calculator tests; the HDF5 is enough for the demo
+        oq engine --run $ini --exports hdf5
+    else
+        oq engine --run $ini --exports csv,hdf5
+    fi
 done
 
 # test the --eos option
@@ -75,7 +81,7 @@ oq reaggregate -1 NAME_1
 oq engine --list-outputs -1
 
 echo "Testing mean_rates"
-OQ_DISTRIBUTE=no python -m openquake.hazardlib.calc.mean_rates $2/mosaic/KOR/in/job_vs30.ini
+OQ_DISTRIBUTE=no oq run $2/mosaic/job_dos_vs30_760_small.ini --mean-rates
 
 echo "Testing oq info usgs_rupture"
 oq info usgs_rupture:us70006sj8

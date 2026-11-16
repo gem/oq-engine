@@ -251,6 +251,42 @@ but it is much simpler to use. An example is:
    [ModifiableGMPE.add_between_within_stds]
    with_betw_ratio = 1.5
 
+Period-dependent site corrections
+---------------------------------
+
+The ``apply_swiss_site_specific_amplification_sa`` modifier applies supplied
+site corrections to a GMPE with between-event uncertainty. For example,
+the following configuration selects three periods::
+
+   <uncertaintyModel>
+       [ModifiableGMPE]
+       gmpe.EdwardsFah2013Foreland10Bars = {}
+       apply_swiss_site_specific_amplification_sa = {periods = [0.2, 0.4, 0.6]}
+   </uncertaintyModel>
+
+For each selected period, the site model must supply the corresponding
+``ch_ampl``, ``ch_phis2s`` and ``ch_phiss`` columns. In this example the suffixes
+are ``02``, ``04`` and ``06``; the ``03`` columns are not required. The default
+selection, when the modifier options are ``{}``, is 0.2, 0.3, 0.4 and 0.6 s.
+Selection is explicit: unused configured periods still require their columns,
+and a shared site model must cover the union required by active GMPE branches.
+
+Amplification is an additive natural-log correction to the mean, and both
+uncertainty inputs are natural-log standard deviations. The modifier replaces
+intra-event uncertainty with ``sqrt(ch_phis2s**2 + ch_phiss**2)``, preserves
+between-event uncertainty, and recomputes total uncertainty from those terms.
+It accepts finite corrections and nonnegative uncertainty components; zero
+corrections are valid. Period-dependent corrections apply to explicitly
+selected, 5%-damped SA, without interpolation. PGA preserves the current mean,
+intra-event uncertainty and between-event uncertainty, and recomputes total
+uncertainty as ``sqrt(tau**2 + phi**2)``. PGA does not use amplification columns
+or receive a median correction; the configured SA columns remain required.
+Other IMTs, including PGV, are not supported. The underlying GMPE must also
+support the requested IMTs. It cannot be combined with
+``apply_swiss_amplification_sa`` in the same wrapper, which would apply the
+same kind of correction twice. Existing Swiss modifier configurations retain
+their 0.3/0.6 s behavior.
+
 ***************
 NRCan15SiteTerm
 ***************

@@ -28,7 +28,7 @@ try:
 except ImportError:  # old version
     from h3.api.numpy_int import (
         geo_to_h3 as latlng_to_cell, h3_to_geo as cell_to_latlng)
-from scipy.spatial import distance
+from scipy.spatial import KDTree, distance
 from shapely import geometry
 from openquake.baselib import hdf5, general
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
@@ -37,6 +37,7 @@ from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, get_middle_point, geolocate)
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.boundaries import read_countries_df
 
 TWO32 = 2 ** 32
 U32 = numpy.uint32
@@ -56,13 +57,15 @@ param = dict(
 #: hazard; lon/lat included because valid.coordinates accepts 'nan'
 CORE_SITE_PARAMS = ('lon', 'lat', 'vs30', 'z1pt0', 'z2pt5', 'z1pt4')
 
+# Site params that should not be rejected if zero
+PERMIT_ZERO_SITE_PARAMS = ('ch_ampl', 'ch_phis2s', 'ch_phiss')
+
 
 def get_countries(lons, lats):
     """
     :returns: array of 3-letter country codes
     """
-    from openquake.commonlib import readinput
-    geom_df = readinput.read_countries_df()
+    geom_df = read_countries_df()
     lonlats = numpy.zeros((len(lons), 2), numpy.float32)
     lonlats[:, 0] = lons
     lonlats[:, 1] = lats
@@ -277,11 +280,17 @@ site_param_dt = {
     'h800': numpy.float64,
     'geology': (numpy.bytes_, 20),
     'amplfactor': numpy.float64,
+    'ch_ampl02': numpy.float64,
     'ch_ampl03': numpy.float64,
+    'ch_ampl04': numpy.float64,
     'ch_ampl06': numpy.float64,
+    'ch_phis2s02': numpy.float64,
     'ch_phis2s03': numpy.float64,
+    'ch_phis2s04': numpy.float64,
     'ch_phis2s06': numpy.float64,
+    'ch_phiss02': numpy.float64,
     'ch_phiss03': numpy.float64,
+    'ch_phiss04': numpy.float64,
     'ch_phiss06': numpy.float64,
     'f0': numpy.float64,
     # Fundamental period and and amplitude of HVRSR spectra
@@ -624,14 +633,15 @@ class SiteCollection(object):
 
     def reduce(self, nsites):
         """
-        :returns: a filtered SiteCollection with around nsites (if nsites<=N)
+        :returns: a filtered SiteCollection with at most nsites sites
+                  evenly spread over the region, obtained by taking every
+                  n-th site in geohash order, with n = ceil(N / nsites)
         """
-        N = len(self.complete)
-        n = N // nsites
+        n = int(numpy.ceil(len(self) / nsites))
         if n <= 1:
             return self
-        sids, = numpy.where(self.complete.sids % n == 0)
-        return self.filtered(sids)
+        idx = numpy.sort(numpy.argsort(self.geohash(8))[::n])
+        return self.filtered(self.sids[idx])
 
     def add_col(self, colname, dtype, values=None):
         """
@@ -768,18 +778,23 @@ class SiteCollection(object):
 
     def split_in_tiles(self, hint):
         """
-        Split a SiteCollection into a set of tiles with contiguous site IDs
+        Split a SiteCollection into at most `hint` tiles, assigning the site
+        IDs round-robin (sids % hint), so that the sites of a tile are not
+        contiguous in space; the empty tiles are dropped
         """
         if hint <= 1:
             return [self]
         elif hint > len(self):
             hint = len(self)
+        # a single stable sort by tile number instead of a pass per tile
+        tilenos = self.sids % hint
+        sids = self.sids[numpy.argsort(tilenos, kind='stable')]
+        counts = numpy.bincount(tilenos, minlength=hint)
         tiles = []
-        for tileno in range(hint):
-            ok = self.sids % hint == tileno
-            if ok.any():
+        for tsids in numpy.split(sids, numpy.cumsum(counts)[:-1]):
+            if len(tsids):
                 sc = SiteCollection.__new__(SiteCollection)
-                sc.array = self.complete.array[self.sids[ok]]
+                sc.array = self.complete.array[tsids]
                 sc.complete = self.complete
                 tiles.append(sc)
         return tiles
@@ -801,9 +816,22 @@ class SiteCollection(object):
 
     def count_close(self, location, distance):
         """
-        :returns: the number of sites within the distance from the location
+        :param location: a Point, a record with 'hypo', or a Mesh
+        :param distance: a distance in km
+        :returns: the number of sites within the distance from the location,
+                  or an array of counts for a Mesh, in flattened mesh order
+
+        NB: mesh queries are vectorized and reuse a KDTree, so they are much
+        faster than calling SourceFilter.close_sids on many point sources.
         """
-        return (self.get_cdist(location) < distance).sum()
+        if not isinstance(location, Mesh):
+            return numpy.less_equal(self.get_cdist(location), distance).sum()
+        if distance < 0:
+            return numpy.zeros(location.lons.size, dtype=int)
+        if not hasattr(self, 'kdt'):
+            self.kdt = KDTree(self.xyz)
+        return self.kdt.query_ball_point(location.xyz, distance,
+                                         return_length=True)
 
     def __iter__(self):
         """
@@ -871,6 +899,8 @@ class SiteCollection(object):
         for param in self.req_site_params:
             if param in ignore:
                 continue
+            if param.startswith(PERMIT_ZERO_SITE_PARAMS):
+                continue # Some are permitted e.g. swiss 2026 site spec amp params
             dt = site_param_dt[param]
             if dt is numpy.float64 and (self.array[param] == 0.).all():
                 raise ValueError('The site parameter %s is always zero: please'

@@ -45,7 +45,6 @@ logger = logging.getLogger(__name__)
 # to tame the divergence, so it is a constant -- deliberately NOT the footprint
 # z, which is a per-model occurrence-table cell size and can legitimately be
 # hundreds of metres. Hard-coded and not exposed in job configuration.
-# See docs/design/rupture_location_uncertainty.md (D7).
 NEAR_FIELD_FLOOR_KM = 0.0125
 
 
@@ -60,7 +59,7 @@ def effective_displacement_definition(model):
     ``Lavrentiadis2023PrimaryFD_principal``); no model parameter may change
     it. This helper is the single lookup point used by the hazard kernel
     (single-bucket routing of aggregate models), by the calculator
-    configuration guard, and by the logic-tree validators (FDLT-013/014).
+    configuration guard, and by the logic-tree validators.
 
     :param model: model instance or class (may be a duck-typed stub).
     :returns: one of ``primary_surf_displ.base.DISPLACEMENT_DEFINITIONS``
@@ -133,7 +132,7 @@ class PFDModelAdapter:
         style = self.model_params.get('style')
         if style is None:
             # a PFD context may expose a derived `style` array; the engine's
-            # RuptureContext carries `rake` instead (PR-4 wiring).
+            # RuptureContext carries `rake` instead.
             style_arr = getattr(ctx, 'style', None)
             if style_arr is None:
                 style = style_from_rake(ctx.rake[0])
@@ -216,11 +215,11 @@ class PFDModelAdapter:
         single-strand ruptures this is simply the canonical trace-based set.
 
         Three context shapes are supported, in priority order: an explicit
-        per-method ``ref_metrics`` mapping (multi-fault, PR-8), a
+        per-method ``ref_metrics`` mapping (multi-fault), a
         ``metrics_for`` method, and finally the
         engine's :class:`~openquake.hazardlib.contexts.RuptureContext`
-        distance/rupture-parameter fields added by PR-3 (``rtor``, ``x_l``,
-        ``length``). Until multi-fault routing lands (PR-8) every method
+        distance/rupture-parameter fields (``rtor``, ``x_l``,
+        ``length``). Until multi-fault routing lands every method
         resolves to the single top-trace metric.
         """
         method = getattr(self.model, 'MULTIFAULT_REFERENCE_LINE', 'lcp')
@@ -341,7 +340,7 @@ class PFDModelAdapter:
         # serves only the aggregate variants; the sum-of-principal
         # disp_prnc_prime metric lives in Lavrentiadis2023PrimaryFD_principal
         # (which in turn accepts no explicit output_type at all). Logic-tree
-        # jobs are already rejected at validation time (FDLT-015).
+        # jobs are already rejected at validation time.
         _output_type = self.model_params.get('output_type')
         if model_name == 'Lavrentiadis2023PrimaryFD_aggregate' \
                 and str(_output_type) == 'disp_prnc_prime':
@@ -514,7 +513,7 @@ class PFDModelAdapter:
         # reference line (e.g. Visini2025 -> nearest segment, raw GC2 x/L).
         r_sel, x_L_sel, L_sel = self._ctx_metrics(ctx)
 
-        # Near-field floor (D7). Petersen (2011) eq.18 diverges as r -> 0; a
+        # Near-field floor. Petersen (2011) eq.18 diverges as r -> 0; a
         # model declaring NEAR_FIELD_FLOOR == 'footprint_half' has the distance
         # fed to its displacement regression clamped to max(r, NEAR_FIELD_FLOOR_KM).
         # The floor is a FIXED 12.5 m (= half a 25-m Petersen cell), deliberately
@@ -526,7 +525,6 @@ class PFDModelAdapter:
         # nothing more. Hard-coded, not user-facing. The clamp lives here, at the
         # adapter boundary, so the model's get_prob stays paper-faithful. Bounded
         # models (Visini, Takao) declare nothing and are untouched.
-        # See docs/design/rupture_location_uncertainty.md.
         if getattr(self.model, 'NEAR_FIELD_FLOOR', None) == 'footprint_half':
             r_sel = np.maximum(np.asarray(r_sel, dtype=np.float64),
                                NEAR_FIELD_FLOOR_KM)

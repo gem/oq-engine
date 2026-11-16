@@ -26,6 +26,7 @@ from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.writers import CsvWriter, FIVEDIGITS
 from openquake.hazardlib import InvalidFile
+from openquake.risklib import scientific
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.commonlib import logs, readinput
 from openquake.calculators.views import view, text_table
@@ -334,6 +335,12 @@ agg_id
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+        # agg_losses with the id tag, which is not an index in tagcol
+        aw = extract(self.calc.datastore, 'agg_losses/structural')
+        losses = self.calc.datastore['avg_losses-stats/structural'][:]
+        numpy.testing.assert_allclose(aw.array.sum(), losses[:, 0].sum(),
+                                      rtol=1E-5)
+
     def test_case_04(self):
         # Turkey with SHARE logic tree
         self.run_calc(case_04.__file__, 'job.ini')
@@ -397,16 +404,28 @@ agg_id
 
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
+        # without time_event the event based losses are computed only
+        # for the average occupants, not for each time event
+        oq = self.calc.datastore['oqparam']
+        self.assertIn('occupants', oq.loss_types)
+        self.assertIn('injured', oq.loss_types)
+        for lt in ['occupants_day', 'occupants_night', 'occupants_transit',
+                   'injured_day', 'injured_night', 'injured_transit']:
+            self.assertNotIn(lt, oq.loss_types)
+        df = self.calc.datastore.read_df('aggrisk')
+        self.assertTrue({scientific.LOSSID[lt] for lt in oq.loss_types}
+                        <= set(df.loss_id))
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-4)
 
     def check_case_master(self):
-        # check total variance
+        # check total variance of the occupants losses
         K = self.calc.datastore['risk_by_event'].attrs.get('K', 0)
+        lid = scientific.LOSSID['occupants']
         elt_df = self.calc.datastore.read_df(
-            'risk_by_event', 'event_id', dict(agg_id=K, loss_id=4))
+            'risk_by_event', 'event_id', dict(agg_id=K, loss_id=lid))
         elt_df['cov'] = numpy.sqrt(elt_df.variance) / elt_df.loss
         elt_df.sort_index(inplace=True)
         del elt_df['agg_id']
@@ -480,6 +499,23 @@ agg_id
                               delta=4E-4)
 
         self.check_case_master()
+
+        # agg_losses with the id tag, which is not an index in tagcol
+        aw = extract(self.calc.datastore, 'agg_losses/structural')
+        losses = self.calc.datastore['avg_losses-stats/structural'][:]
+        numpy.testing.assert_allclose(aw.array.sum(), losses[:, 0].sum(),
+                                      rtol=1E-5)
+
+    def test_minimum_asset_loss_occupants(self):
+        # the occupants losses use the minimum_asset_loss of occupants,
+        # there is no 'default' key
+        mal = ("{'business_interruption': 0, 'contents': 0,"
+               " 'nonstructural': 0, 'occupants': 0, 'structural': 1}")
+        self.run_calc(case_master.__file__, 'job.ini',
+                      minimum_asset_loss=mal)
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.minimum_asset_loss['occupants'], 0)
+        self.assertEqual(oq.minimum_asset_loss['structural'], 1)
 
     def test_from_ses(self):
         self.run_calc(case_master.__file__, 'job_risk.ini')

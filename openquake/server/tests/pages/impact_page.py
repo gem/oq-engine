@@ -35,6 +35,15 @@ class ImpactPage(EnginePage):
         selector.select_option(value=value)
         expect(selector).to_have_value(value)
 
+    def select_another_shakemap_version(self):
+        selector = self.page.locator('select#shakemap_version')
+        current = selector.input_value()
+        values = selector.locator('option').evaluate_all(
+            'items => items.map(item => item.value)')
+        [value, *_] = [val for val in values if val != current]
+        selector.select_option(value=value)
+        expect(selector).to_have_value(value)
+
     def retrieve_data(self):
         self.page.locator('.modal-backdrop').wait_for(
             state='detached', timeout=15_000)
@@ -56,16 +65,9 @@ class ImpactPage(EnginePage):
                 f'{sorted(data)}')
 
     def run_impact_calc(self):
-        with self.page.expect_response(
-                lambda response: response.url.endswith(
-                    '/v1/calc/impact_run'),
-                timeout=USGS_REQUEST_TIMEOUT) as response_info:
-            self.page.locator("#submit_impact_calc").click()
-        response = response_info.value
-        if not response.ok:
-            raise AssertionError(
-                f'Impact calculation submission failed '
-                f'({response.status}): {response.text()}')
+        self._submit_calculation(
+            self.page.locator('#submit_impact_calc'), '/v1/calc/impact_run',
+            timeout=USGS_REQUEST_TIMEOUT)
 
     def set_time_of_the_event(self, value):
         selector = self.page.locator('select#time_event')
@@ -94,6 +96,18 @@ class ImpactPage(EnginePage):
     def local_timestamp(self):
         return self.page.locator('input#local_timestamp')
 
+    def maximum_distance(self):
+        return self.page.locator('input#maximum_distance')
+
+    def truncation_level(self):
+        return self.page.locator('input#truncation_level')
+
+    def description(self):
+        return self.page.locator('input#description')
+
+    def run_impact_calc_btn(self):
+        return self.page.locator('#submit_impact_calc')
+
     def no_uncertainty_ckb(self):
         return self.page.locator('input#no_uncertainty')
 
@@ -118,9 +132,8 @@ class ImpactPageLevel1(ImpactPage):
 class ImpactPageLevel2(ImpactPage):
 
     def set_approach(self, approach_label):
-        # We could find a better approach to make sure the handler is ready
-        self.page.wait_for_timeout(200)
-
+        # the radios are enabled by impact.js only after binding the change
+        # handler, and check() waits for the radio to be enabled
         approach = self.page.get_by_role("radio", name=approach_label)
         approach.check()
         expect(approach).to_be_checked()

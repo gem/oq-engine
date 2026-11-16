@@ -32,7 +32,7 @@ from openquake.calculators import views
 from openquake.engine import engine
 from openquake.engine.impact import main_cmd
 from openquake.engine.aelo import get_params_from
-from openquake.hazardlib.countries import MODELS
+from openquake.hazardlib.countries import MODELS, ALIASES
 from openquake.hazardlib.geo.utils import geolocate
 
 FAMOUS = os.path.join(os.path.dirname(mosaic.__file__), 'famous_ruptures.csv')
@@ -102,7 +102,8 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
         # it is used to set override_vs30 in `get_params_from` and then
         # sitecol.multiply will expand the sites and set custom_site_id
         for model, df in dvf.groupby('model'):
-            if model not in MODELS:
+            if ALIASES.get(model, model) not in MODELS:
+                # Skip unknown models; aliases keep legacy IDN/JPN/TWN valid.
                 continue
             elif model in ('???', 'USA'):
                 continue
@@ -315,7 +316,7 @@ def impact(exposure_hdf5='', *,
            rupfname=FAMOUS,
            stations='',
            mosaic_model='',
-           maximum_distance='300',
+           maximum_distance='',
            maximum_distance_stations='',
            asset_hazard_distance='15',
            number_of_ground_motion_fields='10'):
@@ -327,7 +328,7 @@ def impact(exposure_hdf5='', *,
     if not exposure_hdf5 and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     trt = ''
-    truncation_level = '3'
+    truncation_level = ''  # depends on the magnitude
     ses_seed = '42'
     t0 = time.time()
     if rupfname.endswith('.csv'):
@@ -369,7 +370,8 @@ impact.rupfname = ('Filename with the same format as famous_ruptures.csv '
                    'or file rupture_model.xml')
 impact.stations = 'Path to a csv file with the station data'
 impact.mosaic_model = 'Mosaic model 3-characters code'
-impact.maximum_distance = 'Maximum distance in km'
+impact.maximum_distance = (
+    'Maximum distance in km (by default it depends on the magnitude)')
 impact.maximum_distance_stations = "Maximum distance from stations in km"
 impact.number_of_ground_motion_fields = 'Number of ground motion fields'
 

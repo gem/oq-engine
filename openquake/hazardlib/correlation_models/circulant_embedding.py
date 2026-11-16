@@ -34,7 +34,7 @@ multidimensional Gaussian stochastic simulations. Water Resources Research,
 from dataclasses import dataclass
 
 import numpy
-from pyproj import Transformer
+from openquake.baselib.geolibs import pyproj
 from scipy.fft import next_fast_len
 from scipy.spatial import cKDTree
 
@@ -87,8 +87,9 @@ class RegularGridLayout:
 
     ``from_sites`` projects all coordinates with one transverse Mercator
     projection, centred on the middle of the longitude extent unless ``crs``
-    (a PROJ string) is given, then fits and validates an axis-aligned lattice. ``site_indices`` maps the original site order to
-    flattened grid cells; holes remain unused cells in the enclosing rectangle.
+    is given, then fits and validates an axis-aligned lattice.
+    ``site_indices`` maps the original site order to flattened grid cells;
+    holes remain unused cells in the enclosing rectangle.
 
     CE constructs stationary covariance lags from Euclidean distances between
     lattice cells. A fixed row/column offset must have the same displacement
@@ -105,8 +106,9 @@ class RegularGridLayout:
 
     ``grid_shape`` and ``spacing`` follow row/column order, with spacing in
     kilometres. ``projected_origin`` is northing/easting in metres, ``crs`` is
-    the PROJ string of the projection, and ``maximum_error`` is the largest
-    distance in metres between an input site and its fitted lattice position.
+    a projection specification accepted by pyproj, and ``maximum_error`` is
+    the largest distance in metres between an input site and its fitted
+    lattice position.
     """
 
     grid_shape: tuple
@@ -129,7 +131,7 @@ class RegularGridLayout:
 
         if crs is None:
             crs = _local_crs(lons, lats)
-        transformer = Transformer.from_crs(
+        transformer = pyproj.Transformer.from_crs(
             4326, crs, always_xy=True)
         x, y = transformer.transform(lons, lats)
         initial_spacing = _grid_spacing(x, y)
@@ -181,7 +183,7 @@ class RegularGridLayout:
 
     def grid_coordinates(self, sites):
         """Return fractional row and column coordinates for ``sites``."""
-        transformer = Transformer.from_crs(
+        transformer = pyproj.Transformer.from_crs(
             4326, self.crs, always_xy=True)
         if len(sites.lons) == 1:
             x, y = transformer.transform(

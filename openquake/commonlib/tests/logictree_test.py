@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import shutil
 import pprint
 import codecs
 import unittest
@@ -30,9 +31,11 @@ import pandas
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo, lt, gsim_lt, logictree, valid
+from openquake.hazardlib import geo, lt, gsim_lt, logictree, valid, nrml
 from openquake.commonlib import readinput, tests
 from openquake.hazardlib.source_reader import get_csm
+from openquake.qa_tests_data.logictree import case_01, case_12
+from openquake.qa_tests_data.classical import case_05
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
@@ -52,6 +55,41 @@ class SmltTestCase(unittest.TestCase):
         msg = str(ctx.exception)
         assert ('No such file or directory:' in msg
                 or 'too many branches' in msg)
+
+    def test_to_node(self):
+        # the branchset IDs and the filters are written, so the logic tree
+        # read back has the same realizations; when applyToBranches was
+        # lost, the logic tree of logictree/case_12 had 18 rlzs instead of 12
+        dname = os.path.dirname(case_12.__file__)
+        smlt = logictree.SourceModelLogicTree(os.path.join(dname, 'ssmLT.xml'))
+        with TemporaryDirectory() as tmp:
+            # the source model files must be next to the written file
+            dst = shutil.copytree(dname, os.path.join(tmp, 'case_12'))
+            out = os.path.join(dst, 'written.xml')
+            with open(out, 'wb') as f:
+                nrml.write([smlt.to_node()], f)
+            new = logictree.SourceModelLogicTree(out)
+        self.assertEqual([bs.id for bs in new.branchsets],
+                         [bs.id for bs in smlt.branchsets])
+        self.assertEqual(sorted(rlz.lt_path for rlz in new.get_realizations()),
+                         sorted(rlz.lt_path for rlz in smlt.get_realizations()))
+
+    def test_branchID_serialization(self):
+        # with smlt_branch=b2 the branch b1 becomes an empty branch; the
+        # branch b2 was overwritten by it in the dictionary of the branches
+        # and was lost in the datastore
+        fname = os.path.join(os.path.dirname(case_01.__file__),
+                             'source_model_logic_tree.xml')
+        smlt = logictree.SourceModelLogicTree(fname, branchID='b2')
+        self.assertEqual(smlt.branches['b2'].value, 'source_model_2.xml')
+        self.assertEqual(smlt.branches['b1'].value, '')
+        array, attrs = smlt.__toh5__()
+        new = object.__new__(logictree.SourceModelLogicTree)
+        new.__fromh5__(array, attrs)
+        self.assertEqual(
+            [(br.branch_id, br.value, br.weight) for br in
+             new.root_branchset.branches],
+            [('b2', 'source_model_2.xml', .6), ('b1', '', .4)])
 
 
 class CompositeLtTestCase(unittest.TestCase):
@@ -1768,6 +1806,19 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         xml = xml.decode('utf-8') if hasattr(xml, 'decode') else xml
         return logictree.GsimLogicTree(gettemp(xml), tectonic_region_types)
 
+    def test_ordinals(self):
+        # the ordinals were overwritten by the index of the weights, so all
+        # the realizations had ordinal 0 and get_rlzs_by_gsim_dic was wrong
+        fname = os.path.join(os.path.dirname(case_05.__file__),
+                             'gmpe_logic_tree_MPS19.xml')
+        gsim_lt = logictree.GsimLogicTree(fname)
+        rlzs = gsim_lt.get_realizations()
+        self.assertEqual([rlz.ordinal for rlz in rlzs], list(range(12)))
+        for rlzs_by_gsim in gsim_lt.get_rlzs_by_gsim_dic().values():
+            # each realization uses a single GSIM for each TRT
+            ordinals = numpy.concatenate(list(rlzs_by_gsim.values()))
+            self.assertEqual(sorted(ordinals), list(range(12)))
+
     def test_not_xml(self):
         self.parse_invalid('xxx', ExpatError)
         self.parse_invalid('<?xml foo bar baz', ExpatError)
@@ -1959,8 +2010,9 @@ class GsimLogicTreeTestCase(unittest.TestCase):
                           'Stable Shallow Crust': 5})
         self.assertEqual(as_model_lt.get_num_paths(), 40)
         self.assertEqual(fs_bg_model_lt.get_num_paths(), 20)
-        self.assertEqual(len(list(as_model_lt)), 5 * 4 * 2 * 1)
-        effective_rlzs = set(rlz.pid for rlz in fs_bg_model_lt)
+        self.assertEqual(len(as_model_lt.get_realizations()), 5 * 4 * 2 * 1)
+        effective_rlzs = set(
+            rlz.pid for rlz in fs_bg_model_lt.get_realizations())
         self.assertEqual(len(effective_rlzs), 5 * 4)
 
     def test_sampling(self):
@@ -1988,7 +2040,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         # test a large number of samples with the algorithm used in the engine
         counter = collections.Counter()
-        gsim_rlzs = list(self.parse_valid(xml, ['Volcanic']))
+        gsim_rlzs = self.parse_valid(xml, ["Volcanic"]).get_realizations()
         probs = lt.random(1000, 42, 'early_weights')
         rlzs = lt.sample(gsim_rlzs, probs, 'early_weights')
         for rlz in rlzs:
@@ -2043,13 +2095,14 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.seed = oqparam.random_seed
 
     def test_sample_source_model(self):
-        [rlz] = self.source_model_lt
+        [rlz] = self.source_model_lt.get_realizations()
         self.assertEqual(rlz.value, ['example-source-model.xml', 0.0, 0.1])
         self.assertEqual(('b1', 'b4', 'b6'), rlz.lt_path)
 
     def test_sample_gmpe(self):
         probs = lt.random(1, self.seed, 'early_weights')
-        [rlz] = lt.sample(list(self.gmpe_lt), probs, 'early_weights')
+        [rlz] = lt.sample(
+            self.gmpe_lt.get_realizations(), probs, 'early_weights')
         gsims = (valid.gsim('ChiouYoungs2008'), valid.gsim('SadighEtAl1997'))
         self.assertEqual(rlz.value, gsims)
         self.assertEqual(rlz.weight[-1], 0.5)
@@ -2151,11 +2204,30 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         paths = ['b1_b21', 'b1_b22', 'b1_b23', 'b1_b23',
                  'b2_.', 'b2_.', 'b2_.', 'b2_.', 'b3_.', 'b3_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
-        weights = [0.01428537, 0.03094343, 0.08171773, 0.08171773, 0.17585239,
-                   0.17585239, 0.17585239, 0.17585239, 0.0439631, 0.0439631]
+        # The three root branches are sampled uniformly. The b1 subtree
+        # has six children, giving q=1/18 there and q=1/3 for b2 and b3.
+        # Repeated samples retain individual p/q weights after expansion.
+        weights = numpy.array([.064988 * 18, .14077 * 18,
+                               .185878 * 18, .185878 * 18] +
+                              [.2 * 3] * 4 + [.1 * 3] * 2)
+        weights /= weights.sum()
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight[-1] for rlz in rlzs])
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.116706)
+        expected = numpy.dot(weights, [1.] * 4 + [1.2] * 4 + [1.3] * 2) / 10
+        numpy.testing.assert_almost_equal(self.mean(rlzs), expected)
+
+    def test_late_sampling_matches_enumeration(self):
+        fname_ini = os.path.join(
+            DATADIR, 'source_specific_uncertainty', 'job.ini')
+        full_lt = readinput.get_full_lt(readinput.get_oqparam(fname_ini))
+        exact = sum(self.value['_'.join(r.sm_lt_path)] * r.weight[-1]
+                    for r in full_lt.get_realizations())
+        for method in ('late_weights', 'late_latin'):
+            with self.subTest(method=method):
+                rlzs = full_lt.sample(10000, 42, method)
+                mean = sum(self.value['_'.join(r.sm_lt_path)] * r.weight[-1]
+                           for r in rlzs)
+                self.assertAlmostEqual(mean, exact, delta=.005)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch
@@ -2346,7 +2418,7 @@ class ReduceSmltTestCase(unittest.TestCase):
         smlt = logictree.SourceModelLogicTree(self.smlt_path)
         red = smlt.reduce('f2', num_samples=0)
         self.assertEqual(red.num_paths, 2)
-        [rlz] = [r for r in red if r.lt_path[1] == 'b03']
+        [rlz] = [r for r in red.get_realizations() if r.lt_path[1] == 'b03']
         self.assertEqual(rlz.lt_path, ('b01', 'b03', 'e2_2'))
         self.assertEqual(rlz.value, ['', 'fault2.xml', ''])
         self.assertEqual(rlz.weight, .2)
@@ -2360,7 +2432,7 @@ class ReduceSmltTestCase(unittest.TestCase):
         smlt = logictree.SourceModelLogicTree(self.smlt_path)
         red = smlt.reduce('area', num_samples=0)
         self.assertEqual(red.num_paths, 1)
-        [rlz] = list(red)
+        [rlz] = red.get_realizations()
         self.assertEqual(rlz.value, ['area.xml', '', ''])
         self.assertEqual(rlz.weight, 1.0)
 
@@ -2381,7 +2453,9 @@ class ReduceSmltTestCase(unittest.TestCase):
         smlt = logictree.SourceModelLogicTree(self.smlt_path)
         red = smlt.reduce('f2!b03', num_samples=0)
         self.assertEqual(red.num_paths, 2)
-        self.assertEqual([rlz.value[1] for rlz in red], ['fault2.xml', ''])
+        self.assertEqual(
+            [rlz.value[1] for rlz in red.get_realizations()],
+            ['fault2.xml', ''])
 
     def test_reduce_requires_the_exact_id(self):
         # reducing to a prefix of the source IDs is an error
@@ -2467,6 +2541,53 @@ taxo4,taxo1,.5
                  country=['?'] * 5,
                  taxi=[1, 2, 4, 3, 4]))
         pandas.testing.assert_frame_equal(got, exp)
+
+
+def _full_lt(num_samples=0, seed=42, sampling_method='early_weights'):
+    # a full logic tree of the classical case_05 (6 source models, 12 GMPEs)
+    dname = os.path.dirname(case_05.__file__)
+    smlt = logictree.SourceModelLogicTree(
+        os.path.join(dname, 'smlt.xml'), seed=seed, num_samples=num_samples,
+        sampling_method=sampling_method)
+    gslt = logictree.GsimLogicTree(
+        os.path.join(dname, 'gmpe_logic_tree_MPS19.xml'),
+        ['Active Shallow Crust'])
+    return logictree.FullLogicTree(smlt, gslt)
+
+
+def _keys(rlzs):
+    # what identifies a realization: source model path, ordinal, weight,
+    # GMPEs
+    return [(tuple(rlz.sm_lt_path), rlz.ordinal,
+             round(float(rlz.weight[0]), 12),
+             tuple(str(v) for v in rlz.gsim_rlz.value))
+            for rlz in rlzs]
+
+
+class FullLogicTreeSampleTestCase(unittest.TestCase):
+    def test_sample(self):
+        # sample(n, seed) gives the realizations of a tree with
+        # number_of_logic_tree_samples=n and the same seed
+        flt = _full_lt()
+        before = _keys(flt.get_realizations())
+        got = flt.sample(7, 42)
+        expected = _full_lt(num_samples=7, seed=42).get_realizations()
+        self.assertEqual(len(got), 7)
+        self.assertEqual(_keys(got), _keys(expected))
+        # the tree is not modified
+        self.assertEqual(flt.source_model_lt.num_samples, 0)
+        self.assertEqual(_keys(flt.get_realizations()), before)
+
+    def test_sample_methods(self):
+        flt = _full_lt()
+        early = _keys(flt.sample(7, 42))
+        late = _keys(flt.sample(7, 42, 'late_weights'))
+        self.assertNotEqual(early, late)
+        self.assertEqual(early, _keys(flt.sample(7, 42)))  # deterministic
+
+    def test_sample_rejects_zero(self):
+        with self.assertRaises(ValueError):
+            _full_lt().sample(0, 42)
 
 
 def teardown_module():

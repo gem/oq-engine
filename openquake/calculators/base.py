@@ -42,9 +42,11 @@ from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.qa_tests_data import mosaic
+from openquake.hazardlib.countries import mosaic_index
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.gsim.base import check_sites
 from openquake.hazardlib.site_amplification import (
     Amplifier, AmplificationFunction)
 from openquake.hazardlib.amp_lt import AmplificationLogicTree
@@ -389,11 +391,17 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             try:
                 if oq.impact:
                     self._copy_model_provenance()
+                if os.environ.get('OQ_CHECK_INPUT'):
+                    # do not execute the calculation; risk jobs have a
+                    # fake parent, so only read the inputs (including
+                    # the site model and the check_sites checks)
+                    if oq.job_type == 'risk':
+                        self.read_inputs()
+                    elif pre_execute:
+                        self.pre_execute()
+                    return {}
                 if pre_execute:
                     self.pre_execute()
-                if os.environ.get('OQ_CHECK_INPUT'):
-                    # do not execute the calculation
-                    return {}
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
@@ -519,7 +527,8 @@ def check_time_event(oqparam, occupancy_periods):
     with the periods found in the exposure.
     """
     time_event = oqparam.time_event
-    if time_event != 'avg' and time_event not in occupancy_periods:
+    if time_event not in (None, 'avg') and (
+            time_event not in occupancy_periods):
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
             (time_event, oqparam.inputs['job_ini'],
@@ -618,13 +627,12 @@ class HazardCalculator(BaseCalculator):
                 and ('classical' in oq.calculation_mode or
                      'disaggregation' in oq.calculation_mode)):
             logging.info(
-                'You are not using the pointsource_distance approximation:\n'
-                'https://docs.openquake.org/oq-engine/advanced/general.html#'
-                'pointsource-distance')
+                'You are not using the pointsource_distance approximation')
         elif 'classical' in oq.calculation_mode:
             if oq.ps_grid_spacing:
-                logging.info('Using pointsource_distance=%s + %d',
-                             oq.pointsource_distance, int(oq.ps_grid_spacing))
+                logging.info('Using pointsource_distance=%s and '
+                             'ps_grid_spacing=%s', oq.pointsource_distance,
+                             oq.ps_grid_spacing)
             else:
                 logging.info('Using pointsource_distance=%s',
                              oq.pointsource_distance)
@@ -1096,6 +1104,10 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
             self._read_no_exposure(haz_sitecol)
+        if hasattr(self, 'assetcol'):
+            # the occupants are computed only for the exposure time events
+            oq.set_time_events(self.assetcol.occupancy_periods)
+            self.datastore['oqparam'] = oq
         if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
                 oq.ground_motion_fields and self.N > 1000 and
                 len(oq.min_iml) == 0):
@@ -1108,8 +1120,9 @@ class HazardCalculator(BaseCalculator):
             elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
                 raise ValueError('Missing exposure both in hazard and risk!'
                                  f' [hc_id={oq.hazard_calculation_id}]')
-            if (oq_hazard.time_event != 'avg' and
-                    oq_hazard.time_event != oq.time_event):
+            # None or avg in the hazard mean that all the times are stored
+            if oq.time_event and oq_hazard.time_event not in (
+                    None, 'avg', oq.time_event):
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
                     'hazard was computed with time_event=%s' % (
@@ -1253,6 +1266,9 @@ class HazardCalculator(BaseCalculator):
             self.sitecol.check_nan(
                 [p for p in site.CORE_SITE_PARAMS
                  if p in oq.req_site_params])
+            # check the site parameters are in the range of the GSIMs
+            gsims = readinput.get_gsim_lt(oq).values.values()
+            check_sites(sum(gsims, []), self.sitecol)
 
             self.datastore['sitecol'] = self.sitecol
             if self.sitecol is not self.sitecol.complete:
@@ -1279,8 +1295,10 @@ class HazardCalculator(BaseCalculator):
             # self.full_lt is set after _set_amplifier, so refetch here
             full_lt = getattr(self, 'full_lt', None) or (
                 readinput.get_full_lt(oq))
+            # Sample ordinals identify draws; branch IDs select amplifiers.
+            ampl_ord = {name: i for i, name in enumerate(amp_lt.names)}
             amp_lt.rlz_ampl_ord = numpy.array(
-                [r.extra_rlz.ordinal
+                [ampl_ord[r.extra_rlz.lt_path[0]]
                  for r in full_lt.get_realizations()], numpy.uint32)
             self.amplifier = amp_lt
         elif 'amplification' in oq.inputs:
@@ -1607,9 +1625,15 @@ def import_ruptures_hdf5(h5, fnames):
     for fileno, fname in enumerate(fnames):
         with hdf5.File(fname, 'r') as f:
             oq = f['oqparam']
+            if oq.mosaic_model:
+                # the model index goes in the high bits, so that the rupture
+                # IDs of different models cannot collide
+                shift = numpy.int64(mosaic_index(oq.mosaic_model)) << 55
+            else:
+                shift = offset
             events = f['events'][:]
             events['id'] += E
-            events['rup_id'] += offset
+            events['rup_id'] += shift
             if fileno == 0:  # first time
                 h5.create_dataset(
                     'events', (0,), events.dtype, maxshape=(None,), chunks=True,
@@ -1618,7 +1642,13 @@ def import_ruptures_hdf5(h5, fnames):
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))
             rup = f['ruptures'][:]
-            rup['id'] += offset
+            if oq.mosaic_model:
+                # the IDs of a model must fit in the 55 low bits, i.e.
+                # the source index in the 25 bits above the 30 bits of
+                # the counter within the source
+                assert rup['id'].max() < 2**55, rup['id'].max()
+                assert rup['source_id'].max() < 2**25, rup['source_id'].max()
+            rup['id'] += shift
             rup['geom_id'] += offset
             rup['e0'] += E
             E += len(events)
@@ -1945,7 +1975,7 @@ def read_parent_sitecol(oq, dstore):
     """
     :returns: the hazard site collection in the parent calculation
     """
-    if oq.hazard_calculation_id == '<fake>.ini':  # set by oq check_input
+    if readinput.is_fake_hc(oq):  # set by oq check_input
         return readinput.get_site_collection(oq, dstore.hdf5)
     with datastore.read(oq.hazard_calculation_id) as parent:
         if 'sitecol' in parent:

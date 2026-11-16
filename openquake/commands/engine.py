@@ -117,7 +117,7 @@ def main(
         show_log=None,
         export_output=None,
         export_outputs=None,
-        param='',
+        param=None,
         exports='',
         log_level='info',
         sample_sources=False,
@@ -178,7 +178,7 @@ def main(
     else:
         hc_id = None
     if run:
-        pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
+        pars = dict(p.split('=', 1) for p in param) if param else {}
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
@@ -290,7 +290,7 @@ main.export_outputs = dict(
     help='Export all of the calculation outputs to the specified directory')
 main.param = dict(
     abbrev='-p', help='Override parameters specified with the syntax '
-    'NAME1=VALUE1,NAME2=VALUE2,...')
+    'NAME1=VALUE1 NAME2=VALUE2 ...', nargs='*', action='extend')
 main.exports = ('Comma-separated string specifing the export formats, '
                 'in order of priority')
 main.log_level = dict(help='Defaults to "info"',

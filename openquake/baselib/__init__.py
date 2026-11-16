@@ -114,7 +114,7 @@ def read(*paths, **validators):
 # NB: duplicated in commands/engine.py!!
 config.read = read
 config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
-            serialize_jobs=positiveint, strict=positiveint, code=exec)
+            strict=positiveint, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
@@ -125,13 +125,29 @@ if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
 
-def multi_user():
-    return config.server.host != '127.0.0.1'
+def is_server_installation():
+    """
+    :returns: True if we are in a server installation
+    """
+    inst_type_file_path = os.path.join(sys.prefix, 'INST_TYPE')
+    if os.path.exists(inst_type_file_path):
+        if os.path.isfile(inst_type_file_path):
+            with open(inst_type_file_path, 'r') as inst_type_file:
+                inst_type = inst_type_file.read().strip().lower()
+                # both 'devel_server' and 'server' return True
+                return inst_type.split('_')[-1] == 'server'
+        else:
+            raise FileNotFoundError(
+                f'{inst_type_file_path} exists but is not a regular file')
+
+    return sys.prefix == "/opt/openquake/venv"
 
 
 def use_server():
-    """:returns: True for regular users in a server installation"""
-    return multi_user() and getpass.getuser() != 'openquake'
+    """
+    :returns: True for regular users in a server installation
+    """
+    return is_server_installation() and getpass.getuser() != 'openquake'
 
 
 # the version is managed by the universal installer

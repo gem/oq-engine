@@ -32,6 +32,7 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib import nrml
 from openquake.commonlib import tests, readinput
+from openquake.qa_tests_data.logictree import case_17
 
 # directory where the example files are
 NRML_DIR = os.path.dirname(htests.__file__)
@@ -743,11 +744,11 @@ Subduction Interface,gA1,[SadighEtAl1997],w=1.0>''')
 
         rlzs = csm.full_lt.get_realizations()
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
-        # counting the sources in each TRT model (split_sources is False)
-        self.assertEqual([1, 2], list(map(len, csm.src_groups)))
+        # counting the sources in each TRT model (split_sources is False),
+        # the groups being sorted by TRT index: Active Shallow Crust first
+        self.assertEqual([2, 1], list(map(len, csm.src_groups)))
 
     def test_oversampling(self):
-        from openquake.qa_tests_data.logictree import case_17
         oq = readinput.get_oqparam(
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         csm = readinput.get_composite_source_model(oq)

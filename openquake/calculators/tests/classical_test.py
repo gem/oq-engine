@@ -19,19 +19,23 @@
 import sys
 import gzip
 import unittest
+import pandas as pd
 import numpy
 from unittest import mock
 
 from openquake.baselib import parallel, general, config, hdf5, performance
 from openquake.baselib.general import decode, gettemp
-from openquake.hazardlib import InvalidFile, nrml, calc, rmap_maker
+from openquake.hazardlib import (
+    InvalidFile, nrml, calc, rmap_maker, source_reader)
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.preclassical import CTX_EST
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.hazardlib.gsim.gmpe_table import interp_table
 from openquake.calculators.tests import CalculatorTestCase, no_fastmean
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
@@ -42,9 +46,9 @@ from openquake.qa_tests_data.classical import (
     case_49, case_50, case_51, case_53, case_54, case_55, case_57, case_60,
     case_61, case_62, case_63, case_64, case_65, case_66, case_67, case_68,
     case_69, case_70, case_71, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86,
-    case_87, case_88, case_89, case_90, case_91, case_92, case_93, case_94,
-    case_95, case_96, case_97)
+    case_78, case_79, case_80, case_81, case_82, case_83, case_84, case_85,
+    case_86, case_87, case_88, case_89, case_90, case_91, case_92, case_93,
+    case_94, case_95, case_96, case_97, case_98)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -373,7 +377,7 @@ class ClassicalTestCase(CalculatorTestCase):
         ], case_22.__file__, delta=1E-6)
 
         data = self.calc.datastore['source_groups']
-        self.assertEqual(data['tiles'], [1])
+        self.assertEqual(data['tiles'], [10])
         self.assertEqual(data['blocks'], [2])
 
     def test_case_23(self):  # filtering away on TRT
@@ -436,6 +440,20 @@ class ClassicalTestCase(CalculatorTestCase):
         fname = general.gettemp(text_table(rel, ext='org'))
         self.assertEqualFiles('expected/rel_source.org', fname)
 
+        # rateSplit does not change these sources' occurrence rates.
+        # Both uncertainty sets must retain the full atomic contribution,
+        # with both the few-sites and many-sites task functions.
+        smlt = 'source_model_logic_tree_unc.xml'
+        for kwargs in [{}, dict(disagg_by_src='false', max_sites_disagg='1',
+                                sites='135.68 35.68, 135.69 35.68')]:
+            self.run_calc(case_27.__file__, 'job.ini', **kwargs)
+            expected = self.calc.datastore['hcurves-stats'][:]
+            self.run_calc(
+                case_27.__file__, 'job.ini', **kwargs,
+                source_model_logic_tree_file=smlt)
+            actual = self.calc.datastore['hcurves-stats'][:]
+            aac(actual, expected, rtol=1E-6)
+
     def test_case_27_other(self):
         # the second atomic group has sources named other:03, other:04;
         # with disagg_by_src the rates of each atomic group must be
@@ -477,17 +495,16 @@ class ClassicalTestCase(CalculatorTestCase):
             self.run_calc(case_28.__file__, 'job.ini',
                           source_model_logic_tree_file=(
                               'source_model_logic_tree_depth_error.xml'))
-
         self.assertIn('hypo_depth_list 25.0 km is outside the '
                       'seismogenic zone [0.0, 20.0] km', str(ctx.exception))
 
         # Event-based on the same source goes through simple_fault
         # iter_ruptures(rates=True), where per-rupture rates must be
-        # weighted by the renormalised hypo_depth weights so poisson
-        # sampling totals match the source's true annual rate
+        # weighted by the depth-first allocation so poisson sampling
+        # totals match the source's true annual rate
         self.run_calc(case_28.__file__, 'job_event_based.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 89)
-        self.assertEqual(len(self.calc.datastore['events']), 96)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 93)
+        self.assertEqual(len(self.calc.datastore['events']), 100)
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
         check = False
@@ -509,7 +526,6 @@ class ClassicalTestCase(CalculatorTestCase):
         # This is for checking purposes. It creates a .txt file that can be
         # read with QGIS
         if check:
-            import pandas as pd
             df = pd.DataFrame({'geometry': [poly, expected]})
             fname = general.gettemp(suffix='.csv')
             print('Saving %s' % fname)
@@ -686,16 +702,44 @@ class ClassicalTestCase(CalculatorTestCase):
                                          dict(imt='PGA', stat='mean'))
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
 
+    # the stop after the calibration does not depend on the sampling
+    @mock.patch('openquake.calculators.autogrid.random_filter',
+                new=lambda objs, _factor: objs)
+    def test_calibration_only(self):
+        # oq run --calibrate: the calibration is stored and the
+        # preclassical stops before the splitting of the sources
+        self.run_calc(case_43.__file__, 'job.ini',
+                      calculation_mode='preclassical',
+                      calibration_only='true', concurrent_tasks='4')
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.ps_grid_spacing, 50.)
+        calib = self.calc.datastore.read_df('calibration')
+        self.assertEqual(len(calib), 4)
+        self.assertNotIn('source_info', self.calc.datastore)
+
+    @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 1)
+    # the full calibration, i.e. without the random sample, is checked here
+    @mock.patch('openquake.calculators.autogrid.random_filter',
+                new=lambda objs, _factor: objs)
     def test_case_43(self):
-        # this is a test for pointsource_distance and ps_grid_spacing
+        # this is a test for pointsource_distance and ps_grid_spacing=auto
         # it also checks running a classical after a preclassical
+        # Force separate source batches and check their accumulated rates.
         self.run_calc(case_43.__file__, 'job.ini',
                       calculation_mode='preclassical', concurrent_tasks='4')
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.ps_grid_spacing, 50.)
+        self.assertEqual(oq.pointsource_distance['default'], 50.)
+        # 50 km is within the tolerance, so only its 4 distances are tried
+        calib = self.calc.datastore.read_df('calibration')
+        self.assertEqual(len(calib), 4)
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id, concurrent_tasks='4')
         data = self.calc.datastore.read_df('source_data')
         self.assertGreater(data.nrupts.sum(), 0)
+        self.assertIn('nctxs', self.calc.datastore)
+        self.assertGreater(self.calc.cfactor[2], 0)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -719,6 +763,13 @@ class ClassicalTestCase(CalculatorTestCase):
         # Test use of setLowerSeismDepthAbsolute on area, mps and point sources
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'],
                               case_45.__file__)
+
+    def test_strided_reading(self):
+        # reading the source models with strides (see source_reader.BIG_FILE)
+        # gives the same results, also with mutex groups and uncertainties
+        with mock.patch.object(source_reader, 'BIG_FILE', 0):
+            self.test_case_27()
+            self.test_case_45()
         
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
@@ -1131,6 +1182,26 @@ class ClassicalTestCase(CalculatorTestCase):
         aac(curves, reference, rtol=1E-5)
         self.assertFalse(numpy.allclose(curves[:, 0], curves[:, 1]))
 
+    def test_case_79(self):
+        # ModifiableGMPE with apply_swiss_site_specific_amplification_sa
+        # alongside the unmodified EdwardsFah2013Foreland10Bars branch.
+        # The modified branch must shift SA(0.2/0.4/0.6) but leave PGA
+        # untouched relative to the unmodified branch.
+        self.run_calc(case_79.__file__, 'job.ini')
+        expected = ['hazard_curve-mean-PGA.csv',
+                    'hazard_curve-mean-SA(0.2).csv',
+                    'hazard_curve-mean-SA(0.4).csv',
+                    'hazard_curve-mean-SA(0.6).csv']
+        got = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        for fname, actual in zip(expected, got):
+            self.assertEqualFiles('expected/%s' % fname, actual)
+        curves = self.calc.datastore['hcurves-rlzs'][:]
+        mdic = self.calc.oqparam.imtls.mdic
+        aac(curves[:, 0, mdic['PGA']], curves[:, 1, mdic['PGA']])
+        for imt in ('SA(0.2)', 'SA(0.4)', 'SA(0.6)'):
+            m = mdic[imt]
+            self.assertFalse(numpy.allclose(curves[:, 0, m], curves[:, 1, m]))
+
     def test_case_80(self):
         # New Madrid cluster with rup_mutex
         self.run_calc(case_80.__file__, 'job.ini')
@@ -1294,7 +1365,6 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-SA(2.0).csv'],
             case_93.__file__, concurrent_tasks='2')
 
-        from openquake.hazardlib.gsim.gmpe_table import interp_table
         info = interp_table.cache_info()
         print(info)  # debug
 
@@ -1324,7 +1394,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_96(self):
         # a source with an uncertainty and magnitudes partially outside
         # the integration distance: the magnitudes with zero integration
-        # distance must be ignored, not raise a KeyError (see _quintets).
+        # distance must be ignored, not raise a KeyError (see _sextets).
         # The source is weighted in the preclassical before the
         # uncertainties are applied, i.e. before the magnitude filtering,
         # which is performed in the classical workers (see filter_mag)
@@ -1375,6 +1445,34 @@ class ClassicalTestCase(CalculatorTestCase):
         mean = self.calc.datastore['hcurves-stats'][0, 0]
         aac(hcurves[0], mean, rtol=6E-5)
 
+    def test_case_98(self):
+        # Convert BSSA14 GMM to other horz comps (natively its RotD50)
+
+        # target == native: no conversion applied, output stays in RotD50
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-rotd50-PGA.csv',
+             'hazard_curve-convert-to-rotd50-SA(1.0).csv'],
+            case_98.__file__, horiz_comp_to='rotd50')
+
+        # RotD50 -> GEOM using the BK17 Table 2 RotD50/GMAR ratio
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-geometric_mean-PGA.csv',
+             'hazard_curve-convert-to-geometric_mean-SA(1.0).csv'],
+            case_98.__file__, horiz_comp_to='geometric_mean')
+
+        # RotD50 -> Larger via the BK17 Larger/RotD50 ratio
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-greater_of_two_horizontal-PGA.csv',
+             'hazard_curve-convert-to-greater_of_two_horizontal-SA(1.0).csv'],
+            case_98.__file__,
+            horiz_comp_to='greater_of_two_horizontal')
+
+        # RotD50 -> RotD100 via the direct BK17 RotD100/RotD50 ratio
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-rotd100-PGA.csv',
+             'hazard_curve-convert-to-rotd100-SA(1.0).csv'],
+            case_98.__file__, horiz_comp_to='rotd100')
+
 
 class FakeDatastoreCalculator:
     """
@@ -1382,6 +1480,7 @@ class FakeDatastoreCalculator:
     ClassicalCalculator.post_execute
     """
     SLOW_TASK_ERROR = True
+    MIN_EFFICIENCY = ClassicalCalculator.MIN_EFFICIENCY
 
     def __init__(self, h5):
         self.datastore = mock.MagicMock(calc_id=1)
@@ -1390,46 +1489,153 @@ class FakeDatastoreCalculator:
         self.datastore.__getitem__.side_effect = lambda key: h5[key]
 
 
+class ContextReductionTestCase(unittest.TestCase):
+    def setUp(self):
+        self.calc = object.__new__(ClassicalCalculator)
+        self.calc.oqparam = mock.Mock(collapse_precision=.03)
+        self.calc.datastore = {
+            'nctxs': numpy.array([(400, 0, 100, 0, 0)], CTX_EST)}
+
+    def test_gridding_and_precision(self):
+        self.calc.cfactor = numpy.array([96., 4., 100., 0.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('estimated reduction factor 4.17', logs.output[0])
+        self.assertIn('removed only 4.0%', logs.output[1])
+        self.assertIn('collapse_precision should be turned off',
+                      logs.output[1])
+
+    def test_store_grid(self):
+        self.calc.oqparam = mock.Mock(collapse_precision=0,
+                                      ps_grid_spacing=0)
+        self.calc.datastore = {}
+        self.calc.cfactor = numpy.array([96., 4., 100., 0.])
+        self.calc.store_grid()
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['collapsed'], 96)  # after collapse_precision
+        self.assertEqual(est['gridded'], 100)  # gridded, before collapse
+        self.assertEqual(est['exact'], 0)  # no estimate, not set
+
+    def test_store_exact(self):
+        self.calc.oqparam = mock.Mock(collapse_precision=.03,
+                                      ps_grid_spacing=0)
+        self.calc.datastore = {}
+        self.calc.cfactor = numpy.array([96., 4., 0., 0.])
+        self.calc.store_grid()
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['exact'], 100)  # 96 after + 4 removed
+        # an existing estimate is kept
+        self.calc.datastore = {
+            'nctxs': numpy.array([(400, 0, 0, 0, 0)], CTX_EST)}
+        self.calc.store_grid()
+        self.assertEqual(self.calc.datastore['nctxs'][0]['exact'], 400)
+
+    def test_mixed_sources(self):
+        # Include 50 ungridded contexts as well as the 100 gridded ones.
+        self.calc.cfactor = numpy.array([130., 20., 100., 0.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('estimated reduction factor 3.46', logs.output[0])
+        self.assertEqual(len(logs.output), 1)
+
+    def test_pointsource_distance(self):
+        self.calc.datastore = {
+            'nctxs': numpy.array([(330, 100, 0, 0, 0)], CTX_EST)}
+        self.calc.cfactor = numpy.array([100., 0., 0., 0.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('cfactor = 100, reduction factor 3.30 (psdist 3.30 x '
+                      'collapse 1.00)',
+                      logs.output[0])
+        # 20 contexts removed by collapse_precision: 3.30 * 120 / 100
+        self.calc.cfactor = numpy.array([100., 20., 0., 0.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('cfactor = 100, reduction factor 3.96 (psdist 3.30 x '
+                      'collapse 1.20)',
+                      logs.output[0])
+
+    def test_gridding_without_collapse(self):
+        self.calc.oqparam = mock.Mock(collapse_precision=0)
+        self.calc.cfactor = numpy.array([100., 0., 50., 0.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('cfactor = 100, estimated reduction factor 4.50 '
+                      '(gridding)', logs.output[0])
+        self.assertEqual(len(logs.output), 1)
+
+    def test_warning_threshold(self):
+        self.calc.datastore = {}
+        for precision, removed, warn in [(.03, 9, True), (.03, 10, False),
+                                         (0., 0, False)]:
+            self.calc.oqparam.collapse_precision = precision
+            self.calc.cfactor = numpy.array([100 - removed, removed, 0., 0.])
+            with self.assertLogs(level='INFO') as logs:
+                self.calc.log_cfactor()
+            self.assertEqual(len(logs.output), 2 if warn else 1)
+            self.assertNotIn('estimated', logs.output[0])
+
+    def test_variants(self):
+        # 300 contexts computed and 900 saved by the variant sources
+        # optimization, i.e. 1200 contexts without the optimization
+        self.calc.oqparam = mock.Mock(collapse_precision=0,
+                                      ps_grid_spacing=0)
+        self.calc.datastore = {}
+        self.calc.cfactor = numpy.array([300., 0., 0., 900.])
+        self.calc.store_grid()
+        self.assertEqual(self.calc.datastore['nctxs'][0]['separate'], 1200)
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('reduced the contexts from 1_200 to 300, a factor '
+                      '4.00', logs.output[1])
+        # an nctxs dataset stored by an older engine has no 'separate' field
+        old = numpy.dtype(CTX_EST.descr[:4])
+        self.calc.datastore = {'nctxs': numpy.array([(400, 0, 0, 0)], old)}
+        self.calc.store_grid()
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['exact'], 400)
+        self.assertEqual(est['separate'], 1200)
+
+
 class SlowTasksTestCase(unittest.TestCase):
     """
     Check the detection of slow tasks in ClassicalCalculator.post_execute.
     The Starmap can generate subtasks with a different name (classical ->
-    baseclassical) when the tasks are too slow, and the rows must be
-    combined and not compared, since they are components of the busy time
-    of the same workers. NB: this cannot be tested by running a
-    calculation, since starmap_info is written only if there is more than
-    one core, and with OQ_DISTRIBUTE=no there is a single core.
+    baseclassical) when the tasks are too slow, and each row of the
+    starmap_info holds the efficiency (total_time / num_cores / max_time)
+    and the max_time of the busy times of the workers. NB: this cannot be
+    tested by running a calculation, since starmap_info is written only if
+    there is more than one core, and with OQ_DISTRIBUTE=no there is a
+    single core.
     """
-    # each case is a list of (taskname, mean, std, min, max) rows in the
+    # each case is a list of (taskname, efficiency, maxtime) rows in the
     # starmap_info, followed by the expected outcome
     CASES = [
         # no info at all
         ([], False),
         # a single row, as in a classical calculation without splitting
-        ([('classical', 10., 1., 9., 11.)], False),
-        ([('classical', 10., 4., 4., 16.)], True),
+        ([('classical', .9, 20.)], False),
+        ([('classical', .4, 20.)], True),
+        # the threshold is inclusive: an efficiency equal to MIN_EFFICIENCY
+        # is acceptable
+        ([('classical', .7, 20.)], False),
+        ([('classical', .69, 20.)], True),
+        # a split Starmap has a single classical row, since the busy times
+        # of the baseclassical subtasks are summed to the classical ones
+        ([('classical', .5, 20.)], True),
         # tasks so fast that the busy times are dominated by the startup
-        # of the workers: the ratio 1.5 is meaningless (see eshm20)
-        ([('classical', .15, .225, .1, .4)], False),
-        # a split Starmap: the classical tasks only decide to split, so
-        # they are fast and must be discarded, while the baseclassical
-        # ones do the actual work
-        ([('classical', .05, .001, .05, .05),
-          ('baseclassical', 12., 3., 9., 15.)], False),
-        ([('classical', .05, .001, .05, .05),
-          ('baseclassical', 12., 9., 3., 21.)], True),
-        # a fast but noisy row must not trigger the alarm, since the rows
-        # are combined: sqrt(3**2 + .6**2) / 31.5 = 0.097
-        ([('classical', 30., 3., 27., 33.),
-          ('baseclassical', 1.5, .6, .9, 2.1)], False),
-        # combining two equally noisy rows divides the relative spread
-        # by sqrt(2), so a spread of .4 per row is not enough
-        ([('classical', 10., 4., 4., 16.),
-          ('baseclassical', 10., 4., 4., 16.)], False),
-        ([('classical', 10., 5., 5., 15.),
-          ('baseclassical', 10., 5., 5., 15.)], True),
+        # of the workers: the efficiency is meaningless (see eshm20)
+        ([('classical', .24, .7)], False),
+        # the time threshold is inclusive
+        ([('classical', .5, 4.)], True),
+        # below the time threshold the check is skipped (see eshm20)
+        ([('classical', .5, 3.9)], False),
+        # alaska has a busy time of about 4.8 seconds and must be checked
+        ([('classical', .5, 4.8)], True),
+        # a stray baseclassical row is not considered
+        ([('baseclassical', .5, 20.)], False),
         # a calculation with no classical Starmap has no slow tasks
-        ([('postclassical', 12., 9., 3., 21.)], False),
+        ([('postclassical', .3, 20.)], False),
     ]
 
     def check(self, rows):

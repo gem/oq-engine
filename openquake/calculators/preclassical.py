@@ -21,21 +21,21 @@ import logging
 import operator
 import psutil
 import numpy
-from openquake.baselib import general, parallel, hdf5
+from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
-from openquake.hazardlib.rmap_maker import get_cmakers
+from openquake.hazardlib.rmap_maker import get_cmakers, read_unc_ts_sets
+from openquake.hazardlib.contexts import estimate_nctxs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
-from openquake.hazardlib.source_reader import get_core_trt_smrs
-from openquake.hazardlib.rmap_maker import read_core_trt_smrs
+from openquake.hazardlib.source_reader import get_unc_ts_sets
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
-from openquake.calculators import base
+from openquake.calculators import base, autogrid
 
 MAX_NUM_RUPTURES = 52_000  # to support HimalayanThrust in CHN
 U16 = numpy.uint16
@@ -45,6 +45,50 @@ F64 = numpy.float64
 GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
+PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
+# context estimates stored in the datastore as dataset 'nctxs'
+# NB: 'psd100' is the number of contexts without gridding with the
+# pointsource_distance of config.performance (or with the one of the user,
+# when not gridding, see count_psdist), 'gridded' is the number of contexts
+# of the gridded point sources before collapse_precision, 'collapsed' the
+# number of contexts after collapse_precision and 'separate' the number of
+# contexts without the variant sources optimization, i.e. if the variants
+# of the sources were computed separately
+CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
+                       ('gridded', numpy.int64), ('collapsed', numpy.int64),
+                       ('separate', numpy.int64)])
+
+
+# one real site per H3 cell of resolution `res`, as a complete collection;
+# NB: using the cell centers returned by lower_res would move the sites
+# by up to ~25 km for res=4, so that the estimated contexts of the point
+# sources near the pointsource_distance would be way off
+def _lowres_sites(sites, res):
+    _centers, orig_sids = sites.lower_res(res)
+    first = U32([sids[0] for sids in orig_sids])
+    lowres = object.__new__(sites.__class__)
+    lowres.array = sites.array[numpy.isin(sites.sids, first)]
+    lowres.make_complete()
+    return lowres
+
+
+# SourceFilter used to estimate the weights and contexts of the sources,
+# possibly on a reduced set of sites, with a multiplier compensating
+# for the discarded sites
+def _get_srcfilter(sites, few_sites, maxdist):
+    if not sites:
+        return SourceFilter(None)
+    if not few_sites:
+        # in SAM from 539,831 -> 11,430 sites
+        lowres = _lowres_sites(sites, res=4)  # res=4 ~39 km
+        # if the reduction is not worth it use all the sites, since
+        # the discarded sites make the estimated contexts less accurate
+        if len(lowres) <= len(sites) / 2:
+            sf = SourceFilter(lowres, maxdist)
+            sf.multiplier = len(sites) / len(lowres)
+            logging.debug('Reducing %d->%d sites', len(sites), len(lowres))
+            return sf
+    return SourceFilter(sites, maxdist)
 
 
 def source_data(sources):
@@ -118,6 +162,19 @@ def filter_mag(srcs, min_mag, strict, bysrc=False):
     return out
 
 
+def max_psdist(psd):
+    """
+    :param psd: a pointsource_distance, i.e. a number, a dictionary
+        TRT -> pointsource_distance, or a list of (mag, distance) pairs
+    :returns: the largest distance of the pointsource_distance
+    """
+    if isinstance(psd, dict):
+        return max(max_psdist(val) for val in psd.values())
+    if isinstance(psd, list):  # magnitude-dependent distances
+        return max(dist for _mag, dist in psd)
+    return psd
+
+
 def filter_weight(srcs, sf, cmaker, secparams, monitor):
     """
     Filter and weight the sources. Also split them, except for
@@ -127,7 +184,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     bysrc_unc, see build_groups) are neither split nor filtered here: the
     splitting would destroy the geometry (and the MFD of the fault
     sources) and the filtering depends on the occurrence rates, which are
-    modified in the workers; there they are split (see cmakers_groups_gkeys
+    modified in the workers; there they are split (see groups_gkeys
     in classical.py) and filtered (see filter_mag).
     """
     oq = cmaker.oq
@@ -171,7 +228,48 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
         return {}
 
     cmaker.set_weight(splits, sf)
-    return {splits[0].grp_id: splits}
+    dic = {splits[0].grp_id: splits}
+    psd = max_psdist(cmaker.pointsource_distance)
+    if not cmaker.ps_grid_spacing and psd < PSD_EXACT:
+        # estimate the reduction due to the pointsource_distance approximation
+        # on the split sources, the ones used in classical
+        pts = [src for src in splits if hasattr(src, 'location')]
+        if pts:
+            dic.update(count_psdist(pts, sf, cmaker, monitor))
+    return dic
+
+
+def count_nogrid(srcs, sf, cmaker, monitor):
+    """
+    Estimate the contexts that the point sources would generate without
+    gridding, with config.performance.pointsource_distance and with
+    PSD_EXACT, see contexts.estimate_nctxs
+
+    :returns: a dictionary with the estimates under the keys 'psdist_ctxs'
+              and 'exact_ctxs'
+    """
+    exact = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
+                           srcs, sf.sitecol)
+    psd = float(config.performance.pointsource_distance)
+    psdist = estimate_nctxs(cmaker.copy(pointsource_distance=psd),
+                            srcs, sf.sitecol)
+    return {'psdist_ctxs': int(psdist * sf.multiplier),
+            'exact_ctxs': int(exact * sf.multiplier)}
+
+
+def count_psdist(srcs, sf, cmaker, monitor):
+    """
+    Estimate the contexts that the point sources would generate with the
+    pointsource_distance of the user and with PSD_EXACT, see
+    contexts.estimate_nctxs
+
+    :returns: a dictionary with the two estimates
+    """
+    psdist = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    exact = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
+                           srcs, sf.sitecol)
+    return {'psdist_ctxs': int(psdist * sf.multiplier),
+            'exact_ctxs': int(exact * sf.multiplier)}
 
 
 def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
@@ -189,7 +287,15 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
                 srcs.extend(split_source(src))
             else:
                 srcs.append(src)
+        # estimate the contexts before gridding, to log the reduction
+        pts = [src for src in srcs if hasattr(src, 'location')]
+        if pts:
+            yield count_nogrid, pts, sf, cmaker
         srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
+        # Track the same point sources as the no-gridding estimate.
+        for src in srcs:
+            if hasattr(src, 'location'):
+                src.count_nogrid = True
     else:
         srcs = sources
 
@@ -313,40 +419,39 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.store()
         logging.info('Building cmakers')
         trt_smrs = csm.get_trt_smrs()
-        # NB: core_trt_smrs is stored by source_reader.build_groups, i.e.
-        # before the preclassical; if the groups were read from the parent
-        # calculation, the core list is taken from the parent
-        parent = self.datastore.parent
-        if 'core_trt_smrs' in self.datastore:
-            core = read_core_trt_smrs(self.datastore)
-        elif parent and 'core_trt_smrs' in parent:
-            core = read_core_trt_smrs(parent)
-        else:
-            core = get_core_trt_smrs(csm.src_groups)
-        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq, core)
+        # NB: unc_ts_sets is stored by source_reader.build_groups, before
+        # preclassical; the reader also looks in the parent calculation.
+        unc_ts_sets = read_unc_ts_sets(self.datastore)
+        if unc_ts_sets is None:
+            unc_ts_sets = get_unc_ts_sets(csm.src_groups)
+        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
+        elif oq.auto_grid or (oq.ps_grid_spacing and not oq.psd_given):
+            # with a fixed ps_grid_spacing only pointsource_distance
+            # is calibrated, see autogrid.calibrate; with few sites
+            # the calibration is skipped and the defaults are kept
+            if self.few_sites:
+                logging.info('Few sites: skipping the calibration of '
+                             'ps_grid_spacing and pointsource_distance')
+            else:
+                self.calibrate_grid(sites)
+
+        if oq.calibration_only:  # stop here, the calibration is stored
+            logging.info('Stopping after the calibration')
+            return
 
         # the core size Gt, i.e. the number of columns of the global
         # RateMap, is known already at build time (see
         # source_reader.store_unc_signatures)
-        if 'core_trt_smrs' not in self.datastore:
+        if 'unc_ts_sets' not in self.datastore:
             # this happens if the groups were read from the parent
             # calculation, so the units are taken from the parent
-            self.datastore.hdf5.save_vlen('core_trt_smrs', core)
+            self.datastore.hdf5.save_vlen('unc_ts_sets', unc_ts_sets)
 
-        if sites and not self.few_sites:
-            # in SAM from 539,831 -> 11,430 sites
-            lowres = sites.lower_res(res=4)[0]  # res=4 ~39 km
-            sf = SourceFilter(lowres, oq.maximum_distance)
-            sf.multiplier = len(sites) / len(lowres)
-            logging.debug('Reducing %d->%d sites', len(sites), len(lowres))
-        elif sites:
-            sf = SourceFilter(sites, oq.maximum_distance)
-        else:
-            sf = SourceFilter(None)
+        sf = _get_srcfilter(sites, self.few_sites, oq.maximum_distance)
         atomic_sources = []
         normal_sources = []
         reqv = 'reqv' in oq.inputs
@@ -383,6 +488,33 @@ class PreClassicalCalculator(base.HazardCalculator):
         allsources = csm.get_sources()
         self.store_source_info(source_data(allsources))
 
+    def calibrate_grid(self, sites):
+        """
+        Determine ps_grid_spacing and pointsource_distance on a sample
+        of sites, since the user set ps_grid_spacing=auto or a fixed
+        ps_grid_spacing without pointsource_distance (only the latter
+        is then calibrated)
+        """
+        oq = self.oqparam
+        cmakers = self.cmakers.to_array()
+        best = autogrid.calibrate(
+            self.csm, cmakers, sites, oq, self.datastore.hdf5)
+        if best is None:  # no point sources
+            return
+        psgs, psd = best
+        logging.warning('Using ps_grid_spacing=%s, pointsource_distance=%s',
+                        psgs, psd)
+        oq.ps_grid_spacing = psgs
+        for cmaker in cmakers:
+            cmaker.ps_grid_spacing = psgs
+        if not oq.psd_given:  # keep the pointsource_distance of the user
+            oq.pointsource_distance = {'default': psd}
+            for cmaker in cmakers:
+                cmaker.pointsource_distance = psd
+        # store the calibrated parameters, used when starting from --hc
+        del self.datastore['oqparam']
+        self.datastore['oqparam'] = oq
+
     def _process(self, atomic_sources, normal_sources, sf, secparams):
         # run preclassical in parallel for non-atomic sources
         if normal_sources:
@@ -406,6 +538,11 @@ class PreClassicalCalculator(base.HazardCalculator):
             res = smap.reduce()
         else:
             res = {}
+        psdist_ctxs = res.pop('psdist_ctxs', 0)
+        exact_ctxs = res.pop('exact_ctxs', 0)
+        if exact_ctxs:  # used in classical.log_cfactor
+            self.datastore['nctxs'] = numpy.array(
+                [(exact_ctxs, psdist_ctxs, 0, 0, 0)], CTX_EST)
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
             for grp_id, srcs in groupby(
@@ -439,7 +576,13 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         if not hasattr(self, 'csm'):  # used only for post_process
             return
-        self.populate_csm()
+        # the garbage collector is disabled while receiving, gridding and
+        # weighting the sources, since there can be millions of them: in
+        # Melbourne it was wasting ~50 seconds in the reduce
+        with general.gc_disabled():
+            self.populate_csm()
+        if self.oqparam.calibration_only:
+            return  # nothing else to do, see populate_csm
         return self.csm
 
     def post_execute(self, csm):
@@ -466,8 +609,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
         # save 'source_groups'
-        self.max_weight = store_csm(
-            self.datastore, self.csm, self.sitecol, self.cmakers)
+        with general.gc_disabled():
+            self.max_weight = store_csm(
+                self.datastore, self.csm, self.sitecol, self.cmakers)
 
         # save gsims
         toml = []

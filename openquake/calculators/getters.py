@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.rmap_maker import get_unique_inverse
+from openquake.hazardlib.rmap_maker import get_unique_inverse, read_unc_ts_sets
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.source.rupture import get_ebrupture  # noqa: F401
@@ -147,18 +147,14 @@ def get_rmap_gb(dstore, full_lt=None):
     N = len(dstore['sitecol/sids'])
     L = dstore['oqparam'].imtls.size
     full_lt = full_lt or dstore['full_lt'].init()
-    if 'core_trt_smrs' in dstore:
-        # for classical calculations the rates are attributed to the sets of
-        # realizations with the same uncertainties, not to the trt_smrs of
-        # the groups, since the groups are not split by the uncertainties,
-        # which are applied in the workers
-        key = 'core_trt_smrs'
-    else:
-        key = 'trt_smrs'
-    if key not in dstore:  # starting from hazard_curves.csv
-        trt_smrs = [[0]]
-    else:
-        trt_smrs, _ = get_unique_inverse(dstore[key][:])
+    # Classical rates belong to sets sharing the same uncertainties,
+    # which are applied in the workers, rather than to whole groups.
+    trt_smrs = read_unc_ts_sets(dstore)
+    if trt_smrs is None:
+        if 'trt_smrs' in dstore:  # event based
+            trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
+        else:  # starting from hazard_curves.csv
+            trt_smrs = [[0]]
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
     max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
     return max_gb, trt_rlzs, trt_smrs
@@ -363,13 +359,15 @@ class MapGetter(object):
         if self.array is not None:
             return self.array
         sid2idx = {sid: idx for idx, sid in enumerate(self.sids)}
-        self.array = numpy.zeros((self.N, self.L, self.Gt))  # move to 32 bit
+        self.sid2idx = sid2idx
+        self.array = numpy.zeros((self.N, self.L, self.Gt), F32)
+        if not sid2idx:  # empty chunk, nothing to read
+            return self.array
         lookup = numpy.full(max(sid2idx) + 1, -1, int)
         for sid, idx in sid2idx.items():
             lookup[sid] = idx
         for fname in self.filenames:
             self.read_chunk(fname, lookup)
-        self.sid2idx = sid2idx
         return self.array
 
     def read_chunk(self, fname, lookup):
@@ -451,9 +449,11 @@ def get_ebruptures(dstore):
     Extract EBRuptures from the datastore
     """
     ebrs = []
-    trts = list(dstore['full_lt/gsim_lt'].values)
+    trts = list(dstore.getitem('full_lt').attrs['trts'])
     for proxy in get_proxies(dstore.filename):
-        ebrs.append(proxy.to_ebr(trts[0]))
+        # the TRT index is in the high bits of trt_smr
+        trt = trts[proxy['trt_smr'] // TWO24]
+        ebrs.append(proxy.to_ebr(trt))
     return ebrs
 
 

@@ -157,6 +157,10 @@ class Allen2022(GMPE):
     ## Vs30 (m/s) required for site scaling [Equation 6].
     REQUIRES_SITES_PARAMETERS = {"vs30"}
 
+    ## Calibrated Vs30 range, checked before the calculation starts
+    ## when vs30_strict is True.
+    VS30_RANGE = (220, 800)
+
     ## Moment magnitude and hypocentral depth (km) [Equations 3 and 4].
     REQUIRES_RUPTURE_PARAMETERS = {"mag", "hypo_depth"}
 

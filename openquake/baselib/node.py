@@ -859,13 +859,15 @@ class ValidatingXmlParser(object):
 
     :param validators: a dictionary of validation functions
     :param stop: the tag where to stop the parsing (if any)
+    :param stride: a pair (k, n) to keep only the k-th source over n
     """
     class Exit(Exception):
         """Raised when the parsing is stopped before the end on purpose"""
 
-    def __init__(self, validators, stop=None):
+    def __init__(self, validators, stop=None, stride=None):
         self.validators = validators
         self.stop = stop
+        self.stride = stride
 
     @contextmanager
     def _context(self):
@@ -875,6 +877,8 @@ class ValidatingXmlParser(object):
         self.p.CharacterDataHandler = self._char_data
         self._ancestors = []
         self._root = None
+        self._skipping = 0  # depth inside a skipped source, see _skip
+        self._nsources = 0
         try:
             yield
         except ExpatError as err:
@@ -919,13 +923,38 @@ class ValidatingXmlParser(object):
                     self.p.ParseFile(f)
         return self._root
 
+    def _skip(self, name):
+        # True for the sources to skip when keeping one source over n;
+        # the sources of the atomic groups are kept in the first reading
+        if not name.endswith('Source') or not self._ancestors:
+            return False
+        parent = self._ancestors[-1]
+        ptag = striptag(parent.tag)
+        k, n = self.stride
+        if ptag == 'sourceGroup':
+            attrib = parent.attrib
+            if (attrib.get('cluster') == 'true' or
+                    attrib.get('src_interdep') == 'mutex' or
+                    attrib.get('rup_interdep') == 'mutex'):
+                return k != 0
+        elif ptag != 'sourceModel':
+            return False
+        self._nsources += 1
+        return (self._nsources - 1) % n != k
+
     def _start_element(self, longname, attrs):
+        if self._skipping:  # inside a skipped source
+            self._skipping += 1
+            return
         try:
             _xmlns, name = longname.split('}')
         except ValueError:  # no namespace in the longname
             name = tag = longname
         else:  # fix the tag with an opening brace
             tag = '{' + longname
+        if self.stride and self._skip(name):
+            self._skipping = 1
+            return
         self._ancestors.append(
             Node(tag, attrs, lineno=self.p.CurrentLineNumber))
         if self.stop and name == self.stop:
@@ -934,6 +963,9 @@ class ValidatingXmlParser(object):
             raise self.Exit
 
     def _end_element(self, name):
+        if self._skipping:
+            self._skipping -= 1
+            return
         node = self._ancestors[-1]
         if isinstance(node.text, list):
             node.text = ''.join(node.text)
@@ -944,7 +976,7 @@ class ValidatingXmlParser(object):
             self._ancestors[-1].append(self._root)
 
     def _char_data(self, data):
-        if data:
+        if data and not self._skipping:
             parent = self._ancestors[-1]
             if parent.text is None:
                 parent.text = [data]

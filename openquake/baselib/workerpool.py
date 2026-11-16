@@ -36,11 +36,6 @@ except ImportError:
 UTC = timezone.utc
 
 
-def init_workers():
-    """Used to initialize the process pool"""
-    setproctitle('oq-zworker')
-
-
 def get_zworkers(job_id):
     """
     :returns: DotDict str->str with keys ctrl_port and host_cores
@@ -294,7 +289,8 @@ class WorkerPool(object):
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')
         self.pool = ProcessPoolExecutor(
-            self.num_workers, general.mp, init_workers)
+            self.num_workers, general.mp, parallel.init_worker,
+            ('oq-zworker',))
         # start control loop accepting the commands stop
         ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
         try:
@@ -308,7 +304,8 @@ class WorkerPool(object):
                     elif cmd == 'restart':
                         self.stop()
                         self.pool = ProcessPoolExecutor(
-                            self.num_workers, general.mp, init_workers)
+                            self.num_workers, general.mp,
+                            parallel.init_worker, ('oq-zworker',))
                         self.futures.clear()
                         ctrlsock.send('restarted')
                     elif cmd == 'getpid':

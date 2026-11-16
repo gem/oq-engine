@@ -397,28 +397,25 @@ def get_stddevs(C, rrup, vs30):
     r1 = 200
     r2 = 500
 
-    # total Phi
-    phi_rv = np.zeros(len(vs30))
-    for i, vs30i in enumerate(vs30):
-        if rrup[i] <= r1:
-            phi_rv[i] = C["phi21"]
-        elif rrup[i] >= r2:
-            phi_rv[i] = C["phi22"]
-        else:
-            phi_rv[i] = ((C["phi22"] - C["phi21"])
-                         / (np.log(r2) - np.log(r1))) \
-                        * (np.log(rrup[i]) - np.log(r1)) + C["phi21"]
-
-        if vs30i <= v1:
-            phi_rv[i] += C["phi2V"] * \
-                         (np.log(r2 / max(r1, min(r2, rrup[i])))
-                          / np.log(r2 / r1))
-        elif vs30i < v2:
-            phi_rv[i] += C["phi2V"] * \
-                      ((np.log(v2 / min(v2, vs30i)))
-                       / np.log(v2 / v1)) * \
-                      (np.log(r2 / max(r1, min(r2, rrup[i])))
-                       / np.log(r2 / r1))
+    # total Phi, computed for all the sites at once; the distances are
+    # clipped to [r1, r2] before the logarithms, so that the branches
+    # not selected by np.where never produce NaNs or infinities
+    rrup = np.asarray(rrup, float)
+    vs30 = np.asarray(vs30, float)
+    rc = np.clip(rrup, r1, r2)
+    phi_mid = ((C["phi22"] - C["phi21"])
+               / (np.log(r2) - np.log(r1))) \
+        * (np.log(rc) - np.log(r1)) + C["phi21"]
+    phi_rv = np.where(rrup <= r1, C["phi21"],
+                      np.where(rrup >= r2, C["phi22"], phi_mid))
+    # the distance term is the same for both ranges of vs30, while the
+    # vs30 term is 1 for vs30 <= v1, 0 for vs30 >= v2 and in between
+    # it is log(v2/vs30) / log(v2/v1); clipping vs30 keeps it finite
+    path = np.log(r2 / rc) / np.log(r2 / r1)
+    vs_fac = np.where(vs30 <= v1, 1.,
+                      np.log(v2 / np.clip(vs30, v1, v2))
+                      / np.log(v2 / v1))
+    phi_rv = phi_rv + C["phi2V"] * vs_fac * path
 
     phi_tot = np.sqrt(phi_rv)
 

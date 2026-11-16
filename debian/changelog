@@ -1,4 +1,175 @@
+  [Christopher Brooks]
+  * Remove the HMTK from the OpenQuake Engine in anticipation of
+    moving the related code into the associated parts of the OQ-MBTK.
+
   [Michele Simionato]
+  * Internal: overhauled the logic tree classes and added `oq info logic_trees`
+  * Reduced the size of the yielded packets in classical_bysrc and
+    raised an error in case of lost zmq packets
+
+  [Savas Ceylan]
+  * Added Swiss site-specific SA corrections to ModifiableGMPE.
+    Only site columns for the selected periods are required.
+    PGA keeps mean, phi and tau, and recomputes total sigma.
+
+ [Christopher Brooks]
+ * For Bayless and Abrahamson 2018 GMM:
+    * Fixed high-frequency total sigma values near 10,000 nat log units by
+      replacing placeholder c1a coefficients with zero and corrected the
+      test result labels so sigma comparisons are no longer silently skipped.
+    * Fixed nan mean predictions between 23.988321 and 24 Hz by starting
+      kappa extrapolation at the last valid coefficient frequency.
+    * Added missing span-20 LOWESS smoothing after flattening the non-linear
+      site term on the native frequency grid, matching the MATLAB script.
+    * Fixed off-grid predictions by interpolating completed log EAS and
+      standard deviations against log frequency, matching the MATLAB script.
+      Previously, coefficients were interpolated before evaluation and the
+      non-linear term was interpolated against linear frequency.
+
+ [Anirudh Rao]
+  * Enabled circulant embedding for the Loth & Baker (2013) spatial-cross-IMT
+    correlation model
+
+ [Michele Simionato]
+  * Added a `--calibrate` option to `oq run`
+  * Added a warning for sources with different IDs, the same geometry and
+    different MFDs, which are likely variants of a base source, and
+    `oq check_input --better-smlt` now generates a job.zip
+  * Added an option `oq check_input --better-smlt` to reduce sources with
+    the same geometry
+  * Added a new uncertainty `minMagGRAbsolute` to replace the minimum
+    magnitude of a truncated Gutenberg-Richter MFD
+  * Added a new uncertainty `multiMFDAbsolute` to replace the MFDs of all the
+    points of a multiPointSource, and fixed the variant sources optimization
+    to discard in each variant the sources filtered by the maximum distance
+  * The classical calculator now logs the reduction of the contexts due to
+    the variant sources optimization, stored in the new `separate` field of
+    the `nctxs` dataset and displayed by `oq show context_reduction`
+  * Internal: fixed `oq --version` in devel_server installations by calling
+    automatically `git config --global --add safe.directory`
+
+ [Christopher Brooks]
+ * Fix the filtering of the hypocentral depth distribution in simple faults
+   so the weights per depth are not distorted by the floating of ruptures. The
+   impact on the BCHydro calculations is very small. Unit tests expanded to
+   check that intended behaviour is better observed.
+ * Modified the linear-piecewise magnitude-dependent aspect ratio
+   to permit more than 2 entries and added an unit test checking an
+   expression can be approximately represented using this approach.
+
+ [Christopher Brooks, Michele Simionato]
+ * GridAdjustedGMPEs differing only by the epsilons now share the
+   computation of the backbone's grid-adjusted mean prediction;
+   optimized significantly the ray tracing algorithm (> 10x speedup)
+
+ [Michele Simionato]
+  * GridAdjustedGMPEs reading the same file now share the raytrace grids,
+    saving memory and preserving sharing when sent to the workers
+  * Nonparametric sources with gridded ruptures are now stored as arrays,
+    reducing substantially the memory used by the classical tasks (3x)
+  * Internal: extended `oq check_input` to recognize the case of sources with the
+    same geometry but different MFDs and suggest a better way to write them
+  * Changed `oq engine --param` to use space-separated name=value pairs instead
+    of comma-separated pairs, for consistency with `oq run --param`
+  * Added a new experimental collapse_precision approximation
+  * ps_grid_spacing can now be used with disagg_by_src when the calculation has
+    few sites, since the rates are computed one source at the time
+  * Fixed the rupture IDs of the global SES: they are now unique
+    across the models. Existing SES files must be regenerated
+  * Fixed the classical_risk calculator for risk inputs containing assets
+    of different taxonomies at the same site: the loss curves and average
+    losses of each asset were written at the wrong positions, and the
+    statistics could crash with "'int' object is not subscriptable"
+  * Fixed the postclassical and fast_mean calculations for hazard chunks
+    without any site: the MapGetter no longer crashes on an empty chunk
+  * Fixed get_ebruptures: the tectonic region type of each rupture is now
+    read from its trt_smr instead of always using the first TRT
+  * Changed the MapGetter to use 32 bit arrays, as documented but not done
+
+  [Christopher Brooks]
+  * Extended the IMC conversion to support more horizontal component
+    definitions: the job parameter "horiz_comp_to_geom_mean" is replaced
+    by "horiz_comp_to", which accepts targets such as geometric mean,
+    RotD50 and RotD100 (the old boolean flag still works for backwards
+    compatibility). Conversions use the ratios tabulated by Beyer &
+    Bommer (2006) and Boore & Kishida (2017).
+
+  [Michele Simionato]
+  * Compute the injured losses for each time event when time_event is not
+    specified (injured_day, injured_night, injured_transit, injured_avg),
+    like the occupants losses
+  * Faster Joyner-Boore distances for the 2D meshes, avoiding the shapely
+    polygon: the distances of the sites within 40 km of a rupture can
+    change by a few meters. Faster dip and strike of the floating ruptures
+    of simple faults. In a calculation for Alaska "building contexts" got
+    4x faster but usually the speedup is minor
+  * Fixed the scenario aggregate risk quantiles: the portfolio quantiles are
+    now computed from the total losses of each GMF instead of summing the
+    quantiles of the individual groups
+  * Fixed YuEtAl2013Ms and its subclasses in hazardlib: when called with
+    contexts having different magnitudes, the mean used the magnitude of
+    the last site for all the sites; now each site uses its own magnitude.
+    Other GMPEs (DouglasEtAl2024, BahrampouriEtAl2021, YenierAtkinson2015,
+    YuEtAl2013, BooreAtkinson2008, PankowPechmann2004) have had their loops
+    over the sites vectorized, with unchanged results
+  * Faster standard deviations for the ParkerEtAl2020SInter GMPE by
+    vectorizing the loop over the sites (measured a 10x speedup in
+    "computing mean_stds" in Alaska)
+  * Added the option ps_grid_spacing=auto: the engine determines
+    ps_grid_spacing and pointsource_distance (if not given) by comparing
+    the hazard maps of the point sources on a sample of sites with the
+    exact ones, choosing the cheapest candidate
+  * Faster preclassical for large models: the discretization of the area
+    sources is 4.8 times faster (vectorized check of the points inside the
+    polygon) and the garbage collector is disabled while receiving,
+    gridding, checking and storing the sources; for instance in AUS the
+    computation of the rupture floating factor went down from 29 seconds
+    to 1 second
+  * The distance used to decide if a site is close to a CollapsedPointSource
+    now includes the extent of the source, so that small values of
+    pointsource_distance are safe also for big cells and the precision is good
+  * Faster computation of the PoEs: the truncated normal distribution is
+    computed with fused loops, skipping the levels where the PoE is zero,
+    and the probability maps are updated without temporary arrays; in
+    the performance.zip demo "get_poes" went down from 1,324 s to 899 s
+  * Reading the source models is much faster: the garbage collector is
+    disabled during the reading, the biggest files are read first (in
+    classical calculations with 5 tasks each) and some slow checks were
+    optimized; building the composite source model of AUS now takes 77
+    seconds instead of 252
+  * The task results are unpickled with the garbage collector disabled:
+    in the preclassical phase of Melbourne (AUS model, 3,145 sites) the
+    unpickling went down from 108 seconds to 15
+
+  [Christopher Brooks]
+  * Added some regression tests for the can20 GMMs and fixed a bug in
+    use of "CanadaSHM6_hardrock_site_factor" with the ChiouYoungs2014
+    that resulted in passing of the boolean mask of "vs30_ge1100" as
+    the Vs30 values, so hard-rock sites were corrected using a Vs30 of
+    1 m/s (i.e., the mask being True for that site's idx) rather than
+    the actual Vs30 value of each site
+  * Fixed several bugs present in the ACME 2019 GMMs (phi overwriting
+    total sigma in AlAtikSigmaModel, interpolation/extrapolation bugs
+    in AlAtikSigmaModel, wrong number of args in an untested function
+    in ChiouYoungs2014ACME2019 with a unit test now exposing it)
+
+  [Michele Simionato]
+  * Bug fix: gridding point sources close to the antimeridian with
+    ps_grid_spacing could fail with "longitude -180.000000 outside range"
+  * The contexts are now passed to the GMPEs in chunks of at most 10,000
+    rows, since the GMPEs are memory bound on very large arrays (as the
+    ones of big CollapsedPointSources): in the Tonga model with
+    ps_grid_spacing=50 "computing mean_std" went down from 43,645 s to
+    8,756 s and the total CPU time was halved
+  * Scenario risk: if time_event is not specified, the occupants losses
+    are computed and stored for day, night and transit, limited to
+    the periods present in the exposure, together with occupants_avg
+    from the exposure; the default time_event is now unset instead of
+    "avg". Some outputs now use "occupants_avg" instead of "occupants"
+    for the average occupancy losses
+  * Bug fix: "oq extract agg_losses" failed with a TypeError when the
+    calculation was aggregated by id, and the site_id tags of the
+    aggregated losses were shifted by one site
   * Bug fix: the "too many potential logic tree paths" error suggested
     use_rates=true even when it was already set; the message now
     explains that use_rates only works when computing the mean
@@ -119,11 +290,6 @@
     sites CSVs, or scenario ruptures in `oq prepare_site_model`, compatible
     with circulant-embedding-based correlated GMF simulations.
 
-  [Claudio Schill]
-  * Fix `get_epistemic_sigma` (used by the `sigma_mu_epsilon` option of
-    ASK14, BSSA14, CB14, CY14 and Bradley2013) to now assign M < 5 to the
-    5 <= M < 6 bin values, instead of the M > 7 bin.
-
   [Michele Simionato]
   * Fixed a bug affecting previous versions of the engine: the uncertainties
     on the magnitude and on the b-value were ignored for multiPointSources
@@ -167,9 +333,11 @@
     range of the model to avoid the singularity at Vs30=150.
 
   [Michele Simionato]
-  * Geometry-preserving uncertainties are now optimized in classical calculations
-    with few sites: contexts, means, stddevs and poes are computed only once
-    per realization set
+  * Geometry-preserving uncertainties are now optimized in classical
+    calculations: contexts, means, stddevs and poes are computed only once
+    for the MFD variants of a source, also when their magnitudes are nested
+    (for instance with maxMagGRAbsolute); in the LogicTreeCase2ClassicalPSHA
+    demo the contexts go from 22,422 (engine 3.26) to 2,935
   * Temporarily restored consequences in XML format; this is solely to support
     the current IPT; the XML is still deprecated and should not be used
   * Extended the ps_grid_spacing approximation to the case of few sites
@@ -236,7 +404,8 @@
     linearly, since they are dispersions. Combined with the fix above, the
     MCE spectra of the AELO models increase (by 34% for the PGA in the
     PAC model, by 0.8% in the KOR model), since the previous values were
-    based on sigmas which were too large and thus underestimated the
+    based on sigmas which were too small (the linear average is never
+    larger than the quadrature one) and thus underestimated the
     deterministic MCE
   * The reduction of a source model logic tree to a single source (i.e. the
     `source_id` parameter and the `reduce_smlt` command) is now performed on

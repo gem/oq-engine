@@ -828,9 +828,9 @@ class SourceConverter(RuptureConverter):
             try:
                 hypo_depth_list = [
                     (hd['probability'], hd['depth'],
-                     # Optional override of dip frac computed on
-                     # floating rup by floating rup basis within
-                     # in SimpleFaultSource._hypo_list_from_depths
+                     # Optional override of dip frac computed per
+                     # floating rup inside
+                     # SimpleFaultSource._hypo_depth_allocation
                      float(hd.attrib['fixedDipFrac'])
                      if 'fixedDipFrac' in hd.attrib else None)
                     for hd in node.hypoDepthDist]
@@ -961,7 +961,7 @@ class SourceConverter(RuptureConverter):
         # whole surface, so its mesh top edge is a resampling that can
         # corner-cut a wiggly trace (it would distort the PFD distances).
         # A MultiSurface has no single trace and is left to the per-section
-        # reference-line routing (PR-8), like oq-pfdha
+        # reference-line routing, like oq-pfdha
         if hasattr(char.surface, 'surfaces'):
             trace = None
         else:

@@ -238,31 +238,31 @@ class Polygon(object):
         lons, lats = [], []
         # we cover the bounding box (in spherical coordinates) from highest
         # to lowest latitude and from left to right by longitude. we step
-        # by mesh spacing distance (linear measure). we check each point
-        # if it is inside the polygon and yield the point object, if so.
-        # this way we produce an uniformly-spaced mesh regardless of the
-        # latitude.
+        # by mesh spacing distance (linear measure). this way we produce an
+        # uniformly-spaced mesh regardless of the latitude.
         latitude = north
         while latitude > south:
             longitude = west
             while utils.get_longitudinal_extent(longitude, east) > 0:
-                # we use Cartesian space just for checking if a point
-                # is inside of the polygon.
-                x, y = self._projection(longitude, latitude)
-                if self._polygon2d.contains(shapely.geometry.Point(x, y)):
-                    lons.append(longitude)
-                    lats.append(latitude)
-
+                lons.append(longitude)
+                lats.append(latitude)
                 # move by mesh spacing along parallel...
                 longitude, _, = geodetic.point_at(longitude, latitude,
                                                   90, mesh_spacing)
             # ... and by the same distance along meridian in outer one
             _, latitude = geodetic.point_at(west, latitude, 180, mesh_spacing)
-
+        # we keep the points inside the polygon, by using the Cartesian space
+        # and a vectorized check, which is much faster than building a
+        # shapely Point for each point
+        lons, lats = numpy.array(lons), numpy.array(lats)
+        if len(lons):
+            xs, ys = self._projection(lons, lats)
+            inside = shapely.contains_xy(self._polygon2d, xs, ys)
+            lons, lats = lons[inside], lats[inside]
         if len(lons) == 0:
             raise ValueError("The area_source_discretization is too large "
                              "(%d km)" % mesh_spacing)
-        return Mesh(numpy.array(lons), numpy.array(lats), depths=None)
+        return Mesh(lons, lats, depths=None)
 
 
 def get_resampled_coordinates(lons, lats):

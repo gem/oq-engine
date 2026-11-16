@@ -43,20 +43,18 @@ import itertools
 import numpy
 import pandas
 import requests
-import geopandas as gpd
 from shapely import wkt
-from shapely.geometry import shape
-from shapely.validation import make_valid, explain_validity
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     random_filter, countby, get_duplicates, check_extension, gettemp,
     AccumDict)
-from openquake.baselib.general import decode
+from openquake.baselib.general import decode, gc_disabled
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.geo.packager import fiona
+from openquake.hazardlib.geo.boundaries import (
+    read_geometries, read_countries_df)
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
@@ -76,8 +74,8 @@ from openquake.pfd.gsim import get_pfd_gsim_lt
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib import logs
-from openquake.commonlib.oqvalidation import OqParam
-from openquake.qa_tests_data import mosaic, global_risk
+from openquake.commonlib import oqvalidation
+from openquake.qa_tests_data import mosaic
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -88,12 +86,20 @@ U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 
+# True if word occurs in path not surrounded by letters or digits; NB: \b
+# cannot be used, since the underscore is a word character and job_NAF.ini
+# or job_Cabo_Verde.ini would not match
+def _word_in(word, path):
+    rx = rf'(?<![A-Za-z0-9]){re.escape(word)}(?![A-Za-z0-9])'
+    return re.search(rx, path) is not None
+
+
 def model_in(word, path):
     """
     :returns: True if the 3-character mosaic code word occurs in path
     """
     assert len(word) == 3, word
-    return re.search(rf'\b{word}\b', path) is not None
+    return _word_in(word, path)
 
 
 def get_country_or_model(job_ini):
@@ -101,9 +107,11 @@ def get_country_or_model(job_ini):
     If the path to job_ini contains a recognized country, returns the
     country code or the mosaic code, else the empty string.
     """
-    for name, cc in country2code.items():
-        if re.search(rf'\b{re.escape(name)}\b', job_ini):
-            return cc
+    # the longest names first, otherwise Congo would match
+    # Democratic_Republic_of_the_Congo
+    for name in sorted(country2code, key=len, reverse=True):
+        if _word_in(name, job_ini):
+            return country2code[name]
     for model in MODELS:
         if model_in(model, job_ini):
             return model
@@ -492,6 +500,15 @@ def is_fraction(string):
     return 0 < f < 1
 
 
+def is_fake_hc(oq):
+    """
+    :returns: True if the hazard_calculation_id is the fake one set by
+              `oq check_input` for risk jobs (see get_oqparam)
+    """
+    hc = oq.hazard_calculation_id
+    return isinstance(hc, str) and hc.endswith('<fake>.ini')
+
+
 def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     """
     Parse a dictionary of parameters from an INI-style config file.
@@ -537,7 +554,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
             imt = next(iter(imtls))
             job_ini['intensity_measure_types_and_levels'] = repr(
                 {imt: imtls[imt]})
-    oqparam = OqParam(**oqdict(job_ini))
+    oqparam = oqvalidation.OqParam(**oqdict(job_ini))
     oqparam._input_files = get_input_files(oqparam)
     if validate:  # always true except from oqzip
         oqparam.validate()
@@ -936,6 +953,21 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
     return sitecol
 
 
+# rebuild the GSIMs with a VS30_RANGE (i.e. Allen 2022) with
+# vs30_strict=False; setting the attribute on the instance is not enough,
+# since it is lost when the logic tree is stored (via the TOML repr) and
+# read back, for instance by the risk calculations using a SES file
+def _relax_vs30(gsim_lt):
+    new = {}
+    for gsims in gsim_lt.values.values():
+        for i, gsim in enumerate(gsims):
+            if hasattr(gsim, 'VS30_RANGE') and gsim.vs30_strict:
+                kw = dict(gsim.kwargs, vs30_strict=False)
+                new[id(gsim)] = gsims[i] = gsim.__class__(**kw)
+    for br in gsim_lt.branches:
+        br.gsim = new.get(id(br.gsim), br.gsim)
+
+
 def get_gsim_lt(oqparam, trts=()):
     """
     :param oqparam:
@@ -961,9 +993,14 @@ def get_gsim_lt(oqparam, trts=()):
     if len(oqparam.site_labels) > 1:
         logictree.GsimLogicTree.check_multiple(gsim_file, trts)
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts or oqparam._trts)
+    if not oqparam.strict:
+        _relax_vs30(gsim_lt)
     spatial_model = oqparam.get_within_event_correlation_model()
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
+            if not oqparam.strict and hasattr(gsim, 'VS30_RANGE'):
+                # remove the vs30 range constraint on Allen 2022
+                gsim.vs30_strict = False
             # NB: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE can be != trt,
             # but it is not an error, it is actually the most common case!
             if spatial_model and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
@@ -1000,10 +1037,13 @@ def get_pfd_lt(oqparam):
                           % oqparam.inputs['job_ini'])
     fname = os.path.join(
         oqparam.base_path, oqparam.inputs['pfd_logic_tree'])
-    return pfd_lt.PFDLogicTree(
+    tree = pfd_lt.PFDLogicTree(
         fname, seed=oqparam.random_seed,
         num_samples=oqparam.number_of_logic_tree_samples,
         sampling_method=oqparam.sampling_method)
+    # r_sigma_km is in vars(oqparam) only if set in the job.ini
+    tree.check_r_sigma_conflict(vars(oqparam).get('r_sigma_km'))
+    return tree
 
 
 def get_rupture(oqparam):
@@ -1068,10 +1108,11 @@ def get_source_model_lt(oqparam):
 AMP_LT_SUPPORTED_MODES = ('classical', 'disaggregation')
 
 
-def _get_amp_lt_parser(oqparam):
+def _read_amp_lt(oqparam):
     """
-    If oqparam.inputs['ampl_logic_tree'] is set, parse the amp-LT XML,
-    cache the tree on oqparam._amp_lt, and return it. Otherwise return None.
+    If oqparam.inputs['ampl_logic_tree'] is set, read the amp-LT XML
+    (without amplifiers), cache the tree on oqparam._amp_lt, and return
+    it. Otherwise return None.
     """
     if getattr(oqparam, '_amp_lt', None) is not None:
         # Guard for if already parsed on a previous call
@@ -1090,7 +1131,7 @@ def _get_amp_lt_parser(oqparam):
             '%s: amplification logic tree is only supported with'
             ' amplification_method="convolution", got %r'
             % (fname, oqparam.amplification_method))
-    tree = amp_lt.AmplificationLogicTreeParser(fname)
+    tree = amp_lt.AmplificationLogicTree.from_xml(fname)
     oqparam._amp_lt = tree
     return tree
 
@@ -1101,14 +1142,14 @@ def get_amp_lt(oqparam):
         built from the ``ampl_logic_tree_file`` branch CSVs, or None if
         the input is not set
     """
-    tree = _get_amp_lt_parser(oqparam)
+    tree = _read_amp_lt(oqparam)
     if tree is None:
         return None
     dframes = [AmplificationFunction.read_df(f) for f in tree.filenames]
     amplifiers = [Amplifier(oqparam.imtls, df, oqparam.soil_intensities)
                   for df in dframes]
     return amp_lt.AmplificationLogicTree(
-        tree.branch_ids, tree.weights, dframes=dframes, amplifiers=amplifiers,
+        tree.names, tree.weights, dframes=dframes, amplifiers=amplifiers,
         filenames=tree.filenames, tree_filename=tree.filename,
         branchset_id=tree.branchset_id)
 
@@ -1137,20 +1178,15 @@ def get_full_lt(oqparam):
         extra_lt = get_pfd_lt(oqparam)
     else:
         extra_lt = get_amp_lt(oqparam)
-    full_lt = logictree.FullLogicTree(
-        source_model_lt, gsim_lt, oversampling, extra_lt=extra_lt)
-    p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
+    p = source_model_lt.num_paths * gsim_lt.get_num_paths()
 
+    # Check the limits before FullLogicTree can enumerate the population.
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
                 oqparam.number_of_logic_tree_samples >= p
                 and 'event' not in oqparam.calculation_mode):
             raise ValueError('Use full enumeration since there are only '
                              '{:_d} realizations'.format(p))
-        unique = numpy.unique(full_lt.rlzs['branch_path'])
-        logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
-                     ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
-                                     len(unique)))
     elif ('classical' in oqparam.calculation_mode
           and oqparam.calculation_mode != 'displacement'):  # full enum
         if not oqparam.fastmean and p > oqparam.max_potential_paths:
@@ -1166,6 +1202,13 @@ def get_full_lt(oqparam):
                 'There are too many potential logic tree paths (%d): '
                 'raise `max_potential_paths`, use sampling instead of '
                 'full enumeration, %s' % (p, rates))
+    full_lt = logictree.FullLogicTree(
+        source_model_lt, gsim_lt, oversampling, extra_lt=extra_lt)
+    if oqparam.number_of_logic_tree_samples:
+        unique = numpy.unique(full_lt.rlzs['branch_path'])
+        logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
+                     ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
+                                     len(unique)))
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     return full_lt
@@ -1173,7 +1216,7 @@ def get_full_lt(oqparam):
 
 def get_logic_tree(oqparam):
     """
-    :returns: a CompositeLogicTree instance
+    :returns: a BranchSetLogicTree instance
     """
     flt = get_full_lt(oqparam)
     return logictree.compose(flt.source_model_lt, flt.gsim_lt)
@@ -1234,9 +1277,16 @@ def get_composite_source_model(oqparam, dstore=None):
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
     full_lt = get_full_lt(oqparam)
-    csm = source_reader.get_csm(oqparam, full_lt, dstore)
-    _check_csm(csm, oqparam, dstore)
-    oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
+    # the garbage collector is disabled while building and checking the
+    # composite source model, since it would traverse many times the
+    # millions of objects created by _merge_strides, add_bangs,
+    # build_groups, etc. (the unpickling is managed in
+    # parallel.Result.get): in AUS this reduces the time from ~135 to ~90
+    # seconds without increasing the memory
+    with gc_disabled():
+        csm = source_reader.get_csm(oqparam, full_lt, dstore)
+        _check_csm(csm, oqparam, dstore)
+        oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
     return csm
 
 
@@ -1402,7 +1452,8 @@ def get_exposure(oqparam, h5=None):
                 # used in the tests
                 loss_types = f['crmAfrica'].attrs['loss_types']
                 oq.all_cost_types = loss_types
-                oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
+                # use oq.loss_types to include the occupants_<time_event>
+                oq.minimum_asset_loss = {lt: 0 for lt in oq.loss_types}
     else:
         exposure = asset.Exposure.read_all(
             oq.inputs['exposure'], oq.calculation_mode,
@@ -1968,7 +2019,7 @@ def get_input_files(oqparam):
             fnames.add(fname)
         elif key == 'ampl_logic_tree':
             fnames.add(fname)
-            tree = _get_amp_lt_parser(oqparam)
+            tree = _read_amp_lt(oqparam)
             if tree is not None:
                 fnames.update(tree.filenames)
         elif key == 'source_model':
@@ -2051,38 +2102,6 @@ def get_custom_site_id(descr):
     return base64.urlsafe_b64encode(digest[:6]).decode('ascii')
 
 
-# NOTE: we expect to call this for mosaic or global_risk (adm0-1-2)
-@functools.lru_cache(maxsize=4)
-def read_geometries(fname, name):
-    """
-    :param fname: path of the file containing the geometries
-    :param name: name of the primary key field
-    :returns: GeoDataFrame frame with codes and geometries
-    """
-    codes = []
-    geoms = []
-    with fiona.open(fname, IMMUTABLE="YES") as f:
-        crs = f.crs
-        for feature in f:
-            props = feature["properties"]
-            geom = feature["geometry"]
-            code = props[name]
-            if code and geom:
-                g = shape(geom)
-                if not g.is_valid:
-                    logging.warning("Invalid geometry for %s: %s",
-                                    code, explain_validity(g))
-                    g = make_valid(g)
-                codes.append(code)
-                geoms.append(g)
-            else:
-                logging.error(f"{code=}, {geom=} in {fname}")
-    # NOTE: "geometry" instead of "geom" would be the standard in GeoPandas,
-    #       but using "geom" we avoid changing other code using this object
-    return gpd.GeoDataFrame(
-        dict(code=codes, geom=geoms), geometry="geom", crs=crs)
-
-
 @functools.lru_cache()
 def read_cities(fname, lon_name, lat_name, label_name):
     """
@@ -2112,7 +2131,7 @@ def read_mosaic_df(mosaic_dir=''):
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
     logging.info(f'Reading {mosaic_boundaries_file}')
     df = read_geometries(mosaic_boundaries_file, 'name')
-    codes = set(df.code.unique())
+    codes = {ALIASES.get(c, c) for c in df.code.unique()}
     extra = codes - set(MODELS)
     if extra:
         logging.warning(f'{mosaic_boundaries_file} '
@@ -2121,21 +2140,6 @@ def read_mosaic_df(mosaic_dir=''):
     if missing:
         logging.warning(f'{mosaic_boundaries_file} is missing {missing}')
     return df
-
-
-def read_countries_df():
-    """
-    :returns: a DataFrame of geometries for the world countries
-    """
-    country_boundaries_file = None
-    if hasattr(config.directory, 'admin0_boundaries_file'):
-        country_boundaries_file = config.directory.admin0_boundaries_file
-    if not country_boundaries_file:
-        country_boundaries_file = os.path.join(
-            os.path.dirname(global_risk.__file__),
-            'geoBoundariesCGAZ_ADM0.gpkg')
-    logging.info(f'Reading {country_boundaries_file}')
-    return read_geometries(country_boundaries_file, 'shapeGroup')
 
 
 def read_cities_df(lon_field='longitude', lat_field='latitude',

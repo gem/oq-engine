@@ -47,6 +47,7 @@ def test_impact_ui_level_1(
         should_remove_job):
     page = ImpactPageLevel1(authenticated_page)
     page.set_rupture_identifier('us6000t7zp')
+    expect(page.maximum_distance()).not_to_be_visible()
     page.select_shakemap_version(
         value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
     page.retrieve_data()
@@ -54,6 +55,21 @@ def test_impact_ui_level_1(
     expect(page.pga_map()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).not_to_be_editable()
+    # the default maximum distance depends on the magnitude
+    expect(page.maximum_distance()).to_be_visible()
+    expect(page.maximum_distance()).not_to_have_value('')
+    expect(page.maximum_distance()).to_be_editable()
+    # selecting another ShakeMap version invalidates the retrieved data
+    page.select_another_shakemap_version()
+    for elem in (page.intensity_map(), page.pga_map(), page.local_timestamp(),
+                 page.maximum_distance(), page.description()):
+        expect(elem).not_to_be_visible()
+    expect(page.run_impact_calc_btn()).to_be_disabled()
+    page.select_shakemap_version(
+        value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
+    page.retrieve_data()
+    expect(page.maximum_distance()).to_be_visible(timeout=30_000)
+    expect(page.run_impact_calc_btn()).to_be_enabled()
     page.set_time_of_the_event('Night')
     expect(page.no_uncertainty_ckb()).to_have_count(0)
     page.set_make_impact_reports()
@@ -122,6 +138,13 @@ def test_impact_ui_level_2_use_point_rupture(
     expect(page.local_timestamp()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
+    # M 7.8: the defaults depending on the magnitude
+    expect(page.maximum_distance()).to_have_value('300')
+    expect(page.truncation_level()).to_have_value('3')
+    # unchecking "No uncertainty" restores the default truncation level
+    page.no_uncertainty_ckb().check()
+    page.no_uncertainty_ckb().uncheck()
+    expect(page.truncation_level()).to_have_value('3')
     page.set_no_uncertainty()
     page.run_impact_calc()
     if should_abort_job or should_remove_job:

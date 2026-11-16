@@ -19,6 +19,7 @@
 """
 Utility functions of general interest.
 """
+import gc
 import os
 import sys
 import zlib
@@ -48,6 +49,24 @@ import numpy
 import pandas
 from decorator import decorator
 from openquake.baselib import __version__, config
+import openquake
+
+
+@contextmanager
+def gc_disabled():
+    """
+    Disable the garbage collector inside the context (if it was enabled):
+    when creating or receiving millions of objects (like the sources of a
+    big model) the collector would traverse them many times, wasting a lot
+    of time without freeing anything
+    """
+    enabled = gc.isenabled()
+    gc.disable()
+    try:
+        yield
+    finally:
+        if enabled:
+            gc.enable()
 
 
 def humanize_number(value, precision=2):
@@ -618,16 +637,21 @@ def engine_version():
     gh = ''
     if os.path.isdir(git_path):
         try:
-            with sighandler("SIGCHLD", signal.SIG_DFL), \
-                 open(os.devnull, 'w') as devnull:
-                gh = subprocess.check_output(
-                    ['git', 'rev-parse', '--short', 'HEAD'],
-                    stderr=devnull, cwd=os.path.dirname(git_path)).strip()
-                gh = "-git" + decode(gh) if gh else ''
-        except Exception:
-            pass
-            # trapping everything on purpose; git may not be installed or it
-            # may not work properly
+            gh = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                cwd=os.path.dirname(git_path),
+                stderr=subprocess.STDOUT,
+                text=True
+            ).strip()
+        except subprocess.CalledProcessError as exc:
+            if exc.output.startswith("fatal: detected dubious ownership"):
+                # git config --global --add safe.directory <dir>
+                gitcmd = exc.output.splitlines()[-1]
+                subprocess.run(gitcmd.split(), cwd=os.path.dirname(git_path))
+        except OSError:
+            pass  # git may not be installed or not in the PATH
+        else:
+            gh = "-git" + decode(gh) if gh else ''
 
     return __version__ + gh
 
@@ -666,7 +690,6 @@ def check_dependencies():
     Print a warning if we forgot to update the dependencies.
     Works only for development installations.
     """
-    import openquake
     if 'site-packages' in openquake.__path__[0]:
         return  # do nothing for non-devel installations
     pyver = '%d%d' % (sys.version_info[0], sys.version_info[1])
@@ -1057,17 +1080,26 @@ class DictArray(Mapping):
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(data))
 
 
-def groupby(objects, key, reducegroup=list):
+def groupby(objects, key, reducegroup=list, sort=True):
     """
     :param objects: a sequence of objects with a key value
     :param key: the key function to extract the key value
     :param reducegroup: the function to apply to each group
+    :param sort: if False, keep the keys and the objects in each group in
+                 the original order, and the keys need not be sortable
     :returns: a dict {key value: map(reducegroup, group)}
 
     >>> groupby(['A1', 'A2', 'B1', 'B2', 'B3'], lambda x: x[0],
     ...         lambda group: ''.join(x[1] for x in group))
     {'A': '12', 'B': '123'}
+    >>> groupby(['B2', 'A1', 'B1'], lambda x: x[0], sort=False)
+    {'B': ['B2', 'B1'], 'A': ['A1']}
     """
+    if not sort:
+        groups = {}
+        for obj in objects:
+            groups.setdefault(key(obj), []).append(obj)
+        return {k: reducegroup(group) for k, group in groups.items()}
     kgroups = itertools.groupby(sorted(objects, key=key), key)
     return {k: reducegroup(group) for k, group in kgroups}
 
@@ -1461,18 +1493,17 @@ def random_filter(objects, reduction_factor, seed=42):
         return objects
     rnd = numpy.random.default_rng(seed)
     if isinstance(objects, pandas.DataFrame):
-        df = pandas.DataFrame({
-            col: random_filter(objects[col], reduction_factor, seed)
-            for col in objects.columns})
-        return df
+        # a single mask for all the columns: drawing the random numbers one
+        # by one for each column was extremely slow for large exposures;
+        # NB: rnd.random(n) gives the same numbers as n calls to rnd.random()
+        mask = rnd.random(len(objects)) <= reduction_factor
+        return objects[mask].reset_index(drop=True)
     elif isinstance(objects, numpy.ndarray):
         mask = rnd.random(objects.shape) < reduction_factor
         return objects[mask]
-    out = []
-    for obj in objects:
-        if rnd.random() <= reduction_factor:
-            out.append(obj)
-    return out
+    objects = list(objects)
+    mask = rnd.random(len(objects)) <= reduction_factor
+    return [obj for obj, ok in zip(objects, mask) if ok]
 
 
 def random_choice(array, num_samples, offset=0, seed=42):
@@ -2043,9 +2074,19 @@ class Deduplicate(Sequence):
     Deduplicate lists containing duplicated objects
     """
     def __init__(self, objects, check_one=False):
+        # pickle only the distinct objects by identity, since typically
+        # many of them are the same instance (pickling is the slow part)
+        ids = {}
+        idx = numpy.array([ids.setdefault(id(obj), len(ids))
+                           for obj in objects], int)
+        distinct = list({id(obj): obj for obj in objects}.values())
         pickles = [pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-                   for obj in objects]
-        uni, self.inv = numpy.unique(pickles, return_inverse=True)
+                   for obj in distinct]
+        if len(pickles) == 1:  # fast lane, numpy.unique is slow
+            uni, inv = pickles, numpy.zeros(1, int)
+        else:
+            uni, inv = numpy.unique(pickles, return_inverse=True)
+        self.inv = inv[idx]
         self.uni = [pickle.loads(pik) for pik in uni]
         if check_one:
             assert len(self.uni) == 1, self.uni

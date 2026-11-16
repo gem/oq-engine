@@ -159,7 +159,7 @@ def ses(mosaic_dir, out, models=['ALL'],
         models = MODELS
     for model in models:
         lst.append(f'checkout.{model} = "v2026_updates"')
-
+    lst.append('strict = false')
     for model in models:
         base = os.path.abspath(os.path.join(mosaic_dir, model))
         if not os.path.exists(base):

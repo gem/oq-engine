@@ -18,6 +18,7 @@
 
 import json
 import unittest
+from unittest import mock
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -31,6 +32,7 @@ from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
 from openquake.hazardlib.rmap_maker import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
+from openquake.hazardlib import source_reader
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 from openquake.calculators.views import view
@@ -233,14 +235,14 @@ class PostProcTestCase(CalculatorTestCase):
 
         asce41 = self.calc.datastore['asce41'][0].decode('ascii')
         dic41 = json.loads(asce41)
-        aae(dic41['BSE2N_Sxs'], 1.34087)
-        aae(dic41['BSE2E_Sxs'], 1.0829)
-        aae(dic41['BSE1N_Sxs'], 0.89392)
-        aae(dic41['BSE1E_Sxs'], 0.64129)
-        aae(dic41['BSE2N_Sx1'], 0.42443)
-        aae(dic41['BSE2E_Sx1'], 0.34182)
-        aae(dic41['BSE1N_Sx1'], 0.28295)
-        aae(dic41['BSE1E_Sx1'], 0.18406)
+        aae(dic41['BSE2N_Sxs'], 1.34098)
+        aae(dic41['BSE2E_Sxs'], 1.08299)
+        aae(dic41['BSE1N_Sxs'], 0.89399)
+        aae(dic41['BSE1E_Sxs'], 0.64134)
+        aae(dic41['BSE2N_Sx1'], 0.42445)
+        aae(dic41['BSE2E_Sx1'], 0.34184)
+        aae(dic41['BSE1N_Sx1'], 0.28297)
+        aae(dic41['BSE1E_Sx1'], 0.18407)
         ae(dic41['custom_site_id'], 'CRETE')
 
     def test_median_spectrum1(self):
@@ -281,6 +283,12 @@ class PostProcTestCase(CalculatorTestCase):
         fnames = export(('median_spectra', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+    def test_median_spectrum2_strided(self):
+        # the median spectrum depends on the order of the source groups,
+        # which must not change when reading the source models with strides
+        with mock.patch.object(source_reader, 'BIG_FILE', 0):
+            self.test_median_spectrum2()
 
 
 class SeismicityClassTestCase(unittest.TestCase):

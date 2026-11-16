@@ -26,7 +26,7 @@ on:
 
 jobs:
   on-failure:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
     - uses: ravsamhq/notify-slack-action@v2

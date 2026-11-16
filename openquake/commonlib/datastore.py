@@ -27,8 +27,8 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5, performance, general
-from openquake.commonlib import dbapi
-from openquake.commonlib.logs import get_datadir, CALC_REGEX, dbcmd, init
+from openquake.commonlib import dbapi, logs
+from openquake.commonlib import get_datadir
 
 
 def extract_calc_id_datadir(filename):
@@ -51,7 +51,7 @@ def extract_calc_id_datadir(filename):
     """
     filename = os.path.abspath(filename)
     datadir = os.path.dirname(filename)
-    mo = re.match(CALC_REGEX, os.path.basename(filename))
+    mo = re.match(logs.CALC_REGEX, os.path.basename(filename))
     if mo is None:
         raise ValueError('Cannot extract calc_id from %s' % filename)
     calc_id = int(mo.group(2))
@@ -63,16 +63,16 @@ def _read(calc_id, datadir, mode, haz_id=None):
     ppath = None
     if isinstance(calc_id, int):
         # look in the db
-        job = dbcmd('get_job', calc_id)
+        job = logs.dbcmd('get_job', calc_id)
         if job is None:
             raise dbapi.NotFound(f'{calc_id=} missing in the database')
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
-            dbcmd('update_job', calc_id, {'hazard_calculation_id': haz_id})
+            logs.dbcmd('update_job', calc_id, {'hazard_calculation_id': haz_id})
             hc_id = haz_id
         if hc_id and hc_id != calc_id:
-            hc = dbcmd('get_job', hc_id)
+            hc = logs.dbcmd('get_job', hc_id)
             if hc:
                 ppath = hc.ds_calc_dir + '.hdf5'
             else:
@@ -81,6 +81,15 @@ def _read(calc_id, datadir, mode, haz_id=None):
     else:  # when calc_id is an .hdf5 path
         path = calc_id
     return DataStore(path, ppath, mode)
+
+
+def last_workflow_id():
+    """
+    :returns: the ID of the last workflow, as recorded in ~/.last-workflow
+    """
+    with open(os.path.expanduser('~/.last-workflow')) as f:
+        last = f.read().strip().split('\n')[-1]  # the datastore path
+    return int(re.search(r'calc_(\d+)\.hdf5$', last).group(1))
 
 
 def read(calc_id, mode='r', datadir=None, parentdir=None, read_parent=True):
@@ -133,13 +142,18 @@ def new(calc_id, oqparam, datadir=None, mode=None):
 def create_job_dstore(description='custom calculation', parent=(), ini=None):
     """
     :returns: <DataStore> and <LogContext> associated to the calculation
+
+    The datastore can be used in a `with` block, which closes it on exit.
     """
     if ini is not None:
         dic = ini
     else:
         dic = dict(description=description, calculation_mode='custom')
-    log = init(dic)
+    log = logs.init(dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False), mode='w')
+    dstore.close_on_exit = True
+    # reopening after a `with` block must not truncate the file
+    dstore.mode = 'r+'
     dstore.parent = parent
     if parent:
         dstore._export_dir = get_oq(parent).export_dir
@@ -204,6 +218,7 @@ class DataStore(collections.abc.MutableMapping):
         self.filename = path
         self.ppath = ppath
         self.parent = ()  # can be set later
+        self.close_on_exit = False  # set by create_job_dstore
         # NB: the _tmp.hdf5 file must not be deleted, not even after the
         # calculation is complete: it holds the sections of the
         # multiFaultSources, read by get_sections (used by oq plot, by
@@ -602,8 +617,10 @@ class DataStore(collections.abc.MutableMapping):
         del self.hdf5[key]
 
     def __enter__(self):
-        self.was_close = self.hdf5 == ()
-        if self.was_close:
+        # close on exit if it was closed on enter or if it was created
+        # by create_job_dstore, which hands it over to the caller
+        self.was_close = self.hdf5 == () or self.close_on_exit
+        if self.hdf5 == ():
             self.open(self.mode)
         return self
 

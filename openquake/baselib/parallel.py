@@ -80,12 +80,6 @@ available at the moment:
 `OQ_DISTRIBUTE` set tp "zmq"
    use the zmq concurrency mechanism (experimental)
 
-There is also an `OQ_DISTRIBUTE` = "threadpool"; however the
-performance of using threads instead of processes is normally bad for the
-kind of applications we are interested in (CPU-dominated, which large
-tasks such that the time to spawn a new process is negligible with
-respect to the time to perform the task), so it is not recommended.
-
 If you are using a pool, is always a good idea to cleanup resources at the end
 with
 
@@ -181,6 +175,7 @@ fast sources.
 
 """
 import os
+import sqlite3
 import re
 import ast
 import sys
@@ -194,17 +189,17 @@ import logging
 import operator
 import tempfile
 import traceback
+import warnings
 import collections
 from unittest import mock
 import multiprocessing.shared_memory as shmem
-from concurrent.futures import (ProcessPoolExecutor, ThreadPoolExecutor,
-                                as_completed)
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import psutil
 import numpy
 
 from openquake.baselib import config, hdf5
-from openquake.baselib.general import decode
-from openquake.baselib.zeromq import zmq, Socket
+from openquake.baselib.general import decode, gc_disabled
+from openquake.baselib.zeromq import zmq, Socket, STALL_WARN
 from openquake.baselib.performance import (
     Monitor, PerfBuffer, memory_gb, init_performance)
 from openquake.baselib.general import (
@@ -219,16 +214,41 @@ GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
 
+# an entry "host cores" or "host:port cores" of host_cores; the values are
+# used to build the ssh commands starting the workerpools, so they are
+# validated strictly: a host name or IPv4 address, a port and an integer
+HOSTCORE = re.compile(r'([A-Za-z0-9][A-Za-z0-9._-]*)(?::(\d{1,5}))?\s+(-?\d+)')
+
+
 def parse_hostcore(hostcore, default_port):
     """
     :param hostcore: a string "host cores" or "host:port cores"
     :param default_port: the ctrl_port to use if the port is missing
     :returns: a triple (host, port, cores) with port an integer
+    :raises ValueError: if the string is not in the expected format
     """
-    hostport, cores = hostcore.split()
-    host, sep, port = hostport.partition(':')
+    match = HOSTCORE.fullmatch(hostcore.strip())
+    if match is None:
+        raise ValueError('Invalid host_cores entry %r: expected "host cores"'
+                         ' or "host:port cores"' % hostcore)
+    host, port, cores = match.groups()
     # without an explicit port the default ctrl_port is used
-    return host, (int(port) if sep else int(default_port)), cores
+    return host, int(port or default_port), cores
+
+
+# read the ds_calc_dir of a job from the database of a user installation;
+# this is direct access, so that baselib does not import commonlib
+def _ds_calc_dir(job_id):
+    dbfile = os.path.expanduser(config.server.dbfile)
+    conn = sqlite3.connect(dbfile, timeout=60)
+    try:
+        row = conn.execute('SELECT ds_calc_dir FROM job WHERE id=?',
+                           (job_id,)).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        raise ValueError('No job %s in %s' % (job_id, dbfile))
+    return row[0]
 
 
 def calc_dir(job_id_or_fname):
@@ -241,9 +261,8 @@ def calc_dir(job_id_or_fname):
         return os.path.join(tempfile.gettempdir(), getpass.getuser())
     if isinstance(job_id_or_fname, str):
         dirname = job_id_or_fname[:-5]  # strip .hdf5
-    else:  # in SLURM clusters
-        from openquake.commonlib.logs import dbcmd
-        dirname = dbcmd('get_job', job_id_or_fname).ds_calc_dir
+    else:  # in SLURM clusters the installation is of kind user
+        dirname = _ds_calc_dir(job_id_or_fname)
     try:
         os.makedirs(dirname)
     except FileExistsError:  # already created
@@ -258,7 +277,7 @@ def no_submit(self, func, args, monitor):
     safely_call(func, args, self.task_no, monitor, InprocSocket(self.inproc))
 
 
-@submit.add('processpool', 'threadpool')
+@submit.add('processpool')
 def processpool_submit(self, func, args, monitor):
     return self.pool.submit(
         safely_call, func, args, self.task_no, monitor)
@@ -281,16 +300,21 @@ def oq_distribute(task=None):
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
-    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'slurm'):
+    if dist not in ('no', 'processpool', 'zmq', 'slurm'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
 
-def init_worker():
+def init_worker(title):
     """
-    Used to initialize the process pool. Calls setproctitle (if available)
-    and sets the flag Starmap.on, so that it is possible to determine if
-    the current code is begin run in parallel or not.
+    Used to initialize the process pools. Calls setproctitle (if
+    available) with the given title and sets the flag Starmap.on, so that
+    it is possible to determine if the current code is being run in
+    parallel or not. It also silences the DeprecationWarnings and
+    UserWarnings, which the GSIM classes raise at instantiation and which
+    are already shown by the master process.
+
+    :param title: the process title to set (if setproctitle is available)
     """
     # SIGINT not passed to the workers to reduce traceback
     try:
@@ -303,8 +327,10 @@ def init_worker():
     except ImportError:
         pass
     else:
-        setproctitle('oq-worker')
+        setproctitle(title)
     Starmap.on = True
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    warnings.filterwarnings('ignore', category=UserWarning)
 
 
 class Pickled(object):
@@ -431,7 +457,11 @@ class Result(object):
         Returns the underlying value or raise the underlying exception
         """
         t0 = time.time()
-        val = self.pik.unpickle()
+        # disabling the garbage collector makes the unpickling of
+        # millions of objects (for instance the sources returned by
+        # preclassical) much faster
+        with gc_disabled():
+            val = self.pik.unpickle()
         self.dt = time.time() - t0
         if self.tb_str:
             etype = val.__class__
@@ -506,15 +536,14 @@ def sendback(res, zsocket):
     try:
         zsocket.send(res)
         if DEBUG:
-            from openquake.commonlib.logs import dblog
             if calc_id:  # None when building the png maps
                 msg = 'sent back %s' % humansize(nbytes)
-                dblog('DEBUG', calc_id, task_no, msg)
+                logging.debug('task #%d: %s', task_no, msg)
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
         if DEBUG and calc_id:
-            dblog('ERROR', calc_id, task_no, tb_str)
+            logging.error('task #%d: %s', task_no, tb_str)
         res = Result(exc, res.mon, tb_str)
         zsocket.send(res)
     return nbytes
@@ -779,12 +808,10 @@ class Starmap(object):
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = ProcessPoolExecutor(
-                num_cores, mp_context, init_worker)
+                num_cores, mp_context, init_worker, ('oq-worker',))
             # we use spawn to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-        elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = ThreadPoolExecutor(num_cores, initializer=init_worker)
 
         if num_cores > tot_cores:
             logging.warning(f'{num_cores=} but {tot_cores=}')
@@ -919,8 +946,7 @@ class Starmap(object):
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # setup the PULL socket the first time
             self.socket = Socket(
-                self.receiver, zmq.PULL, 'bind',
-                starmap=self if self.distribute == 'processpool' else None
+                self.receiver, zmq.PULL, 'bind', starmap=self
             ).__enter__()
             self.monitor.shared = self._shared
             self.monitor.backurl = 'tcp://%s:%s' % (
@@ -928,7 +954,7 @@ class Starmap(object):
             if self.distribute == 'slurm':
                 self.init_slurm()
         dist = 'no' if self.num_tasks == 1 else self.distribute
-        if dist not in ('no', 'threadpool'):
+        if dist != 'no':
             pickled = isinstance(args[0], Pickled)
             if not pickled:
                 assert not isinstance(args[-1], Monitor)  # sanity check
@@ -1011,6 +1037,82 @@ class Starmap(object):
             if task.done():
                 task.result(timeout=0)
 
+    # called by the zmq Socket on a poll timeout (no message received)
+    def poll_timeout(self, sock, waited):
+        """
+        On a poll timeout (no message on the socket) either check that the
+        local process pool is not broken (processpool mode) or, in zmq/slurm
+        mode, collect diagnostic info about a possible stall, i.e. a result
+        that was expected but never arrived.
+        """
+        if self.distribute == 'processpool':
+            self.check_tasks_alive()  # raise BrokenProcessPool if a worker died
+        elif (self.distribute in ('zmq', 'slurm') and waited >= STALL_WARN):
+            self._zmq_stall_report(sock)
+
+    # Instrument the zmq/slurm stalls: on a long silence log (at debug level)
+    # which tasks are outstanding and whether the workers are still executing
+    # them (stuck) or went idle (lost result). Keep the log concise: do not
+    # dump the full list of executing tasks, just counts.
+    def _zmq_stall_report(self, sock):
+        if not self.tasks or not host_cores:
+            return
+        now = time.monotonic()
+        # throttle: report at most once every STALL_WARN seconds
+        if now - getattr(self, '_last_stall_report', -STALL_WARN) < STALL_WARN:
+            return
+        self._last_stall_report = now
+        outstanding = set(self.tasks)  # task_no not ended yet
+        cid = str(self.calc_id)
+        logging.debug(
+            'Waiting on %s: %d tasks outstanding %s', sock, len(outstanding),
+            shortlist(sorted(outstanding)))
+        rows = []
+        still_tot = 0
+        all_known = True
+        for line in host_cores:
+            try:
+                host, port, _cores = parse_hostcore(
+                    line, config.zworkers.ctrl_port)
+                addr = 'tcp://%s:%s' % (host, port)
+                with Socket(addr, zmq.REQ, 'connect', timeout=5) as wsock:
+                    nworkers = wsock.send('get_num_workers')
+                    busy = wsock.send('get_executing').split()
+                    # Keep execution status even if the memory query fails.
+                    still = sum(1 for t in busy
+                                if t.rsplit('-', 1)[0] == cid
+                                and int(t.rsplit('-', 1)[1]) in outstanding)
+                    still_tot += still
+                    try:
+                        mem_gb = wsock.send('memory_gb')
+                    except Exception as exc:
+                        mem_gb = numpy.nan
+                        logging.warning(
+                            'Could not query workerpool memory %s: %r',
+                            line, exc)
+                rows.append((addr, nworkers, len(busy), mem_gb, still))
+            except Exception as exc:
+                all_known = False
+                logging.warning('Could not query workerpool %s: %r', line, exc)
+        # if none of the outstanding tasks is executing on any worker, the
+        # results were computed but never delivered (lost packets): report at
+        # ERROR level and abort instead of hanging. Failed status queries
+        # leave worker execution unknown, so they cannot establish a loss.
+        # A task may have completed during the queries: let the receiver
+        # consume any messages that arrived before deciding they were lost.
+        lost = (bool(outstanding) and all_known and still_tot == 0
+                and not sock.zsocket.poll(0))
+        for addr, nworkers, nbusy, mem_gb, still in rows:
+            msg = ('WorkerPool %s: %d workers, %d busy, mem=%.0fGB, '
+                   '%d/%d executing')
+            args = (addr, nworkers, nbusy, mem_gb, still, len(outstanding))
+            (logging.error if lost else logging.debug)(msg, *args)
+        if lost:
+            raise RuntimeError(
+                'Lost %d result(s) for %s: tasks %s are not executing on any '
+                'worker (likely dropped zmq messages)' % (
+                    len(outstanding), sock, shortlist(sorted(outstanding))))
+
     def _inproc_results(self):
         # a task submitted while consuming (a subtask) appends more
         # results, which are seen by the loop since we pop lazily
@@ -1034,6 +1136,7 @@ class Starmap(object):
 
     def _loop_tasks(self):
         self.busytime = AccumDict()  # name -> pid -> time
+        self.subtask_names = set()  # names of the subtasks generated
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
@@ -1065,6 +1168,7 @@ class Starmap(object):
             elif res.msg == 'TASK_ENDED':
                 self._task_ended(res, finished)
             elif res.func:  # add subtask
+                self.subtask_names.add(res.func.__name__)
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
             else:
@@ -1077,11 +1181,16 @@ class Starmap(object):
         if self.expected_outputs:
             assert self.expected_outputs == self.n_out, (
                 self.expected_outputs, self.n_out)
-        # NB: a Starmap can generate tasks with different names, as
+        # NB: a Starmap can generate subtasks with different names, as
         # preclassical -> filter_weight, or classical -> baseclassical
         # when the tasks are split for being too slow (see the comment
-        # in classical.py); there is one row per task name, so that the
-        # tasks of different kinds are not mixed together
+        # in classical.py); the busy times of the subtasks are summed to
+        # the ones of the Starmap, per worker, so that the efficiency is
+        # computed from the total busy times and ascribed to the Starmap
+        for name in self.subtask_names & set(self.busytime):
+            base = self.busytime.pop(name)
+            parent = self.busytime.setdefault(self.name, AccumDict(accum=0.))
+            parent += base
         for name, dic in self.busytime.items():
             if len(dic) > 1:  # no statistics with a single core
                 times = numpy.array(list(dic.values()))
@@ -1144,6 +1253,18 @@ class Starmap(object):
     def __del__(self):
         if hasattr(self, 'socket'):
             self.socket.close()
+
+
+def heaviest_first(allargs, weights):
+    """
+    :param allargs: a list of task arguments
+    :param weights: a list of weights, one for each task
+    :returns: the task arguments sorted by decreasing weight, so that the
+              heaviest tasks are submitted first and do not end up last
+              with most of the cores idle
+    """
+    order = numpy.argsort(-numpy.array(weights), kind='stable')
+    return [allargs[i] for i in order]
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,

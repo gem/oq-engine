@@ -33,6 +33,7 @@ from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture)
 from openquake.hazardlib.geo.utils import (
     get_bounding_box, angular_mean, KM_TO_DEGREES, DEGREES_TO_RAD)
+from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
 
 def msr_name(src):
@@ -115,6 +116,9 @@ def calc_average(pointsources):
             acc[key] = acc[key][0]
         else:
             acc[key] = numpy.average(acc[key], weights=rate_w)
+    # the average of points on the antimeridian can exceed 180 in
+    # absolute value by a few ulps, see test_antimeridian
+    acc['lon'] = numpy.clip(acc['lon'], -180., 180.)
     return acc
 
 
@@ -244,8 +248,9 @@ class PointSource(ParametricSeismicSource):
         """
         :returns: max radius, without the ps_grid_spacing half diagonal
         """
-        if radii is None:
-            radii = self._get_rupture_projection_radii()
+        if radii is None:  # compute the radius of the maximum magnitude
+            mag, rate = self.get_annual_occurrence_rates()[-1]
+            radii = self._get_rupture_projection_radii([(rate, mag)])
         return min(radii[-1], maxdist / 2)
 
     def get_psdist(self, m, mag, psdist, magdist, radii=None):
@@ -256,18 +261,19 @@ class PointSource(ParametricSeismicSource):
             radii = self._get_rupture_projection_radii()
         return psdist + min(radii[m], magdist[mag] / 2)
 
-    def _get_rupture_projection_radii(self):
+    def _get_rupture_projection_radii(self, magd=None):
         """
         Return half the maximum rupture's diagonal surface projection for
         each magnitude.
         """
-        magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
+        if magd is None:
+            magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         if isinstance(self.magnitude_scaling_relationship, PointMSR):
             return numpy.zeros(len(magd))
         radii = numpy.zeros(len(magd))
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
-        for m, planin in enumerate(self.get_planin()):
+        for m, planin in enumerate(self.get_planin(magd)):
             rup_length, rup_width, _ = get_rupdims(
                 usd, lsd, self.get_aspect_ratio(magd[m][1]),
                 planin.area[-1], planin.dip[-1])
@@ -523,6 +529,18 @@ class CollapsedPointSource(PointSource):
             [(1., NodalPlane(self.strike, self.dip, self.rake))])
         self.hypocenter_distribution = PMF([(1., self.dep)])
         self.hypo_dip_fracs = (self.hypo_dip_frac,)
+        self.extent = self.get_extent(pointsources)
+
+    def get_extent(self, pointsources):
+        """
+        :param pointsources: the underlying point sources
+        :returns: the max distance in km between the centroid and the
+                  underlying point sources
+        """
+        lons = numpy.array([src.location.x for src in pointsources])
+        lats = numpy.array([src.location.y for src in pointsources])
+        return geodetic.geodetic_distance(
+            self.lon, self.lat, lons, lats).max()
 
     @property
     def pointsources(self):
@@ -587,15 +605,11 @@ class CollapsedPointSource(PointSource):
 
     def modify_set_recurrow(self, recurrow):
         """Apply an area-source recurrence row to the underlying points."""
-        from openquake.hazardlib.source.area import AreaSource
-        from openquake.hazardlib.mfd.evenly_discretized import (
-            EvenlyDiscretizedMFD)
-
         row = dict(recurrow)
         rate_key = 'bg_rate' if 'bg_rate' in row else 'rate'
         fraction = getattr(self, 'source_fraction', 1.)
         row[rate_key] = float(row[rate_key]) * fraction
-        AreaSource.modify_set_recurrow(self, row)
+        super().modify_set_recurrow(row)
         rates = self.mfd.get_annual_occurrence_rates()
         share = 1. / len(self.pdata['array'])
         pointsources = self.pointsources
@@ -612,6 +626,18 @@ class CollapsedPointSource(PointSource):
             [(1., NodalPlane(self.strike, self.dip, self.rake))])
         self.hypocenter_distribution = PMF([(1., self.dep)])
         self.hypo_dip_fracs = (self.hypo_dip_frac,)
+        self.extent = self.get_extent(pointsources)
+
+    def get_psdist(self, m, mag, psdist, magdist, radii=None):
+        """
+        :returns:
+            the effective pointsource distance for the given magnitude,
+            measured from the centroid, i.e. including the extent of
+            the cell, so that a site close to an underlying point source
+            is never considered far
+        """
+        return self.extent + super().get_psdist(
+            m, mag, psdist, magdist, radii)
 
     def count_ruptures(self):
         """
