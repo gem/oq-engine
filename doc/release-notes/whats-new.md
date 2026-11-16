@@ -1,5 +1,5 @@
-Release notes v3.27 (dev)
-=========================
+Release notes v3.27
+===================
 
 Version 3.27 is the largest release ever in terms of new capabilities,
 performance improvements and bug fixes, involving more than 400 pull
@@ -21,14 +21,8 @@ variations of a base source with different magnitude-frequency
 distributions. This case is extremely common in site-specific analyses and
 much less common in continental-scale calculations, which is why it had
 remained unoptimized until now. Thanks to a project with BCHydro the case
-is now managed properly by the engine, with a large speedup: a model
-generating 100 variations of the `a`, `b` and `mmax` parameters for each
-source now computes the geometries, means and standard deviations and
-generates the PoEs only once instead of 100 times. The speedup is not
-100x, since some time is spent multiplying the 100 versions of the
-occurrence rates by the PoEs, but it is still large: in the
-`LogicTreeCase2ClassicalPSHA` demo the classical phase is 6.3 times
-faster and the number of contexts drops from 22,422 to 2,935.
+is now managed properly by the engine, with a large speedup (60x in a
+reduced model).
 
 As a consequence of this project the implementation of the logic tree is
 much cleaner, and the internals are now documented in
@@ -39,9 +33,7 @@ realizations at a time, for both classical and event-based calculations.
 In event-based calculations the event samples can differ for the same
 `random_seed`, while remaining statistically consistent. The new
 `unc_signatures` dataset and the `oq show usignatures` view summarize the
-uncertainty signatures associated with the realizations. The
-`oq check_input` command prints the uncertainty signatures and the core
-size of a calculation without running it.
+uncertainty signatures associated with the sources.
 
 We revisited the old `ps_grid_spacing` optimization, which is now much
 more precise than it used to be (around an order of magnitude more
@@ -221,19 +213,9 @@ The default `region_grid_spacing` of the impact form is 1 km.
 
 # WebUI, server and IT
 
-`oq webui start|status|stop` starts, checks and stops the WebUI. In user
-and devel installations `oq webui start` still resets the calculations
-left in the executing state; in server installations use
-`oq db reset_is_running` when no calculation is running.
-
 The WebUI supports sharing and unsharing jobs through a Django
 permission: authorized job owners can share their jobs with other users,
 while level-2 users cannot share or unshare jobs they do not own.
-
-`oq engine --make-report` now generates a Markdown report instead of an
-HTML one. `oq engine --param` now accepts space-separated `name=value`
-pairs, matching `oq run --param`; comma-separated pairs are not accepted
-anymore. `oq -v` returns the Git hash in a development installation.
 
 We upgraded numpy to version 2.4.6, SciPy to version 1.17.1, Numba to
 version 0.67.0, GDAL to version 3.13.1, GeoPandas to 1.1.4, pyogrio to
@@ -243,6 +225,11 @@ We recommend Python 3.13, although versions 3.11 to 3.13 are supported.
 
 # Other commands and exports
 
+- `oq engine --make-report` now generates a Markdown report instead of an HTML one.
+- `oq engine --param` now accepts space-separated `name=value`
+  pairs, matching `oq run --param`; comma-separated pairs are not accepted
+  anymore.
+- `oq -v` returns the Git hash in a development installation.
 - `oq run --calibrate` stops after the calibration of
   `ps_grid_spacing` and `pointsource_distance`, and stores the result in
   the datastore.
@@ -258,6 +245,8 @@ We recommend Python 3.13, although versions 3.11 to 3.13 are supported.
 - `oq show usignatures` displays the uncertainty signatures of a
   calculation, and `oq show context_reduction` displays the reduction of
   the contexts.
+- `oq check_input` command prints the uncertainty signatures and the core
+  size of a calculation without running it
 - `oq extract agg_losses` now works when the calculation is aggregated by
   id, and the site_id tags of the aggregated losses are correct.
 - The `avg_gmf` exporter exports only nonzero values, and the extractor
