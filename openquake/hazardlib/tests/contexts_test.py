@@ -48,6 +48,10 @@ from openquake.hazardlib.geo.surface.planar import (
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
+from openquake.commonlib import readinput
+from openquake.hazardlib.rmap_maker import get_cmakers
+from openquake.hazardlib.source_reader import (
+    get_bset_values, modified_groups)
 
 PLOTTING = False
 aac = numpy.testing.assert_allclose
@@ -301,10 +305,6 @@ class FastRatesTestCase(unittest.TestCase):
     """
     @classmethod
     def setUpClass(cls):
-        from openquake.commonlib import readinput
-        from openquake.hazardlib.rmap_maker import get_cmakers
-        from openquake.hazardlib.source_reader import (
-            get_bset_values, modified_groups)
         job_ini = os.path.join(os.path.dirname(__file__), 'data/area/job.ini')
         oq = readinput.get_oqparam(job_ini)
         csm = readinput.get_composite_source_model(oq)

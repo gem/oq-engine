@@ -23,6 +23,7 @@ import numpy
 import pandas
 
 from openquake.baselib import performance, parallel, hdf5, general, config
+from openquake.baselib.writers import text_table
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import map_array, nrml
 from openquake.hazardlib.source.rupture import get_events
@@ -250,7 +251,6 @@ class RuptureImporter(object):
         rupids = numpy.unique(rup_array['id'])
         if len(rupids) < nr:
             # rup_id not unique
-            from openquake.calculators.views import text_table
             dupl, source_id = get_first_duplicate(
                 rup_array, self.datastore['source_info'][:])
             msg = f'{source_id=}\n{text_table(dupl, ext="org")}'

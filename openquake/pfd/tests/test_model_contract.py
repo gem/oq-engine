@@ -23,8 +23,8 @@ valid DISPLACEMENT_DEFINITION / DISPLACEMENT_COMPONENT (Sarmiento et al.
 APPLICABILITY_RANGE in their own distance metric.
 
 The exact per-model assignments are frozen here on purpose: changing a
-model's definition changes kernel routing (aggregate single-bucket path,
-FDLT-013/014 guards), so any change must be a conscious, cited edit of both
+model's definition changes kernel routing (aggregate single-bucket path
+and validator guards), so any change must be a conscious, cited edit of both
 the model class and this table.
 """
 import inspect

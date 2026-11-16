@@ -24,7 +24,6 @@ from openquake.hazardlib.source.rupture import (  # noqa
     ParametricProbabilisticRupture,
     NonParametricProbabilisticRupture
 )
-from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.source.point import PointSource  # noqa
 from openquake.hazardlib.source.area import AreaSource  # noqa
 from openquake.hazardlib.source.simple_fault import SimpleFaultSource, HypoData  # noqa
@@ -34,14 +33,6 @@ from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
 from openquake.hazardlib.source.multi_point import MultiPointSource   # noqa
 from openquake.hazardlib.source.kite_fault import KiteFaultSource  # noqa
 from openquake.hazardlib.source.multi_fault import MultiFaultSource  # noqa
-
-
-def splittable(src):
-    """
-    :returns: True if the source is splittable, False otherwise
-    """
-    return (src.__class__.__iter__ is not BaseSeismicSource.__iter__
-            and getattr(src, 'mutex_weight', 1) == 1 and src.splittable)
 
 
 def check_complex_fault(src):

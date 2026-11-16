@@ -35,7 +35,7 @@ suitable for the area being modeled.
 import logging
 
 import numpy
-from pyproj import Transformer
+from openquake.baselib.geolibs import pyproj
 
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     RegularGridLayout, _local_crs)
@@ -80,7 +80,7 @@ def regular_grid(mesh, spacing, padding=None):
     _check_coordinates(lons, lats)
     # One projection for the whole grid, shared with the CE detector
     crs = _local_crs(lons, lats)
-    projection = Transformer.from_crs(4326, crs, always_xy=True)
+    projection = pyproj.Transformer.from_crs(4326, crs, always_xy=True)
     if len(lons) == 1:
         x, y = projection.transform(float(lons[0]), float(lats[0]))
         x, y = numpy.array([x]), numpy.array([y])
@@ -99,8 +99,8 @@ def regular_grid(mesh, spacing, padding=None):
     nx, ny = dimensions.astype(int)
     xx, yy = numpy.meshgrid((lower[0] + numpy.arange(nx)) * step,
                            (lower[1] + numpy.arange(ny)) * step)
-    lons, lats = Transformer.from_crs(crs, 4326, always_xy=True).transform(
-        xx.ravel(), yy.ravel())
+    lons, lats = pyproj.Transformer.from_crs(
+        crs, 4326, always_xy=True).transform(xx.ravel(), yy.ravel())
     lons, lats = numpy.round(lons, 5), numpy.round(lats, 5)
     _check_coordinates(lons, lats)
     coordinates = numpy.column_stack([lons, lats])

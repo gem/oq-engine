@@ -109,12 +109,19 @@ class server:
     OQDATA = "/opt/openquake/oqdata"
     ETC = "/etc/openquake"
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
-    CONFIG = f"""[server]
+    USER = "openquake"
+
+    @classmethod
+    def config(cls, authkey):
+        # the authkey is the key of the internal API, which the users need
+        # to reach the engine from their calculations: it is random
+        return f"""[server]
     host = localhost
-    dbfile = {DBPATH}
+    dbfile = {cls.DBPATH}
+    [webapi]
+    authkey = {authkey}
     [directory]
     """
-    USER = "openquake"
 
     @classmethod
     def manage_py(cls):
@@ -177,7 +184,7 @@ class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
-    INST_TYPE = 'devel_user'
+    INST_TYPE = 'devel'
 
     @classmethod
     def manage_py(cls):
@@ -610,10 +617,11 @@ def create_cfg(inst):
         return
     if os.path.exists(inst.CFG):
         print(f"There is an old file {inst.CFG}; it will not be "
-              f"overwritten, but consider updating it with\n{inst.CONFIG}")
+              f"overwritten, but consider updating it with\n"
+              f"{inst.config('<a random key>')}")
     else:
         with open(inst.CFG, "w") as cfg:
-            cfg.write(inst.CONFIG)
+            cfg.write(inst.config(secrets.token_urlsafe(32)))
         print(f"Created {inst.CFG}")
 
 
@@ -703,6 +711,12 @@ def create_services(inst):
                     for i in range(50))
                 f.write(f"DJANGO_SECRET_KEY='{key}'\n")
         os.chmod(secret_file, stat.S_IRUSR | stat.S_IWUSR)
+        # openquake is not a system user, so when its last login session ends
+        # (e.g. after `sudo -i -u openquake`) systemd-logind removes its IPC
+        # objects (RemoveIPC=yes), including the semaphores of the running
+        # calculations, which then fail with BrokenProcessPool; with lingering
+        # the user is never considered logged out and its IPC objects are kept
+        subprocess.check_call(["loginctl", "enable-linger", "openquake"])
         os.chown(secret_file,
                  openquake_user.pw_uid,
                  openquake_user.pw_gid)
@@ -737,9 +751,9 @@ def install(inst, version, from_fork, noupgrade):
         print(f"Created {inst.VENV}")
 
     # store in the venv dir a file specifying the type of installation (server,
-    # user, devel_server, devel_user)
+    # user, devel, devel_server)
     if inst.VENV:
-        inst_type_file_path = os.path.join(inst.VENV, 'OQ_ENGINE_INST_TYPE')
+        inst_type_file_path = os.path.join(inst.VENV, 'INST_TYPE')
         with open(inst_type_file_path, 'w') as inst_type_file:
             inst_type_file.write(inst.INST_TYPE)
 

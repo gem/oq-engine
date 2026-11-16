@@ -22,6 +22,7 @@ Module :mod:`openquake.hazardlib.geo.point` defines :class:`Point`.
 import numpy
 import shapely.geometry
 
+from openquake.hazardlib import geo
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
 
@@ -277,9 +278,6 @@ class Point(object):
             approximates a circle around the point with specified radius.
         """
         assert radius > 0
-        # avoid circular imports
-        from openquake.hazardlib.geo.polygon import Polygon
-
         # get a projection that is centered in the point
         proj = geo_utils.OrthographicProjection(
             self.longitude, self.longitude, self.latitude, self.latitude)
@@ -290,7 +288,7 @@ class Point(object):
 
         # extend the point to a shapely polygon using buffer()
         # and create openquake.hazardlib.geo.polygon.Polygon object from it
-        return Polygon._from_2d(point.buffer(radius), proj)
+        return geo.Polygon._from_2d(point.buffer(radius), proj)
 
     def closer_than(self, mesh, radius):
         """
