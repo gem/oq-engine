@@ -1047,8 +1047,7 @@ class Starmap(object):
         """
         if self.distribute == 'processpool':
             self.check_tasks_alive()  # raise BrokenProcessPool if a worker died
-        elif (self.distribute in ('zmq', 'slurm') and waited >= STALL_WARN
-              and logging.getLogger().isEnabledFor(logging.DEBUG)):
+        elif (self.distribute in ('zmq', 'slurm') and waited >= STALL_WARN):
             self._zmq_stall_report(sock)
 
     # Instrument the zmq/slurm stalls: on a long silence log (at debug level)
