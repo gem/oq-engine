@@ -440,6 +440,20 @@ class ClassicalTestCase(CalculatorTestCase):
         fname = general.gettemp(text_table(rel, ext='org'))
         self.assertEqualFiles('expected/rel_source.org', fname)
 
+        # rateSplit does not change these sources' occurrence rates.
+        # Both uncertainty sets must retain the full atomic contribution,
+        # with both the few-sites and many-sites task functions.
+        smlt = 'source_model_logic_tree_unc.xml'
+        for kwargs in [{}, dict(disagg_by_src='false', max_sites_disagg='1',
+                                sites='135.68 35.68, 135.69 35.68')]:
+            self.run_calc(case_27.__file__, 'job.ini', **kwargs)
+            expected = self.calc.datastore['hcurves-stats'][:]
+            self.run_calc(
+                case_27.__file__, 'job.ini', **kwargs,
+                source_model_logic_tree_file=smlt)
+            actual = self.calc.datastore['hcurves-stats'][:]
+            aac(actual, expected, rtol=1E-6)
+
     def test_case_27_other(self):
         # the second atomic group has sources named other:03, other:04;
         # with disagg_by_src the rates of each atomic group must be

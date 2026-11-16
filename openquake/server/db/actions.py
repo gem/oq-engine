@@ -25,7 +25,7 @@ from openquake.hazardlib import valid
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.commonlib.dbapi import NotFound
-from openquake.calculators.export import DISPLAY_NAME
+from openquake.commonlib.outputs import DISPLAY_NAME
 
 UTC = timezone.utc
 JOB_TYPE = '''CASE
