@@ -40,12 +40,15 @@ from scipy.fft import next_fast_len
 from scipy.spatial import cKDTree
 
 
+# Limit on enclosing grid cells per occupied site; inf disables the limit.
 MAX_GRID_CELL_RATIO = 4
+# Grid-fit and cell-snapping tolerance, as a fraction of grid spacing.
 GRID_TOLERANCE = 0.01
-_SPECTRAL_CHUNK_CELLS = 65536
-
-
+# Maximum Fourier modes factored in one eigensolver chunk.
+_SPECTRAL_CHUNK_CELLS = 2**16
+# Relative tolerance for checking spectral Hermitian symmetry.
 EPS = 1E-10
+
 
 def _pair(value, name, cast):
     """Return a validated pair of grid parameters."""
