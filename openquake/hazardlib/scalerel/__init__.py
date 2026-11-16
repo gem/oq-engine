@@ -39,7 +39,8 @@ def _get_available_class(base_class):
     '''
     classes = {}  # class_name -> class
     for fname in os.listdir(os.path.dirname(__file__)):
-        if fname.endswith('.py'):
+        # Skip the package initializer to avoid importing it a second time.
+        if fname.endswith('.py') and fname != '__init__.py':
             modname, _ext = os.path.splitext(fname)
             mod = importlib.import_module(
                 'openquake.hazardlib.scalerel.' + modname)

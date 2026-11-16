@@ -28,7 +28,7 @@ import h5py
 
 from openquake.baselib import hdf5, performance, general
 from openquake.commonlib import dbapi, logs
-from openquake.commonlib import get_datadir as get_datadir
+from openquake.commonlib import get_datadir
 
 
 def extract_calc_id_datadir(filename):

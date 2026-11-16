@@ -42,9 +42,7 @@ from openquake.hazardlib.source_group import read_csm
 from openquake.commonlib import util, datastore, logs
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
-from openquake.baselib.writers import (
-    scientificformat, text_table, form as form,
-    HtmlTable as HtmlTable, fix_newlines as fix_newlines)
+from openquake.baselib.writers import scientificformat, text_table
 from openquake.calculators.getters import (
     get_ebrupture, map_getters, get_rmap_gb)
 from openquake.calculators.base import get_weights, get_model_lts

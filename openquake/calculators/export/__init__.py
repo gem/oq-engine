@@ -20,7 +20,6 @@ import logging
 from openquake.baselib.general import CallableDict
 from openquake.baselib.writers import write_csv
 from openquake.risklib.scientific import TIME_EVENTS
-from openquake.commonlib.outputs import DISPLAY_NAME as DISPLAY_NAME
 
 
 AGGRISK_FIELD_DESCRIPTION = {

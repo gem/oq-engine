@@ -56,11 +56,12 @@ from openquake.hazardlib.shakemap.parsers import (
     get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info,
     format_event_time)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
+from openquake.commonlib.outputs import DISPLAY_NAME
 from openquake.calculators import base, views
 from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
     EXPOSED_VALUE_EXPLANATION, REPORTED_VALUE_EXPLANATION,
-    EXPOSURE_FIELD_DESCRIPTION, DISPLAY_NAME)
+    EXPOSURE_FIELD_DESCRIPTION)
 from openquake.calculators.extract import extract as _extract
 from openquake.risklib.scientific import TIME_EVENTS, TIME_LOSSES
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
