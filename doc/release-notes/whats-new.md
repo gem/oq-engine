@@ -235,6 +235,10 @@ HTML one. `oq engine --param` now accepts space-separated `name=value`
 pairs, matching `oq run --param`; comma-separated pairs are not accepted
 anymore. `oq -v` returns the Git hash in a development installation.
 
+We upgraded numpy to version 2.4.6, SciPy to version 1.17.1, Numba to
+version 0.67.0, GDAL to version 3.13.1, GeoPandas to 1.1.4, pyogrio to
+0.12.1.
+
 We recommend Python 3.13, although versions 3.11 to 3.13 are supported.
 
 # Other commands and exports
