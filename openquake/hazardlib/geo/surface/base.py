@@ -495,12 +495,7 @@ class BaseSurface(metaclass=abc.ABCMeta):
         """
         Compute area as the sum of the mesh cells area values.
         """
-        from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
-        if isinstance(self, KiteSurface):
-            _, _, _, area = self.get_cell_dimensions()
-        else:
-            mesh = self.mesh
-            _, _, _, area = mesh.get_cell_dimensions()
+        _, _, _, area = self.mesh.get_cell_dimensions()
         return numpy.sum(area)
 
     def get_bounding_box(self):

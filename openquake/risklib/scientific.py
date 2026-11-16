@@ -48,7 +48,8 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
 # the time events used when the occupants depend on the time
 TIME_EVENTS = ['day', 'night', 'transit']
 # the calculation modes where the occupants losses depend on time_event
-OCC_TIME_MODES = ('scenario_risk', 'event_based_risk', 'ebrisk')
+# (for the event based calculations only the average is computed)
+OCC_TIME_MODES = ('scenario_risk',)
 # the loss types computed for each time event, using the occupants_<te>
 TIME_LOSSES = ('occupants', 'injured')
 

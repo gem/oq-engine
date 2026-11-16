@@ -38,6 +38,8 @@ from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
     JayaramBaker2009)
 from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
     import DuNing2021
+from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+    loth_baker_2013 import LothBaker2013
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.contexts import simple_cmaker
@@ -103,10 +105,12 @@ def collect_batches(batch_size):
     return pandas.concat([batch[0] for batch in batches]), batches
 
 
-def test_ce_selection():
+@pytest.mark.parametrize('model_cls', [DuNing2021, LothBaker2013])
+def test_ce_selection(model_cls):
     complete = regular_sites((2, 3))
     sites = complete.filtered([4, 0, 2])
     computer = build_computer(sites)
+    computer.within_event_model = model_cls()
     factor = computer._get_ce_factor()
 
     assert isinstance(factor, CirculantEmbeddingFactor)

@@ -37,7 +37,7 @@ traces, and the resulting line provides both ``r`` (distance to it) and
 observations) is not needed by the hazard and is not ported.
 """
 import numpy as np
-import pyproj
+from openquake.baselib.geolibs import pyproj
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import dijkstra
 

@@ -34,7 +34,7 @@ multidimensional Gaussian stochastic simulations. Water Resources Research,
 from dataclasses import dataclass
 
 import numpy
-from pyproj import Transformer
+from openquake.baselib.geolibs import pyproj
 from scipy.fft import next_fast_len
 from scipy.spatial import cKDTree
 
@@ -131,7 +131,7 @@ class RegularGridLayout:
 
         if crs is None:
             crs = _local_crs(lons, lats)
-        transformer = Transformer.from_crs(
+        transformer = pyproj.Transformer.from_crs(
             4326, crs, always_xy=True)
         x, y = transformer.transform(lons, lats)
         initial_spacing = _grid_spacing(x, y)
@@ -183,7 +183,7 @@ class RegularGridLayout:
 
     def grid_coordinates(self, sites):
         """Return fractional row and column coordinates for ``sites``."""
-        transformer = Transformer.from_crs(
+        transformer = pyproj.Transformer.from_crs(
             4326, self.crs, always_xy=True)
         if len(sites.lons) == 1:
             x, y = transformer.transform(

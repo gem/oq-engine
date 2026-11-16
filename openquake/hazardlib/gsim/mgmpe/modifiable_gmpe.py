@@ -35,7 +35,8 @@ from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
 from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
 from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import (
     _get_bssa14_site_term)
- 
+from openquake.hazardlib.gsim.mgmpe import swiss_amplification
+
 # Basin terms imports
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
 from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
@@ -74,9 +75,7 @@ ADJUSTMENT_REQUIREMENTS = {
                          StdDev.INTRA_EVENT,
                          StdDev.INTER_EVENT},
     },
-    'apply_swiss_amplification': {
-        'gmpe_sites': frozenset(['amplfactor']),
-    },
+    **swiss_amplification.ADJUSTMENT_REQUIREMENTS,
     'set_between_epsilon': {
         'requires_gmpe_stddev': StdDev.INTER_EVENT,
     },
@@ -309,6 +308,31 @@ def bssa14_site_term(ctx, imt, me, si, ta, phi):
     me[:] += _get_bssa14_site_term(imt, ctx)
 
 
+def apply_swiss_amplification(ctx, imt, me, si, ta, ph):
+    """
+    Adds the Swiss amplfactor to the log mean.
+    """
+    me[:] += ctx.amplfactor
+
+
+def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
+    """
+    Legacy Swiss SA amplification at 0.3 and 0.6 s with intra-event correction.
+    """
+    swiss_amplification._apply_swiss_amplification_sa(
+        ctx, imt, me, si, ta, ph)
+
+
+def apply_swiss_site_specific_amplification_sa(
+        ctx, imt, me, si, ta, ph,
+        periods=swiss_amplification.SWISS_SITE_SPECIFIC_PERIODS):
+    """
+    Applies supplied natural-log site corrections at selected SA periods.
+    """
+    swiss_amplification._apply_swiss_site_specific_amplification_sa(
+        ctx, imt, me, si, ta, ph, periods)
+
+
 def cb14_basin_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the CB14 basin term to GMMs requiring it.
@@ -321,34 +345,6 @@ def m9_basin_term(ctx, imt, me, si, ta, phi):
     This function applies the M9 basin adjustment
     """
     me = _apply_m9_basin_term(ctx, imt, me)
-
-
-def apply_swiss_amplification(ctx, imt, me, si, ta, ph):
-    """
-    Adds amplfactor to mean
-    """
-    me[:] += ctx.amplfactor
-
-
-def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
-    """
-    Adjust Swiss GMPEs to add amplification and correct intra-event residuals
-    """
-
-    if imt.period == 0.3:
-        phis2s = ctx.ch_phis2s03
-        phiss = ctx.ch_phiss03
-        me[:] += ctx.ch_ampl03
-    elif imt.period == 0.6:
-        phis2s = ctx.ch_phis2s06
-        phiss = ctx.ch_phiss06
-        me[:] += ctx.ch_ampl06
-
-    phi_star = np.sqrt(phis2s**2 + phiss**2)
-    total_stddev_star = np.sqrt(ta**2 + phi_star**2)
-
-    ph[:] = phi_star
-    si[:] = total_stddev_star
 
 
 # ################ FUNCTIONS MODIFYING mean_stds ################## #
@@ -702,6 +698,9 @@ class ModifiableGMPE(GMPE):
         if hasattr(self.gmpe, 'gmpe_table'):
             self.gmpe_table = self.gmpe.gmpe_table
         self.set_parameters()
+
+        self.REQUIRES_SITES_PARAMETERS |= (
+            swiss_amplification.get_site_parameters(self.params))
 
         # Validate the underlying GMPE against per-adjustment requirements
         for meth in self.params:

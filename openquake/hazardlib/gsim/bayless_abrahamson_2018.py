@@ -34,7 +34,7 @@ METRES_PER_KM = 1000.
 
 def _magnitude_scaling(C, ctx):
     """
-    Compute the magnitude scaling term
+    Compute magnitude scaling; equation (8), p. 2091.
     """
     t1 = C['c1']
     t2 = C['c2'] * (ctx.mag - 6.)
@@ -45,7 +45,7 @@ def _magnitude_scaling(C, ctx):
 
 def _path_scaling(C, ctx):
     """
-    Compute path scaling term
+    Compute path scaling; equation (9), p. 2091.
     """
     tmp = np.maximum(ctx.mag-C['chm'], 0.)
     t1 = C['c4'] * np.log(ctx.rrup + C['c5'] * np.cosh(C['c6'] * tmp))
@@ -57,7 +57,7 @@ def _path_scaling(C, ctx):
 
 def _normal_fault_effect(C, ctx):
     """
-    Compute the correction coefficient for the normal faulting
+    Compute the normal-faulting term; equation (12), p. 2093.
     """
     idx = (ctx.rake > -150) & (ctx.rake < -30)
     fnm = np.zeros_like(ctx.rake)
@@ -67,31 +67,37 @@ def _normal_fault_effect(C, ctx):
 
 def _ztor_scaling(C, ctx):
     """
-    Compute top of rupture term
+    Compute depth-to-top-of-rupture scaling; equation (11), p. 2093.
     """
     return C['c9'] * np.minimum(ctx.ztor, 20.)
 
 
 def _get_ln_ir_outcrop(self, ctx):
     """
-    Compute the natural logarithm of peak PGA at rock outcrop, Ir.
-    See eq.10e page 2092.
+    Compute the natural logarithm of rock PGA, Ir, in g;
+    equation (10e), p. 2092.
+
+    NOTE: "The EAS at 5 Hz is used to estimate PGA because this is
+    approximately the predominant frequency of the ground motions
+    (response spectra generally "peak at T= 0.2 s) and should correlate
+    strongly with the PGA" - p. 2093
     """
-    # Set imt and cofficients. The value of frequency is consistent with
-    # the one used in the matlab script - line 156
-    im = EAS(5.0118725)
+    # 5 Hz in paper but use exact value in matlab script (line 156)
+    im = EAS(5.011872)
     tc = self.COEFFS[im]
+
     # Get mean
     mean = (_magnitude_scaling(tc, ctx) +
             _path_scaling(tc, ctx) +
             _ztor_scaling(tc, ctx) +
             _normal_fault_effect(tc, ctx))
+    
     return 1.238 + 0.846 * mean
 
 
 def _linear_site_response(C, ctx):
     """
-    Compute the site response term
+    Compute linear site response; equation (10b), p. 2092.
     """
     tmp = np.minimum(ctx.vs30, 1000.)
     fsl = C['c8'] * np.log(tmp / 1000.)
@@ -100,21 +106,25 @@ def _linear_site_response(C, ctx):
 
 def _get_basin_term(C, ctx, region=None):
     """
-    Compute the soil depth scaling term
+    Compute soil-depth scaling; equations (13a)-(13c), p. 2093.
     """
     # Set the c11 coefficient - See eq.13b at page 2093
     c11 = np.ones_like(ctx.vs30) * C['c11a']
     c11[(ctx.vs30 <= 300) & (ctx.vs30 > 200)] = C['c11b']
     c11[(ctx.vs30 <= 500) & (ctx.vs30 > 300)] = C['c11c']
     c11[(ctx.vs30 > 500)] = C['c11d']
+    
     # Compute the Z1ref parameter
     tmp = (ctx.vs30**4 + 610**4) / (1360**4 + 610**4)
     z1ref = np.exp(-7.67/4*np.log(tmp)) # in metres
+    
     # Get z1pt0 (already in metres)
     z1pt0 = ctx.z1pt0.copy()
+    
     # Use GMM's vs30 to z1pt0 for none-measured values
     mask = z1pt0 == -999
     z1pt0[mask] = z1ref[mask]
+    
     # Return the fz1 parameter. The z1pt0 is converted from m (standard in OQ)
     # to km as indicated in the paper
     tmp = np.minimum(z1pt0/METRES_PER_KM, np.ones_like(z1pt0)*2.0) + 0.01
@@ -123,7 +133,8 @@ def _get_basin_term(C, ctx, region=None):
 
 def _get_stddevs(C, ctx):
     """
-    Compute the standard deviations
+    Compute total, between-event and within-event standard deviations;
+    equations (18) and (19a)-(19c), p. 2099.
     """
     # Set components of std
     tau = np.ones_like(ctx.mag) * C['s1']
@@ -149,38 +160,63 @@ def _get_stddevs(C, ctx):
     return sigma, tau, phi
 
 
-def _get_nl_site_response(C, ctx, imt, ln_ir_outcrop, freq_nl, coeff_nl):
+def _get_lowess_matrix(num_freqs):
     """
-    :param ln_ir_outcrop:
-        The peak ground acceleration (PGA [g]) at rock outcrop
-    :param freq_nl:
-        Frequencies for the coefficients f3, f4 and f5 used to compute the
-        non-linear term
-    :param coeff_nl:
-        A :class:`numpy.ndarray` instance of shape [# freq, 3] with the values
-        of the coefficients f3, f4 and f5 which are used to compute the
-        non-linear term
+    Compute weights for MATLAB script's smooth2(Y, 20, 'lowess'), which fits
+    local lines against sample index and includes all points tied at the
+    distance to the twentieth neighbour.
     """
+    indices = np.arange(num_freqs)
+    span = min(20, num_freqs)
+    matrix = np.zeros((num_freqs, num_freqs))
+    for i in indices:
+        distance = np.abs(indices - i)
+        selected = distance <= np.partition(distance, span - 1)[span - 1]
+        x = indices[selected] - i
+        dmax = max(np.max(np.abs(x)), 1)
+        # MATLAB scrppt weights both the design matrix and the observations
+        weight = (1 - (np.abs(x) / dmax)**3)**1.5
+        design = np.column_stack((np.ones(len(x)), x)) * weight[:, None]
+        matrix[i, selected] = np.linalg.lstsq(
+            design, np.diag(weight), rcond=None)[0][0]
+    return matrix
 
-    vsref = 760.0
-    NSITES = len(ctx.vs30)
-    NFREQS = coeff_nl.shape[0]
+
+def _get_nl_site_response(ctx, ln_ir_outcrop, coeff_nl, lowess_matrix):
+    """
+    Compute nonlinear site response on the native frequency grid;
+    equations (10c)-(10d) and the discussion on pp. 2092-2093.
+
+    :param ln_ir_outcrop:
+        The natural logarithm of peak ground acceleration (PGA [g]) at rock
+        outcrop
+    :param coeff_nl:
+        A :class:`numpy.ndarray` instance of shape [number of freqs, 3] with
+        the values of the coefficients f3, f4 and f5 which are used to compute
+        the non-linear term
+    :param lowess_matrix:
+        LOWESS smoothing weights for the native frequency grid
+    :returns:
+        The smoothed nonlinear term with shape
+        [number of freqs, number of sites]
+    """
+    vsref_nl = 760.0
+    num_sites = len(ctx.vs30)
+    num_freqs = coeff_nl.shape[0]
 
     # Updating the matrix with the coefficients. This has shape (number of
-    # frequencies) x (number of coeffs) x (number of sites)
+    # frequencies) * (number of coeffs) * (number of sites)
     coeff_nl = np.expand_dims(coeff_nl, 2)
-    coeff_nl = np.repeat(coeff_nl, NSITES, 2)
+    coeff_nl = np.repeat(coeff_nl, num_sites, 2)
 
     # Updating the matrix with Vs30 values. This has shape (number of
-    # frequencies) x (number of sites)
-    # vs30 = np.matlib.repmat(ctx.vs30, NFREQS, 1)
-    # ln_ir_outcrop = np.matlib.repmat(ln_ir_outcrop, NFREQS, 1)
-    vs30 = np.tile(ctx.vs30, (NFREQS, 1))
-    ln_ir_outcrop = np.tile(ln_ir_outcrop, (NFREQS, 1))
+    # frequencies) * (number of sites)
+    vs30 = np.tile(ctx.vs30, (num_freqs, 1))
+    ln_ir_outcrop = np.tile(ln_ir_outcrop, (num_freqs, 1))
 
     # Computing
-    t1 = np.exp(coeff_nl[:, 2] * (np.minimum(vs30, vsref)-360.))
-    t2 = np.exp(coeff_nl[:, 2] * (vsref-360.))
+    t1 = np.exp(coeff_nl[:, 2] * (np.minimum(vs30, vsref_nl)-360.))
+    t2 = np.exp(coeff_nl[:, 2] * (vsref_nl-360.))
     f2 = coeff_nl[:, 1] * (t1 - t2)
     f3 = coeff_nl[:, 0]
 
@@ -188,15 +224,17 @@ def _get_nl_site_response(C, ctx, imt, ln_ir_outcrop, freq_nl, coeff_nl):
     idxs = np.argmin(fnl_0, axis=0)
 
     # Applying correction as described at page 2093 in BA18
-    fnl = []
     for i, j in enumerate(idxs):
         fnl_0[j:, i] = min(fnl_0[:, i])
-        tmp = np.interp(imt.frequency, freq_nl, fnl_0[:, i])
-        fnl.append(tmp)
-    return np.array(fnl)
+    # Smooth after flattening, as in smooth2(fNL_mod0, 20, 'lowess').
+    return lowess_matrix @ fnl_0
 
 
 def _get_dimunition_factor(ctx, imt):
+    """
+    Compute kappa diminution for high-frequency extrapolation;
+    equations (17a)-(17b), p. 2096.
+    """
     max_freq = 23.988321
     kappa = np.exp(-0.4*np.log(ctx.vs30/760)-3.5)
     D = np.exp(-np.pi * kappa * (imt.frequency - max_freq))
@@ -204,6 +242,10 @@ def _get_dimunition_factor(ctx, imt):
 
 
 def _get_mean_linear(C, ctx):
+    """
+    Compute log median EAS without nonlinear site response;
+    equation (7), p. 2091, with the fNL part of fS omitted.
+    """
     mean = (_magnitude_scaling(C, ctx) +
             _path_scaling(C, ctx) +
             _linear_site_response(C, ctx) +
@@ -214,7 +256,12 @@ def _get_mean_linear(C, ctx):
 
 
 def _get_mean(self, C, ctx, imt):
-    if imt.frequency >= 24.:
+    """
+    Compute log median EAS without nonlinear site response, including
+    high-frequency extrapolation; equations (7) and (17), pp. 2091, 2096.
+    """
+    # Extrapolate from the last valid coefficient row, rounded to 24 Hz.
+    if imt.frequency >= 23.988321:
         im = EAS(23.988321)
         C = self.COEFFS[im]
         t1 = np.exp(_get_mean_linear(C, ctx))
@@ -222,6 +269,24 @@ def _get_mean(self, C, ctx, imt):
     else:
         mean = _get_mean_linear(C, ctx)
     return mean
+
+
+def _get_native_predictions(self, ctx, nl_response, indices):
+    """
+    Compute log median EAS and standard deviations at native frequencies.
+    """
+    predictions = {}
+    for index in np.unique(indices):
+        imt = EAS(self.FREQ_NL[index])
+        C = self.COEFFS[imt]
+        # Compute log median EAS before nonlinear site response
+        lin_component = _get_mean(self, C, ctx, imt)
+        # Combine to get the log median EAS
+        mean = lin_component + nl_response[index]
+        # Compute sigma components
+        sigma, tau, phi = _get_stddevs(C, ctx)
+        predictions[index] = np.array([mean, sigma, tau, phi])
+    return predictions
 
 
 class BaylessAbrahamson2018(GMPE):
@@ -235,10 +300,8 @@ class BaylessAbrahamson2018(GMPE):
     Ground-Motion Model for Fourier Amplitude Spectra for Crustal Earthquakes
     in California.  Bull. Seism. Soc. Am., 109(5): 2088–2105
 
-    Disclaimer: The authors describe a smoothing technique that needs to be
-    applied to the non linear component of the site response. We did not
-    implement these smoothing functions in this initial versions since the
-    match with the values in the verification tables is good even without it.
+    The nonlinear site term is flattened after its minimum and smoothed using
+    the span-20 LOWESS procedure from the MATLAB script in the e-sup.
     """
 
     #: Supported tectonic region type is active shallow crust, see title!
@@ -266,16 +329,53 @@ class BaylessAbrahamson2018(GMPE):
     #: Required distance measures
     REQUIRES_DISTANCES = {'rrup'}
 
-    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
-        freq_nl, coeff_nl = self.COEFFS.get_coeffs(['f3', 'f4', 'f5'])
-        for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
-            ln_ir_outcrop = _get_ln_ir_outcrop(self, ctx)
-            lin_component = _get_mean(self, C, ctx, imt)
-            nl_component = _get_nl_site_response(C, ctx, imt, ln_ir_outcrop,
-                                                 freq_nl, coeff_nl)
-            mean[m] = (lin_component + nl_component)
-            sigma[m], tau[m], phi[m] = _get_stddevs(C, ctx)
+    def __init__(self):
+        # Load the coeffs
+        with open(BA_COEFFS) as f:
+            self.COEFFS = CoeffsTable(table=f.read())
 
-    with open(BA_COEFFS) as f:
-        COEFFS = CoeffsTable(table=f.read())
+        # Get the tabulted freqs + the non-linear coeffs per freq
+        self.FREQ_NL, self.COEFF_NL = self.COEFFS.get_coeffs(
+            ['f3', 'f4', 'f5'])
+
+        # Build the LOWESS matrix
+        self.LOWESS_MATRIX = _get_lowess_matrix(len(self.FREQ_NL))
+
+    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+        """
+        Compute log median EAS and standard deviations;
+        equations (7), (18) and (19), pp. 2091, 2099.
+
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
+        # Compute nat log of PGA on rock
+        ln_ir_outcrop = _get_ln_ir_outcrop(self, ctx)
+
+        # Get non-linear term once
+        nl_response = _get_nl_site_response(
+            ctx, ln_ir_outcrop, self.COEFF_NL, self.LOWESS_MATRIX)
+
+        # Find the native frequencies surrounding each requested IMT
+        for imt in imts:
+            if not self.FREQ_NL[0] <= imt.frequency <= self.FREQ_NL[-1]:
+                raise KeyError(imt)
+        frequencies = np.array([imt.frequency for imt in imts])
+        high = np.searchsorted(self.FREQ_NL, frequencies)
+        low = np.maximum(high - 1, 0)
+        low = np.where(self.FREQ_NL[high] == frequencies, high, low)
+        predictions = _get_native_predictions(
+            self, ctx, nl_response, np.r_[low, high])
+
+        # Compute per IMT, interpolating completed outputs in log frequency
+        log_freqs = np.log(self.FREQ_NL)
+        for m, (lo, hi) in enumerate(zip(low, high)):
+            if lo == hi:
+                values = predictions[lo]
+            else:
+                ratio = ((np.log(frequencies[m]) - log_freqs[lo]) /
+                         (log_freqs[hi] - log_freqs[lo]))
+                values = (predictions[lo] + ratio *
+                          (predictions[hi] - predictions[lo]))
+            mean[m], sigma[m], tau[m], phi[m] = values

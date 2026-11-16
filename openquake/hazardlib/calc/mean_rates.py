@@ -16,9 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import numpy
-from openquake.baselib import sap
 from openquake.hazardlib.rmap_maker import get_cmakers, get_unique_inverse
 
 F32 = numpy.float32
@@ -108,43 +106,3 @@ def calc_mcurves(src_groups, sitecol, full_lt, oq):
     # the default weights are returned, as in the case without IMT-dependent
     # weights, while the rates are computed with the IMT-dependent ones
     return to_probs(rates), gweights[:, -1]
-
-
-# tested in run-demos.sh
-def main(job_ini):
-    """
-    Compute the mean rates from scratch without source splitting and without
-    parallelization, pretty useful when debugging single site calculations
-    """
-    from openquake.commonlib import readinput
-    from openquake.calculators.views import text_table
-    from openquake.hazardlib.source_reader import get_bset_values, modified_groups
-    oq = readinput.get_oqparam(job_ini)
-    csm = readinput.get_composite_source_model(oq)
-    # NB: there are no workers here, so the uncertainties are applied here,
-    # one set of realizations at a time; this way the groups returned have
-    # the trt_smrs of a single set of uncertainties, as expected by get_rmap
-    src_groups = []
-    for grp in csm.src_groups:
-        bset_values = get_bset_values(csm.full_lt, grp)
-        src_groups.extend(
-            sg for _trt_smrs, sg in modified_groups(grp, bset_values))
-    sitecol = readinput.get_site_collection(oq)
-    assert len(sitecol) <= oq.max_sites_disagg, sitecol
-    rmap, cmakers = get_rmap(src_groups, csm.full_lt, sitecol, oq)
-    gws = get_gweights(src_groups, csm.full_lt)
-    rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
-    N, _M, L1 = rates.shape
-    mrates = numpy.zeros((N, L1), oq.imt_dt())
-    for m, imt in enumerate(oq.imtls):
-        mrates[imt] = rates[:, m]
-    print('Mean hazard rates for the first site')
-    print(text_table(mrates[0], ext='org'))
-
-
-main.job_ini = 'path to a job.ini file'
-
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    sap.run(main)

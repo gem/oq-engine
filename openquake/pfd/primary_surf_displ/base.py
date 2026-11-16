@@ -41,7 +41,7 @@ import abc
 #:                          principal-slot model already contains the
 #:                          distributed contribution, so the hazard kernel
 #:                          runs it as a SINGLE bucket and the secondary
-#:                          slot is forbidden (FDLT-013);
+#:                          slot is forbidden;
 #: - ``"distributed"``      off-fault (secondary/distributed) rupture
 #:                          displacement only.
 DISPLACEMENT_DEFINITIONS = ("principal", "sum-of-principal", "aggregate",
@@ -51,7 +51,7 @@ DISPLACEMENT_DEFINITIONS = ("principal", "sum-of-principal", "aggregate",
 #: model was regressed on (Sarmiento et al. 2025, Table 1 subscripts):
 #: ``"vertical"`` (V), ``"lateral"`` (L, fault-parallel horizontal),
 #: ``"net"`` (N/N*, resultant slip vector). Mixing components inside one
-#: branch set is advisory-only (FDLT-105): unlike definitions, components
+#: branch set is advisory-only: unlike definitions, components
 #: measure the same event differently rather than different events.
 DISPLACEMENT_COMPONENTS = ("vertical", "lateral", "net")
 
@@ -82,14 +82,13 @@ class BasePrimarySurfDispl(metaclass=abc.ABCMeta):
     #: declares its own value with the source of the assignment in its
     #: class docstring. ``"aggregate"`` switches the hazard kernel to the
     #: single-bucket path (rate * P_sr * P_fd_aggregate * W_p, no distributed
-    #: term) and forbids the secondary slot (docs/design/
-    #: rupture_location_uncertainty.md, D8; validator FDLT-013).
+    #: term) and forbids the secondary slot.
     DISPLACEMENT_DEFINITION = "principal"
 
     #: Slip component this model predicts; one of
     #: :data:`DISPLACEMENT_COMPONENTS`. Metadata only (no routing effect);
-    #: mixing components within one logic-tree branch set draws the advisory
-    #: FDLT-105 warning.
+    #: mixing components within one logic-tree branch set draws an advisory
+    #: warning.
     DISPLACEMENT_COMPONENT = "net"
 
     @abc.abstractmethod
@@ -164,8 +163,7 @@ class BaseSecondarySurfDispl(metaclass=abc.ABCMeta):
     #: ``max(r, NEAR_FIELD_FLOOR_KM)`` -- a fixed 12.5 m (half a 25-m Petersen
     #: cell), hard-coded in model_adapter.py, deliberately independent of any
     #: occurrence cell size (pixel_size) -- a tool regularisation of Petersen
-    #: (2011) eq.18's r -> 0 divergence (docs/design/
-    #: rupture_location_uncertainty.md, decision D7).
+    #: (2011) eq.18's r -> 0 divergence.
     NEAR_FIELD_FLOOR = None
 
     @abc.abstractmethod

@@ -132,9 +132,8 @@ class ImpactPageLevel1(ImpactPage):
 class ImpactPageLevel2(ImpactPage):
 
     def set_approach(self, approach_label):
-        # We could find a better approach to make sure the handler is ready
-        self.page.wait_for_timeout(200)
-
+        # the radios are enabled by impact.js only after binding the change
+        # handler, and check() waits for the radio to be enabled
         approach = self.page.get_by_role("radio", name=approach_label)
         approach.check()
         expect(approach).to_be_checked()

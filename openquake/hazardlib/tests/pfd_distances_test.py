@@ -39,6 +39,7 @@ from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 from openquake.hazardlib.calc.filters import get_dparam, get_distances
 from openquake.hazardlib.contexts import KNOWN_DISTANCES, ContextMaker
 from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.geo import geodetic
 
 # Norcia MVFS trace (same as GetXLRatioTestCase)
 NORCIA = Line([
@@ -89,7 +90,6 @@ class RtorAndXlTestCase(unittest.TestCase):
         # beyond the trace end the distance is to the endpoint, measured in
         # the local OrthographicProjection frame (~0.3% from the geodesic
         # distance at 56 km, so a 0.5 km tolerance)
-        from openquake.hazardlib.geo import geodetic
         expected = geodetic.geodetic_distance(0.0, 1.0, 0.1, 1.5)
         self.assertAlmostEqual(float(rtor[0]), float(expected), delta=0.5)
 
