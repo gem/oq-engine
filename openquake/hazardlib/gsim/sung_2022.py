@@ -101,12 +101,12 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     """
     Non-ergodic variant of Sung et al. (2022).
 
-    At compute time the posterior-mean prediction of the ergodic model is
-    shifted by a pre-computed Delta-mu drawn from a per-site adjustment table.
-    Delta-mu depends on rupture location (closest point to the site) and
-    frequency, and encodes the combined non-ergodic source, site and path
-    terms from the varying-coefficient model + cell-specific anelastic
-    attenuation in the paper.
+    At compute time the ergodic mean is shifted by a scalar Delta-mu
+    looked up from a site-specific adjustment table. The shift depends
+    only on the rupture's nearest grid cell and the frequency. Each
+    table entry already sums the model's non-ergodic source, site and
+    path terms, which were integrated when the h5 was generated (i.e.,
+    compute() does no ray-tracing itself).
 
     :param adjustment_h5:
         Bare filename (e.g. "adj_RE_Site1.h5") inside the gsim/sung_2022/
