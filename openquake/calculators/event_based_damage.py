@@ -23,11 +23,11 @@ import pandas
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import compute_stats2, mean_curve
 from openquake.risklib import scientific, connectivity
+from openquake.commonlib.outputs import DISPLAY_NAME
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 from openquake.calculators.post_risk import (
     get_loss_builder, fix_dtypes, PostRiskCalculator)
-from openquake.calculators.export import DISPLAY_NAME
 
 U8 = numpy.uint8
 U16 = numpy.uint16

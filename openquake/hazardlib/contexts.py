@@ -40,6 +40,7 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.map_array import MapArray
+from openquake.hazardlib.source import rupture
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
@@ -1721,8 +1722,6 @@ class ContextMaker(object):
             4 attenuation curves mea, sig, tau, phi
             (up to 500 km from the site at steps of 5 km)
         """
-        # keep local: circular import through source and valid
-        from openquake.hazardlib.source import rupture
         rup = rupture.get_planar(
             site, msr, mag, aratio, strike, dip, rake, self.trt)
         ctx = self.from_planar(rup, hdist=500, step=5)

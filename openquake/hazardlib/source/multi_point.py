@@ -23,7 +23,7 @@ from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.geo import utils, NodalPlane
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.valid import mag_scale_rel
+from openquake.hazardlib.scalerel import mag_scale_rel
 from openquake.hazardlib.source.point import PointSource
 
 F32 = numpy.float32

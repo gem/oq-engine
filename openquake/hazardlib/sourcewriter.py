@@ -35,6 +35,13 @@ from openquake.hazardlib.tom import NegativeBinomialTOM
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
 
+def to_xml(source):
+    """
+    Convert the source into an XML string, very useful for debugging.
+    """
+    return nrml.to_string(obj_to_node(source))
+
+
 def r4(x):
     """
     Round lon, lat to 4 digits (11 meters)
