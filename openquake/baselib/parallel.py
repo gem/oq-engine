@@ -1068,6 +1068,8 @@ class Starmap(object):
         logging.debug(
             'Waiting on %s: %d tasks outstanding %s', sock, len(outstanding),
             shortlist(sorted(outstanding)))
+        rows = []
+        still_tot = 0
         for line in host_cores:
             try:
                 host, port, _cores = parse_hostcore(
@@ -1081,12 +1083,24 @@ class Starmap(object):
                 still = sum(1 for t in busy
                             if t.rsplit('-', 1)[0] == cid
                             and int(t.rsplit('-', 1)[1]) in outstanding)
-                logging.debug(
-                    'Worker %s: %d workers, %d busy, mem=%.0fGB, '
-                    '%d/%d outstanding still executing',
-                    addr, nworkers, len(busy), mem_gb, still, len(outstanding))
+                still_tot += still
+                rows.append((addr, nworkers, len(busy), mem_gb, still))
             except Exception as exc:
-                logging.debug('Could not query worker %s: %r', line, exc)
+                logging.warning('Could not query worker %s: %r', line, exc)
+        # if none of the outstanding tasks is executing on any worker, the
+        # results were computed but never delivered (lost packets): report at
+        # ERROR level and abort instead of hanging
+        lost = bool(outstanding) and still_tot == 0
+        for addr, nworkers, nbusy, mem_gb, still in rows:
+            msg = ('WorkerPool %s: %d workers, %d busy, mem=%.0fGB, '
+                   '%d/%d executing')
+            args = (addr, nworkers, nbusy, mem_gb, still, len(outstanding))
+            (logging.error if lost else logging.debug)(msg, *args)
+        if lost:
+            raise RuntimeError(
+                'Lost %d result(s) for %s: tasks %s are not executing on any '
+                'worker (likely dropped zmq messages)' % (
+                    len(outstanding), sock, shortlist(sorted(outstanding))))
 
     def _inproc_results(self):
         # a task submitted while consuming (a subtask) appends more
