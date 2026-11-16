@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020 GEM Foundation
+# Copyright (C) 2012-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,7 @@ Reference:
 import os
 import h5py
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -76,7 +77,11 @@ class SungEtAl2022(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
-        # Fill mean and sigma arrays one IMT at a time
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Ergodic mean = magnitude + path + Ztor + linear Vs30 terms
@@ -113,6 +118,11 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
             'Adjustment file not found: %s' % self.adjustment_file
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
         # Load the full adjustment grid for this site + frequency
         with h5py.File(self.adjustment_file, 'r') as fcoeff:
             dat = fcoeff['init'][:]
