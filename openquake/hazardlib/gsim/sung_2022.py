@@ -311,23 +311,8 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
             else:
                 mean[m] += dat['rlz'][idx_all, int(self.rlz_id)]
 
-    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.compute>`
-        for spec of input and result values.
-
-        Standalone path (ignores ContextMaker caching). The ContextMaker's
-        classical path calls compute_central()/apply_branch_shift() directly;
-        this entry point exists for direct use outside that loop (tests,
-        ad-hoc scripts).
-        """
-        idx_all = self.compute_central(ctx, imts, mean, sigma, tau, phi)
-        self.apply_branch_shift(idx_all, imts, mean)
-
     # The Coefficients used here are the same of the ergodic model BUT the
-    # standard deviations which are based on information Karen sent on
-    # Sept 4th 2020 (consistent with the later published paper)
+    # standard deviations differ given they are for teh non-ergodic variant
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT c1             c2   c3           c4     c5          c6          c7           c8           c9           cn          cM          chm         tot      tau
 EAS(1.0) -3.831335618 1.27 -0.339593397 -2.165 7.581303952 0.451924112 -0.003743823 -1.220089093 -0.002488724 3.714155909 6           3.811150377 0.705 0.476
