@@ -22,7 +22,7 @@
 |case\_24|Test collapsing rjb-independent GMPE|
 |case\_25|Test negative depths|
 |case\_26|Test YoungsCoppersmith1985MFD|
-|case\_27|Nankai mutex model, including disaggregation|
+|case\_27|Nankai mutex model, including disaggregation and uncertainty sets|
 |case\_27\_other|Nankai mutex model with disagg\_by\_src and atomic groups with different source names|
 |case\_27\_labels|Nankai mutex model with site\_labels|
 |case\_28|Test hypoDepthDist (and down-dip fractions for hypo placement) with a simple fault source|

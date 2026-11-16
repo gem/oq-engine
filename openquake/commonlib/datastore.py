@@ -27,8 +27,8 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5, performance, general
-from openquake.commonlib import dbapi
-from openquake.commonlib.logs import get_datadir, CALC_REGEX, dbcmd, init
+from openquake.commonlib import dbapi, logs
+from openquake.commonlib import get_datadir
 
 
 def extract_calc_id_datadir(filename):
@@ -51,7 +51,7 @@ def extract_calc_id_datadir(filename):
     """
     filename = os.path.abspath(filename)
     datadir = os.path.dirname(filename)
-    mo = re.match(CALC_REGEX, os.path.basename(filename))
+    mo = re.match(logs.CALC_REGEX, os.path.basename(filename))
     if mo is None:
         raise ValueError('Cannot extract calc_id from %s' % filename)
     calc_id = int(mo.group(2))
@@ -63,16 +63,16 @@ def _read(calc_id, datadir, mode, haz_id=None):
     ppath = None
     if isinstance(calc_id, int):
         # look in the db
-        job = dbcmd('get_job', calc_id)
+        job = logs.dbcmd('get_job', calc_id)
         if job is None:
             raise dbapi.NotFound(f'{calc_id=} missing in the database')
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
-            dbcmd('update_job', calc_id, {'hazard_calculation_id': haz_id})
+            logs.dbcmd('update_job', calc_id, {'hazard_calculation_id': haz_id})
             hc_id = haz_id
         if hc_id and hc_id != calc_id:
-            hc = dbcmd('get_job', hc_id)
+            hc = logs.dbcmd('get_job', hc_id)
             if hc:
                 ppath = hc.ds_calc_dir + '.hdf5'
             else:
@@ -149,7 +149,7 @@ def create_job_dstore(description='custom calculation', parent=(), ini=None):
         dic = ini
     else:
         dic = dict(description=description, calculation_mode='custom')
-    log = init(dic)
+    log = logs.init(dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False), mode='w')
     dstore.close_on_exit = True
     # reopening after a `with` block must not truncate the file

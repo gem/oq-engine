@@ -131,6 +131,14 @@ class ReportWriter(object):
             f.write(encode(self.text))
 
 
+@views.view.add('fullreport')
+def view_fullreport(token, dstore):
+    """
+    Display an .rst report about the computation
+    """
+    return ReportWriter(dstore).make_report(show_inputs=False)
+
+
 def build_report(job_ini, output_dir=None):
     """
     Write a `report.csv` file with information about the calculation
