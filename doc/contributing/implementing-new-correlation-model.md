@@ -176,6 +176,13 @@ Return the correlation defined by the model without silently repairing it.
 Generic positive-semidefinite repair, when needed for sampling, belongs in the
 common factorization machinery.
 
+Sampling memory estimates include the evaluator's temporary work arrays.
+`COVARIANCE_EVALUATION_BUFFERS` counts scalar float64 buffers per distance
+pair, in addition to the cross-IMT covariance matrices. The base class has
+a conservative default; a model can declare a smaller bound when its
+implementation permits it. Count all simultaneous temporaries, including
+latent-component fields, and test that oversized setups fail before allocation.
+
 ## Add independent verification tests
 
 Reference values should be produced independently of the hazardlib
