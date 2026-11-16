@@ -246,8 +246,8 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         Returns `idx_all` so apply_epsilons() can pull the per-rlz column
         without redoing the lookup.
 
-        **_kw absorbs ContextMaker kwargs (e.g. gra_mon) that this GSIM
-        has no use for — accepted for interface compatibility only.
+        ``**_kw`` absorbs ContextMaker kwargs (e.g. ``gra_mon``) that this
+        GSIM has no use for - accepted for interface compatibility only.
         """
         grid = self.dat[next(iter(self.dat))]
         # Nearest-node index from lattice arithmetic; O(n_ctx) ops total
