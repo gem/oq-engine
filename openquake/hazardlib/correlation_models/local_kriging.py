@@ -211,10 +211,16 @@ class LocalKrigingFactor:
             del grid_covariance
         for box, indices in sorted_boxes:
             station_indices = numpy.asarray(indices, dtype=numpy.int64)
+            _check_setup_memory(
+                model, len(imts), len(indices), cells,
+                retained + grid_inverse.nbytes, memory_budget)
             group = _build_group(
                 model, imts, layout, station_points, station_indices,
                 box, order, grid_inverse, component, context, error_start)
             groups.append(group)
+            retained += sum(value.nbytes for value in (
+                group.weights, group.conditional_root, group.grid_indices,
+                group.station_indices))
             error_start = group.error_slice.stop
         return cls(
             layout, len(imts), len(rows), on_grid_stations,

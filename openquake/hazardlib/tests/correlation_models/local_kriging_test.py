@@ -147,7 +147,7 @@ def test_input_shapes():
         factor.apply(numpy.zeros((2, 16, 1)), numpy.zeros((1, 1)))
 
 
-@pytest.mark.parametrize('count,budget', [(1, 1024)])
+@pytest.mark.parametrize('count,budget', [(1, 1024), (1000, 16 * 1024 ** 2)])
 def test_setup_memory_guard(count, budget):
     grid = grid_sites((10, 10))
     layout = RegularGridLayout.from_sites(grid, crs=TEST_CRS)
