@@ -250,6 +250,22 @@ class RegularGridLayout:
              float(x0 + minimum_x * spacing_x)),
             float(errors.max()))
 
+    def cropped(self, indices):
+        """Enclose selected cells, preserving their order, CRS and spacing.
+
+        The origin moves by whole rows and columns of the original lattice.
+        Empty cells inside the resulting rectangle are still sampled.
+        """
+        rows, columns = numpy.divmod(indices, self.grid_shape[1])
+        low_y, low_x = int(rows.min()), int(columns.min())
+        shape = (max(2, int(rows.max()) - low_y + 1),
+                 max(2, int(columns.max()) - low_x + 1))
+        origin = (self.projected_origin[0] + low_y * self.spacing[0] * 1000,
+                  self.projected_origin[1] + low_x * self.spacing[1] * 1000)
+        return type(self)(
+            shape, self.spacing, (rows - low_y) * shape[1] + columns - low_x,
+            self.crs, origin, self.maximum_error)
+
     def grid_coordinates(self, sites):
         """Return fractional row and column coordinates for ``sites``."""
         transformer = pyproj.Transformer.from_crs(
