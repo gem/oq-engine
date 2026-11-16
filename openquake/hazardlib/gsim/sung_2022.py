@@ -203,13 +203,13 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
             # Sigma
             sigma[m] = np.ones_like(ctx.vs30) * C['tot']
             tau[m] = np.ones_like(ctx.vs30) * C['tau']
-            phi_val = float(
-                np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.))) # Phi not stored
+            phi_val = float( # phi not stored and this is consistent with eq 9.
+                np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.)))
             phi[m] = np.ones_like(ctx.vs30) * phi_val
 
     # The Coefficients used here are the same of the ergodic model BUT the
     # standard deviations which are based on information Karen sent on
-    # Sept 4th.
+    # Sept 4th (consistent with the later published paper)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT c1             c2   c3           c4     c5          c6          c7           c8           c9           cn          cM          chm         tot      tau
 EAS(1.0) -3.831335618 1.27 -0.339593397 -2.165 7.581303952 0.451924112 -0.003743823 -1.220089093 -0.002488724 3.714155909 6           3.811150377 0.705 0.476
