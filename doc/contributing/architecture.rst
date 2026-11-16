@@ -37,13 +37,12 @@ This is the full stack of internal libraries used by the engine. Each of these i
 modules or event subpackages. The stack is a dependency tower where the higher levels depend on the lower levels but not 
 vice versa:
 
-- **level 9**: commands (subcommands of oq)
-- **level 8**: server (database and Web UI)
-- **level 7**: engine (command-line tool, export, logs)
-- **level 6**: calculators (hazard and risk calculators)
-- **level 5**: commonlib (configuration, logic trees, I/O)
-- **level 4**: risklib (risk validation, risk models, risk inputs)
-- **level 3**: hmtk (catalogues, plotting, …)
+- **level 8**: commands (subcommands of oq)
+- **level 7**: server (database and Web UI)
+- **level 6**: engine (command-line tool, export, logs)
+- **level 5**: calculators (hazard and risk calculators)
+- **level 4**: commonlib (configuration, logic trees, I/O)
+- **level 3**: risklib (risk validation, risk models, risk inputs)
 - **level 2**: hazardlib (validation, read/write XML, source and site objects, geospatial utilities, GSIM library)
 - **level 1**: baselib (programming utilities, parallelization, monitoring, hdf5…)
 

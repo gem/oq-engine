@@ -160,7 +160,7 @@ realizations, i.e. the size of the logic tree is ``R = 144``::
 
 Each group has its own ``trt_smrs`` in the ``trt_smrs`` dataset
 (56, 56, 128, 16, 16 entries) and its own RateMap indices in
-``core_trt_smrs``, one per realization set, which here is one per
+``unc_ts_sets``, one per realization set, which here is one per
 realization (144 in total): the realizations
 of a group are *not* grouped together, since the
 uncertainties of its sources differ from realization to realization.
@@ -215,7 +215,7 @@ The datasets involved are:
 .. code-block:: text
 
     $ oq show trt_smrs          # the realizations of each source group
-    $ oq show core_trt_smrs    # the realization sets
+    $ oq show unc_ts_sets    # the realization sets
     $ oq show composite_source_model
 
 The correspondence between the realizations and the columns of the

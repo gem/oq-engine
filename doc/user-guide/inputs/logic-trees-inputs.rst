@@ -1101,7 +1101,7 @@ sampling method.
   With this sampling method, the engine randomly choose branches ignoring the weights in the logic tree, but still using an hypercube sampling; then, the hazard curve statistics are computed by taking into account the weights.
 
 The engine samples the paths with the method ``sample_paths`` of
-the ``CompositeLogicTree`` object, which takes the number of samples,
+the ``BranchSetLogicTree`` object, which takes the number of samples,
 the seed and the sampling method::
 
     clt.sample_paths(num_samples, seed, sampling_method)

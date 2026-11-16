@@ -36,6 +36,9 @@ import logging
 
 context = zmq.Context()
 
+# Check worker status for lost results after this many seconds of silence.
+STALL_WARN = 200
+
 # from integer socket_type to string
 SOCKTYPE = {zmq.REQ: 'REQ', zmq.REP: 'REP',
             zmq.PUSH: 'PUSH', zmq.PULL: 'PULL',
@@ -160,14 +163,20 @@ class Socket(object):
         """
         # works with zmq.REP and zmq.PULL sockets
         self.running = True
+        t_last = time.monotonic()  # last time a message was received
         while self.running:
             try:
                 got_something = self.zsocket.poll(self.timeout)
                 if got_something:
-                    yield self.zsocket.recv_pyobj()
-                elif self.starmap:
-                    # possibly raise BrokenProcessPool
-                    self.starmap.check_tasks_alive()
+                    res = self.zsocket.recv_pyobj()
+                    t_last = time.monotonic()
+                    yield res
+                else:
+                    waited = time.monotonic() - t_last
+                    if self.starmap is not None:
+                        # processpool: possibly raise BrokenProcessPool;
+                        # zmq/slurm: report which tasks are stuck (if any)
+                        self.starmap.poll_timeout(self, waited)
                 if self.socket_type == zmq.PULL:
                     logging.debug('Waiting on %s:%d', self, self.port)
             except zmq.ZMQError:

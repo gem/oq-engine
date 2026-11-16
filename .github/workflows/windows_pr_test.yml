@@ -132,7 +132,7 @@ jobs:
           Write-Host "curl.exe -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/"
           curl.exe -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/
           ping 127.0.0.1 -n 6 > null
-      - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
+      - name: Run tests for hazardlib, sep, commands, engine, risklib, commonlib and baselib to test installation
         if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
@@ -140,4 +140,4 @@ jobs:
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' engine --upgrade-db}
           sleep 10
           cd D:\a\oq-engine\oq-engine\openquake
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 sep commands engine hmtk risklib commonlib baselib
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 sep commands engine risklib commonlib baselib

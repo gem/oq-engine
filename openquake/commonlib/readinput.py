@@ -74,7 +74,7 @@ from openquake.pfd.gsim import get_pfd_gsim_lt
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib import logs
-from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib import oqvalidation
 from openquake.qa_tests_data import mosaic
 
 F32 = numpy.float32
@@ -554,7 +554,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
             imt = next(iter(imtls))
             job_ini['intensity_measure_types_and_levels'] = repr(
                 {imt: imtls[imt]})
-    oqparam = OqParam(**oqdict(job_ini))
+    oqparam = oqvalidation.OqParam(**oqdict(job_ini))
     oqparam._input_files = get_input_files(oqparam)
     if validate:  # always true except from oqzip
         oqparam.validate()
@@ -1216,7 +1216,7 @@ def get_full_lt(oqparam):
 
 def get_logic_tree(oqparam):
     """
-    :returns: a CompositeLogicTree instance
+    :returns: a BranchSetLogicTree instance
     """
     flt = get_full_lt(oqparam)
     return logictree.compose(flt.source_model_lt, flt.gsim_lt)
