@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: overhauled the logic tree classes and added `oq info logic_trees`
   * Reduced the size of the yielded packets in classical_bysrc and
     raised an error in case of lost zmq packets
 
