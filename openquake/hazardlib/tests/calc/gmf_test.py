@@ -105,6 +105,18 @@ def collect_batches(batch_size):
     return pandas.concat([batch[0] for batch in batches]), batches
 
 
+def test_ce_output_memory_guard():
+    computer = build_computer(regular_sites((2, 3)))
+    factor = computer._get_ce_factor()
+    budget = factor.nbytes + factor.workspace_bytes_per_realization
+    limited = mock.patch('openquake.hazardlib.calc.gmf._correlation_budget',
+                         return_value=budget)
+    with limited, mock.patch('numpy.empty') as allocate:
+        with pytest.raises(ValueError, match='workspace'):
+            computer._draw_ce_eps(factor, 3)
+        allocate.assert_not_called()
+
+
 def test_scalar_pca_memory_guard():
     computer = build_computer(regular_sites((20, 25)))
     computer.M, computer.imts = 1, [PGA()]
