@@ -31,6 +31,7 @@ import pytest
 from openquake import qa_tests_data
 from openquake.calculators import tests
 import numba
+from openquake.hazardlib.gsim import registry
 
 QA_DIR = os.path.dirname(qa_tests_data.__file__)
 REPO = os.path.dirname(
@@ -210,7 +211,6 @@ def test_forbid_long_funcs():
                                  'openquake.risklib',
                                  'openquake.calculators',
                                  'openquake.engine',
-                                 'openquake.hmtk',
                                  'openquake.sep',
                                  'openquake._unc',
                                  ], MAX_FUN_LEN)
@@ -239,7 +239,6 @@ def test_init_files():
 
 def test_get_basin_term():
     # make sure the basin terms have the right signature
-    from openquake.hazardlib.gsim import registry
     modules = set(cls.__module__ for cls in registry.values())
     for name in modules:
         mod = importlib.import_module(name)

@@ -39,7 +39,7 @@ class DisaggregationRegressionTest(unittest.TestCase):
                         expected = -np.log1p(-selected).reshape(-1, 3).T / 50
                         for rlzs in [slice(None), [0, 2]]:
                             with self.subTest(atype=atype, imt=imt,
-                                              rlzs=rlzs):
+                                              rlzs=str(rlzs)):
                                 _, afes, weights = afes_matrix_from_dstore(
                                     store, imt, atype, rlzs=rlzs)
                                 np.testing.assert_allclose(

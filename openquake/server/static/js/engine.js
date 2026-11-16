@@ -82,7 +82,7 @@ else if (window.application_mode === 'IMPACT') {
 
             if (window.application_mode === 'AELO') {
                 $.ajax({
-                    url:  "/v1/aelo_site_classes",
+                    url:  gem_oq_server_url + "/v1/aelo_site_classes",
                     method: "GET",
                     dataType: "json",
                     success: function(data) {
@@ -97,7 +97,7 @@ else if (window.application_mode === 'IMPACT') {
                 initAeloForm();
             } else if (window.application_mode === 'IMPACT') {
                 $.ajax({
-                    url:  "/v1/get_impact_form_defaults",
+                    url:  gem_oq_server_url + "/v1/get_impact_form_defaults",
                     method: "GET",
                     dataType: "json",
                     success: function(data) {

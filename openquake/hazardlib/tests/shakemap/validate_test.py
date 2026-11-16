@@ -30,8 +30,10 @@ Here are a few codes with interesting errors:
 import ast
 import os
 import unittest
+from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.shakemap.parsers import User
-from openquake.hazardlib.shakemap.validate import impact_validate
+from openquake.hazardlib.shakemap.validate import (
+    ImpactParam, impact_validate)
 from openquake.hazardlib.source.rupture import BaseRupture
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
@@ -166,6 +168,16 @@ class ImpactValidateTestCase(unittest.TestCase):
             self.assertEqual(params['ses_seed'], '42')
             # self.assertEqual(params['station_data_file'], stations)  # FIXME
             self.assertEqual(err, {})
+
+    def test_no_trts_for_mosaic_model(self):
+        # the exposure has no TRTs for the mosaic model: clean error
+        par = ImpactParam(
+            rupture_dict={}, time_event='day', maximum_distance=300,
+            truncation_level=3, number_of_ground_motion_fields=1,
+            asset_hazard_distance=15, ses_seed=42, mosaic_model='TUR')
+        with self.assertRaises(SiteAssociationError) as ctx:
+            par.get_oqparams('us6000jllz', ['TUR'], {'TUR': []}, False)
+        self.assertIn('TUR', str(ctx.exception))
 
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations

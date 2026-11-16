@@ -35,7 +35,8 @@ from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
 from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
 from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import (
     _get_bssa14_site_term)
- 
+from openquake.hazardlib.gsim.mgmpe import swiss_amplification
+
 # Basin terms imports
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
 from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
@@ -74,12 +75,7 @@ ADJUSTMENT_REQUIREMENTS = {
                          StdDev.INTRA_EVENT,
                          StdDev.INTER_EVENT},
     },
-    'apply_swiss_amplification': {
-        'gmpe_sites': frozenset(['amplfactor']),
-    },
-    'apply_swiss_site_specific_amplification_sa': {
-        'requires_gmpe_stddev': StdDev.INTER_EVENT,
-    },
+    **swiss_amplification.ADJUSTMENT_REQUIREMENTS,
     'set_between_epsilon': {
         'requires_gmpe_stddev': StdDev.INTER_EVENT,
     },
@@ -87,47 +83,6 @@ ADJUSTMENT_REQUIREMENTS = {
         'requires_gmpe_stddev': StdDev.INTER_EVENT,
     },
 }
-
-
-# These are natural-log amplification and uncertainty columns, not rock-model
-# coefficients. Register new period columns in site.py before adding them here.
-SWISS_SITE_SPECIFIC_FIELDS = {
-    0.2: ('ch_ampl02', 'ch_phis2s02', 'ch_phiss02'),
-    0.3: ('ch_ampl03', 'ch_phis2s03', 'ch_phiss03'),
-    0.4: ('ch_ampl04', 'ch_phis2s04', 'ch_phiss04'),
-    0.6: ('ch_ampl06', 'ch_phis2s06', 'ch_phiss06'),
-}
-SWISS_SITE_SPECIFIC_PERIODS = tuple(SWISS_SITE_SPECIFIC_FIELDS)
-
-
-def _swiss_site_specific_periods(periods):
-    # Explicit selection makes requirements available before site CSV loading;
-    # it must not depend on the job IMTs, which are resolved separately.
-    if not isinstance(periods, (list, tuple)) or not periods:
-        raise ValueError('Swiss site-specific periods must be a nonempty list')
-    for period in periods:
-        if (isinstance(period, (bool, np.bool_)) or not isinstance(
-                period, (int, float, np.integer, np.floating)) or
-                not np.isfinite(period) or
-                period not in SWISS_SITE_SPECIFIC_FIELDS):
-            raise ValueError('Unsupported Swiss site-specific period: '
-                             f'{period!r}')
-    if len(set(periods)) != len(periods):
-        raise ValueError('Duplicate Swiss site-specific periods')
-    return tuple(periods)
-
-
-def _swiss_site_specific_fields(imt, periods):
-    # Period-specific columns describe 5%-damped SA; PGA is handled separately.
-    # Rock SA support does not imply interpolation of these site corrections.
-    if imt.name != 'SA' or imt.damping != 5.0:
-        raise ValueError('Swiss site-specific amplification supports PGA and '
-                         'selected 5%-damped SA: '
-                         f'{imt}')
-    if imt.period not in periods:
-        raise ValueError('No selected Swiss site-specific correction for '
-                         f'{imt}')
-    return SWISS_SITE_SPECIFIC_FIELDS[imt.period]
 
 
 # ############## HANDLER FUNCTIONS FOR CONDITIONAL GMPES ################ #
@@ -353,6 +308,31 @@ def bssa14_site_term(ctx, imt, me, si, ta, phi):
     me[:] += _get_bssa14_site_term(imt, ctx)
 
 
+def apply_swiss_amplification(ctx, imt, me, si, ta, ph):
+    """
+    Adds the Swiss amplfactor to the log mean.
+    """
+    me[:] += ctx.amplfactor
+
+
+def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
+    """
+    Legacy Swiss SA amplification at 0.3 and 0.6 s with intra-event correction.
+    """
+    swiss_amplification._apply_swiss_amplification_sa(
+        ctx, imt, me, si, ta, ph)
+
+
+def apply_swiss_site_specific_amplification_sa(
+        ctx, imt, me, si, ta, ph,
+        periods=swiss_amplification.SWISS_SITE_SPECIFIC_PERIODS):
+    """
+    Applies supplied natural-log site corrections at selected SA periods.
+    """
+    swiss_amplification._apply_swiss_site_specific_amplification_sa(
+        ctx, imt, me, si, ta, ph, periods)
+
+
 def cb14_basin_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the CB14 basin term to GMMs requiring it.
@@ -365,78 +345,6 @@ def m9_basin_term(ctx, imt, me, si, ta, phi):
     This function applies the M9 basin adjustment
     """
     me = _apply_m9_basin_term(ctx, imt, me)
-
-
-def apply_swiss_amplification(ctx, imt, me, si, ta, ph):
-    """
-    Adds amplfactor to mean
-    """
-    me[:] += ctx.amplfactor
-
-
-def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
-    """
-    Adjust Swiss GMPEs to add amplification and correct intra-event residuals
-    """
-
-    if imt.period == 0.3:
-        phis2s = ctx.ch_phis2s03
-        phiss = ctx.ch_phiss03
-        me[:] += ctx.ch_ampl03
-    elif imt.period == 0.6:
-        phis2s = ctx.ch_phis2s06
-        phiss = ctx.ch_phiss06
-        me[:] += ctx.ch_ampl06
-
-    phi_star = np.sqrt(phis2s**2 + phiss**2)
-    total_stddev_star = np.sqrt(ta**2 + phi_star**2)
-
-    ph[:] = phi_star
-    si[:] = total_stddev_star
-
-
-def apply_swiss_site_specific_amplification_sa(
-        ctx, imt, me, si, ta, ph, periods=SWISS_SITE_SPECIFIC_PERIODS):
-    """
-    Apply supplied natural-log site corrections at explicitly selected periods.
-
-    The inputs have the same meaning as the Swiss SA correction: amplification
-    shifts the log mean, phi combines site-to-site and single-station terms,
-    and the current between-event uncertainty is retained. PGA keeps its mean,
-    phi and tau and only recomputes total uncertainty from those current terms.
-    """
-    if not np.all(np.isfinite(ta)) or np.any(ta < 0):
-        raise ValueError('Swiss site-specific amplification requires finite, '
-                         'nonnegative between-event uncertainty')
-
-    # PGA keeps the mean, const.StdDev.INTRA_EVENT (ph) and
-    # const.StdDev.INTER_EVENT (ta); only const.StdDev.TOTAL is rebuilt.
-    # This follows the reference implementation passed by L. Danciu.
-    if imt.name == 'PGA':
-        if not np.all(np.isfinite(ph)) or np.any(ph < 0):
-            raise ValueError('Swiss site-specific PGA requires finite, '
-                             'nonnegative intra-event uncertainty')
-        si[:] = np.sqrt(ta**2 + ph**2)
-        return
-
-    # Select the amplification and two phi columns for this SA period.
-    fields = _swiss_site_specific_fields(imt, periods)
-    amplification, phis2s, phiss = (getattr(ctx, name) for name in fields)
-    for name, values in zip(fields, (amplification, phis2s, phiss)):
-        if not np.all(np.isfinite(values)):
-            raise ValueError('Nonfinite site correction in %s' % name)
-    if np.any(phis2s < 0) or np.any(phiss < 0):
-        raise ValueError('Swiss site-specific phi components must be '
-                         'nonnegative')
-    # Add the site correction to the log mean; keep the current
-    # const.StdDev.INTER_EVENT (ta/tau) unchanged.
-    me[:] += amplification
-    # Store phi_star in const.StdDev.INTRA_EVENT through the output view ph.
-    # This replaces rock phi; its original variance is not added again.
-    ph[:] = np.sqrt(phis2s**2 + phiss**2)
-    # Store sqrt(tau**2 + phi_star**2) in const.StdDev.TOTAL
-    # through the output view si.
-    si[:] = np.sqrt(ta**2 + ph**2)
 
 
 # ################ FUNCTIONS MODIFYING mean_stds ################## #
@@ -791,25 +699,8 @@ class ModifiableGMPE(GMPE):
             self.gmpe_table = self.gmpe.gmpe_table
         self.set_parameters()
 
-        # Only the new modifier advertises its selected correction columns.
-        # Do not extend the legacy Swiss context requirements or mutate the
-        # caller's options: nested kwargs also determine the GSIM's TOML
-        # identity.
-        name = 'apply_swiss_site_specific_amplification_sa'
-        if name in self.params:
-            options = self.params[name]
-            if not isinstance(options, dict) or set(options) - {'periods'}:
-                raise ValueError('Swiss site-specific options only accept '
-                                 'periods')
-            if 'apply_swiss_amplification_sa' in self.params:
-                raise ValueError('Swiss and Swiss site-specific SA '
-                                 'amplification '
-                                 'cannot be applied together')
-            periods = _swiss_site_specific_periods(
-                options.get('periods', SWISS_SITE_SPECIFIC_PERIODS))
-            self.REQUIRES_SITES_PARAMETERS |= {
-                field for period in periods
-                for field in SWISS_SITE_SPECIFIC_FIELDS[period]}
+        self.REQUIRES_SITES_PARAMETERS |= (
+            swiss_amplification.get_site_parameters(self.params))
 
         # Validate the underlying GMPE against per-adjustment requirements
         for meth in self.params:

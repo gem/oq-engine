@@ -23,7 +23,7 @@ from django.views.generic.base import RedirectView
 
 from openquake.server import views
 from openquake.server.db.tag_admin import tag_admin_site
-from openquake.server.internal_api import internal_urlpatterns
+from openquake.server.internal_api import v0_urlpatterns
 
 urlpatterns = []
 if settings.WEBUI:
@@ -38,9 +38,6 @@ if settings.WEBUI:
                 url='%s/engine/' % settings.WEBUI_PATHPREFIX,
                 permanent=True))]
     urlpatterns += [
-        re_path(r'^$', RedirectView.as_view(
-            url='%s/engine/' % settings.WEBUI_PATHPREFIX,
-            permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
                 views.web_engine_get_outputs, name="outputs"),
@@ -79,24 +76,6 @@ if settings.WEBUI:
 urlpatterns += [path('', include('openquake.server.webui.urls'))]
 
 if settings.APPLICATION_MODE != 'TOOLS_ONLY':
-    # it is useful to disable the default redirect if the usage is via API only
-    # 'collectstatic' and related configurationis on the reverse proxy
-    # are also not required anymore for an API-only usage
-    if settings.WEBUI:
-        urlpatterns += [
-            re_path(r'^$', RedirectView.as_view(
-                url='%s/engine/' % settings.WEBUI_PATHPREFIX,
-                permanent=True)),
-            re_path(r'^engine/?$', views.web_engine, name="index"),
-            re_path(r'^engine/(\d+)/outputs$',
-                    views.web_engine_get_outputs, name="outputs"),
-        ]
-        if settings.APPLICATION_MODE == 'AELO':
-            urlpatterns.append(
-                re_path(r'^engine/(\d+)/outputs_aelo$',
-                        views.web_engine_get_outputs_aelo,
-                        name="outputs_aelo"))
-
     if settings.LOCKDOWN:
         from django.contrib import admin
         from django.contrib.auth.views import (
@@ -183,11 +162,14 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
     if settings.WEBUI_PATHPREFIX != "":
         urlpatterns = [path(r'%s/' % settings.WEBUI_PATHPREFIX.strip('/'),
                             include(urlpatterns))]
-    else:
-        urlpatterns = urlpatterns
 
-    # the internal API is always served at the root, as before
-    urlpatterns += internal_urlpatterns
+    # the internal routes are always served at the root, as before
+    if settings.WEBUI:
+        urlpatterns += [
+            re_path(r'^v1/calc_info/(\d+)$', views.v1_calc_info),
+            re_path(r'^v1/calc_list/count$', views.v1_calc_list_count),
+        ]
+    urlpatterns += v0_urlpatterns
 
     # To enable gunicorn debug without Nginx (to serve static files)
     # uncomment the following lines
