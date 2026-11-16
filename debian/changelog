@@ -1,3 +1,8 @@
+  [Marco Pagani]
+  * Internal: fixed zero-rate handling in uncertainty histograms, preserving
+    zero-rate probability masses through convolution and mixture calculations.
+  * Internal: preserved global uncertainty indices during convolution.
+
   [Christopher Brooks]
   * Remove the HMTK from the OpenQuake Engine in anticipation of
     moving the related code into the associated parts of the OQ-MBTK.
