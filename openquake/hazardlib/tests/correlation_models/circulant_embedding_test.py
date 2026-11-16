@@ -80,6 +80,31 @@ def test_release_failed_embedding(monkeypatch):
     assert factor.embedding_multiplier == 2
 
 
+def test_memory_guard_precedes_allocations():
+    with patch.object(ce, '_covariance_lags') as lags:
+        with patch.object(CirculantEmbeddingFactor,
+                          '_validate_indices') as ids:
+            with pytest.raises(ValueError, match='workspace bytes'):
+                CirculantEmbeddingFactor.build(
+                    DuNing2021(), IMTS, (1_000_000, 1_000_000), 1.,
+                    memory_budget=1024)
+    lags.assert_not_called()
+    ids.assert_not_called()
+
+
+def test_memory_guard_checks_enlargement():
+    imts = [PGA(), SA(0.3), SA(1.), SA(3.)]
+    shape = (12, 11)
+    initial = ce._embedding_shape(shape, 1)
+    budget = ce._embedding_bytes(initial, len(imts), numpy.prod(shape))
+    with patch.object(ce, '_covariance_lags',
+                      wraps=ce._covariance_lags) as evaluate:
+        with pytest.raises(ValueError, match='workspace bytes'):
+            CirculantEmbeddingFactor.build(
+                DuNing2021(), imts, shape, 10., memory_budget=budget)
+    assert evaluate.call_count == 1
+
+
 def geographic_grid(shape, missing=(), perturb=None):
     """Return rounded geographic coordinates for a UTM grid."""
     y, x = numpy.indices(shape)
@@ -303,7 +328,7 @@ def test_input_shape(model_cls):
 def test_batch_size(model_cls):
     factor = CirculantEmbeddingFactor.build(
         model_cls(), IMTS, (2, 3), 1.0)
-    fixed = factor.spectral_root.nbytes
+    fixed = factor.nbytes
     per_realization = factor.workspace_bytes_per_realization
 
     assert factor.batch_size(fixed + 3 * per_realization) == 3

@@ -402,6 +402,17 @@ def covariance_bytes_per_pair(num_imts1, num_imts2=None, copies=6, model=None):
     return 8 * max(copies * pairs, pairs + buffers)
 
 
+def _embedding_bytes(shape, num_imts, output_sites, model=None):
+    # Model evaluation, FFT setup and eigensolver chunks have different
+    # lifetimes. Count their peak, then compare it with one sampling batch.
+    cells = prod(shape)
+    setup = cells * covariance_bytes_per_pair(num_imts, copies=3, model=model)
+    setup += 6 * min(cells, _SPECTRAL_CHUNK_CELLS) * num_imts ** 2 * 16
+    sampling = (16 * shape[0] * (shape[1] // 2 + 1) * num_imts ** 2 +
+                32 * cells * num_imts + 8 * output_sites * num_imts)
+    return max(setup, sampling)
+
+
 @dataclass(frozen=True)
 class CirculantEmbeddingFactor:
     """FFT factorization of an IMT-major regular-grid covariance.
@@ -421,25 +432,38 @@ class CirculantEmbeddingFactor:
 
     @classmethod
     def build(cls, model, imts, grid_shape, spacing, component=None,
-              context=None, site_indices=None, max_multiplier=8):
-        """Build an embedding, enlarging it until its spectrum is PSD."""
+              context=None, site_indices=None, max_multiplier=8,
+              memory_budget=None):
+        """Build a PSD embedding within the optional workspace budget.
+
+        Check each attempted enlargement before allocating its lag arrays.
+        Output-cell indices are allocated only after setup has succeeded.
+        """
         grid_shape = _pair(grid_shape, 'grid_shape', int)
         spacing = _pair(spacing, 'spacing', float)
         if not imts:
             raise ValueError('At least one IMT is required')
         if max_multiplier < 1:
             raise ValueError('max_multiplier must be positive')
-        indices = cls._validate_indices(site_indices, grid_shape)
+        num_sites = (prod(grid_shape) if site_indices is None
+                     else len(site_indices))
         minimum = numpy.nan
         for multiplier in range(1, max_multiplier + 1):
             # Extending the periodic domain reduces artificial interaction
             # across its boundary while preserving the requested covariance.
             embedded_shape = _embedding_shape(grid_shape, multiplier)
+            required = _embedding_bytes(
+                embedded_shape, len(imts), num_sites, model)
+            if memory_budget is not None and required > memory_budget:
+                raise ValueError('The circulant embedding requires at least '
+                                 f'{required} workspace bytes; budget is '
+                                 f'{int(memory_budget)} bytes')
             covariance_lags = _covariance_lags(
                 model, imts, embedded_shape, spacing, component, context)
             minimum, root = _spectral_root(covariance_lags)
             del covariance_lags
             if root is not None:
+                indices = cls._validate_indices(site_indices, grid_shape)
                 return cls(
                     root, grid_shape, embedded_shape, len(imts), indices,
                     multiplier, minimum)
@@ -476,6 +500,11 @@ class CirculantEmbeddingFactor:
         return self.num_imts * len(self.site_indices)
 
     @property
+    def nbytes(self):
+        """Bytes retained by the spectral factor and output-cell mapping."""
+        return self.spectral_root.nbytes + self.site_indices.nbytes
+
+    @property
     def workspace_bytes_per_realization(self):
         """Conservative FFT workspace estimate for one realization."""
         return 32 * self.input_size + 8 * self.output_size
@@ -483,12 +512,12 @@ class CirculantEmbeddingFactor:
     def batch_size(self, memory_budget):
         """Return how many realizations fit in the workspace budget."""
         memory_budget = int(memory_budget)
-        available = memory_budget - self.spectral_root.nbytes
+        available = memory_budget - self.nbytes
         required = self.workspace_bytes_per_realization
         if available < required:
             raise ValueError(
                 'The circulant embedding requires at least '
-                f'{self.spectral_root.nbytes + required} workspace bytes')
+                f'{self.nbytes + required} workspace bytes')
         return max(1, available // required)
 
     def apply(self, samples):

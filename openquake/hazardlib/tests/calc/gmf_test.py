@@ -152,7 +152,7 @@ def test_ce_batches():
     sites = regular_sites((2, 3))
     factor = CirculantEmbeddingFactor.build(
         DuNing2021(), IMTS, (2, 3), 1.0)
-    fixed = factor.spectral_root.nbytes
+    fixed = factor.nbytes
     per_realization = factor.workspace_bytes_per_realization
 
     first = build_computer(sites, factor)
