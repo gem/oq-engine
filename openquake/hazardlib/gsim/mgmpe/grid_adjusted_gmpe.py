@@ -855,3 +855,13 @@ class GridAdjustedGMPE(GMPE):
         """
         resolved = compute_central(self, ctx, imts, mean, sig, tau, phi)
         apply_epsilons(self, resolved, imts, mean)
+
+    # Dispatch targets for ContextMaker's shared-central caching
+    # (see contexts.py:_get_central / _add_epsilons)
+    def compute_central(self, ctx, imts, mean, sig, tau, phi,
+                        gra_mon=nullcontext()):
+        return compute_central(self, ctx, imts, mean, sig, tau, phi,
+                               gra_mon=gra_mon)
+
+    def apply_epsilons(self, resolved, imts, mean):
+        apply_epsilons(self, resolved, imts, mean)

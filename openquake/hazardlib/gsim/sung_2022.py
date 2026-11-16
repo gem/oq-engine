@@ -230,15 +230,25 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         self._lon_fast = p['lon_fast']
         self.off_grid_tol = p['off_grid_tol']
 
-    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+    @property
+    def central_key(self):
         """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.compute>`
-        for spec of input and result values.
+        Branches with the same adjustment h5 share the same backbone and
+        the same nearest-neighbour lookup. ContextMaker computes those once
+        per batch and reuses the result across every branch returning the
+        same key (see contexts.py:get_mean_stds).
         """
-        # Grid coordinates should be identical across all frequency
-        # datasets in the h5 (checked at instantiation), so the nearest
-        # node lookup is IMT-independent and uses lattice arithmetic.
+        return (self.adjustment_h5,)
+
+    def compute_central(self, ctx, imts, mean, sigma, tau, phi, **_kw):
+        """
+        Branch-independent work: ergodic backbone + nearest-node index.
+        Returns `idx_all` so apply_epsilons() can pull the per-rlz column
+        without redoing the lookup.
+
+        **_kw absorbs ContextMaker kwargs (e.g. gra_mon) that this GSIM
+        has no use for — accepted for interface compatibility only.
+        """
         grid = self.dat[next(iter(self.dat))]
         # Nearest-node index from lattice arithmetic; O(n_ctx) ops total
         i_lon = np.round(
@@ -268,25 +278,44 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
                    grid['lon'][idx_all[i]], grid['lat'][idx_all[i]],
                    dlon[i], dlat[i]))
 
+        # Ergodic backbone + sigma components (do NOT depend on rlz_id)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            # Pull Delta-mu for every ctx row from the per-frequency grid
-            dat = self.dat[imt.frequency]
-            if self.rlz_id == 'mean':
-                adj = dat['mean'][idx_all]
-            else:
-                adj = dat['rlz'][idx_all, int(self.rlz_id)]
-
-            # Ergodic mean (same as baseline) plus the non-ergodic shift
             mean[m] = (_magnitude_scaling(C, ctx) +
                        _path_scaling(C, ctx) +
                        _ztor_scaling(C, ctx) +
-                       _linear_site_response(C, ctx)) + adj
-
-            # Sigma (phi not stored, derive from tot and tau)
+                       _linear_site_response(C, ctx))
             sigma[m] = C['tot']
             tau[m] = C['tau']
             phi[m] = np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.))
+        return idx_all
+
+    def apply_epsilons(self, idx_all, imts, mean):
+        """
+        Branch-specific shift: add Delta-mu for this `rlz_id` into the
+        central mean. `idx_all` is the per-rupture nearest-node index
+        returned by compute_central() and cached by ContextMaker.
+        """
+        for m, imt in enumerate(imts):
+            dat = self.dat[imt.frequency]
+            if self.rlz_id == 'mean':
+                mean[m] += dat['mean'][idx_all]
+            else:
+                mean[m] += dat['rlz'][idx_all, int(self.rlz_id)]
+
+    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+
+        Standalone path (ignores ContextMaker caching). The ContextMaker's
+        classical path calls compute_central()/apply_epsilons() directly;
+        this entry point exists for direct use outside that loop (tests,
+        ad-hoc scripts).
+        """
+        idx_all = self.compute_central(ctx, imts, mean, sigma, tau, phi)
+        self.apply_epsilons(idx_all, imts, mean)
 
     # The Coefficients used here are the same of the ergodic model BUT the
     # standard deviations which are based on information Karen sent on
