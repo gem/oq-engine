@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Reduced the size of the yielded packets in classical_bysrc and
+    raised an error in case of lost zmq packets
+
   [Savas Ceylan]
   * Added Swiss site-specific SA corrections to ModifiableGMPE.
     Only site columns for the selected periods are required.
@@ -18,7 +22,7 @@
       non-linear term was interpolated against linear frequency.
 
  [Anirudh Rao]
-  * Enabled circulant embedding for the Loth & Baker (2013) spatial-cross-IMT 
+  * Enabled circulant embedding for the Loth & Baker (2013) spatial-cross-IMT
     correlation model
 
  [Michele Simionato]

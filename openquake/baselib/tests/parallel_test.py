@@ -71,6 +71,13 @@ def countletters(text1, text2, monitor):
 
 class StallDiagnosticsTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.smap = parallel.Starmap.__new__(parallel.Starmap)
+        self.smap.tasks = {1: None}
+        self.smap.calc_id = 42
+        self.result_socket = mock.Mock()
+        self.result_socket.zsocket.poll.return_value = 0
+
     def test_socket_recovery(self):
         sock = zeromq.Socket('tcp://127.0.0.1:1909', zeromq.zmq.REP, 'bind')
         sock.port = 1909
@@ -97,14 +104,11 @@ class StallDiagnosticsTestCase(unittest.TestCase):
                     parallel.Starmap.poll_timeout(smap, 'socket', waited)
                 self.assertEqual(smap.check_tasks_alive.call_count,
                                  int(mode == 'processpool'))
-                expected = mode in ('zmq', 'slurm') and waited >= 200 and debug
+                expected = mode in ('zmq', 'slurm') and waited >= 200
                 self.assertEqual(smap._zmq_stall_report.call_count,
                                  int(expected))
 
     def test_worker_failure_and_throttling(self):
-        smap = parallel.Starmap.__new__(parallel.Starmap)
-        smap.tasks = {1: None}
-        smap.calc_id = 42
         with mock.patch.object(parallel, 'host_cores', ['127.0.0.1 1']), \
                 mock.patch.object(parallel, 'Socket',
                                   side_effect=RuntimeError('offline')) as sock, \
@@ -112,11 +116,70 @@ class StallDiagnosticsTestCase(unittest.TestCase):
                                   side_effect=[0, 199, 200]), \
                 self.assertLogs(level=logging.DEBUG) as log:
             for _ in range(3):
-                smap._zmq_stall_report('socket')
+                self.smap._zmq_stall_report(self.result_socket)
         self.assertEqual(sock.call_count, 2)
         self.assertEqual(len(log.records), 4)
-        self.assertTrue(all(r.levelno == logging.DEBUG for r in log.records))
-        self.assertIn('Could not query worker', log.records[-1].message)
+        self.assertEqual([r.levelno for r in log.records],
+                         [logging.DEBUG, logging.WARNING] * 2)
+        self.assertIn('Could not query workerpool', log.records[-1].message)
+
+    def test_unreachable_worker(self):
+        # An unreachable worker may still be running the outstanding task.
+        idle, offline = mock.MagicMock(), mock.MagicMock()
+        idle.__enter__.return_value.send.side_effect = [1, '', 0.]
+        offline.__enter__.side_effect = zeromq.TimeoutError('offline')
+        with mock.patch.object(parallel, 'host_cores',
+                               ['127.0.0.1 1', '127.0.0.2 1']), \
+                mock.patch.object(parallel, 'Socket',
+                                  side_effect=[idle, offline]):
+            self.smap._zmq_stall_report(self.result_socket)
+        self.result_socket.zsocket.poll.assert_not_called()
+
+    def test_memory_query_failure(self):
+        for busy in ('42-1', ''):
+            with self.subTest(busy=busy), \
+                    mock.patch.object(parallel, 'host_cores',
+                                      ['127.0.0.1 1']), \
+                    mock.patch.object(parallel, 'Socket') as cls:
+                self.smap.__dict__.pop('_last_stall_report', None)
+                cls.return_value.__enter__.return_value.send.side_effect = [
+                    1, busy, zeromq.TimeoutError('memory query')]
+                if busy:
+                    self.smap._zmq_stall_report(self.result_socket)
+                else:
+                    with self.assertRaisesRegex(RuntimeError, 'Lost 1'):
+                        self.smap._zmq_stall_report(self.result_socket)
+
+    def test_idle_workers_without_results(self):
+        with mock.patch.object(parallel, 'host_cores', ['127.0.0.1 1']), \
+                mock.patch.object(parallel, 'Socket') as cls:
+            cls.return_value.__enter__.return_value.send.side_effect = [
+                1, '', 0.]
+            with self.assertRaisesRegex(RuntimeError, 'Lost 1'):
+                self.smap._zmq_stall_report(self.result_socket)
+        self.result_socket.zsocket.poll.assert_called_once_with(0)
+
+    def test_result_arrives_during_queries(self):
+        with zeromq.context.socket(zeromq.zmq.PULL) as receiver:
+            port = receiver.bind_to_random_port('tcp://127.0.0.1')
+            addr = 'tcp://127.0.0.1:%d' % port
+            with zeromq.Socket(addr, zeromq.zmq.PUSH, 'connect') as sender:
+                def reply(cmd):
+                    if cmd == 'get_num_workers':
+                        sender.send('completed task result')
+                        self.assertTrue(receiver.poll(1000))
+                        return 1
+                    return '' if cmd == 'get_executing' else 0.
+
+                with mock.patch.object(parallel, 'host_cores',
+                                       ['127.0.0.1 1']), \
+                        mock.patch.object(parallel, 'Socket') as cls:
+                    worker = cls.return_value.__enter__.return_value
+                    worker.send.side_effect = reply
+                    sock = mock.Mock(zsocket=receiver)
+                    self.smap._zmq_stall_report(sock)
+                self.assertEqual(receiver.recv_pyobj(),
+                                 'completed task result')
 
 
 class StarmapTestCase(unittest.TestCase):

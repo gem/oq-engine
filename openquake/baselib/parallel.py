@@ -1069,6 +1069,7 @@ class Starmap(object):
             shortlist(sorted(outstanding)))
         rows = []
         still_tot = 0
+        all_known = True
         for line in host_cores:
             try:
                 host, port, _cores = parse_hostcore(
@@ -1077,19 +1078,30 @@ class Starmap(object):
                 with Socket(addr, zmq.REQ, 'connect', timeout=5) as wsock:
                     nworkers = wsock.send('get_num_workers')
                     busy = wsock.send('get_executing').split()
-                    mem_gb = wsock.send('memory_gb')
-                # how many of the outstanding tasks are still executing here?
-                still = sum(1 for t in busy
-                            if t.rsplit('-', 1)[0] == cid
-                            and int(t.rsplit('-', 1)[1]) in outstanding)
-                still_tot += still
+                    # Keep execution status even if the memory query fails.
+                    still = sum(1 for t in busy
+                                if t.rsplit('-', 1)[0] == cid
+                                and int(t.rsplit('-', 1)[1]) in outstanding)
+                    still_tot += still
+                    try:
+                        mem_gb = wsock.send('memory_gb')
+                    except Exception as exc:
+                        mem_gb = numpy.nan
+                        logging.warning(
+                            'Could not query workerpool memory %s: %r',
+                            line, exc)
                 rows.append((addr, nworkers, len(busy), mem_gb, still))
             except Exception as exc:
-                logging.warning('Could not query worker %s: %r', line, exc)
+                all_known = False
+                logging.warning('Could not query workerpool %s: %r', line, exc)
         # if none of the outstanding tasks is executing on any worker, the
         # results were computed but never delivered (lost packets): report at
-        # ERROR level and abort instead of hanging
-        lost = bool(outstanding) and still_tot == 0
+        # ERROR level and abort instead of hanging. Failed status queries
+        # leave worker execution unknown, so they cannot establish a loss.
+        # A task may have completed during the queries: let the receiver
+        # consume any messages that arrived before deciding they were lost.
+        lost = (bool(outstanding) and all_known and still_tot == 0
+                and not sock.zsocket.poll(0))
         for addr, nworkers, nbusy, mem_gb, still in rows:
             msg = ('WorkerPool %s: %d workers, %d busy, mem=%.0fGB, '
                    '%d/%d executing')
