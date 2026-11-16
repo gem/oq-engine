@@ -184,7 +184,7 @@ class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
-    INST_TYPE = 'devel_user'
+    INST_TYPE = 'devel'
 
     @classmethod
     def manage_py(cls):
@@ -751,9 +751,9 @@ def install(inst, version, from_fork, noupgrade):
         print(f"Created {inst.VENV}")
 
     # store in the venv dir a file specifying the type of installation (server,
-    # user, devel_server, devel_user)
+    # user, devel, devel_server)
     if inst.VENV:
-        inst_type_file_path = os.path.join(inst.VENV, 'OQ_ENGINE_INST_TYPE')
+        inst_type_file_path = os.path.join(inst.VENV, 'INST_TYPE')
         with open(inst_type_file_path, 'w') as inst_type_file:
             inst_type_file.write(inst.INST_TYPE)
 
