@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,7 +28,6 @@ Reference:
 import os
 import h5py
 import numpy as np
-
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -58,14 +57,20 @@ class SungEtAl2022(GMPE):
     Implements the Sung et al. (2022) ergodic model for France based on the
     Bayless and Abrahamson (2018) GMM.
     """
+
+    # France is stable continental crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
+    # Model is for Fourier amplitude spectra, not PSA
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {EAS}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
+
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT,
     }
+
+    # Linear Vs30 only (paper omits nonlinear site and basin terms)
     REQUIRES_SITES_PARAMETERS = {'vs30'}
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
     REQUIRES_DISTANCES = {'rrup'}
@@ -103,13 +108,17 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     # clon/clat are the closest point of the rupture to the site
     REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
 
-    def __init__(self, adjustment_file, rlz_id="mean"):
+    def __init__(self, adjustment_h5, rlz_id="mean"):
         # Pre-computed per-site adjustment table (one h5 per site + frequency)
-        self.adjustment_file = adjustment_file
+        # Bare filenames are resolved against the module data folder
+        if os.sep not in adjustment_h5 and '/' not in adjustment_h5:
+            adjustment_h5 = os.path.join(
+                os.path.dirname(__file__), 'sung_2022', adjustment_h5)
+        self.adjustment_h5 = adjustment_h5
         # Selects which posterior draw: "mean" or integer 0..99
         self.rlz_id = rlz_id
-        assert os.path.exists(self.adjustment_file), \
-            'Adjustment file not found: %s' % self.adjustment_file
+        assert os.path.exists(self.adjustment_h5), \
+            'Adjustment file not found: %s' % self.adjustment_h5
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         """
@@ -118,7 +127,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         for spec of input and result values.
         """
         # Load the full adjustment grid for this site + frequency
-        with h5py.File(self.adjustment_file, 'r') as fcoeff:
+        with h5py.File(self.adjustment_h5, 'r') as fcoeff:
             dat = fcoeff['init'][:]
 
         # One Delta-mu per ctx row (per rupture)
