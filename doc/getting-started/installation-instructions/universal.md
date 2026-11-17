@@ -194,7 +194,9 @@ $ sudo -H python3.11 install.py server
 
 The first WebUI startup applies database migrations and synchronizes the
 optional standalone application data. New standard taxonomy records are
-added without replacing existing records.
+loaded after dropping existing taxonomy records on application or data
+upgrades. The taxonomy application is still in development, and its content
+is stored in Git; a content-preserving dump/restore procedure is planned.
 
 The installation script will automatically create a user called
 `openquake` and will install the engine in the directory
