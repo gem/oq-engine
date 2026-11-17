@@ -204,8 +204,10 @@ class RuptureConverter(object):
     """
     fname = None  # should be set externally
 
-    def __init__(self, rupture_mesh_spacing, complex_fault_mesh_spacing=None):
+    def __init__(self, rupture_mesh_spacing, complex_fault_mesh_spacing=None,
+                 dip_spacing='mesh_spacing'):
         self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.dip_spacing = dip_spacing
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
 
@@ -298,7 +300,9 @@ class RuptureConverter(object):
                 ~surface_node.upperSeismoDepth,
                 ~surface_node.lowerSeismoDepth,
                 ~surface_node.dip,
-                self.rupture_mesh_spacing)
+                self.rupture_mesh_spacing,
+                dip_spacing=(self.rupture_mesh_spacing
+                             if self.dip_spacing == 'inferred' else None))
         elif surface_node.tag.endswith('complexFaultGeometry'):
             if not self.complex_fault_mesh_spacing:
                 raise ValueError('complex_fault_mesh_spacing is not set!')
@@ -453,11 +457,13 @@ class SourceConverter(RuptureConverter):
                  source_id=(), discard_trts=(),
                  floating_x_step=0, floating_y_step=0,
                  source_nodes=(),
-                 infer_occur_rates=False, filter_sourcecodes=''):
+                 infer_occur_rates=False, filter_sourcecodes='',
+                 dip_spacing='mesh_spacing'):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
         self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.dip_spacing = dip_spacing
         self.complex_fault_mesh_spacing = complex_fault_mesh_spacing
         self.width_of_mfd_bin = width_of_mfd_bin
         self.source_id = tuple(source_id)
@@ -825,6 +831,7 @@ class SourceConverter(RuptureConverter):
                 ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
                 fault_trace, ~geom.dip, ~node.rake,
                 source.HypoData(hypo_list, slip_list, hypo_depth_list))
+            simple.dip_spacing = self.dip_spacing
             rate_frac = node.attrib.get('rateFrac')
             if rate_frac is not None:
                 simple.rate_frac = float(rate_frac)

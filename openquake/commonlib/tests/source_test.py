@@ -174,6 +174,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             hypo_data=source.HypoData(
                 hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
                 slip_list=numpy.array([[90, 0.7], [135, 0.3]])))
+        simple.dip_spacing = 'mesh_spacing'
         simple.width_of_mfd_bin = self.width_of_mfd_bin
         return simple
 

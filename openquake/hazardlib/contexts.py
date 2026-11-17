@@ -477,9 +477,6 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
         closest = project_back(planar, xx, yy)  # (3, U, N)
     # set distances
     zeroctx['rrup'] = rrup
-    # clon/clat/clon_clat are populated from the pre-computed `closest`
-    # below, not via get_distances_planar (planar.py has no dispatch for
-    # closest-point coords)
     for par in cmaker.REQUIRES_DISTANCES - {'rrup'} - closest_keys:
         zeroctx[par] = get_distances_planar(planar, sites, par)
     for par in cmaker.REQUIRES_DISTANCES - closest_keys:
