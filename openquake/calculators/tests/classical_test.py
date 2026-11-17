@@ -39,16 +39,16 @@ from openquake.hazardlib.gsim.gmpe_table import interp_table
 from openquake.calculators.tests import CalculatorTestCase, no_fastmean
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
-    case_09, case_10, case_11, case_12, case_13, case_18, case_22, case_23,
-    case_24, case_25, case_26, case_27, case_28, case_29, case_30, case_31,
-    case_32, case_33, case_34, case_35, case_36, case_37, case_38, case_39,
-    case_40, case_41, case_42, case_43, case_44, case_45, case_47, case_48,
-    case_49, case_50, case_51, case_53, case_54, case_55, case_57, case_60,
-    case_61, case_62, case_63, case_64, case_65, case_66, case_67, case_68,
-    case_69, case_70, case_71, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_79, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89, case_90, case_91, case_92, case_93,
-    case_94, case_95, case_96, case_97, case_98)
+    case_09, case_10, case_11, case_12, case_13, case_18, case_21, case_22,
+    case_23, case_24, case_25, case_26, case_27, case_28, case_29, case_30,
+    case_31, case_32, case_33, case_34, case_35, case_36, case_37, case_38,
+    case_39, case_40, case_41, case_42, case_43, case_44, case_45, case_47,
+    case_48, case_49, case_50, case_51, case_53, case_54, case_55, case_57,
+    case_60, case_61, case_62, case_63, case_64, case_65, case_66, case_67,
+    case_68, case_69, case_70, case_71, case_72, case_74, case_75, case_76,
+    case_77, case_78, case_79, case_80, case_81, case_82, case_83, case_84,
+    case_85, case_86, case_87, case_88, case_89, case_90, case_91, case_92,
+    case_93, case_94, case_95, case_96, case_97, case_98)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -368,6 +368,18 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def getLG(self):
         return self.calc.datastore['hcurves-stats'][3, 0]
+
+    def test_case_21(self):
+        # Sung 2022 EAS ergodic and non-ergodic (mean adjustment) at Site1,
+        # EAS(1.0) and EAS(5.0)
+        for suffix, job in [('ergodic', 'job_ergodic.ini'),
+                            ('non_ergodic', 'job_non_ergodic.ini')]:
+            self.run_calc(case_21.__file__, job)
+            for fname in export(('hcurves/mean', 'csv'), self.calc.datastore):
+                freq = '1.0' if '(1.000000)' in fname else '5.0'
+                self.assertEqualFiles(
+                    'expected/hazard_curve-mean-EAS(%s)_%s.csv' % (
+                        freq, suffix), fname)
 
     def test_case_22(self):
         # crossing date line calculation for Alaska
