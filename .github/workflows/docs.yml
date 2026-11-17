@@ -94,7 +94,7 @@ jobs:
       - name: Upgrade pip and install requirements
         run: |
           pip install -U pip wheel
-          pip install -r ./requirements-py312-linux64.txt
+          pip install -r ./requirements-py313-linux64.txt
           pip install -r ./doc/requirements.txt
       - name: Install oq engine
         run: |
