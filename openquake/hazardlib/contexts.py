@@ -71,6 +71,9 @@ MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
 # collapsing, see _collapse_by_mag; 5 millions gave workers of over 11 GB
 # in the CHN model
 COLLAPSE_PAIRS = 2_000_000
+# REQUIRES_DISTANCES names that mean "give me closest-point coordinates";
+# all three populate both ctx.clon and ctx.clat
+CLOSEST_KEYS = frozenset({'clon', 'clat', 'clon_clat'})
 bymag = operator.attrgetter('mag')
 
 # These coordinates were provided by M Gerstenberger (personal
@@ -469,19 +472,17 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     # computing distances
     rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
     # get the closest points on the surface
-    if (cmaker.fewsites
-            or 'clon' in cmaker.REQUIRES_DISTANCES
-            or 'clon_clat' in cmaker.REQUIRES_DISTANCES):
+    closest_keys = cmaker.REQUIRES_DISTANCES & CLOSEST_KEYS
+    if cmaker.fewsites or closest_keys:
         closest = project_back(planar, xx, yy)  # (3, U, N)
     # set distances
     zeroctx['rrup'] = rrup
     # clon/clat/clon_clat are populated from the pre-computed `closest`
     # below, not via get_distances_planar (planar.py has no dispatch for
     # closest-point coords)
-    for par in cmaker.REQUIRES_DISTANCES - {
-            'rrup', 'clon', 'clat', 'clon_clat'}:
+    for par in cmaker.REQUIRES_DISTANCES - {'rrup'} - closest_keys:
         zeroctx[par] = get_distances_planar(planar, sites, par)
-    for par in cmaker.REQUIRES_DISTANCES:
+    for par in cmaker.REQUIRES_DISTANCES - closest_keys:
         dst = zeroctx[par]
         if cmaker.minimum_distance:
             dst[dst < cmaker.minimum_distance] = cmaker.minimum_distance
@@ -515,9 +516,7 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
         elif par == 'hypo_depth':
             ctxt[par] = planar.hypo[:, 2]
 
-    if (cmaker.fewsites
-            or 'clon' in cmaker.REQUIRES_DISTANCES
-            or 'clon_clat' in cmaker.REQUIRES_DISTANCES):
+    if cmaker.fewsites or closest_keys:
         zeroctx['clon'] = closest[0]
         zeroctx['clat'] = closest[1]
 
@@ -1405,7 +1404,7 @@ class ContextMaker(object):
     # called before building the contexts for the given sites
     def _init_sites(self, sitecol):
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
-        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
+        if self.fewsites or self.REQUIRES_DISTANCES & CLOSEST_KEYS:
             self.defaultdict['clon'] = F64(0.)
             self.defaultdict['clat'] = F64(0.)
 
