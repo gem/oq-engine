@@ -97,10 +97,15 @@ def runserver(hostport=None, skip_browser=False):
     """Start the Django development server and serve the WebUI application."""
     url = 'http://' + hostport
     health = _health_url(hostport)
-    if check_webserver_running(health, max_retries=1, warn=False):
-        if not skip_browser:
-            webbrowser.open(url)
-        return
+    host, port = hostport.rsplit(':', 1)
+    if host == '0.0.0.0':
+        host = '127.0.0.1'
+    if general.socket_ready((host, int(port))):
+        if check_webserver_running(health, max_retries=1, warn=False):
+            if not skip_browser:
+                webbrowser.open(url)
+            return
+        raise SystemExit('Port %s is already in use' % port)
 
     args = [sys.executable, '-m', 'openquake.server.manage', 'runserver']
     # the reload functionality of the Django development server interferes
