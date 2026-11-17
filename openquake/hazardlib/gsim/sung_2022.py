@@ -240,6 +240,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         """
         return (self.adjustment_h5,)
 
+    # Generic func name so method accepted in get_mean_stds for speedup
     def compute_central(self, ctx, imts, mean, sigma, tau, phi, **_kw):
         """
         Branch-independent work: ergodic backbone + nearest-node index.
@@ -298,6 +299,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
             phi[m] = np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.))
         return idx_all
 
+    # Generic func name so method accepted in get_mean_stds for speedup
     def apply_branch_shift(self, idx_all, imts, mean):
         """
         Branch-specific shift: add Delta-mu for this `rlz_id` into the
