@@ -5,6 +5,7 @@
     variant (uses clon_clat).
 
   [Michele Simionato]
+  * Added file AI_POLICY.md
   * Changed the signature of MultiPointSource to be consistent with the other
     parametric sources
 
