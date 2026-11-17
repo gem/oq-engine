@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import ast
 import csv
 import shutil
 import json
@@ -68,7 +66,7 @@ from openquake.risklib.scientific import TIME_EVENTS, TIME_LOSSES
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
-from openquake.engine import engine, impact
+from openquake.engine import engine
 from openquake.engine.aelo import (
     PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.server import internal_api, services, utils
@@ -1035,54 +1033,6 @@ def impact_get_nodal_planes_and_info(request):
     response_data = dict(nodal_planes=nodal_planes,
                          nodal_planes_issue=nodal_planes_issue, info=info)
     return JsonResponse(response_data)
-
-
-def create_impact_job(request, params, email_file_path):
-    # NOTE: params['rupture_dict'] is a string representation of a
-    # dictionary, not a JSON string, so we can't use json.loads
-    rupdic = ast.literal_eval(params['rupture_dict'])
-    if rupdic['approach'] == 'use_shakemap_from_usgs':
-        params['secondary_perils'] = (
-            'AllstadtEtAl2022Landslides, AllstadtEtAl2022Liquefaction')
-        params['intensity_measure_types'] = (
-            'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)')
-    [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level,
-        user_name=utils.get_username(request))
-
-    job_owner_email = request.user.email
-    response_data = dict()
-
-    job_id = jobctx.calc_id
-    outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs_impact', args=[job_id]))
-    outputs_uri_api = request.build_absolute_uri(
-        reverse('results', args=[job_id]))
-    log_uri = request.build_absolute_uri(
-        reverse('log', args=[job_id, '0', '']))
-    traceback_uri = request.build_absolute_uri(
-        reverse('traceback', args=[job_id]))
-    response_data[job_id] = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        log_uri=log_uri, traceback_uri=traceback_uri)
-    if not job_owner_email:
-        response_data[job_id]['WARNING'] = (
-            'No email address is specified for your user account,'
-            ' therefore email notifications will be disabled. As soon as'
-            ' the job completes, you can access its outputs at the'
-            ' following link: %s. If the job fails, the error traceback'
-            ' will be accessible at the following link: %s'
-            % (outputs_uri_api, traceback_uri))
-
-    args = ([params], [jobctx], job_owner_email, outputs_uri_web,
-            services.impact_callback, email_file_path)
-
-    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
-        impact.main_web(*args)
-    else:
-        # spawn the Impact main process
-        mp.Process(target=impact.main_web, args=args).start()
-    return response_data
 
 
 @csrf_exempt
