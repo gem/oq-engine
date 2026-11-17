@@ -343,12 +343,8 @@ def install_standalone(inst):
                  "--find-links", WHEELHOUSE_URL,
                  "--find-links", URL_STANDALONE,
                  app['pkg'] + app['ver']])
-            result = subprocess.check_call([pycmd, "-m", "pip", "check"])
-            print('MATTEO3 return code')
-            print(result)
-        except subprocess.CalledProcessError as exc:
-            print('MATTEO4')
-            print(exc)
+            subprocess.check_call([pycmd, "-m", "pip", "check"])
+        except subprocess.CalledProcessError:
             raise
         except Exception as exc:
             # for instance if somebody removed a wheel from the wheelhouse
@@ -590,9 +586,7 @@ def install_requirements(inst, pycmd, version, from_fork):
         [pycmd, "-m", "pip", "install", "--force-reinstall",
          "--trusted-host", "wheelhouse.openquake.org",
          "--trusted-host", "raw.githubusercontent.com", "-r", req])
-    result = subprocess.check_call([pycmd, "-m", "pip", "check"])
-    print('MATTEO return code')
-    print(result)
+    subprocess.check_call([pycmd, "-m", "pip", "check"])
 
 
 def git_zip_url(commit):
@@ -629,9 +623,7 @@ def install_engine(inst, pycmd, version, noupgrade):
                 [pycmd, "-m", "pip", "install"] + upgrade
                 + [git_zip_url(commit), "--no-clean"], env=custom_env)
         fix_version(commit, inst.VENV)
-    result = subprocess.check_call([pycmd, "-m", "pip", "check"])
-    print('MATTEO2 return code')
-    print(result)
+    subprocess.check_call([pycmd, "-m", "pip", "check"])
 
 
 def create_cfg(inst):
