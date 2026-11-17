@@ -53,6 +53,7 @@
   * The classical calculator now logs the reduction of the contexts due to
     the variant sources optimization, stored in the new `separate` field of
     the `nctxs` dataset and displayed by `oq show context_reduction`
+  * Internal: moved the database upgrade outside of install.py
   * Internal: fixed `oq --version` in devel_server installations by calling
     automatically `git config --global --add safe.directory`
 
