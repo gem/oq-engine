@@ -18,8 +18,7 @@ the postinstall commands run after their installation.
 """
 import subprocess
 
-WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
-URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
+# Keep this list in sync with the standalone installer install.py.
 STANDALONE_APP_INFO = [
     # All engine Django app need oq-platform-standalone
     {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.16.4"},
@@ -29,30 +28,6 @@ STANDALONE_APP_INFO = [
      "ver": "~=1.2.0"},
     {"pkg": "django-gem-taxonomy", "name": "django_gem_taxonomy", "ver": "~=1.4.4"},
 ]
-
-
-def install_standalone(pycmd, apps=STANDALONE_APP_INFO):
-    """
-    Install the standalone Django applications if possible.
-
-    :param pycmd: the Python executable to run pip with
-    :param apps: the standalone applications to install
-    :returns: the errors of the installation, empty if all went well
-    """
-    errors = []
-    for app in apps:
-        try:
-            print(f"Applications {app['pkg']} are not installed yet \n")
-            subprocess.check_call(
-                [pycmd, "-m", "pip", "install",
-                 "--no-index", "--no-cache-dir",
-                 "--find-links", WHEELHOUSE_URL,
-                 "--find-links", URL_STANDALONE,
-                 app["pkg"] + app["ver"]])
-        except Exception as exc:
-            # for instance if somebody removed a wheel from the wheelhouse
-            errors.append(f"{exc}: could not install {app['pkg']}")
-    return errors
 
 
 def postinstall(pycmd, apps=STANDALONE_APP_INFO):

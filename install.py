@@ -46,8 +46,6 @@ import platform
 import subprocess
 from urllib.request import urlopen, Request
 
-from openquake.server import standalone
-
 try:
     # used for "server" modes only, not available on windows
     import pwd
@@ -226,6 +224,37 @@ PLATFORM = {
     "darwin": ("macos",),
     "win32": ("win64",),
 }
+
+# Keep this list in sync with openquake/server/standalone.py. The installer
+# must also work when downloaded on its own, before openquake is installed.
+STANDALONE_APP_INFO = [
+    {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.16.4"},
+    {"pkg": "oq-platform-ipt", "name": "openquakeplatform_ipt",
+     "ver": "~=1.21.0"},
+    {"pkg": "oq-platform-taxonomy", "name": "openquakeplatform_taxonomy",
+     "ver": "~=1.2.0"},
+    {"pkg": "django-gem-taxonomy", "name": "django_gem_taxonomy",
+     "ver": "~=1.4.4"}]
+WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
+URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
+
+
+def install_standalone(pycmd, apps=STANDALONE_APP_INFO):
+    """Install the optional Django applications using the target Python."""
+    errors = []
+    for app in apps:
+        try:
+            print(f"Applications {app['pkg']} are not installed yet \n")
+            subprocess.check_call(
+                [pycmd, "-m", "pip", "install",
+                 "--no-index", "--no-cache-dir",
+                 "--find-links", WHEELHOUSE_URL,
+                 "--find-links", URL_STANDALONE,
+                 app["pkg"] + app["ver"]])
+        except Exception as exc:
+            # for instance if somebody removed a wheel from the wheelhouse
+            errors.append(f"{exc}: could not install {app['pkg']}")
+    return errors
 
 
 def python_exe(inst):
@@ -669,7 +698,7 @@ def install(inst, version, from_fork, noupgrade):
     install_requirements(inst, pycmd, version, from_fork)
     install_engine(inst, pycmd, version, noupgrade)
 
-    errors = standalone.install_standalone(pycmd)
+    errors = install_standalone(pycmd)
 
     create_cfg(inst)
 
