@@ -114,8 +114,7 @@ jobs:
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq.exe --version
           ping 127.0.0.1 -n 3 > null
-          #Start-Job -ScriptBlock{& oq.exe webui start 127.0.0.1:8800 -s 2>&1 > "$env:LOCALAPPDATA\Temp\webui.log" }
-          oq.exe webui start 127.0.0.1:8800 -s
+          Start-Job -ScriptBlock{& oq.exe webui start 127.0.0.1:8800 -s 2>&1 > "$env:LOCALAPPDATA\Temp\webui.log" }
           ping 127.0.0.1 -n 6 > null
           do {
              Write-Host "waiting..."
