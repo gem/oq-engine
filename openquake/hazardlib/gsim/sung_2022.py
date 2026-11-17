@@ -209,7 +209,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         realization (rlz_id=0..N-1) to sample the full epistemic uncertainty of
         the VCM model. The LT size can be anything up to N.
     """
-    REQUIRES_DISTANCES = {'rrup', 'clon_clat'}
+    REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
 
     experimental = True # For now
 
