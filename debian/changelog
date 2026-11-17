@@ -1,3 +1,9 @@
+  [Christopher Brooks]
+  * Fix _get_ctx_planar to correctly track all variants of required rup params
+    required for computation of closest point to a rupture (c_lon, c_lat and
+    clon_clat) as used in some GMMs e.g., Zhao et al. (2016) non-ergodic slab
+    variant (uses clon_clat).
+
   [Michele Simionato]
   * Changed the signature of MultiPointSource to be consistent with the other
     parametric sources
