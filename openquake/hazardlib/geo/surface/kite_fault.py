@@ -21,10 +21,11 @@ Module :mod:`openquake.hazardlib.geo.surface.kite_fault` defines
 """
 
 import copy
+import logging
 import numpy as np
 import numpy.typing as npt
-import matplotlib.pyplot as plt
 from scipy import stats
+from shapely import make_valid
 from shapely.geometry import Polygon
 
 from openquake.baselib.node import Node
@@ -35,8 +36,7 @@ from openquake.hazardlib.geo.line import _resample, Line
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.geodetic import (
-    npoints_towards, distance, azimuth)
+from openquake.hazardlib.geo.geodetic import distance, azimuth
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 
@@ -57,17 +57,21 @@ class KiteSurface(BaseSurface):
 
     def __init__(self, mesh, profiles=None, sec_id=''):
         self.mesh = mesh
+        self.sec_id = sec_id
 
         # Clean the mesh
         success = self._clean()
         if not success:
-            msg = f"Error while initialising section (id: {sec_id})"
+            msg = (f"Error while initialising section (id: {sec_id}): the "
+                   "mesh does not contain any finite node")
             raise ValueError(msg)
 
         # Save profiles
         self.profiles = profiles
-        assert 1 not in self.mesh.shape, (
-            "Mesh must have at least 2 nodes along strike and dip.")
+        if 1 in self.mesh.shape:
+            raise ValueError(
+                f"Section (id: {sec_id}): the mesh must have at least 2 "
+                f"nodes along strike and dip; shape is {self.mesh.shape}")
 
         # Make sure the mesh respects the right hand rule
         self._fix_right_hand()
@@ -76,19 +80,32 @@ class KiteSurface(BaseSurface):
 
     def _clean(self):
         """
-        Removes from the mesh the rows and columns containing just NaNs
+        Sets to NaN the nodes with at least one undefined coordinate and
+        removes from the mesh the rows and columns containing just NaNs
         """
+        # A node is valid only if all its coordinates are finite. Nodes
+        # with e.g. a finite longitude but an undefined depth would
+        # otherwise propagate NaNs in all the calculations
+        lons = self.mesh.lons
+        lats = self.mesh.lats
+        deps = self.mesh.depths
+        bad = ~(np.isfinite(lons) & np.isfinite(lats) & np.isfinite(deps))
+        if bad.any():
+            # Copy (keeping the dtype) to avoid modifying the input arrays
+            lons, lats, deps = lons.copy(), lats.copy(), deps.copy()
+            lons[bad] = lats[bad] = deps[bad] = np.nan
+
         # Identify rows that are NOT completely filled with NaNs
-        valid_rows = ~np.all(np.isnan(self.mesh.lons), axis=1)
+        valid_rows = ~np.all(np.isnan(lons), axis=1)
 
         # Early exit if all rows are dropped (size would be 0)
         if not np.any(valid_rows):
             return False
 
         # Slice the rows
-        lons = self.mesh.lons[valid_rows, :]
-        lats = self.mesh.lats[valid_rows, :]
-        deps = self.mesh.depths[valid_rows, :]
+        lons = lons[valid_rows, :]
+        lats = lats[valid_rows, :]
+        deps = deps[valid_rows, :]
 
         # Identify columns that are NOT completely filled with NaNs
         valid_cols = ~np.all(np.isnan(lons), axis=0)
@@ -110,9 +127,26 @@ class KiteSurface(BaseSurface):
         """
         A single element list containing a kiteSurface node
         """
-        # TODO if the object is created without profiles we must extract them
-        # from the mesh
-        return kite_surface_node(self.profiles)
+        profiles = self.profiles
+        if profiles is None:
+            # The surface was created directly from a mesh (e.g. with
+            # `geom_to_kite`): use its columns as profiles
+            profiles = []
+            for icol in range(self.mesh.lons.shape[1]):
+                ok = np.isfinite(self.mesh.lons[:, icol])
+                if ok.sum() < 2:
+                    continue
+                # NRML profiles cannot represent disconnected runs of nodes.
+                if np.any(np.diff(np.flatnonzero(ok)) > 1):
+                    raise ValueError(
+                        f'Cannot serialize section (id: {self.sec_id}): mesh '
+                        f'column {icol} has internal gaps that cannot be '
+                        'represented by an NRML profile')
+                profiles.append([
+                    Point(lo, la, de) for lo, la, de in zip(
+                        self.mesh.lons[ok, icol], self.mesh.lats[ok, icol],
+                        self.mesh.depths[ok, icol])])
+        return kite_surface_node(profiles)
 
     def get_surface_boundaries(self):
         return self._get_external_boundary()
@@ -129,6 +163,10 @@ class KiteSurface(BaseSurface):
 
         One important note here. The kite fault surface uses a rectangular
         mesh to describe the geometry of the rupture; some nodes can be NaN.
+        Only the columns whose first finite node is in the first or second
+        row are used: columns starting deeper are on the lateral edges of the
+        surface (e.g. when profiles are aligned at depth or the surface
+        narrows at the top) and are deliberately not part of the trace.
 
         :returns:
             Two :class:`numpy.ndarray` instances with the longitudes and
@@ -169,32 +207,56 @@ class KiteSurface(BaseSurface):
             Two :class:`numpy.ndarray` instances containing longitudes and
             latitudes, respectively
         """
+        # The boundary is used by Rjb, `surface_projection` and
+        # `get_surface_boundaries`, possibly many times for the same surface
+        # (e.g. in multi-fault sources). It is cached together with the mesh
+        # it was computed from, so that a new mesh invalidates it.
+        cache = getattr(self, '_boundary_cache', None)
+        if cache is None or cache[0] is not self.mesh:
+            cache = (self.mesh, self._compute_external_boundary())
+            self._boundary_cache = cache
+        lo, la = cache[1]
+        return lo.copy(), la.copy()
+
+    def _compute_external_boundary(self):
+        # See `_get_external_boundary`
         if self.is_vertical():
 
-            lo = []
-            la = []
-            idx = np.min(np.where(np.isfinite(self.mesh.lons[:, 0])))
-            slo = self.mesh.lons[idx, 0]
-            sla = self.mesh.lats[idx, 0]
-            idx = np.min(np.where(np.isfinite(self.mesh.lons[:, -1])))
-            elo = self.mesh.lons[idx, -1]
-            ela = self.mesh.lats[idx, -1]
-            strike = azimuth(slo, sla, elo, ela)
-
-            npt = npoints_towards
+            # The surface projection of a vertical surface is its trace. We
+            # follow the whole trace (not only its end points, which would
+            # ignore its curvature) and give it a small width
             dlt = 0.1
-            tmp = npt(slo, sla, 0.0, strike - 90, dlt, 0, 2)
-            lo.append(tmp[0][1])
-            la.append(tmp[1][1])
-            tmp = npt(slo, sla, 0.0, strike + 90, dlt, 0, 2)
-            lo.append(tmp[0][1])
-            la.append(tmp[1][1])
-            tmp = npt(elo, ela, 0.0, strike + 90, dlt, 0, 2)
-            lo.append(tmp[0][1])
-            la.append(tmp[1][1])
-            tmp = npt(elo, ela, 0.0, strike - 90, dlt, 0, 2)
-            lo.append(tmp[0][1])
-            la.append(tmp[1][1])
+            chk = np.isfinite(self.mesh.lons)
+            irow = chk.argmax(axis=0)
+            icol = np.arange(self.mesh.lons.shape[1])
+            tlo = self.mesh.lons[irow, icol]
+            tla = self.mesh.lats[irow, icol]
+            proj = geo_utils.OrthographicProjection.from_(tlo, tla)
+            txx, tyy = proj(tlo, tla)
+            # Remove repeated points
+            keep = np.r_[True, np.hypot(np.diff(txx), np.diff(tyy)) > 0]
+            txx, tyy = txx[keep], tyy[keep]
+            if len(txx) < 2:
+                raise ValueError('The trace of a vertical surface must have '
+                                 'at least two distinct points')
+            # Unit normals of the segments and, at each vertex of the trace,
+            # the normalised mean of the normals of the adjacent segments
+            dxy = np.c_[np.diff(txx), np.diff(tyy)]
+            nrm = np.c_[-dxy[:, 1], dxy[:, 0]]
+            nrm /= np.linalg.norm(nrm, axis=1)[:, None]
+            vnr = np.concatenate([nrm[:1], nrm[:-1] + nrm[1:], nrm[-1:]])
+            vln = np.linalg.norm(vnr, axis=1)
+            bad = vln < SMALL  # the trace reverses its direction
+            vnr[bad] = np.concatenate([nrm[:1], nrm])[bad]
+            vnr /= np.linalg.norm(vnr, axis=1)[:, None]
+            pts = np.c_[txx, tyy]
+            lft = pts + dlt * vnr
+            rgt = pts - dlt * vnr
+            # The ring starts with the two points offset from the first
+            # point of the trace, then it follows the right side of the
+            # trace forward and the left side backward
+            ring = np.concatenate([lft[:1], rgt, lft[:0:-1]])
+            lo, la = proj(ring[:, 0], ring[:, 1], reverse=True)
 
         else:
 
@@ -253,50 +315,56 @@ class KiteSurface(BaseSurface):
         """
 
         blo, bla = self._get_external_boundary()
-        distances = geodetic.min_geodetic_distance(
-            (blo, bla), (mesh.lons, mesh.lats))
+        lons = np.asarray(mesh.lons).ravel()
+        lats = np.asarray(mesh.lats).ravel()
+        distances = geodetic.min_geodetic_distance((blo, bla), (lons, lats))
 
-        idxs = (distances < 40).nonzero()[0]  # indices on the first dimension
+        # The distance to the closest vertex of the boundary is only an upper
+        # bound of the distance to the polygon. A point within 40 km of the
+        # polygon (or inside it) is at most `thr` km from the closest vertex,
+        # where `thr` accounts for the length of the boundary segments and
+        # for the size of the polygon (points inside a large polygon can be
+        # far from all its vertexes).
+        seg = geodetic.geodetic_distance(blo, bla, np.roll(blo, -1),
+                                         np.roll(bla, -1))
+        rad = np.max(geodetic.geodetic_distance(blo[0], bla[0], blo, bla))
+        thr = 40. + 0.5 * np.max(seg) + rad
+        idxs = (distances < thr).nonzero()[0]
         if len(idxs) < 1:
             # no point is close enough, return distances as they are
-            return distances
+            return distances.reshape(np.shape(mesh.lons))
 
         # Get the projection
         proj = geo_utils.OrthographicProjection.from_(blo, bla)
 
         # Mesh projected coordinates
-        mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
+        mesh_xx, mesh_yy = proj(lons[idxs], lats[idxs])
 
-        # Create the shapely Polygon using projected coordinates
+        # Create the shapely Polygon using projected coordinates. The
+        # boundary of irregular surfaces can self-intersect, hence we make
+        # the polygon valid
         xp, yp = proj(blo, bla)
-        polygon = Polygon([[x, y] for x, y in zip(xp, yp)])
+        polygon = Polygon(np.c_[xp, yp])
+        if not polygon.is_valid:
+            polygon = make_valid(polygon)
 
         # Calculate the distances
         distances[idxs] = geo_utils.point_to_polygon_distance(
             polygon, mesh_xx, mesh_yy)
 
-        return distances
+        return distances.reshape(np.shape(mesh.lons))
 
     def _fix_right_hand(self):
         """
         This method fixes the mesh used to represent the grid surface so
         that it complies with the right hand rule.
         """
-        found = False
-        irow = 0
-        icol = 0
-        while not found:
-            if np.all(np.isfinite(self.mesh.lons[irow:irow + 2,
-                                                 icol:icol + 2])):
-                found = True
-            else:
-                icol += 1
-                if (icol + 1) >= self.mesh.lons.shape[1]:
-                    irow += 1
-                    icol = 1
-                    if (irow + 1) >= self.mesh.lons.shape[0]:
-                        break
+        # Find the first cell with four finite vertexes
+        fin = np.isfinite(self.mesh.lons)
+        cells = fin[:-1, :-1] & fin[:-1, 1:] & fin[1:, :-1] & fin[1:, 1:]
+        found = cells.any()
         if found:
+            irow, icol = np.argwhere(cells)[0]
             azi_strike = azimuth(self.mesh.lons[irow, icol],
                                  self.mesh.lats[irow, icol],
                                  self.mesh.lons[irow, icol + 1],
@@ -306,7 +374,9 @@ class KiteSurface(BaseSurface):
                               self.mesh.lons[irow + 1, icol],
                               self.mesh.lats[irow + 1, icol])
 
-            if abs((azi_strike - 90) % 360 - azi_dip) < 40:
+            # The dip direction should be at strike + 90. If it is at
+            # strike - 90 the mesh must be flipped
+            if abs(_angles_diff(azi_strike - 90, azi_dip)) < 40:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
@@ -399,11 +469,17 @@ class KiteSurface(BaseSurface):
         """
         if self.strike is None:
             idx = np.nonzero(np.isfinite(self.mesh.lons[0, :]))[0]
-            azi = azimuth(self.mesh.lons[0, idx[:-1]],
-                          self.mesh.lats[0, idx[:-1]],
-                          self.mesh.lons[0, idx[1:]],
-                          self.mesh.lats[0, idx[1:]])
-            self.strike = np.mean((azi + 0.001) % 360)
+            if len(idx) < 2:
+                msh = self.mesh.array.transpose(1, 2, 0)
+                self.strike = _top_edge_azimuth(msh)
+            else:
+                azi = azimuth(self.mesh.lons[0, idx[:-1]],
+                              self.mesh.lats[0, idx[:-1]],
+                              self.mesh.lons[0, idx[1:]],
+                              self.mesh.lats[0, idx[1:]])
+                # Azimuths are averaged as angles i.e. 359 and 1 give 0,
+                # not 180
+                self.strike = _circular_mean(azi)
         return self.strike
 
     def get_top_edge_depth(self):
@@ -414,8 +490,10 @@ class KiteSurface(BaseSurface):
             Float value, the vertical distance between the earth surface
             and the shallowest point in surface's top edge in km.
         """
-        ok = np.isfinite(self.mesh.lons[0, :])
-        return np.amin(self.mesh.depths[0, ok])
+        # The shallowest node is not necessarily in the first row since this
+        # can contain NaNs
+        ok = np.isfinite(self.mesh.lons)
+        return np.amin(self.mesh.depths[ok])
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
@@ -472,8 +550,12 @@ class KiteSurface(BaseSurface):
         mesh = self.mesh
         irow = int(np.round(mesh.shape[0] / 2))
         icol = int(np.round(mesh.shape[1] / 2))
-        return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
-                     mesh.depths[irow, icol])
+        if np.isfinite(mesh.lons[irow, icol]):
+            return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
+                         mesh.depths[irow, icol])
+        # The central node is not defined, use the finite node closest to
+        # the centroid of the surface
+        return self.get_middle_point()
 
     def get_middle_point(self):
         """
@@ -565,13 +647,12 @@ class KiteSurface(BaseSurface):
         dd[idx] = distance(lo0[idx], la0[idx], de0[idx],
                            lo1[idx], la1[idx], de1[idx])
 
-        # Compute the area of the upper left triangles in each cell
-        s = (dx[:-1, :] + dy[:, :-1] + dd) * 0.5
-        upp = (s * (s - dx[:-1, :]) * (s - dy[:, :-1]) * (s - dd))**0.5
-
-        # Compute the area of the lower right triangles in each cell
-        s = (dx[1:, :] + dy[:, 1:] + dd) * 0.5
-        low = (s * (s - dx[1:, :]) * (s - dy[:, 1:]) * (s - dd))**0.5
+        # The diagonal `dd` connects the upper-left and the lower-right
+        # vertexes of each cell. It splits the cell into an upper-right
+        # triangle (top side, right side, diagonal) and a lower-left triangle
+        # (left side, bottom side, diagonal)
+        upp = _heron(dx[:-1, :], dy[:, 1:], dd)
+        low = _heron(dx[1:, :], dy[:, :-1], dd)
 
         # Compute the area of each cell
         area = np.full_like(dd, np.nan)
@@ -589,6 +670,23 @@ class KiteSurface(BaseSurface):
         else:
             idx = ''
         return '<%s%s>' % (self.__class__.__name__, idx)
+
+
+def _heron(a, b, c):
+    # Area of triangles with sides `a`, `b` and `c` (Heron's formula). The
+    # product is clipped at zero so that rounding errors on degenerate
+    # triangles do not produce NaNs. NaN sides still give a NaN area.
+    s = (a + b + c) * 0.5
+    prod = s * (s - a) * (s - b) * (s - c)
+    return np.sqrt(np.where(np.isfinite(prod), np.maximum(prod, 0.), np.nan))
+
+
+def _circular_mean(angles, weights=None):
+    # Mean of angles in decimal degrees, in the range [0, 360)
+    rad = np.radians(angles)
+    sin = np.average(np.sin(rad), weights=weights)
+    cos = np.average(np.cos(rad), weights=weights)
+    return np.degrees(np.arctan2(sin, cos)) % 360
 
 
 def geom_to_kite(geom):
@@ -809,6 +907,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
 
     # Adjust the sorting
     _edges_fix_sorting(msh)
+    _warn_if_edges_cross(msh)
 
     # Fix the orientation of the mesh
     msh = _fix_right_hand(msh)
@@ -819,7 +918,26 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     return msh
 
 
+def _warn_if_edges_cross(msh):
+    # Edges (i.e. rows of the mesh) are expected to deepen monotonically
+    # going down the mesh. Crossing edges (a fold in the surface) cannot be
+    # fixed by reordering rows, so they are reported
+    for irow in range(msh.shape[0] - 1):
+        ok = np.isfinite(msh[irow, :, 2]) & np.isfinite(msh[irow + 1, :, 2])
+        if np.any(msh[irow + 1, ok, 2] < msh[irow, ok, 2]):
+            logging.warning(
+                'Kite mesh: edges %d and %d cross each other (the depth '
+                'does not increase monotonically down the mesh)',
+                irow, irow + 1)
+            return True
+    return False
+
+
 def _edges_fix_sorting(msh):
+    # Swaps rows (edges) when, for any column, a lower row is shallower
+    # than an upper one. This is a heuristic: it fixes rows that are simply
+    # out of order but cannot fix edges crossing each other, which are
+    # reported by `_warn_if_edges_cross`
     for i_row_u in range(0, msh.shape[0] - 1):
         for i_row_l in range(i_row_u, msh.shape[0] - 1):
             i_cols = np.logical_and(np.isfinite(msh[i_row_u, :, 2]),
@@ -849,7 +967,9 @@ def _edges_sort_by_mean_depth(msh):
 
 
 def _dbg_plot_mesh(mesh):
-
+    # Debugging only: matplotlib is imported here to avoid importing it
+    # (slow, and possibly unavailable on headless workers) with the module
+    import matplotlib.pyplot as plt
     from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
         set_axes_equal)
 
@@ -872,9 +992,7 @@ def _fix_right_hand(msh):
     #
 
     # Compute the average azimuth for the top edge of the surface
-    tmp = msh[0, :, 0]
-    idx = np.isfinite(tmp)
-    top = Line([Point(c[0], c[1]) for c in msh[0, idx, :]])
+    top_azi = _top_edge_azimuth(msh)
 
     # Compute the strike of the surface
     coo = msh.reshape(-1, 3)
@@ -884,22 +1002,43 @@ def _fix_right_hand(msh):
     strike = grdd.get_strike()
 
     # Check if we need to flip the grid
-    if not np.abs(_angles_diff(strike, top.azimuth)) < 60:
+    dff = np.abs(_angles_diff(strike, top_azi))
+    if not dff < 60:
 
         # Flip the grid to make it compliant with the right hand rule
         nmsh = np.flip(msh, axis=1)
 
-        # Compute the average azimuth for the top edge of the surface
-        tmp = nmsh[0, :, 0]
-        idx = np.isfinite(tmp)
-        top = Line([Point(c[0], c[1]) for c in nmsh[0, idx, :]])
-
         # Check again the average azimuth for the top edge of the surface
-        msg = "The mesh still does not comply with the right hand rule"
-        assert np.abs(_angles_diff(strike, top.azimuth)) < 60, msg
+        ndff = np.abs(_angles_diff(strike, _top_edge_azimuth(nmsh)))
+        if not ndff < 60:
+            # Neither orientation is close to the strike of the best-fit
+            # plane (e.g. very irregular surfaces): keep the closest one
+            logging.warning(
+                'Kite mesh: the azimuth of the top edge differs from the '
+                'strike (%.1f) by more than 60 degrees in both orientations',
+                strike)
+            return nmsh if ndff < dff else msh
         return nmsh
 
     return msh
+
+
+def _top_edge_azimuth(msh):
+    # Average azimuth of the top edge of the mesh. When the first row
+    # contains less than two finite nodes we use the first finite node of
+    # each column
+    idx = np.isfinite(msh[0, :, 0])
+    if idx.sum() >= 2:
+        coo = msh[0, idx, :]
+    else:
+        fin = np.isfinite(msh[:, :, 0])
+        icol = np.nonzero(fin.any(axis=0))[0]
+        irow = fin[:, icol].argmax(axis=0)
+        coo = msh[irow, icol, :]
+    if len(coo) < 2:
+        raise ValueError('Cannot define the top edge of the mesh: less '
+                         'than two columns with finite nodes')
+    return Line([Point(c[0], c[1]) for c in coo]).azimuth
 
 
 def _angles_diff(ang_a, ang_b):
@@ -912,27 +1051,27 @@ def _align_profiles(prfr: list, prfl: list):
     # Check that the two sets contain profiles with the same length
     lenr = len(prfr[0])
     lenl = len(prfl[0])
-    assert np.all(np.array([len(pr) for pr in prfr]) - lenr) == 0.0
-    assert np.all(np.array([len(pr) for pr in prfl]) - lenl) == 0.0
+    if not (all(len(pr) == lenr for pr in prfr) and
+            all(len(pr) == lenl for pr in prfl)):
+        raise ValueError('Profiles in each set must have the same length')
 
-    # Find the alignment between left and right
-    delta = 0
+    # Find the alignment between left and right i.e. the number of NaN
+    # points to add at the top of the profiles in the set whose reference
+    # profile starts deeper
     if prfr[0][0][2] <= prfl[0][0][2]:
         # Initial depth of the right profile shallower
-        for i_dep, dep in enumerate(prfr[0][:][2]):
-            if np.abs(dep - prfl[0][0][2]) < SMALL:
-                delta = i_dep
-                break
-            for i_pro, pro in enumerate(prfl):
-                prfl[i_pro] = _fill(delta, pro)
+        shallow, deep = prfr, prfl
     else:
         # Initial depth of the left profile shallower
-        for i_dep, dep in enumerate(prfl[0][:][2]):
-            if np.abs(dep - prfr[0][0][2]) < SMALL:
-                delta = i_dep
-                break
-            for i_pro, pro in enumerate(prfr):
-                prfr[i_pro] = _fill(delta, pro)
+        shallow, deep = prfl, prfr
+    delta = 0
+    for i_dep, dep in enumerate(np.array(shallow[0])[:, 2]):
+        if np.abs(dep - deep[0][0][2]) < SMALL:
+            delta = i_dep
+            break
+    if delta > 0:
+        for i_pro, pro in enumerate(deep):
+            deep[i_pro] = _fill(delta, pro)
 
     # Pad at the end to get the same length
     delta = len(prfl[0]) - len(prfr[0])
@@ -971,19 +1110,25 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     if np.max(lengths) - np.min(lengths) > profile_sd * 0.1:
         ref_idx = np.argmax(lengths)
 
-
     # Check that in each profile the points are equally spaced
-    for pro in rprofiles:
+    for i_pro, pro in enumerate(rprofiles):
         pnts = pro.coo
 
-        # Check that the profile is not crossing the IDL and compute the
-        # distance between consecutive points along the profile
-        assert np.all(pnts[:, 0] <= 180) & np.all(pnts[:, 0] >= -180)
+        # Check that the longitudes are valid and compute the distance
+        # between consecutive points along the profile
+        if np.any(pnts[:, 0] > 180) or np.any(pnts[:, 0] < -180):
+            raise ValueError(
+                f'Profile {i_pro}: longitudes must be in [-180, 180]')
         dst = distance(pnts[:-1, 0], pnts[:-1, 1], pnts[:-1, 2],
                        pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
 
-        # Check that all the distances are within a given tolerance
-        np.testing.assert_allclose(dst, profile_sd, rtol=1.)
+        # Check that all the distances are within a given tolerance (the
+        # same used before i.e. between 0 and twice the sampling distance)
+        if np.any(np.abs(dst - profile_sd) > profile_sd):
+            raise ValueError(
+                f'Profile {i_pro}: after resampling, the distance between '
+                f'consecutive points ranges from {dst.min():.3f} to '
+                f'{dst.max():.3f} km; expected about {profile_sd} km')
 
     # Find the delta needed to align profiles if requested
     shift = np.zeros((len(rprofiles)))
@@ -1172,39 +1317,32 @@ def _check_sampling(edg, proj):
     #   An instance of
     #   :class:`openquake.hazardlib.geo.geo_utils.OrthographicProjection`
 
-    # Find continuos parts
-    idxs = []
-    first = None
-    last = None
-
-    for i_e, e in enumerate(edg):
-        if first is None and np.isfinite(e[0]):
-            first = i_e
-        elif first is not None and np.isfinite(e[0]):
-            last = i_e
-        elif first is not None and last is not None and not np.isfinite(e[0]):
-            if last - first > 0:
-                idxs.append([first, last])
-            first = None
-            last = None
+    # Find the continuous parts i.e. runs of consecutive finite points
+    # (the start index is inclusive, the end index is exclusive)
+    fin = np.isfinite(edg[:, 0]).astype(int)
+    chg = np.diff(np.concatenate([[0], fin, [0]]))
+    starts = np.nonzero(chg == 1)[0]
+    ends = np.nonzero(chg == -1)[0]
 
     # Check the sampled edges
-    for idx in idxs:
-        edg = edg[idx[0]:idx[1]].T
-        if edg.shape[1] == 0:
+    for i_start, i_end in zip(starts, ends):
+        if i_end - i_start < 3:
+            # Less than two segments, nothing to compare
             continue
-        xp, yp = proj(edg[0], edg[1])
-        dsts = (np.diff(xp)**2 + np.diff(yp)**2 +
-                np.diff(edg[2])**2)
-        dsts = np.array([dsts[0]] + dsts.tolist())
-        dsts = dsts[~np.isnan(edg[2])]
-
-        np.testing.assert_allclose(dsts, dsts[0], rtol=2e-2)
+        sub = edg[i_start:i_end].T
+        xp, yp = proj(sub[0], sub[1])
+        dsts = (np.diff(xp)**2 + np.diff(yp)**2 + np.diff(sub[2])**2)**0.5
+        if not np.allclose(dsts, dsts[0], rtol=2e-2):
+            raise ValueError(
+                'The sampling along an edge of the mesh is not constant: '
+                f'segment lengths range from {dsts.min():.3f} to '
+                f'{dsts.max():.3f} km')
 
 
 def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
               num=False, hold=False):
     # This is a plotting function used for debugging
+    import matplotlib.pyplot as plt
 
     ax = plt.figure().add_subplot(projection='3d')
 
@@ -1317,44 +1455,67 @@ def _fill(delta, coo):
 
 
 def _get_intersections(edges, lines, proj):
+    # Computes the intersections between a polyline (an edge) and a set of
+    # lines (the new profiles) in the projected space.
+    #
+    # :param edges:
+    #   An array of shape Nx3 with the longitude, latitude and depth of the
+    #   vertexes of the edge
+    # :param lines:
+    #   A list of [slope, intercept] pairs describing the lines y = a*x + b.
+    #   When the slope is >= VERY_BIG the line is vertical and the second
+    #   value is its abscissa.
+    # :param proj:
+    #   An instance of
+    #   :class:`openquake.hazardlib.geo.utils.OrthographicProjection`
+    # :returns:
+    #   An array with the coordinates of the intersections and the smallest
+    #   index of the lines intersected
     pnts = []
     idxs = []
-    for i_vtx in range(len(edges) - 1):
+    eps = 1e-9
+    xp, yp = proj(edges[:, 0], edges[:, 1])
+    num_seg = len(edges) - 1
+    for i_vtx in range(num_seg):
 
-        xp, yp = proj(edges[i_vtx:i_vtx + 2, 0], edges[i_vtx:i_vtx + 2, 1])
-        slope, intercept, _, _, _ = stats.linregress(xp, yp)
+        # Each segment is P(t) = P0 + t * (P1 - P0) with 0 <= t <= 1. This
+        # works for segments of any orientation (e.g. N-S or E-W)
+        x0, y0, z0 = xp[i_vtx], yp[i_vtx], edges[i_vtx, 2]
+        dx = xp[i_vtx + 1] - x0
+        dy = yp[i_vtx + 1] - y0
+        dz = edges[i_vtx + 1, 2] - z0
 
         for i_line, line in enumerate(lines):
 
-            # Intersection between edge and profile
             if line[0] >= VERY_BIG:
-                xi = line[1]
-                yi = xi * slope + intercept
+                # Vertical line x = c
+                den = dx
+                num = line[1] - x0
             else:
-                xi = (intercept - line[1]) / (line[0] - slope)
-                yi = xi * slope + intercept
+                # Line y = a * x + b
+                den = dy - line[0] * dx
+                num = line[0] * x0 + line[1] - y0
 
-            # Check if intercept is along the segment
-            if (xi > np.min([xp]) and xi < np.max([xp]) and
-                    yi > np.min([yp]) and yi < np.max([yp])):
+            # The segment and the line are parallel
+            if abs(den) < VERY_SMALL:
+                continue
+
+            # Keep the intersection if it is along the segment. An
+            # intersection at a vertex shared by two segments is counted
+            # only once
+            tpar = num / den
+            last = i_vtx == num_seg - 1
+            if -eps <= tpar < (1. + eps if last else 1. - eps):
+                xi = x0 + tpar * dx
+                yi = y0 + tpar * dy
                 xg, yg = proj(np.array([xi]), np.array([yi]), reverse=True)
-                zi = _get_point_depth([xp[0], yp[0], edges[i_vtx, 2]],
-                                      [xp[1], yp[1], edges[i_vtx + 1, 2]],
-                                      xi)
-                pnts.append([xg[0], yg[0], zi])
+                pnts.append([xg[0], yg[0], z0 + tpar * dz])
                 idxs.append(i_line)
 
+    if len(idxs) == 0:
+        raise ValueError('The edge does not intersect any of the profiles '
+                         'already built. Cannot create the mesh.')
     return np.array(pnts), min(idxs)
-
-
-def _line3d(pnt1, pnt2):
-    return [pnt2[0] - pnt1[0], pnt2[1] - pnt1[1], pnt2[2] - pnt1[2]]
-
-
-def _get_point_depth(pnt1, pnt2, xco):
-    vect = _line3d(pnt1, pnt2)
-    ratio = (xco - pnt1[0]) / vect[0]
-    return vect[2] * ratio + pnt1[2]
 
 
 def _compute_lines(coos: list, i_from: int, proj, new_lines_profiles):
@@ -1418,26 +1579,18 @@ def fix_mesh(msh: npt.ArrayLike) -> np.ndarray:
         A revised :class:`numpy.ndarray` instance with the coordinates of
         the mesh. The shape of this array num_rows x num_cols x 3
     """
-    for i in range(msh.shape[0]):
-        ru = i + 1
-        rl = i - 1
-
-        for j in range(msh.shape[1]):
-            cu = j + 1
-            cl = j - 1
-
-            trl = False if cl < 0 else np.isfinite(msh[i, cl, 0])
-            tru = (False if cu > msh.shape[1] - 1 else
-                   np.isfinite(msh[i, cu, 0]))
-            tcl = False if rl < 0 else np.isfinite(msh[rl, j, 0])
-            tcu = (False if ru > msh.shape[0] - 1 else
-                   np.isfinite(msh[ru, j, 0]))
-
-            check_row = trl or tru
-            check_col = tcl or tcu
-
-            if not (check_row and check_col):
-                msh[i, j, :] = np.nan
+    # A node is kept only if it is a vertex of at least one cell with four
+    # finite vertexes. Removing the other nodes does not affect any complete
+    # cell, hence a single pass is enough and the result does not depend on
+    # the order in which nodes are processed.
+    fin = np.all(np.isfinite(msh), axis=2)
+    cell = fin[:-1, :-1] & fin[:-1, 1:] & fin[1:, :-1] & fin[1:, 1:]
+    keep = np.zeros_like(fin)
+    keep[:-1, :-1] |= cell
+    keep[:-1, 1:] |= cell
+    keep[1:, :-1] |= cell
+    keep[1:, 1:] |= cell
+    msh[~keep] = np.nan
     return msh
 
 
@@ -1461,12 +1614,15 @@ def profiles_depth_alignment(pro1, pro2):
     coo1 = pro1.coo
     coo2 = pro2.coo
 
-    # Compute the shift with the minimum difference
+    # Compute the shift with the minimum difference. We use the mean
+    # difference since the length of the overlap decreases as the shift
+    # increases (a sum would favour larger shifts). Profiles too short to
+    # test any shift are not shifted.
     mindff = 1e20
-    minidx = None
-    for i1 in range(0, len(coo1) - minwdt):
+    minidx = 0
+    for i1 in range(0, len(coo1) - minwdt + 1):
         lle = np.min([len(coo1[i1:, 2]), len(coo2[:, 2])])
-        dff = np.sum(np.abs(coo1[i1:i1 + lle, 2] - coo2[0:lle, 2]))
+        dff = np.mean(np.abs(coo1[i1:i1 + lle, 2] - coo2[0:lle, 2]))
         if mindff > dff:
             minidx = i1
             mindff = dff

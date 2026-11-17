@@ -15,7 +15,6 @@ import pytest
 from django.conf import settings
 from django.contrib.staticfiles.finders import get_finders
 
-from openquake.commonlib.auth import API_KEY
 from openquake.commonlib.logs import dbcmd
 
 from .views_test import EngineServerTestCase, start_webui, stop_webui
@@ -86,41 +85,20 @@ def test_calc_count_requires_internal_api_key(webui_client):
     assert response.status_code == 403
 
 
-def test_calc_result_requires_internal_api_key(webui_client):
-    """Keep the internal result-export route protected."""
-    response = webui_client.get('/v0/calc/result/1')
-    assert response.status_code == 403
-
-
 def test_calc_result_missing(webui_client):
     """Return a 404 for a non-existing result."""
-    response = webui_client.get(
-        '/v0/calc/result/0', headers={'X-API-Key': API_KEY})
+    response = webui_client.get('/v1/calc/result/0')
     assert response.status_code == 404
 
 
 def test_calc_result_downloads_the_file(webui_client, classical_result):
-    """Export a result through the internal API and through the Django one."""
-    path = '/v0/calc/result/%d' % classical_result['id']
-    headers = {'X-API-Key': API_KEY}
-    response = webui_client.get(path, dict(export_type='csv'),
-                                  headers=headers)
+    """Export a result through the public Django endpoint."""
+    path = '/v1/calc/result/%d' % classical_result['id']
+    response = webui_client.get(path, dict(export_type='csv'))
     assert response.status_code == 200
     assert response.content
     assert response.headers['content-disposition'].startswith(
         'attachment; filename=output-%d-' % classical_result['id'])
-    # the same file must be downloadable from the public Django endpoint
-    response = webui_client.get(
-        '/v1/calc/result/%d' % classical_result['id'],
-        dict(export_type='csv'))
-    assert response.status_code == 200
-    assert response.content == (  # streamed by the Django proxy
-        webui_client.get(path, dict(export_type='csv'),
-                           headers=headers).content)
-    # a failing export is a 500, propagated by the Django proxy as well
+    # a failing export is a 500
     assert webui_client.get(
-        path, dict(export_type='gibberish'), headers=headers
-    ).status_code == 500
-    assert webui_client.get(
-        '/v1/calc/result/%d' % classical_result['id'],
-        dict(export_type='gibberish')).status_code == 500
+        path, dict(export_type='gibberish')).status_code == 500

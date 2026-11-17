@@ -24,6 +24,7 @@ import pandas
 import numpy
 from openquake.baselib import hdf5, sap, general, performance
 from openquake.baselib.parallel import Starmap
+from openquake.baselib.writers import text_table
 from openquake.hazardlib.geo.utils import hex6
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.risklib.asset import _get_exposure, Exposure
@@ -155,7 +156,6 @@ def store_tagcol(dstore, indexer):
 
 
 def save_by_country(dstore):
-    from openquake.calculators.views import text_table
     logging.info('Computing/storing assets_by_country')
     countries = dstore['tagcol/ID_0'][:]
     id0s, counts = numpy.unique(dstore['assets/ID_0'][:], return_counts=1)

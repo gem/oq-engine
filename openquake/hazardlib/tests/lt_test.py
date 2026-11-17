@@ -119,7 +119,7 @@ class CollapseTestCase(unittest.TestCase):
         bs1.branches = [lt.Branch('C', 7.0, .5, 'bs1'),
                         lt.Branch('D', 7.6, .5, 'bs1')]
 
-        self.clt = lt.CompositeLogicTree([bs0, bs1])
+        self.clt = lt.BranchSetLogicTree([bs0, bs1])
 
         # setup sitecol, srcfilter, gsims, imtls
         self.sitecol = site.SiteCollection([site.Site(Point(0, 0), 760.)])
@@ -358,7 +358,7 @@ class UncertaintySerializationTestCase(unittest.TestCase):
         self.assertEqual(nrml.to_string(model), before)
 
 
-class CompositeLogicTreeTestCase(unittest.TestCase):
+class BranchSetLogicTreeTestCase(unittest.TestCase):
 
     def test5(self):
         # simple logic tree with 5 realizations
@@ -384,7 +384,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         lt.Branch('F', 'B', .7, 'bs2')]
         for branch in bs1.branches:
             branch.bset = bs2
-        clt = lt.CompositeLogicTree([bs0, bs1, bs2])
+        clt = lt.BranchSetLogicTree([bs0, bs1, bs2])
         self.assertEqual(lt.count_paths(bs0.branches), 5)
         self.assertEqual(clt.get_all_paths(),
                          ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
@@ -780,11 +780,11 @@ class AbstractLogicTreeTestCase(unittest.TestCase):
 
     def test_subclasses(self):
         for cls in (logictree.SourceModelLogicTree, logictree.FullLogicTree,
-                    lt.CompositeLogicTree, gsim_lt.GsimLogicTree,
+                    lt.BranchSetLogicTree, gsim_lt.GsimLogicTree,
                     amp_lt.AmplificationLogicTree, pfd_lt.PFDLogicTree):
             self.assertTrue(issubclass(cls, lt.AbstractLogicTree), cls)
         # the logic trees made of branchsets
-        for cls in (logictree.SourceModelLogicTree, lt.CompositeLogicTree,
+        for cls in (logictree.SourceModelLogicTree, lt.BranchSetLogicTree,
                     pfd_lt.PFDLogicTree):
             self.assertTrue(issubclass(cls, lt.BranchSetLogicTree), cls)
 

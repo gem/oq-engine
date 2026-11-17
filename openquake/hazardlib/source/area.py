@@ -20,10 +20,7 @@ import math
 from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.codes import AREA
 from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
-from openquake.hazardlib.mfd.alternative_characteristic_mfd import AlternativeCharacteristicMFD
-from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
+from openquake.hazardlib.source.base import ParametricSeismicSource, SourceParam
 
 
 class AreaSource(ParametricSeismicSource):
@@ -126,72 +123,6 @@ class AreaSource(ParametricSeismicSource):
         """
         self.upper_seismogenic_depth += increment
 
-    def modify_set_recurrow(self, recurrow):
-        """
-        Modify the recurrence parameters by values given in a dict.
-
-        Params are read from the recurrow dict, preferring bg-prefixed keys
-        e.g., bg_b_value, bg_ref_mag, bg_rate) so a single alt3-style
-        recurRow branch can carry different but correlated bg and fault
-        parameters; otherwise the unprefixed alt1/alt2 keys are used.
-
-        How it works is determined by if rate_split_bg_frac is present:
-
-        - Alt1/Alt3 (no rate_split_bg_frac): Build the TE or AC MFD from the row
-          params and use it as it is.
-
-        - Alt2 (rate_split_bg_frac present): Build the same MFD, then
-          piecewise-scale bins at or above Mmax-1 by rate_split_bg_frac (bg
-          side of the alt2 partition between the area source and its faults
-          and make an EvenlyDiscretizedMFD.
-
-        NOTE: This is currently only intended for support of the BC Hydro
-        NVA SSC logic tree. We may expand it to become a more general
-        capability.
-
-        :param recurrow:
-            Dict of values to use in given type of MFD e.g.b_value, ref_mag,
-            rate). Alt3-style rows use prefixes of "bg" for the same keys.
-        """
-        # Constants for BC Hydro NVA model
-        b_ac = 0.3
-        delta_mac = 1.0
-        gamma_eff = 0.9185 # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
-        # the job parameter width_of_mfd_bin, 0.1 if not set
-        bin_width = getattr(self, 'width_of_mfd_bin', 0.1)
-
-        # Get params from recurRow, preferring bg-prefixed keys (alt3)
-        mmax = self.mmax
-        recur_model = self.recur_model
-        bval = float(recurrow.get("bg_b_value", recurrow.get("b_value")))
-        ref_mag = float(recurrow.get("bg_ref_mag", recurrow.get("ref_mag")))
-        rate = float(recurrow.get("bg_rate", recurrow.get("rate")))
-
-        # Build the MFD
-        if recur_model == "TE":
-            a_val = math.log10(rate) + bval * ref_mag
-            self.mfd = TruncatedGRMFD(
-                min_mag=ref_mag, max_mag=mmax,
-                bin_width=bin_width, a_val=a_val, b_val=bval)
-        else:
-            assert recur_model == "AC"
-            self.mfd = AlternativeCharacteristicMFD(
-                min_mag=ref_mag, max_mag=mmax, b_GR=bval, b_AC=b_ac,
-                bin_width=bin_width, gamma=gamma_eff, delta_m_AC=delta_mac,
-                total_rate=rate)
-
-        # Piecewise partition above Mmax-1 if a rate_split_bg_frac is active
-        bg_frac = getattr(self, 'rate_split_bg_frac', None)
-        if bg_frac is not None:
-            bins = self.mfd.get_annual_occurrence_rates()
-            threshold = mmax - 1.0
-            occ = [
-                (r * bg_frac if m >= threshold - bin_width / 4 else r)
-                for m, r in bins
-            ]
-            self.mfd = EvenlyDiscretizedMFD(
-                min_mag=bins[0][0], bin_width=bin_width, occurrence_rates=occ)
-
     def iter_ruptures(self, **kwargs):
         """
         See :meth:
@@ -274,22 +205,17 @@ class AreaSource(ParametricSeismicSource):
         else:
             raise TypeError('Unknown MFD: %s' % area_mfd)
         for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
-            pt = PointSource(
-                # Generate a new ID and name
-                source_id='%s:%s' % (self.source_id, i),
-                name=self.name,
-                tectonic_region_type=self.tectonic_region_type,
-                mfd=new_mfd,
-                rupture_mesh_spacing=self.rupture_mesh_spacing,
-                magnitude_scaling_relationship=
-                self.magnitude_scaling_relationship,
-                rupture_aspect_ratio=self.rupture_aspect_ratio,
-                upper_seismogenic_depth=self.upper_seismogenic_depth,
-                lower_seismogenic_depth=self.lower_seismogenic_depth,
-                location=geo.Point(lon, lat),
-                nodal_plane_distribution=self.nodal_plane_distribution,
-                hypocenter_distribution=self.hypocenter_distribution,
-                temporal_occurrence_model=self.temporal_occurrence_model)
+            # Generate a new ID and name
+            param = SourceParam('%s:%s' % (self.source_id, i), self.name,
+                                self.tectonic_region_type, new_mfd,
+                                self.rupture_mesh_spacing,
+                                self.magnitude_scaling_relationship,
+                                self.rupture_aspect_ratio,
+                                self.temporal_occurrence_model)
+            pt = PointSource.from_param(
+                param, self.upper_seismogenic_depth,
+                self.lower_seismogenic_depth, geo.Point(lon, lat),
+                self.nodal_plane_distribution, self.hypocenter_distribution)
             pt._num_ruptures = pt.count_ruptures()
             if hasattr(self, 'mmax_offset'):
                 pt.mmax_offset = self.mmax_offset

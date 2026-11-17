@@ -32,7 +32,7 @@ from openquake.calculators import views
 from openquake.engine import engine
 from openquake.engine.impact import main_cmd
 from openquake.engine.aelo import get_params_from
-from openquake.hazardlib.countries import MODELS
+from openquake.hazardlib.countries import MODELS, ALIASES
 from openquake.hazardlib.geo.utils import geolocate
 
 FAMOUS = os.path.join(os.path.dirname(mosaic.__file__), 'famous_ruptures.csv')
@@ -102,7 +102,8 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
         # it is used to set override_vs30 in `get_params_from` and then
         # sitecol.multiply will expand the sites and set custom_site_id
         for model, df in dvf.groupby('model'):
-            if model not in MODELS:
+            if ALIASES.get(model, model) not in MODELS:
+                # Skip unknown models; aliases keep legacy IDN/JPN/TWN valid.
                 continue
             elif model in ('???', 'USA'):
                 continue

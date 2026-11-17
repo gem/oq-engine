@@ -30,6 +30,7 @@ import pandas
 from openquake.baselib.general import encode, decode
 from openquake.commonlib import logs
 from openquake.calculators import views
+from openquake.calculators import base  # ugly
 
 
 def indent(text):
@@ -130,6 +131,14 @@ class ReportWriter(object):
             f.write(encode(self.text))
 
 
+@views.view.add('fullreport')
+def view_fullreport(token, dstore):
+    """
+    Display an .rst report about the computation
+    """
+    return ReportWriter(dstore).make_report(show_inputs=False)
+
+
 def build_report(job_ini, output_dir=None):
     """
     Write a `report.csv` file with information about the calculation
@@ -146,7 +155,6 @@ def build_report(job_ini, output_dir=None):
             oq.calculation_mode = 'preclassical'
         oq.ground_motion_fields = False
         output_dir = output_dir or os.path.dirname(job_ini)
-        from openquake.calculators import base  # ugly
         calc = base.calculators(oq, log.calc_id)
         calc.save_params()  # needed to save oqparam
 

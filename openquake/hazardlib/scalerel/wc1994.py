@@ -405,8 +405,8 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
     # ------------------------------------------------------------------
     # PFD extension: displacement versus magnitude (Table 2B).
     #
-    # Added for Probabilistic Fault Displacement Hazard Analysis (PR-2 of
-    # the oq-engine integration plan).  Purely additive: the PSHA geometry
+    # Added for Probabilistic Fault Displacement Hazard Analysis.  Purely
+    # additive: the PSHA geometry
     # API above is unchanged and no PSHA code path calls these methods.
     # The relations use the oq-pfdha convention of selecting the rupture
     # style by a ``style`` string, while also accepting a hazardlib ``rake``.

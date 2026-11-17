@@ -52,6 +52,7 @@ from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
+from openquake.commonlib import datastore
 
 CORRELATION_STRATEGIES = (
     'cholesky_decomposition', 'circulant_embedding')
@@ -292,6 +293,12 @@ disagg_outputs:
   outputs.
   Example: *disagg_outputs = Mag_Dist*
   Default: list of all possible outputs
+
+dip_spacing:
+  Set to *inferred* to determine the down-dip spacing of simple fault surfaces
+  from the rupture mesh spacing, or to *mesh_spacing* to use it unchanged.
+  Example: *dip_spacing = inferred*.
+  Default: mesh_spacing
 
 discard_assets:
   Flag used in risk calculations to discard assets from the exposure.
@@ -1234,6 +1241,8 @@ class OqParam(valid.ParamSet):
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, list(valid.pmf_map))
     disagg_bin_edges = valid.Param(valid.dictionary, {})
+    dip_spacing = valid.Param(valid.Choice('inferred', 'mesh_spacing'),
+                              'mesh_spacing')
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     discrete_damage_distribution = valid.Param(valid.boolean, False)
@@ -1850,7 +1859,6 @@ class OqParam(valid.ParamSet):
         Set .all_cost_types and .total_losses from the parent calculation,
         if any
         """
-        from openquake.commonlib import datastore  # avoid circular import
         if self.hazard_calculation_id and isinstance(
                 self.hazard_calculation_id, int):
             with datastore.read(self.hazard_calculation_id) as ds:

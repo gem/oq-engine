@@ -33,8 +33,10 @@ import numpy
 
 from openquake.baselib.general import distinct, pprod
 from openquake.baselib import hdf5
-from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
+from openquake.hazardlib import imt, gsim, pmf, site, tom
 from openquake.hazardlib.codes import SOURCE_CODES
+from openquake.hazardlib.scalerel import (
+    SCALEREL as SCALEREL, mag_scale_rel as mag_scale_rel)
 from openquake.hazardlib.gsim.base import registry, gsim_aliases, fix_toml
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
@@ -49,8 +51,6 @@ RENAMED_SEPS = {
     'GrantEtAl2016RockSlopeFailure': "Jibson2007ALandslides"}
 
 PRECISION = pmf.PRECISION
-
-SCALEREL = scalerel._get_available_class(scalerel.BaseMSR)
 
 GSIM = gsim.get_available_gsims()
 
@@ -1136,29 +1136,6 @@ def list_of_dict(value):
 
 
 # ########################### SOURCES/RUPTURES ############################# #
-
-def mag_scale_rel(value):
-    """
-    :param value:
-        a Magnitude-Scale relationship in hazardlib
-    :returns:
-        the corresponding hazardlib object
-
-    Parametric MSR classes are supported with TOML syntax; for instance
-
-    >>> mag_scale_rel("CScalingMSR.C=4.7")
-    <CScalingMSR>
-    """
-    value = value.strip()
-    if '.' in value or '[' in value:
-        [(value, kwargs)] = toml.loads(value).items()
-    else:
-        kwargs = {}
-    if value not in SCALEREL:
-        raise ValueError(
-            "'%s' is not a recognized magnitude-scale relationship" % value)
-    return SCALEREL[value](**kwargs)
-
 
 def pmf(value):
     """

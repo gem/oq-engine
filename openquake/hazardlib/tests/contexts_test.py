@@ -48,6 +48,10 @@ from openquake.hazardlib.geo.surface.planar import (
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
+from openquake.commonlib import readinput
+from openquake.hazardlib.rmap_maker import get_cmakers
+from openquake.hazardlib.source_reader import (
+    get_bset_values, modified_groups)
 
 PLOTTING = False
 aac = numpy.testing.assert_allclose
@@ -301,10 +305,6 @@ class FastRatesTestCase(unittest.TestCase):
     """
     @classmethod
     def setUpClass(cls):
-        from openquake.commonlib import readinput
-        from openquake.hazardlib.rmap_maker import get_cmakers
-        from openquake.hazardlib.source_reader import (
-            get_bset_values, modified_groups)
         job_ini = os.path.join(os.path.dirname(__file__), 'data/area/job.ini')
         oq = readinput.get_oqparam(job_ini)
         csm = readinput.get_composite_source_model(oq)
@@ -403,6 +403,25 @@ class PlanarDistancesTestCase(unittest.TestCase):
         # test att_curves which are functions N-distances -> (G, M, N) arrays
         mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
         aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)
+
+    def test_clon_clat_planar(self):
+        # point-source ctx has clon/clat filled when the GSIM asks for them,
+        # otherwise the planar path would crash looking for a get_clon function
+        trt = TRT.SUBDUCTION_INTRASLAB
+        tom = PoissonTOM(1.)
+        src = PointSource(
+            "ps", "pointsource", trt, ArbitraryMFD([7.0], [1.]),
+            2.5, WC1994(), 1.0, tom, 0.0, 100.0, Point(0.0, 0.0),
+            PMF([(1.0, NodalPlane(90., 90., 90.))]), PMF([(1.0, 50.)]))
+        sites = SiteCollection([
+            Site(Point(0.1 * i, 0.0, 0.0), vs30=760, vs30measured=True,
+                 z1pt0=20, z2pt5=30) for i in range(1, 4)])
+        cmaker = contexts.simple_cmaker(
+            [valid.gsim('ZhaoEtAl2016SSlabPErg')], ['PGA'])
+        cmaker.tom = tom
+        [ctx] = cmaker.get_ctxs(src, sites)
+        aac(ctx.clat, 0., atol=1e-6)  # sites and source on the equator
+        self.assertTrue(numpy.all(numpy.isfinite(ctx.clon)))
 
 
 class EstimateNctxsTestCase(unittest.TestCase):

@@ -204,8 +204,10 @@ class RuptureConverter(object):
     """
     fname = None  # should be set externally
 
-    def __init__(self, rupture_mesh_spacing, complex_fault_mesh_spacing=None):
+    def __init__(self, rupture_mesh_spacing, complex_fault_mesh_spacing=None,
+                 dip_spacing='mesh_spacing'):
         self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.dip_spacing = dip_spacing
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
 
@@ -298,7 +300,9 @@ class RuptureConverter(object):
                 ~surface_node.upperSeismoDepth,
                 ~surface_node.lowerSeismoDepth,
                 ~surface_node.dip,
-                self.rupture_mesh_spacing)
+                self.rupture_mesh_spacing,
+                dip_spacing=(self.rupture_mesh_spacing
+                             if self.dip_spacing == 'inferred' else None))
         elif surface_node.tag.endswith('complexFaultGeometry'):
             if not self.complex_fault_mesh_spacing:
                 raise ValueError('complex_fault_mesh_spacing is not set!')
@@ -453,11 +457,13 @@ class SourceConverter(RuptureConverter):
                  source_id=(), discard_trts=(),
                  floating_x_step=0, floating_y_step=0,
                  source_nodes=(),
-                 infer_occur_rates=False, filter_sourcecodes=''):
+                 infer_occur_rates=False, filter_sourcecodes='',
+                 dip_spacing='mesh_spacing'):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
         self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.dip_spacing = dip_spacing
         self.complex_fault_mesh_spacing = complex_fault_mesh_spacing
         self.width_of_mfd_bin = width_of_mfd_bin
         self.source_id = tuple(source_id)
@@ -720,21 +726,13 @@ class SourceConverter(RuptureConverter):
         fracs = self.convert_hypo_dip_fracs(node)
         if fracs is not None:
             hdd.hypo_dip_fracs = fracs
-        area = source.AreaSource(
-            source_id=node['id'],
-            name=node['name'],
-            tectonic_region_type=node.attrib.get('tectonicRegion'),
-            mfd=self.convert_mfdist(node),
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
-            magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=get_aspect_ratio(node),
-            upper_seismogenic_depth=~geom.upperSeismoDepth,
-            lower_seismogenic_depth=~geom.lowerSeismoDepth,
-            nodal_plane_distribution=self.convert_npdist(node),
-            hypocenter_distribution=hdd,
-            polygon=polygon,
-            area_discretization=area_discretization,
-            temporal_occurrence_model=self.get_tom(node))
+        param = source.base.SourceParam(
+            node['id'], node['name'], node.attrib.get('tectonicRegion'),
+            self.convert_mfdist(node), self.rupture_mesh_spacing, msr,
+            get_aspect_ratio(node), self.get_tom(node))
+        area = source.AreaSource.from_param(
+            param, ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
+            self.convert_npdist(node), hdd, polygon, area_discretization)
         # Optional per-source offset applied to recurSet's max_mag
         # (used by the BC Hydro NVA alt3 bg sources: bg_mmax = fault_mmax - 0.5)
         mmax_offset = node.attrib.get('mmaxOffset')
@@ -758,20 +756,14 @@ class SourceConverter(RuptureConverter):
         fracs = self.convert_hypo_dip_fracs(node)
         if fracs is not None:
             hdd.hypo_dip_fracs = fracs
-        psrc = source.PointSource(
-            source_id=node['id'],
-            name=node['name'],
-            tectonic_region_type=node.attrib.get('tectonicRegion'),
-            mfd=self.convert_mfdist(node),
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
-            magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=get_aspect_ratio(node),
-            upper_seismogenic_depth=~geom.upperSeismoDepth,
-            lower_seismogenic_depth=~geom.lowerSeismoDepth,
-            location=geo.Point(*lon_lat),
-            nodal_plane_distribution=self.convert_npdist(node),
-            hypocenter_distribution=hdd,
-            temporal_occurrence_model=self.get_tom(node))
+        param = source.base.SourceParam(
+            node['id'], node['name'], node.attrib.get('tectonicRegion'),
+            self.convert_mfdist(node), self.rupture_mesh_spacing, msr,
+            get_aspect_ratio(node), self.get_tom(node))
+        psrc = source.PointSource.from_param(
+            param,
+            ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
+            geo.Point(*lon_lat), self.convert_npdist(node), hdd)
         # used by the BCHydro set_recurrow MFD, see point.py
         psrc.width_of_mfd_bin = self.width_of_mfd_bin
         return psrc
@@ -790,19 +782,13 @@ class SourceConverter(RuptureConverter):
         fracs = self.convert_hypo_dip_fracs(node)
         if fracs is not None:
             hdd.hypo_dip_fracs = fracs
-        return source.MultiPointSource(
-            source_id=node['id'],
-            name=node['name'],
-            tectonic_region_type=node.attrib.get('tectonicRegion'),
-            mfd=self.convert_mfdist(node),
-            magnitude_scaling_relationship=msr,
-            rupture_aspect_ratio=get_aspect_ratio(node),
-            upper_seismogenic_depth=~geom.upperSeismoDepth,
-            lower_seismogenic_depth=~geom.lowerSeismoDepth,
-            nodal_plane_distribution=self.convert_npdist(node),
-            hypocenter_distribution=hdd,
-            mesh=geo.Mesh(F32(lons), F32(lats)),
-            temporal_occurrence_model=self.get_tom(node))
+        param = source.base.SourceParam(
+            node['id'], node['name'], node.attrib.get('tectonicRegion'),
+            self.convert_mfdist(node), None, msr, get_aspect_ratio(node),
+            self.get_tom(node))
+        return source.MultiPointSource.from_param(
+            param, ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
+            self.convert_npdist(node), hdd, geo.Mesh(F32(lons), F32(lats)))
 
     def convert_simpleFaultSource(self, node):
         """
@@ -836,14 +822,16 @@ class SourceConverter(RuptureConverter):
                     for hd in node.hypoDepthDist]
             except AttributeError:
                 hypo_depth_list = ()
-            simple = source.SimpleFaultSource(
-                node['id'], node['name'],
-                node.attrib.get('tectonicRegion'),
-                mfd, self.rupture_mesh_spacing,
-                msr, get_aspect_ratio(node), self.get_tom(node),
+            param = source.base.SourceParam(
+                node['id'], node['name'], node.attrib.get('tectonicRegion'),
+                mfd, self.rupture_mesh_spacing, msr, get_aspect_ratio(node),
+                self.get_tom(node))
+            simple = source.SimpleFaultSource.from_param(
+                param,
                 ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
                 fault_trace, ~geom.dip, ~node.rake,
                 source.HypoData(hypo_list, slip_list, hypo_depth_list))
+            simple.dip_spacing = self.dip_spacing
             rate_frac = node.attrib.get('rateFrac')
             if rate_frac is not None:
                 simple.rate_frac = float(rate_frac)
@@ -883,32 +871,23 @@ class SourceConverter(RuptureConverter):
 
         with context(self.fname, node):
             if as_kite:
-                outsrc = source.KiteFaultSource(
-                    source_id=node['id'],
-                    name=node['name'],
-                    tectonic_region_type=node.attrib.get('tectonicRegion'),
-                    mfd=mfd,
-                    rupture_mesh_spacing=self.rupture_mesh_spacing,
-                    magnitude_scaling_relationship=msr,
-                    rupture_aspect_ratio=rar,
-                    temporal_occurrence_model=self.get_tom(node),
-                    profiles=profiles,
-                    floating_x_step=xstep,
-                    floating_y_step=ystep,
-                    rake=~node.rake,
-                    profiles_sampling=None
-                    )
+                param = source.base.SourceParam(
+                    node['id'], node['name'], node.attrib.get('tectonicRegion'),
+                    mfd, self.rupture_mesh_spacing, msr, rar,
+                    self.get_tom(node))
+                outsrc = source.KiteFaultSource.from_param(
+                    param, profiles, ~node.rake, xstep, ystep)
             else:
                 param = source.base.SourceParam(
-                    node['id'], node['name'],
-                    node.attrib.get('tectonicRegion'),
-                    mfd, self.rupture_mesh_spacing,
-                    msr, rar, self.get_tom(node))
+                    node['id'], node['name'], node.attrib.get('tectonicRegion'),
+                    mfd, self.rupture_mesh_spacing, msr, rar,
+                    self.get_tom(node))
                 outsrc = source.KiteFaultSource.as_simple_fault(
                     param,
-                    ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
-                    fault_trace, ~geom.dip, ~node.rake,
-                    xstep, ystep)
+                    upper_seismogenic_depth=~geom.upperSeismoDepth,
+                    lower_seismogenic_depth=~geom.lowerSeismoDepth,
+                    fault_trace=fault_trace, dip=~geom.dip, rake=~node.rake,
+                    floating_x_step=xstep, floating_y_step=ystep)
         return outsrc
 
     def convert_complexFaultSource(self, node):
@@ -926,17 +905,13 @@ class SourceConverter(RuptureConverter):
         mfd = self.convert_mfdist(node)
         msr = ~node.magScaleRel
         with context(self.fname, node):
-            cmplx = source.ComplexFaultSource(
-                source_id=node['id'],
-                name=node['name'],
-                tectonic_region_type=node.attrib.get('tectonicRegion'),
-                mfd=mfd,
-                rupture_mesh_spacing=self.complex_fault_mesh_spacing,
-                magnitude_scaling_relationship=msr,
-                rupture_aspect_ratio=get_aspect_ratio(node),
-                edges=edges,
-                rake=~node.rake,
-                temporal_occurrence_model=self.get_tom(node))
+            param = source.base.SourceParam(
+                node['id'], node['name'], node.attrib.get('tectonicRegion'),
+                mfd, self.complex_fault_mesh_spacing, msr,
+                get_aspect_ratio(node), self.get_tom(node))
+            cmplx = source.ComplexFaultSource.from_param(
+                param,
+                edges, ~node.rake)
         return cmplx
 
     def convert_characteristicFaultSource(self, node):
@@ -949,19 +924,16 @@ class SourceConverter(RuptureConverter):
             a :class:`openquake.hazardlib.source.CharacteristicFaultSource`
             instance
         """
-        char = source.CharacteristicFaultSource(
-            source_id=node['id'],
-            name=node['name'],
-            tectonic_region_type=node.attrib.get('tectonicRegion'),
-            mfd=self.convert_mfdist(node),
-            surface=self.convert_surfaces(node.surface),
-            rake=~node.rake,
-            temporal_occurrence_model=self.get_tom(node))
+        param = source.base.SourceParam(
+            node['id'], node['name'], node.attrib.get('tectonicRegion'),
+            self.convert_mfdist(node), None, None, None, self.get_tom(node))
+        char = source.CharacteristicFaultSource.from_param(
+            param, self.convert_surfaces(node.surface), ~node.rake)
         # retain the declared top edge: a characteristic rupture spans the
         # whole surface, so its mesh top edge is a resampling that can
         # corner-cut a wiggly trace (it would distort the PFD distances).
         # A MultiSurface has no single trace and is left to the per-section
-        # reference-line routing (PR-8), like oq-pfdha
+        # reference-line routing, like oq-pfdha
         if hasattr(char.surface, 'surfaces'):
             trace = None
         else:

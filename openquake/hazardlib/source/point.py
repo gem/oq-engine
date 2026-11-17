@@ -28,11 +28,12 @@ from openquake.hazardlib.geo.surface.planar import (
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.aspect_ratio import MagDepAspectRatio
-from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource, SourceParam
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture)
 from openquake.hazardlib.geo.utils import (
     get_bounding_box, angular_mean, KM_TO_DEGREES, DEGREES_TO_RAD)
+from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
 
 def msr_name(src):
@@ -480,20 +481,11 @@ def pdata_to_psources(pdata):
     out = []
     for i, rec in enumerate(pdata['array']):
         hcd[i].hypo_dip_fracs = hdf[i]
-        ps = PointSource(
-            source_id=f'{name}:{i}',
-            name=name,
-            tectonic_region_type=trt,
-            mfd=mfd[i],
-            rupture_mesh_spacing=rms,
-            magnitude_scaling_relationship=msr[i],
-            rupture_aspect_ratio=rar[i],
-            upper_seismogenic_depth=rec['usd'],
-            lower_seismogenic_depth=rec['lsd'],
-            location=Point(rec['lon'], rec['lat']),
-            nodal_plane_distribution=npd[i],
-            hypocenter_distribution=hcd[i],
-            temporal_occurrence_model=tom)
+        param = SourceParam(f'{name}:{i}', name, trt, mfd[i], rms, msr[i],
+                            rar[i], tom)
+        ps = PointSource.from_param(
+            param, rec['usd'], rec['lsd'],
+            Point(rec['lon'], rec['lat']), npd[i], hcd[i])
         ps.scaling_rate = (1. if scaling_rate is None
                            else float(scaling_rate[i]))
         out.append(ps)
@@ -604,15 +596,11 @@ class CollapsedPointSource(PointSource):
 
     def modify_set_recurrow(self, recurrow):
         """Apply an area-source recurrence row to the underlying points."""
-        from openquake.hazardlib.source.area import AreaSource
-        from openquake.hazardlib.mfd.evenly_discretized import (
-            EvenlyDiscretizedMFD)
-
         row = dict(recurrow)
         rate_key = 'bg_rate' if 'bg_rate' in row else 'rate'
         fraction = getattr(self, 'source_fraction', 1.)
         row[rate_key] = float(row[rate_key]) * fraction
-        AreaSource.modify_set_recurrow(self, row)
+        super().modify_set_recurrow(row)
         rates = self.mfd.get_annual_occurrence_rates()
         share = 1. / len(self.pdata['array'])
         pointsources = self.pointsources

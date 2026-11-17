@@ -89,7 +89,7 @@ class PFDLogicTree(lt.ExtraLogicTree):
     """
     Reader and realization enumerator for PFD-style logic trees.
 
-    The XML schema is the oq-pfdha one (decision D5).  The
+    The XML schema is the oq-pfdha one.  The
     ``<logicTreeBranchSet>`` elements may sit directly under ``<logicTree>``
     or be wrapped in a ``<logicTreeBranchingLevel>``: both are accepted,
     through the same ``gsim_lt.bsnodes`` helper used by

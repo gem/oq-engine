@@ -93,8 +93,7 @@ class ImpactParam:
                 logging.info('Using the "%s" model' % self.mosaic_model)
 
         if not self.trt:
-            # NOTE: using the first tectonic region type
-            self.trt = next(iter(trts[self.mosaic_model]))
+            self.trt = _first_trt(trts, self.mosaic_model)
         shakemap_array = rupdic.pop('shakemap_array', ())
         params = dict(
             base_path='',  # no .ini file
@@ -228,7 +227,8 @@ IMPACT_FORM_PLACEHOLDERS = {
 }
 
 # IMTs of the impact calculations: the ShakeMap jobs compute all of them
-# (see create_impact_job in views.py), the other jobs the ones of the
+# (see create_impact_job in server/services.py and main_cmd in
+# engine/impact.py), the other jobs the ones of the
 # global vulnerability models
 IMPACT_IMTS = {
     'shakemap': 'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)',
@@ -540,6 +540,16 @@ def _check_correlation_models(params, user, use_shakemap):
                 'error_msg': f'{IMPACT_FORM_LABELS[field]}: invalid for '
                 f'{model}: {exc}'}
     return {}
+
+
+# first tectonic region type of the mosaic model, from the exposure
+def _first_trt(trts, mosaic_model):
+    mtrts = trts.get(mosaic_model, [])
+    if not mtrts:  # the exposure has no TRTs for this model
+        raise SiteAssociationError(
+            'No tectonic region types for the mosaic model %s'
+            % mosaic_model)
+    return next(iter(mtrts))  # NOTE: using the first TRT
 
 
 def impact_validate(POST, user, rupture_file=None, station_data_file=None,

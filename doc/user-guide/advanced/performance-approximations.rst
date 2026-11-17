@@ -5,7 +5,7 @@ Performance Approximations
 
 The engine implements a few approximations to speed up the classical calculations: the point source gridding,
 the ``pointsource_distance`` approximation, the choice of the ``ps_grid_spacing``, the ``collapse_precision``
-approximation, plus the source variants optimization, which does not change the results. This page describes them,
+approximation, plus the variant sources optimization, which does not change the results. This page describes them,
 shows how to measure their effect and gives a worked example.
 
 .. _point-source-gridding:
@@ -43,24 +43,113 @@ If the ``maximum_distance`` has a value of 500 km and the ``pointsource_distance
 collapsed sources for 99% percent of the sites and a huge speedup is to big expected (in reality things are a bit more 
 complicated, since the engine also consider the fact that ruptures have a finite size, but you get the idea).
 
+*******************************************
+Application: making the Canada model faster
+*******************************************
+
+In order to give a concrete example, I ran the 2026 Canada model on 7 cities by using the following ``site_model.csv`` file:
+
++----------------+------+-----+------+----------+----------+
+| custom_site_id | lon  | lat | vs30 |  z1pt0   |   z2pt5  |
++================+======+=====+======+==========+==========+
+|     montre     | -73  | 45  | 368  | 393.6006 | 1.391181 |
++----------------+------+-----+------+----------+----------+
+|     calgar     | -114 | 51  | 451  |290.6857  | 1.102391 |
++----------------+------+-----+------+----------+----------+
+|     ottawa     | -75  | 45  | 246  | 492.3983 | 2.205382 |
++----------------+------+-----+------+----------+----------+
+|     edmont     | -113 | 53  | 372  | 389.0669 | 1.374081 |
++----------------+------+-----+------+----------+----------+
+|     toront     | -79  | 43  | 291  | 465.5151 | 1.819785 |
++----------------+------+-----+------+----------+----------+
+|     winnip     | -97  | 50  | 229  | 499.7842 | 2.393656 |
++----------------+------+-----+------+----------+----------+
+|     vancou     | -123 | 49  | 600  | 125.8340 | 0.795259 |
++----------------+------+-----+------+----------+----------+
+
+Notice that we are using a ``custom_site_id`` field to identify the cities.
+
+All the calculations below use the current engine (3.27) on a 16-core machine. The exact calculation, with
+``ps_grid_spacing=0`` and ``pointsource_distance=1000``, is the reference. It is dominated by the operation "total
+classical_bysrc", which takes 1115 seconds. With the default ``pointsource_distance = 100``, the time of "total
+classical_bysrc" goes down to 590 seconds. Enters the point source gridding: by setting ``ps_grid_spacing = 50`` and
+``pointsource_distance = 75`` it goes down to 270 seconds, and with ``pointsource_distance = 0`` to 150 seconds. The
+following table collects the results:
+
++-----------------------+-----------+----------------------------+---------+
+| operation             | calc_time | approx                     | speedup |
++=======================+===========+============================+=========+
+| total classical_bysrc | 1115      | no approx                  | 1x      |
++-----------------------+-----------+----------------------------+---------+
+| total classical_bysrc | 590       | pointsource_distance = 100 | 1.9x    |
++-----------------------+-----------+----------------------------+---------+
+| total classical_bysrc | 270       | ps_grid_spacing + psd=75   | 4.1x    |
++-----------------------+-----------+----------------------------+---------+
+| total classical_bysrc | 150       | ps_grid_spacing + psd=0    | 7.4x    |
++-----------------------+-----------+----------------------------+---------+
+
+As you see, by playing with the parameters ``ps_grid_spacing`` and ``pointsource_distance`` it is possible to
+improve the performance quite a lot. The cost to pay is in the precision of the results.
+
+With the engine defaults (``ps_grid_spacing=0`` and ``pointsource_distance = 100``)
+the hazard maps are quite precise::
+
+	$ oq compare hmaps PGA <exact_calc_id> <psd100_calc_id>
+	There are no differences within the tolerances atol=0.001, rtol=0%, sids=[0 1 2 3 4 5 6]
+
+With the gridding and ``pointsource_distance = 75`` the hazard maps are still quite precise::
+
+	$ oq compare hmaps PGA <exact_calc_id> <psd75_gridded_calc_id>
+	There are no differences within the tolerances atol=0.001, rtol=0%, sids=[0 1 2 3 4 5 6]
+
+With the gridding and ``pointsource_distance = 0`` the differences are larger: the root-mean-square difference of the
+hazard maps is 0.0029 g at poe 0.002105 and 0.0080 g at poe 0.000404, with maximum differences of 0.0049 g and 0.0123
+g, well above the tolerance::
+
+	$ oq compare hmaps PGA <exact_calc_id> <gridded_calc_id>
+	poe      | rms-diff | max-diff
+	0.002105 | 0.0029   | 0.0049
+	0.000404 | 0.0080   | 0.0123
+
+It should be noticed that if you have 130,000 sites it is likely that there will be a few sites where the point source 
+gridding approximation gives results quite different for the exact results. The commands ``oq compare`` allows you to 
+figure out which are the problematic sites, where they are and how big is the difference from the exact results.
+
+You should take into account that even the “exact” results have uncertainties due to all kind of reasons, so even a 
+large difference can be quite acceptable. In particular if the hazard is very low you can ignore any difference since 
+it will have no impact on the risk.
+
+Points with low hazard are expected to have large differences, this is why by default *oq compare* use an absolute 
+tolerance of 0.001g, but you can raise that to 0.01g or more. You can also give a relative tolerance of 10% or more. 
+Internally ``oq compare`` calls the function ``numpy.allclose`` see https://numpy.org/doc/stable/reference/generated/numpy.allclose.html 
+for a description of how the tolerances work.
+
+By increasing the ``pointsource_distance`` parameter and decreasing the ``ps_grid_spacing`` parameter one can make the 
+approximation as precise as wanted, at the expense of a larger runtime.
+
+NB: the speedup depends on the number of sites. In particular, for the
+full model with hundreds of thousands of sites, the speedup can be even larger.
+
 ************************************************************************
 How to determine the right value for the ``ps_grid_spacing`` parameter
 ************************************************************************
 
 The recommended way is to set ``ps_grid_spacing = auto`` and to run the calculation with
-``calculation_mode = preclassical``, for instance::
+the ``--calibrate`` option, for instance::
 
-	$ oq run job.ini -p ps_grid_spacing=auto calculation_mode=preclassical
+	$ oq run job.ini -p ps_grid_spacing=auto --calibrate
 
 With this setting the engine determines both ``ps_grid_spacing`` and ``pointsource_distance`` (unless the
 ``pointsource_distance`` is set in the job.ini) by comparing the hazard of the point sources on a sample of sites
 with the hazard of the exact calculation, and then stops. The chosen values are logged, and they are stored in the
-datastore, so that a subsequent calculation started with ``--hc`` uses them.
+datastore.
 
 The calibration works as follows (in engine v3.27, it may change in the future):
 
-- the sample has at most 300 sites, it uses a single GMPE per tectonic region type,
-  the two intensity measure types closest to 0.2 s and 1 s and one intensity level every two;
+- the sample has at most 300 sites, it uses a single GMPE per tectonic region type, the two intensity measure types
+  closest to 0.2 s and 1 s and one intensity level every two;
+- the point sources of each group are sampled: a random third of them is used in the calibration, with a fixed seed,
+  so that the results are reproducible; if the sample of a group is empty, its first point source is used;
 - the reference is the calculation without gridding and with a ``pointsource_distance`` of 100 km (1000 km would be
   exact, but too expensive for large maximum distances);
 - the candidates are the grid spacings 50, 25 and 15 km, each one with the ``pointsource_distance`` values 15, 25, 50
@@ -68,26 +157,27 @@ The calibration works as follows (in engine v3.27, it may change in the future):
 - the errors are normalized by ``0.002 + 0.01 * |reference|``, as in ``numpy.testing.assert_allclose`` with
   ``atol=0.002`` and ``rtol=0.01``, and a candidate is acceptable if the 99th percentile of the normalized error on
   the hazard maps is at most 1, i.e. the hazard maps are close within these tolerances;
-- the acceptable candidate with the smallest weight is chosen, where the weight is the estimated cost of the full
-  calculation; if no candidate is acceptable, the candidates with a normalized error within 10% of the smallest one
-  are considered, and the cheapest of them is chosen.
+- the acceptable candidate with the smallest weight is chosen, where the weight is the estimated cost of the
+  calculation on the sampled point sources, which ranks the candidates like the cost of the full calculation; if no
+  candidate is acceptable, the candidates with a normalized error within 10% of the smallest one are considered, and
+  the cheapest of them is chosen.
 
-For the ``job_vs30.ini`` file of the ``performance.zip`` archive (current master, commit ``ae768378a5``) the
-calibration log is the following, and the calibration takes a few seconds on 16 cores::
+For the Canada model of the mosaic (CND, 482,898 sites) on current master, the calibration log is the following. The
+whole preclassical phase, which includes the calibration, takes about one minute on 16 cores::
 
-	 psgs   psd      weight   mean_err    p99_err
-	   50    15      294562     0.0001     0.0013
-	   50    25      338005     0.0000     0.0012
-	   50    50      490575     0.0000     0.0007
-	   50    75      680618     0.0000     0.0007
-	Using ps_grid_spacing=50.0, pointsource_distance=15.0
+	 psgs   psd      weight   mean_err    p99_err  p99_norm
+	   50    15     7573185     0.0012    0.0135    3.6039
+	   50    25     8300487     0.0009    0.0096    2.5132
+	   50    50    10561253     0.0005    0.0049    1.2019
+	   50    75    13350315     0.0003    0.0032    0.9436
+	Using ps_grid_spacing=50.0, pointsource_distance=75.0
 
-The errors are absolute, in g. The grid spacings are tried from the largest to the smallest, and the search stops at
-the first one with a candidate within the tolerance, so the 25 and 15 km grids are not tried here: the 50 km grid
-with a ``pointsource_distance`` of 15 km is acceptable and has the smallest weight, so it is chosen.
+The errors are absolute, in g, while p99_norm is the normalized error used to choose the candidate. The grid spacings
+are tried from the largest to the smallest, and the search stops at the first one with a candidate within the
+tolerance, so the 25 and 15 km grids are not tried here: the 50 km candidates with a pointsource_distance of 15, 25
+and 50 km have p99_norm above 1, the one with 75 km has p99_norm of 0.94, and it is chosen.
 
-Once the values are known, run the full calculation with them, for instance ``oq run job.ini -p ps_grid_spacing=50
-pointsource_distance=15``. The precision can be checked with ``oq compare hcurves`` and ``oq compare uhs``, and the
+Once the values are known, run the full calculation with them, for instance ``oq run job.ini -p ps_grid_spacing=50 pointsource_distance=75``. The precision can be checked with ``oq compare hcurves`` and ``oq compare uhs``, and the
 performance with ``oq show performance``.
 
 Since version 3.27 the number of contexts generated by the calculation is stored in the ``nctxs`` dataset of the datastore, with the
@@ -100,27 +190,26 @@ following fields, which are useful to understand how much the approximations red
   the reduction logged by the engine;
 - ``gridded``: the number of contexts of the gridded point sources before ``collapse_precision``;
 - ``collapsed``: the number of contexts after ``collapse_precision``, shown only if ``collapse_precision`` is nonzero;
-- ``separate``: the number of contexts without the source variants optimization (see :ref:`source-variants`), i.e. if
+- ``separate``: the number of contexts without the variant sources optimization (see :ref:`variant-sources`), i.e. if
   the variants of the sources were computed separately; it is equal to ``collapsed`` when the optimization is not used.
 
 If ``ps_grid_spacing`` or ``collapse_precision`` is set, the ``exact`` field is the number of contexts before
 ``collapse_precision``, counted for all the source types, when no estimate was computed. The ``exact``, ``psd100`` and
 ``gridded`` fields are zero when they have not been computed. The fields can be displayed with
-``oq show context_reduction <calc_id>``, which also displays the reduction factor of the source variants optimization.
+``oq show context_reduction <calc_id>``, which also displays the reduction factor of the variant sources optimization.
 
 For the ``job_vs30.ini`` file of the ``performance.zip`` archive, run with ``ps_grid_spacing=25``,
 ``pointsource_distance=15`` and ``collapse_precision=.03`` (engine version 3.27), the ``nctxs`` dataset contains::
 
 	exact      psd100     gridded    collapsed  separate
-	990383445  296658391  48062426   44781744   44781744
+	993298176  297900530  48062426   44932370   44932370
 
 Here ``psd100`` is computed with a ``pointsource_distance`` of 100 km, and the
-gridding reduces the contexts by a factor of 990383445 / 48062426 = 20.61, the value logged as "estimated reduction
-factor". The collapse_precision reduces them further, from 48062426 to 44781744, a factor of 1.07, so that the total
-reduction logged as "estimated reduction factor" is 22.12 (gridding 20.61 x collapse 1.07).
+gridding reduces the contexts by a factor of 993298176 / 48062426 = 20.67, the value logged as "estimated reduction
+factor". The collapse_precision reduces them further, from 48062426 to 44932370, a factor of 1.07, so that the total
+reduction logged as "estimated reduction factor" is 22.11 (gridding 20.67 x collapse 1.07).
 
-For the same file run with ``ps_grid_spacing=auto`` and no ``collapse_precision`` (current master, commit
-``ae768378a5``), the calibration chooses ``ps_grid_spacing=50`` and ``pointsource_distance=15``, and the ``nctxs``
+For the same file run with ``ps_grid_spacing=auto`` and no ``collapse_precision`` (current master), the calibration chooses ``ps_grid_spacing=50`` and ``pointsource_distance=15``, and the ``nctxs``
 dataset contains::
 
 	exact      psd100     gridded    collapsed  separate
@@ -214,86 +303,17 @@ If the contexts removed by the collapse are less than 10% of the contexts, the e
 For instance, on the ``performance.zip`` archive with ``ps_grid_spacing=30`` and engine version 3.27, the collapse removes
 about 16% of the contexts (from 50,182,457 to 42,110,255, a reduction factor of 1.19).
 
-***********************************************
-Application: making the Canada model 26x faster
-***********************************************
-
-In order to give a concrete example, I ran the Canada 2015 model on 7 cities by using the following ``site_model.csv`` file:
-
-+----------------+------+-----+------+----------+----------+
-| custom_site_id | lon  | lat | vs30 |  z1pt0   |   z2pt5  |
-+================+======+=====+======+==========+==========+
-|     montre     | -73  | 45  | 368  | 393.6006 | 1.391181 |
-+----------------+------+-----+------+----------+----------+
-|     calgar     | -114 | 51  | 451  |290.6857  | 1.102391 |
-+----------------+------+-----+------+----------+----------+
-|     ottawa     | -75  | 45  | 246  | 492.3983 | 2.205382 |
-+----------------+------+-----+------+----------+----------+
-|     edmont     | -113 | 53  | 372  | 389.0669 | 1.374081 |
-+----------------+------+-----+------+----------+----------+
-|     toront     | -79  | 43  | 291  | 465.5151 | 1.819785 |
-+----------------+------+-----+------+----------+----------+
-|     winnip     | -97  | 50  | 229  | 499.7842 | 2.393656 |
-+----------------+------+-----+------+----------+----------+
-|     vancou     | -123 | 49  | 600  | 125.8340 | 0.795259 |
-+----------------+------+-----+------+----------+----------+
-
-Notice that we are using a ``custom_site_id`` field to identify the cities. This is possible only in engine versions 
->= 3.13, where ``custom_site_id`` has been extended to accept strings of at most 6 characters, while before only 
-integers were accepted (we could have used a zip code instead).
-
-If no special approximations are used, the calculation is extremely slow, since the model is extremely large. On the 
-the GEM cluster (320 cores) it takes over 2 hours to process the 7 cities. The dominating operation, as of engine 3.13, 
-is “computing mean_std” which takes, in total, 925,777 seconds split across the 320 cores, i.e. around 48 minutes per 
-core. This is way too much and it would make impossible to run the full model with ~138,000 sites. An analysis shows 
-that the calculation time is totally dominated by the point sources. Moreover, the engine prints a warning saying that 
-I should use the ``pointsource_distance approximation``. Let’s do so, i.e. let us set ``pointsource_distance = 50``
-in the job.ini file. That alone triples the speed of the engine, and the calculation times in “computing mean_std” goes 
-down to 324,241 seconds, i.e. 16 minutes per core, in average. An analysis of the hazard curves shows that there is 
-practically no difference between the original curves and the ones computed with the approximation on::
-
-	$ oq compare hcurves PGA <first_calc_id> <second_calc_id>
-	There are no differences within the tolerances atol=0.001, rtol=0%, sids=[0 1 2 3 4 5 6]
-
-However, this is not enough. We are still too slow to run the full model in a reasonable amount of time. Enters the 
-point source gridding. By setting ``ps_grid_spacing=50`` we can spectacularly reduce the calculation time to 35,974s, 
-down by nearly an order of magnitude! This time ``oq compare hcurves`` produces some differences on the last city but 
-they are minor and not affecting the hazard maps::
-
-	$ oq compare hmaps PGA <first_calc_id> <third_calc_id>
-	There are no differences within the tolerances atol=0.001, rtol=0%, sids=[0 1 2 3 4 5 6]
-
-The following table collects the results:
-
-+--------------------+-----------+----------------------+---------+
-|     operation      | calc_time |         approx       | speedup |
-+====================+===========+======================+=========+
-| computing mean_std |  925_777  |       no approx      |    1x   |
-+--------------------+-----------+----------------------+---------+
-| computing mean_std |  324_241  | pointsource_distance |    3x   |
-+--------------------+-----------+----------------------+---------+
-| computing mean_std |   35_974  |    ps_grid_spacing   |    26x  |
-+--------------------+-----------+----------------------+---------+
-
-It should be noticed that if you have 130,000 sites it is likely that there will be a few sites where the point source 
-gridding approximation gives results quite different for the exact results. The commands ``oq compare`` allows you to 
-figure out which are the problematic sites, where they are and how big is the difference from the exact results.
-
-You should take into account that even the “exact” results have uncertainties due to all kind of reasons, so even a 
-large difference can be quite acceptable. In particular if the hazard is very low you can ignore any difference since 
-it will have no impact on the risk.
-
-Points with low hazard are expected to have large differences, this is why by default *oq compare* use an absolute 
-tolerance of 0.001g, but you can raise that to 0.01g or more. You can also give a relative tolerance of 10% or more. 
-Internally ``oq compare`` calls the function ``numpy.allclose`` see https://numpy.org/doc/stable/reference/generated/numpy.allclose.html 
-for a description of how the tolerances work.
-
-By increasing the ``pointsource_distance`` parameter and decreasing the ``ps_grid_spacing`` parameter one can make the 
-approximation as precise as wanted, at the expense of a larger runtime.
-
-NB: the fact that the Canada model with 7 cities can be made 26 times faster does not mean that the same speedup apply 
-when you consider the full 130,000+ sites. A test with ``ps_grid_spacing=pointsource_distance=50`` gives a speedup of 7 
-times, which is still very significant.
+The precision of the ``ps_grid_spacing`` approximation depends on the engine release, and it has improved
+substantially in engine 3.27 compared with the past. As an example, consider the Lisbon site of the EUR model
+(``ps_grid_spacing=50`` and ``pointsource_distance=50``) compared with the reference without gridding
+(``ps_grid_spacing=0`` and ``pointsource_distance=1000``, i.e. the exact calculation). For the mean PGA hazard curve,
+the maximum relative difference from the reference, for probabilities of at least 1e-4, is 7.7% with engine 3.26 and
+0.7% with engine 3.27, so the error has been reduced by an order of magnitude. The reduction is smaller at long
+periods: for SA(2.0) it goes from 2.7% to 1.5%. With engine 3.27 we have *much* better precision without losing
+performance, so much that in the hazard curves or UHS plots it is impossible to see the difference visually. Of course
+for very small intensities numeric errors are much larger because the rates are very sensitive to the maximum distance
+and to many details, however below 0.01 g there is no reason to be precise since the hazard is too small to have a
+practical effect.
 
 Measuring the reduction of the contexts
 ---------------------------------------
@@ -359,9 +379,9 @@ much on the version of the engine: the numbers above are valid for the engine ve
 other versions, as well as they will depend on the hardware. They are meant to show how to read the logs, not
 as a benchmark.
 
-.. _source-variants:
+.. _variant-sources:
 
-Source variants optimization
+Variant sources optimization
 ----------------------------
 
 When the source model logic tree contains uncertainties on the sources, every source has several *variants*, one for
@@ -426,7 +446,7 @@ The hazard curves and the hazard maps of the two runs are the same within the to
 factor of 7.6 (the contexts were counted directly in both engines, and the counts match the logged ``cfactor``);
 in master the reduction is logged as::
 
-	The source variants optimization reduced the contexts from 22_422 to 2_935, a factor 7.64
+	The variant sources optimization reduced the contexts from 22_422 to 2_935, a factor 7.64
 
 and ``oq show context_reduction`` displays::
 

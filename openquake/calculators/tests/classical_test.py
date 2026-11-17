@@ -19,6 +19,7 @@
 import sys
 import gzip
 import unittest
+import pandas as pd
 import numpy
 from unittest import mock
 
@@ -34,6 +35,7 @@ from openquake.calculators.preclassical import CTX_EST
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.hazardlib.gsim.gmpe_table import interp_table
 from openquake.calculators.tests import CalculatorTestCase, no_fastmean
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
@@ -147,10 +149,19 @@ class ClassicalTestCase(CalculatorTestCase):
                       str(ctx.exception))
 
     def test_case_04(self):
-        # make sure the UHS are sorted correctly
-        self.run_calc(case_04.__file__, 'job.ini')
+        # The simple fault's down-dip mesh changes with inferred spacing.
+        # Here inferred selects 3 intervals where the default uses 2.
+        self.run_calc(case_04.__file__, 'job.ini', rupture_mesh_spacing='4.7')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/uhs.csv', fname)
+        self.assertEqualFiles('expected/uhs_mesh_spacing.csv', fname)
+        default = self.calc.datastore['source_info']['num_ruptures'][:]
+
+        self.run_calc(case_04.__file__, 'job.ini', rupture_mesh_spacing='4.7',
+                      dip_spacing='inferred')
+        [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs_inferred.csv', fname)
+        automatic = self.calc.datastore['source_info']['num_ruptures'][:]
+        self.assertFalse(numpy.array_equal(default, automatic))
 
     def test_case_05(self):
         # make sure `oq show rlz` works
@@ -438,6 +449,20 @@ class ClassicalTestCase(CalculatorTestCase):
         fname = general.gettemp(text_table(rel, ext='org'))
         self.assertEqualFiles('expected/rel_source.org', fname)
 
+        # rateSplit does not change these sources' occurrence rates.
+        # Both uncertainty sets must retain the full atomic contribution,
+        # with both the few-sites and many-sites task functions.
+        smlt = 'source_model_logic_tree_unc.xml'
+        for kwargs in [{}, dict(disagg_by_src='false', max_sites_disagg='1',
+                                sites='135.68 35.68, 135.69 35.68')]:
+            self.run_calc(case_27.__file__, 'job.ini', **kwargs)
+            expected = self.calc.datastore['hcurves-stats'][:]
+            self.run_calc(
+                case_27.__file__, 'job.ini', **kwargs,
+                source_model_logic_tree_file=smlt)
+            actual = self.calc.datastore['hcurves-stats'][:]
+            aac(actual, expected, rtol=1E-6)
+
     def test_case_27_other(self):
         # the second atomic group has sources named other:03, other:04;
         # with disagg_by_src the rates of each atomic group must be
@@ -510,7 +535,6 @@ class ClassicalTestCase(CalculatorTestCase):
         # This is for checking purposes. It creates a .txt file that can be
         # read with QGIS
         if check:
-            import pandas as pd
             df = pd.DataFrame({'geometry': [poly, expected]})
             fname = general.gettemp(suffix='.csv')
             print('Saving %s' % fname)
@@ -1350,7 +1374,6 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-SA(2.0).csv'],
             case_93.__file__, concurrent_tasks='2')
 
-        from openquake.hazardlib.gsim.gmpe_table import interp_table
         info = interp_table.cache_info()
         print(info)  # debug
 
@@ -1562,7 +1585,7 @@ class ContextReductionTestCase(unittest.TestCase):
             self.assertNotIn('estimated', logs.output[0])
 
     def test_variants(self):
-        # 300 contexts computed and 900 saved by the source variants
+        # 300 contexts computed and 900 saved by the variant sources
         # optimization, i.e. 1200 contexts without the optimization
         self.calc.oqparam = mock.Mock(collapse_precision=0,
                                       ps_grid_spacing=0)

@@ -33,12 +33,12 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.source_reader import (
-    get_bset_values, modified_groups)
-from openquake.hazardlib.rmap_maker import read_core_trt_smrs
+    prepare_bset_values, modified_groups)
+from openquake.hazardlib.rmap_maker import read_unc_ts_sets
 from openquake.hazardlib.lt import (
     get_bset_value, GEOMETRY_PRESERVING)
 from openquake.hazardlib.rmap_maker import (
-    get_cmakers, read_full_lt_by_label, make_results, mag_support)
+    build_cmakers, read_full_lt_by_label, make_results, mag_support)
 from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
@@ -174,7 +174,7 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def baseclassical(grp, tgetter, cmaker, remove_zeros, dstore=None,
+def baseclassical(grp, tgetter, cmaker, remove_zeros, gids, dstore=None,
                   as_rmap=True, monitor=None):
     """
     Wrapper over hazard_curve.classical
@@ -194,80 +194,17 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros, dstore=None,
     result = hazard_curve.classical(grp, sites, cmaker)
     if remove_zeros:
         result['rmap'] = result['rmap'].remove_zeros()
-    result['rmap'].gid = cmaker.gid
-    result['rmap'].wei = cmaker.wei
+    result['rmap'].gid = gids
     if not as_rmap:
-        result['rmap'] = result['rmap'].to_array(cmaker.gid)
+        result['rmap'] = result['rmap'].to_array(gids)
     return result
 
 
-# (dstore filename, ilabel, init) -> FullLogicTree
-_full_lt_cache = {}
-
-
-def read_full_lt(dstore, ilabel=None, init=True):
-    """
-    :param dstore: a DataStore instance, possibly closed
-    :param ilabel: the index of the site label (see site_labels), or None
-    :param init: if False, the realizations are not built
-    :returns: the FullLogicTree stored in the datastore, initialized only
-        once per process, since the init is not cheap for large LTs;
-        with a site label, the gsim logic tree is the one of the label,
-        so that the gweights are the right ones (see read_gid_dic)
-
-    NB: without init the FullLogicTree has only the source model
-    realizations, which is enough for get_bset_values; the init is
-    expensive for large logic trees (4.7 GB and 2 minutes for the 7_864_320
-    realizations of CND) and must not be performed in each worker
-    """
-    if not init:
-        ilabel = None  # the source model realizations do not depend on it
-    key = (dstore.filename, ilabel or 0, init)
-    try:
-        return _full_lt_cache[key]
-    except KeyError:
-        # keep only the logic trees of the current calculation, otherwise
-        # the cache would grow forever in long-lived worker processes
-        for k in [k for k in _full_lt_cache if k[0] != dstore.filename]:
-            del _full_lt_cache[k]
-        with dstore:
-            full_lt = dstore['full_lt']
-            if init:
-                full_lt.init()
-            if ilabel:
-                # the labels are ordered as the cmdict, i.e. Default first;
-                # tested in classical/case_06_disagg_by_src
-                dic = read_full_lt_by_label(dstore, full_lt)
-                full_lt = list(dic.values())[ilabel]
-        _full_lt_cache[key] = full_lt
-        return full_lt
-
-
-def read_gid_dic(dstore, full_lt=None):
-    """
-    :param dstore: a DataStore instance
-    :param full_lt: a FullLogicTree instance, read from the datastore if None
-    :returns: a dictionary trt_smrs -> (gids, weights), associating to each
-        realization set its gids and the weights of the corresponding
-        realizations
-
-    The realization sets are the sets of realizations with the same
-    uncertainties applied (see get_core_trt_smrs) and the gids of a
-    realization set are the indices of its trt_smrs, see
-    get_rmap_gb.
-    """
-    trt_smrs = read_core_trt_smrs(dstore)
-    full_lt = full_lt or read_full_lt(dstore)
-    gweights = full_lt.g_weights(trt_smrs)[:, -1]  # shape Gt
-    return {trt_smr: (gids, gweights[gids])
-            for trt_smr, gids in zip(trt_smrs, full_lt.get_gids(trt_smrs))}
-
-
-def group_gids(src_groups, gid_dic):
+def group_gids(src_groups, ts2gids):
     """
     :param src_groups: the groups of a CSM built without applying the
         uncertainties
-    :param gid_dic: a dictionary trt_smrs -> (gids, weights)
+    :param ts2gids: a mapping from ts sets to output gids
     :returns: a dictionary grp_id -> gids, with the gids of all the rates
         each group can produce, i.e. one per set of realizations with the
         same uncertainties
@@ -277,20 +214,30 @@ def group_gids(src_groups, gid_dic):
         gids = set()
         for src in grp:
             for trt_smrs in src.get_ts_sets():
-                gids.update(gid_dic[trt_smrs][0])
+                gids.update(ts2gids[trt_smrs])
         out[grp.grp_id] = U32(sorted(gids))
     return out
 
 
-def cmakers_groups_gkeys(srcs, grp, cmaker, gid_dic, full_lt):
+def _task_data(src_groups, grp_ids, ts2gids, full_lt):
+    # Build the task-scoped arguments sent to the classical worker.
+    groups = [src_groups[i] for i in sorted(grp_ids)]
+    sources = [src for grp in groups for src in grp]
+    task_ts2gids = {ts: ts2gids[ts] for src in sources
+                    for ts in src.get_ts_sets()}
+    return task_ts2gids, prepare_bset_values(full_lt, sources)
+
+
+def groups_gkeys(srcs, grp, cmaker, ts2gids, bset_values):
     """
     :param srcs: the sources of the group grp with the same sets of
         realizations, i.e. grouped either by basename or by subset
     :param grp: the SourceGroup the sources belong to
     :param cmaker: the ContextMaker associated to the group
-    :param gid_dic: a dictionary trt_smrs -> (gids, weights)
-    :param full_lt: a FullLogicTree instance
-    :returns: a generator of (cmaker, group, gkey) triples, one per set
+    :param ts2gids: a mapping from ts sets to output gids
+    :param bset_values: uncertainty values for the sources, grouped by
+        realization ordinal
+    :returns: a generator of (group, gids, gkey) triples, one per set
         of realizations, with the uncertainties applied to the sources;
         gkey is the geometry key of the set (see geometry_key)
     """
@@ -299,7 +246,6 @@ def cmakers_groups_gkeys(srcs, grp, cmaker, gid_dic, full_lt):
     # the base source
     subgrp = copy.copy(grp)
     subgrp.sources = list(srcs)
-    bset_values = get_bset_values(full_lt, subgrp)
     for trt_smrs, sg in modified_groups(subgrp, bset_values):
         sources = []
         for src in sg:
@@ -318,16 +264,16 @@ def cmakers_groups_gkeys(srcs, grp, cmaker, gid_dic, full_lt):
             sg, cmaker.oq.minimum_magnitude, cmaker.oq.strict)
         if not sg.sources:
             continue
-        gids, wei = gid_dic[trt_smrs]
+        gids = ts2gids[trt_smrs]
         bvals = bset_values.get(trt_smrs[0] % TWO24, [])
         gkey = geometry_key(srcs, bvals)
-        yield cmaker.restrict_trt_smrs(trt_smrs, gids, wei), sg, gkey
+        yield sg, gids, gkey
 
 
 def geometry_key(srcs, bvals):
     """
     :param srcs: the sources of a group with the same sets of realizations
-        (see cmakers_groups_gkeys)
+        (see groups_gkeys)
     :param bvals: the (branchset, value) pairs of a set of realizations
     :returns: a hashable key with the geometry-changing branchsets in bvals
         which apply to some of srcs, see lt.GEOMETRY_PRESERVING; two sets
@@ -357,7 +303,7 @@ def geometry_key(srcs, bvals):
 
 def _split_by_mags(pairs):
     """
-    :param pairs: a list of (cmaker, group) pairs with the same geometry
+    :param pairs: a list of (group, gids) pairs with the same geometry
     :returns: a list of lists of pairs, such that in each list the
         magnitudes of every source are a subset of the magnitudes of the
         same source in the pair with the most magnitudes, i.e. the base
@@ -367,7 +313,7 @@ def _split_by_mags(pairs):
         go in different lists
     """
     supports = []
-    for cm, sg in pairs:
+    for sg, gids in pairs:
         # sources without MFD (e.g. nonparametric), see _rates_by_mag
         # NB: the pairs are kept together, then _make_results fails
         # and they are computed one at a time
@@ -395,15 +341,15 @@ def _split_by_mags(pairs):
             for _, idxs in sorted(parts, key=lambda p: min(p[1]))]
 
 
-def _make_results(pairs, sites, remove_zeros, as_rmap):
+def _make_results(pairs, sites, cmaker, remove_zeros, as_rmap):
     """
-    :param pairs: a list of (cmaker, group) pairs with the same geometry
+    :param pairs: a list of (group, gids) pairs with the same geometry
     :returns: a list of dictionaries, one per pair, as returned by
         baseclassical, or None if make_results cannot be used
     """
     try:
-        dics = make_results([sg for _, sg in pairs],
-                            [cm for cm, _ in pairs], sites)
+        dics = make_results([sg for sg, _ in pairs],
+                            [cmaker] * len(pairs), sites)
     except (ValueError, FilteredAway):
         # NB: make_results raises a ValueError when the variants
         # cannot be derived from a single base. The cases are: the
@@ -413,17 +359,16 @@ def _make_results(pairs, sites, remove_zeros, as_rmap):
         # the variants have a different number of sources, i.e. some
         # sources were filtered away
         return None
-    for (cmaker_, _), dic in zip(pairs, dics):
+    for (_, gids), dic in zip(pairs, dics):
         dic['rmap'] = dic['rmap'].remove_zeros() \
             if remove_zeros else dic['rmap']
-        dic['rmap'].gid = cmaker_.gid
-        dic['rmap'].wei = cmaker_.wei
+        dic['rmap'].gid = gids
         if not as_rmap:
-            dic['rmap'] = dic['rmap'].to_array(cmaker_.gid)
+            dic['rmap'] = dic['rmap'].to_array(gids)
     return dics
 
 
-def _atomic_results(grps, sites, cmaker, remove_zeros, as_rmap,
+def _atomic_results(grps, sites, cmaker, gids, remove_zeros, as_rmap,
                     merge_atomic):
     # yield the results of the atomic groups collapsed in a single
     # task (see get_allargs and bysrc_results); they contribute to the
@@ -434,7 +379,7 @@ def _atomic_results(grps, sites, cmaker, remove_zeros, as_rmap,
     # modelled with nonparametric sources)
     if merge_atomic:
         # with many sites there are no rup_data nor mean_rates_by_src
-        yield baseclassical(grps, sites, cmaker, remove_zeros,
+        yield baseclassical(grps, sites, cmaker, remove_zeros, gids,
                             as_rmap=as_rmap)
     else:
         # one result per group, since the rates are attributed to the
@@ -444,23 +389,24 @@ def _atomic_results(grps, sites, cmaker, remove_zeros, as_rmap,
         # independent, so the sum of the results is the same;
         # tested in classical/case_27_other and disagg/case_18
         for grp in grps:
-            yield baseclassical([grp], sites, cmaker, remove_zeros,
+            yield baseclassical([grp], sites, cmaker, remove_zeros, gids,
                                 as_rmap=as_rmap)
 
 
-def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
+def bysrc_results(grps, sites, cmaker, ts2gids, bset_values, remove_zeros,
                   as_rmap=True, merge_atomic=True):
     """
     Yield the results of a classical task as RateMaps: the CSM is built without
-    applying the uncertainties, so cmakers_groups_gkeys applies them one
-    set of realizations at a time and restricts the cmaker to the set; the
-    rates are attributed to the gids of the set, see read_gid_dic.
+    applying the uncertainties, so groups_gkeys applies them one
+    set of realizations at a time. The context maker computes local GSIM
+    columns; ts2gids maps these columns to their output gids.
 
     :param grps: the source groups of the task
     :param sites: the sites of the task
     :param cmaker: the ContextMaker associated to the groups
-    :param gid_dic: a dictionary trt_smrs -> (gids, weights)
-    :param full_lt: a FullLogicTree instance
+    :param ts2gids: a mapping from ts sets to output gids
+    :param bset_values: uncertainty values for the sources, grouped by
+        realization ordinal
     :param remove_zeros: if True the sites with zero rates are removed
     :param as_rmap: if False the rates are returned as arrays of rates,
         stored right away by the master, see baseclassical
@@ -468,7 +414,11 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         returned in a single result, otherwise in a result per group
     """
     if len(grps) > 1:
-        yield from _atomic_results(grps, sites, cmaker, remove_zeros,
+        # get_allargs batches only atomic groups without uncertainties,
+        # all sharing the same single ts set.
+        [ts] = grps[0][0].get_ts_sets()
+        gids = ts2gids[ts]
+        yield from _atomic_results(grps, sites, cmaker, gids, remove_zeros,
                                    as_rmap, merge_atomic)
         return
     grp = grps[0]
@@ -491,7 +441,8 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
     for srcs in srcblocks:
         # for the demo LogicTreeCase2ClassicalPSHA srcs is
         # [<AreaSource first>] and then [<SimpleFaultSource second>]
-        triples = list(cmakers_groups_gkeys(srcs, grp, cmaker, gid_dic, full_lt))
+        triples = list(groups_gkeys(srcs, grp, cmaker, ts2gids,
+                                    bset_values))
         # the sets with the same geometry key have the same geometry, so
         # their MFD variants are computed together by make_results (see
         # geometry_key); the other sets are computed one at a time
@@ -502,8 +453,8 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # 9 sets of the abGR x maxMagGR branches (3 x 3)
         # sorted(bykey) = [(('bs6', '10.0'),), (('bs6', '20.0'),)]
         bykey = {}
-        for cm, sg, gkey in triples:
-            bykey.setdefault(gkey, []).append((cm, sg))
+        for sg, gids, gkey in triples:
+            bykey.setdefault(gkey, []).append((sg, gids))
         slow = []
         # for case_25 (one site, so few=True) each pair is a source
         # restricted to one set of realizations (one gid).
@@ -518,15 +469,16 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
             # make_results needs the magnitudes of every variant to be a
             # subset of the magnitudes of the base (see _split_by_mags)
             for part in _split_by_mags(pairs):
-                dics = _make_results(part, sites, remove_zeros, as_rmap) \
+                dics = _make_results(
+                    part, sites, cmaker, remove_zeros, as_rmap) \
                     if len(part) > 1 else None
                 if dics is None:
                     slow.extend(part)
                 else:
                     yield from dics
-        for cmaker_, sg in slow:
+        for sg, gids in slow:
             yield baseclassical(
-                sg, sites, cmaker_, remove_zeros, as_rmap=as_rmap)
+                sg, sites, cmaker, remove_zeros, gids, as_rmap=as_rmap)
 
 
 # NB: _split_src is used in conjunction with the split_time mechanism,
@@ -540,37 +492,18 @@ def _split_src(srcs, n):
 
 
 def read_task_input(grp_keys, tilegetter, cmaker, dstore, monitor):
-    """
-    :returns: a tuple (groups, sites, gid_dic, full_lt) with the source
-        groups, the sites, the units of rate attribution and the logic
-        tree of a classical task
-    """
+    """Read source groups and sites for a classical task."""
     cmaker.init_monitoring(monitor)
-    # grp_keys is multiple only for JPN and New Madrid groups
+    # grp_keys is multiple only for JPN and New Madrid groups.
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
-    # the weight of the task is not inferrable from grp_keys, which are
-    # plain strings, so it is set explicitly (used in task_info)
+    # The keys are plain strings and do not carry the task weight.
     monitor.weight = sum(grp.weight for grp in grps)
-    # NB: the datastore is closed when passed to a task, see read_gid_dic;
-    # full_lt is read from the datastore, since it is too big to be passed
-    # to the tasks
-    # NB: the tilegetter is trivial unless there are site labels;
-    # the gweights depend on the label, see get_rates and
-    # classical/case_06_disagg_by_src
-    gid_dic = getattr(cmaker, 'gid_dic', None)
-    if gid_dic is None:
-        full_lt = read_full_lt(dstore, cmaker.ilabel)
-        gid_dic = read_gid_dic(dstore, full_lt)
-    else:
-        # the gid_dic was computed in the master (see set_gid_dic), so
-        # the realizations are not needed and are not built: with
-        # 160 cores and the 7_864_320 realizations of CND that would
-        # require 160 x 4.7 GB, i.e. the machine would go out of memory
-        full_lt = read_full_lt(dstore, init=False)
-    return grps, tilegetter(sitecol, cmaker.ilabel), gid_dic, full_lt
+    # Site labels select the GSIMs and sites, not the output routing.
+    return grps, tilegetter(sitecol, cmaker.ilabel)
 
 
-def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
+def classical_bysrc(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
+                    dstore, monitor):
     """
     Call the classical calculator in hazardlib with few sites, i.e. with
     disagg_by_src or with at most max_sites_disagg sites. `grp_keys`
@@ -581,18 +514,30 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     master (see get_rmap), and the sites with zero rates are not removed,
     otherwise AELO for JPN will break.
     """
-    grps, sites, gid_dic, full_lt = read_task_input(
+    grps, sites = read_task_input(
         grp_keys, tilegetter, cmaker, dstore, monitor)
     # the RateMap in the master is the one of the first group (see
     # get_rmap), also for the results of the other atomic groups
     rmap_id = int(grp_keys[0].split('-')[0])
-    for dic in bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
+    for dic in bysrc_results(grps, sites, cmaker, ts2gids, bset_values,
                              remove_zeros=False, merge_atomic=False):
         dic['rmap_id'] = rmap_id
+        if cmaker.oq.disagg_by_src:
+            # Reduce packet sizes to avoid hanging ZMQ due to lost packets.
+            rup_data = dic.pop('rup_data')
+            if len(rup_data):
+                max_rows = max(1, 32 * 1024**2 // rup_data.dtype.itemsize)
+                grp_id = dic['source_data']['grp_id'][0]
+                # The first gid labels the contexts shared by all GSIMs
+                # of this realization set; the rmap retains all gids.
+                gid = dic['rmap'].gid.min()
+                for slc in general.gen_slices(0, len(rup_data), max_rows):
+                    yield dict(rup_data=rup_data[slc], grp_id=grp_id, gid=gid)
         yield dic
 
 
-def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
+def classical(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
+              dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
     `grp_keys` contains always a single element except in the case of
@@ -603,7 +548,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     of the other tasks are accumulated in a RateMap in the master; the
     sites with zero rates are removed.
     """
-    grps, sites, gid_dic, full_lt = read_task_input(
+    grps, sites = read_task_input(
         grp_keys, tilegetter, cmaker, dstore, monitor)
     oq = cmaker.oq
     remove_zeros = True  # reduce the size of the arrays of rates
@@ -614,13 +559,16 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     # accumulated in a RateMap in the master, i.e. if the groups are
     # already split in blocks
     if unsplit or bysrc or not as_rmap:
-        yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
+        yield from bysrc_results(grps, sites, cmaker, ts2gids, bset_values,
                                  remove_zeros, as_rmap)
         return
     # NB: multifaults are not split to avoid transferring the dparam cache
+    # bysrc is false here: the sources have no uncertainties and one ts set.
+    [ts] = grps[0][0].get_ts_sets()
+    gids = ts2gids[ts]
     b0, *blks = _split_src(list(grps[0]), 5)
     t0 = time.time()
-    yield baseclassical(b0, sites, cmaker, remove_zeros, as_rmap=as_rmap)
+    yield baseclassical(b0, sites, cmaker, remove_zeros, gids, as_rmap=as_rmap)
     dt = time.time() - t0
     # NB: the tasks generated below are called baseclassical, i.e. they
     # have a different name than the Starmap (classical), but their busy
@@ -631,19 +579,20 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     # oq-risk-tests (split_time = 2)
     if dt > 2 * oq.split_time:
         for blk in blks[1:]:
-            yield baseclassical, blk, tilegetter, cmaker, remove_zeros, dstore
+            yield (baseclassical, blk, tilegetter, cmaker, remove_zeros,
+                   gids, dstore)
         yield baseclassical(
-            blks[0], sites, cmaker, remove_zeros, as_rmap=as_rmap)
+            blks[0], sites, cmaker, remove_zeros, gids, as_rmap=as_rmap)
     elif dt > oq.split_time:
         yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
-               remove_zeros, dstore)
+               remove_zeros, gids, dstore)
         rest = sum(blks[2:], [])
         if rest:
             yield baseclassical(
-                rest, sites, cmaker, remove_zeros, as_rmap=as_rmap)
+                rest, sites, cmaker, remove_zeros, gids, as_rmap=as_rmap)
     else:
         yield baseclassical(
-            sum(blks, []), sites, cmaker, remove_zeros, as_rmap=as_rmap)
+            sum(blks, []), sites, cmaker, remove_zeros, gids, as_rmap=as_rmap)
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -813,12 +762,18 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dict with keys rmap, source_data, rup_data
+        :param dic: rates and source statistics, or rupture data
         """
         # NB: dic should be a dictionary, but when the calculation dies
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
+        elif 'rmap' not in dic:
+            if self.few_sites:
+                with self.monitor('saving rup_data'):
+                    store_ctxs(self.datastore, dic['rup_data'], dic['grp_id'],
+                               dic['gid'])
+            return acc
         elif not dic['source_data']:
             # all the sources were filtered out
             return acc
@@ -832,7 +787,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_mb = max(dic.pop('source_mb'), self.source_mb)
 
         # store rup_data if there are few sites
-        if self.few_sites and len(dic['rup_data']):
+        if self.few_sites and len(dic.get('rup_data', ())):
             with self.monitor('saving rup_data'):
                 # NB: each result has its own gid, see bysrc_results
                 store_ctxs(self.datastore, dic['rup_data'], grp_id,
@@ -897,13 +852,11 @@ class ClassicalCalculator(base.HazardCalculator):
     def init_poes(self):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore, self.full_lt)
-        self.full_lt_by_label = full_lt_by_label  # used in set_gid_dic
         trt_smrs = self.datastore['trt_smrs'][:]
-        # NB: the gids of the cmakers must be numbered as in the core list,
-        # the one used by read_gid_dic in the master and in the workers
+        # Output numbering belongs to ts2gids, not to the cmakers.
         ds = self.datastore.parent or self.datastore
-        core = read_core_trt_smrs(ds)
-        self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq, core)
+        unc_ts_sets = read_unc_ts_sets(ds)
+        self.cmdict = {label: build_cmakers(trt_smrs, full_lt, oq)
                        for label, full_lt in full_lt_by_label.items()}
         if 'delta_rates' in self.datastore:  # aftershock
             drgetter = getters.DeltaRatesGetter(self.datastore)
@@ -920,7 +873,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # [0] contexts after collapsing, [1] removed by collapse_precision,
         # [2] contexts before collapse_precision for the gridding baseline,
-        # [3] contexts saved by the source variants optimization
+        # [3] contexts saved by the variant sources optimization
         self.cfactor = numpy.zeros(4)
         self.dparam_mb = 0
         self.source_mb = 0
@@ -930,7 +883,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # Select each IMT's weights, including the default for other IMTs.
             ilabel = self.sitecol.ilabel[0] if oq.site_labels else 0
             full_lt = list(full_lt_by_label.values())[ilabel]
-            weights = full_lt.g_weights(core)
+            weights = full_lt.g_weights(unc_ts_sets)
             wget = full_lt.gsim_lt.wget
             self.gweights = numpy.array(
                 [wget(weights, imt) for imt in oq.imtls]).T
@@ -1028,7 +981,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Store in the nctxs dataset the contexts after collapse_precision
         in the 'collapsed' field, the contexts of the gridded point sources
         before collapse_precision in the 'gridded' field and the contexts
-        without the source variants optimization in the 'separate' field,
+        without the variant sources optimization in the 'separate' field,
         see contexts.py. If collapse_precision or ps_grid_spacing is set and
         there is no estimate in the 'exact' field, the 'exact' field is set
         to the contexts before collapse_precision, counted for all source
@@ -1056,7 +1009,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Log the overall context reduction, including point-source gridding
         and the reduction due to the pointsource_distance approximation.
         Warn when collapse_precision removes fewer than 10% of contexts.
-        Log the reduction due to the source variants optimization, if any.
+        Log the reduction due to the variant sources optimization, if any.
         """
         after, removed, gridded, saved = self.cfactor
         before = after + removed
@@ -1096,7 +1049,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 'collapse_precision should be turned off',
                 100 * removed / before)
         if saved:  # see the 'separate' field of the nctxs dataset
-            logging.info('The source variants optimization reduced the '
+            logging.info('The variant sources optimization reduced the '
                          'contexts from {:_d} to {:_d}, a factor {:.2f}'
                          .format(int(after + saved), int(after),
                                  (after + saved) / after))
@@ -1139,36 +1092,15 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.sitecol.sids, self.oqparam.imtls.size, gids[grp_id])
         return self.rmap[grp_id]
 
-    def set_gid_dic(self, ds):
-        """
-        Compute the gid_dic of each site label once, in the master, and
-        attach it to the cmakers sent to the tasks, so that the workers
-        do not need to build the realizations (see read_task_input)
-
-        :param ds: the datastore read by the tasks
-        :returns: the gid_dic of the Default label
-        """
-        # NB: this is needed for CND, which has 7_864_320 LtRealizations:
-        # building them in each worker requires 4.7 GB per process, i.e.
-        # the machine goes out of memory with 160 workers
-        dics = [read_gid_dic(ds, full_lt)
-                for full_lt in self.full_lt_by_label.values()]
-        # the labels are ordered as the cmdict, i.e. Default first
-        for gid_dic, cmakers in zip(dics, self.cmdict.values()):
-            for cmaker in cmakers:
-                cmaker.gid_dic = gid_dic
-        return dics[0]
-
     def _execute(self, ds):
         oq = self.oqparam
         allargs = []
         weights = []  # estimated weight of each task
         self.rmap = {}
-        # the rates are attributed to the sets of realizations with the
-        # same uncertainties, see read_gid_dic; NB: this is read on ds, the
-        # dataset read by the tasks, which can be the parent calculation
-        # (as in case_36)
-        gid_dic = self.set_gid_dic(ds)
+        # Compile routing once, independently of site labels and weights.
+        unc_ts_sets = read_unc_ts_sets(ds)
+        ts2gids = dict(zip(unc_ts_sets,
+                           self.full_lt.get_gids(unc_ts_sets)))
         # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
                            self.max_weight, self.num_chunks)
@@ -1178,7 +1110,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
         if oq.split_time is None:
             oq.split_time = max(max_gb * 100, 10)
-        gids = group_gids(self.csm.src_groups, gid_dic)
+        gids = group_gids(self.csm.src_groups, ts2gids)
         for cmaker, tilegetters, grp_keys, atomic, grp_weights in data:
             num_blocks += sum('-' in key for key in grp_keys)
             # the rates are accumulated in a RateMap in the master, unless
@@ -1194,6 +1126,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 assert len(tilegetters) <= 1, (
                     'disagg_by_src has %d tiles for group %s'
                     % (len(tilegetters), grp_keys))
+            grp_ids = {int(key.split('-')[0]) for key in grp_keys}
+            task_ts2gids, bset_values = _task_data(
+                self.csm.src_groups, grp_ids, ts2gids, self.full_lt)
             for tgetter in tilegetters:
                 if len(tgetter(self.sitecol, cmaker.ilabel)) == 0:
                     # can happen for some ilabel
@@ -1201,12 +1136,14 @@ class ClassicalCalculator(base.HazardCalculator):
                 elif atomic:
                     # JPN, send the grp_keys together, they will all send
                     # rates to the RateMap associated to the first grp_id
-                    allargs.append((grp_keys, tgetter, cmaker, ds))
+                    allargs.append((grp_keys, tgetter, cmaker,
+                                    task_ts2gids, bset_values, ds))
                     weights.append(sum(grp_weights) / len(tilegetters))
                 else:
                     # send a grp_key at the time
                     for grp_key, w in zip(grp_keys, grp_weights):
-                        allargs.append(([grp_key], tgetter, cmaker, ds))
+                        allargs.append(([grp_key], tgetter, cmaker,
+                                        task_ts2gids, bset_values, ds))
                         weights.append(w / len(tilegetters))
             maxtiles = max(maxtiles, len(tilegetters))
         allargs = parallel.heaviest_first(allargs, weights)

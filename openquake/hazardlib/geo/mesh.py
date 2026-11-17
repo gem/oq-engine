@@ -29,7 +29,7 @@ import shapely.ops
 
 from alpha_shapes import Alpha_Shaper
 from openquake.baselib.general import cached_property, gen_slices
-from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib import geo
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
 
@@ -372,7 +372,7 @@ class Mesh(object):
         lats = self.lats.flat
         depths = self.depths.flat
         for i in range(self.lons.size):
-            yield Point(lons[i], lats[i], depths[i])
+            yield geo.Point(lons[i], lats[i], depths[i])
 
     def __getitem__(self, item):
         """
@@ -696,9 +696,7 @@ class Mesh(object):
                                   shapely.geometry.Point)):
             polygon2d = polygon2d.buffer(self.DIST_TOLERANCE, 1)
 
-        # avoid circular imports
-        from openquake.hazardlib.geo.polygon import Polygon
-        return Polygon._from_2d(polygon2d, proj)
+        return geo.Polygon._from_2d(polygon2d, proj)
 
     def reduce(self, n):
         """
@@ -769,8 +767,8 @@ class RectangularMesh(Mesh):
                 # odd number of columns, we can easily take
                 # the middle point
                 depth = self.depths[mid_row, mid_col]
-                return Point(self.lons[mid_row, mid_col],
-                             self.lats[mid_row, mid_col], depth)
+                return geo.Point(self.lons[mid_row, mid_col],
+                                 self.lats[mid_row, mid_col], depth)
             else:
                 # even number of columns, need to take two middle
                 # points on the middle row
@@ -791,7 +789,7 @@ class RectangularMesh(Mesh):
         # we need to find the middle between two points
         depth = (depth1 + depth2) / 2.0
         lon, lat = geo_utils.get_middle_point(lon1, lat1, lon2, lat2)
-        return Point(lon, lat, depth)
+        return geo.Point(lon, lat, depth)
 
     def get_mean_inclination_and_azimuth(self):
         """

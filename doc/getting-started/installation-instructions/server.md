@@ -85,13 +85,6 @@ dbfile = /path/to/db.sqlite3
 If the database is on a different machine, you have to edit the file and
 specify the correct host name.
 
-
-NB: setting `host=127.0.0.1` is a mistake in a server installation, 
-since it will result on the database being accessed directly, which is a problem,
-since regular users will not have write permission to it. 
-`host=127.0.0.1` instead is correct for single-user installations and correctly set by
-the universal installer.
-
 #### Upgrade the database to host users and sessions
 
 ```console
@@ -177,6 +170,15 @@ ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --t
 ```
 where `N` is the number of workers. 
 Refer to the official Gunicorn documentation for the optimal choice of this value based on your system's hardware specifications.
+
+### Two installations on the same machine
+
+The installer does not allow two server installations on the same machine. Manually, you could create two
+different virtual environments, use different ports for the WebUI and use different systemd services,
+however we advice against that approach. Engine calculations tend to be resource hungry, so calculations
+running on the first installation could run out of memory and break also the second installation. We
+recommend implementing standard server installations on containers, with memory limits and process
+limits.
 
 ### Using Environment Variables in systemd Units
 
