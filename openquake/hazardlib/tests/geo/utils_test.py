@@ -388,14 +388,14 @@ class PlaneFit(unittest.TestCase):
 
     def setUp(self):
         # Set the seed of the random number generator
-        rng = numpy.random.default_rng(41)
+        self.rng = rng = numpy.random.default_rng(41)
         # Compute the x and y coordinates of the points which lay on the plane
         self.npts = 20
         self.points = numpy.zeros((self.npts, 3))
         self.points[:, 0] = (rng.random(self.npts) - 0.5) * 10.
         self.points[:, 1] = (rng.random(self.npts) - 0.5) * 10.
         # Plane equation coefficients
-        self.c = numpy.random.random(4)
+        self.c = rng.random(4)
         # Normalise the plane equation coefficients to get the direction
         # cosines
         self.c[0:3] = self.c[0:3] / (sum(self.c[0:3]**2.))**0.5
@@ -411,6 +411,9 @@ class PlaneFit(unittest.TestCase):
         Tests the parameters of the plane obtained through the regression.
         """
         pnt, par = utils.plane_fit(self.points)
+        # Both directions of the normal describe the same plane.
+        if self.c[:3] @ par < 0:
+            par = -par
         numpy.testing.assert_allclose(self.c[0:3], par, rtol=1e-5, atol=0)
         self.assertAlmostEqual(self.c[-1], -sum(par*pnt))
 
@@ -419,8 +422,11 @@ class PlaneFit(unittest.TestCase):
         Tests the parameters of the plane obtained through the regression.
         In this second case we add noise to the z values
         """
-        self.points[:, 2] += numpy.random.random(self.npts) * 0.01
+        self.points[:, 2] += self.rng.random(self.npts) * 0.01
         pnt, par = utils.plane_fit(self.points)
+        # Align the normal before checking the plane's constant term too.
+        if self.c[:3] @ par < 0:
+            par = -par
         numpy.testing.assert_allclose(self.c[0:3], par, atol=.001)
         numpy.testing.assert_allclose(self.c[-1], -sum(par*pnt), atol=.01)
 
