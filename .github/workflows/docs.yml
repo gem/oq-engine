@@ -87,10 +87,10 @@ jobs:
           echo "BS_REF: $GITHUB_BS_REF"
       - name: Check out the codebase
         uses: actions/checkout@v6
-      - name: Set up Python 3.12
+      - name: Set up Python 3.13
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.13'
       - name: Upgrade pip and install requirements
         run: |
           pip install -U pip wheel
