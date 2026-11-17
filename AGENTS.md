@@ -7,6 +7,8 @@ not too short). Do not strip comments away. Prefer the use of numpy
 when possible. Do not use black code style, in particular no closing
 parenthesis on their own line; try to save vertical space.
 Private functions should have comments, not docstrings.
+Prefer module-level imports. Avoid local imports unless they are necessary
+for a circular dependency or an optional dependency.
 
 # development
 
