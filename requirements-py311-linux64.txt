@@ -72,7 +72,7 @@ https://wheelhouse.openquake.org/unified/sympy-1.12-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/timezonefinder-8.2.1-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/unified/toml-0.10.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/tzdata-2023.3-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/unified/urllib3-2.7.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/urllib3-2.8.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/zipp-3.19.1-py3-none-any.whl
 # Added at branch updatedeps
 https://wheelhouse.openquake.org/unified/pygments-2.20.0-py3-none-any.whl

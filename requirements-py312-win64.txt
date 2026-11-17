@@ -69,7 +69,7 @@ https://wheelhouse.openquake.org/unified/sqlparse-0.5.5-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/sympy-1.12-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/toml-0.10.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/tzdata-2023.3-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/unified/urllib3-2.7.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/urllib3-2.8.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/zipp-3.19.1-py3-none-any.whl
 # Added at branch updatedeps
 https://wheelhouse.openquake.org/unified/pygments-2.20.0-py3-none-any.whl
