@@ -61,31 +61,33 @@ def _magnitude_scaling(C, ctx):
 
 def _load_adjustments(path):
     """
-    Read every `adj_Nhz` dataset out of the h5 at `path` and return a dict
-    keyed by frequency in Hz (float).
+    Read every /<site>/adj_<Nhz> dataset out of the h5 at `path` and return
+    a dict keyed by (site_name, freq_hz).
     """
     dat = {}
     with h5py.File(path, 'r') as f:
-        for ds_name in f:
-            if ds_name.startswith('adj_'):
-                freq = float(ds_name[len('adj_'):].rstrip('hz'))
-                dat[freq] = f[ds_name][:]
+        for site_name in f:
+            site = f[site_name]
+            for ds_name in site:
+                if ds_name.startswith('adj_'):
+                    freq = float(ds_name[len('adj_'):].rstrip('hz'))
+                    dat[(site_name, freq)] = site[ds_name][:]
     return dat
 
 
 def _verify_grids_match(dat, path):
     """
-    Raise if any two frequency grids disagree on lon/lat columns. Return
-    the first frequency's dataset to use as the reference grid.
+    Raise if any two datasets disagree on lon/lat columns. Return the
+    first dataset to use as the reference grid.
     """
-    freqs = list(dat)
-    ref = dat[freqs[0]]
-    for freq in freqs[1:]:
-        if not (np.array_equal(dat[freq]['lon'], ref['lon'])
-                and np.array_equal(dat[freq]['lat'], ref['lat'])):
+    keys = list(dat)
+    ref = dat[keys[0]]
+    for key in keys[1:]:
+        if not (np.array_equal(dat[key]['lon'], ref['lon'])
+                and np.array_equal(dat[key]['lat'], ref['lat'])):
             raise ValueError(
-                '%s: grid coords differ between adj_%ghz and adj_%ghz'
-                % (os.path.basename(path), freqs[0], freq))
+                '%s: grid coords differ between %s and %s'
+                % (os.path.basename(path), keys[0], key))
     return ref
 
 
@@ -186,45 +188,43 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     Non-ergodic variant of Sung et al. (2022).
 
     At compute time the ergodic mean is shifted by a scalar Delta-mu
-    looked up from a site-specific adjustment table. The shift depends
-    only on the rupture's nearest grid cell and the frequency. Each
-    table entry already sums the model's non-ergodic source, site and
-    path terms, which were integrated when the h5 was generated (i.e.,
-    compute() does no ray-tracing itself).
+    looked up from the adjustment h5 at the rupture's nearest grid
+    cell. The adjustment is conditional on the target site, so each
+    row is routed to the group matching its `custom_site_id`.
 
     :param adjustment_h5:
-        Bare filename (e.g. "adj_RE_Site1.h5") inside the gsim/sung_2022/
-        data folder, or an absolute path. The file holds one dataset per
-        frequency named `adj_Nhz` (e.g. `adj_1hz`, `adj_5hz`). Each provided
-        dataset in sung_2022/ is a structured array of 5551 grid nodes with
-        fields (lon, lat, mean, std, rlz[N]) covering the France 0.2x0.2 degree
-        grid. N is the number of posterior realizations stored in the file
-        (100 for the files in sung_2022). Each file is specific to one target
-        site (the site location and Vs30 are baked in at generation time).
+        Bare filename (default "adj_RE_france.h5") inside the
+        gsim/sung_2022/ data folder, or an absolute path. The file has
+        a /<site_name>/adj_<N>hz group structure; `custom_site_id`
+        values in the job's sites.csv must match one of the site groups
+        in the h5. Each dataset is a structured array of 5551 grid nodes
+        with fields (lon, lat, mean, std, rlz[N]) covering the France
+        0.2x0.2 degree grid. All sites share the same grid; dat['mean']
+        and dat['rlz'] differ per site because the posterior is
+        conditional on the receiver.
     :param rlz_id:
         Selects which posterior draw of the adjustment field to use.
         "mean" (default) uses the posterior mean field `mean`; an integer
         0..N-1 selects one of the sampled realization maps in `rlz[rlz_id]`.
-        Each branch of SungEtAl2020 in a GMM logic tree XML specifies a single
-        realization (rlz_id=0..N-1) to sample the full epistemic uncertainty of
-        the VCM model. The LT size can be anything up to N.
+        The same rlz_id applies across all sites in the h5; each LT
+        branch corresponds to one posterior draw.
     """
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'custom_site_id'}
     REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
 
     experimental = True # For now
 
-    def __init__(self, adjustment_h5, rlz_id="mean"):
-        # Resolve the per-site adjustment table path (bare filenames are
-        # looked up under gsim/sung_2022/; absolute paths pass through)
+    def __init__(self, adjustment_h5="adj_RE_france.h5", rlz_id="mean"):
         self.adjustment_h5 = os.path.join(ADJ_DIR, adjustment_h5)
         self.rlz_id = rlz_id
         assert os.path.exists(self.adjustment_h5), \
             'Adjustment h5 not found: %s' % self.adjustment_h5
 
-        # Load every frequency dataset (keyed by float Hz), verify they
-        # share the same grid, and cache the lattice parameters used by
-        # compute() for O(1) nearest-node indexing
+        # Load every (site, freq) dataset, verify they share the same grid,
+        # cache the lattice parameters for O(1) nearest-node indexing
         self.dat = _load_adjustments(self.adjustment_h5)
+        self.sites = sorted({s for s, _ in self.dat})
+        self.freqs = sorted({f for _, f in self.dat})
         ref = _verify_grids_match(self.dat, self.adjustment_h5)
         p = _lattice_params(ref, self.adjustment_h5)
         self._lon0 = p['lon0']
@@ -249,22 +249,45 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     # Generic func name so method accepted in get_mean_stds for speedup
     def compute_central(self, ctx, imts, mean, sigma, tau, phi, **_kw):
         """
-        Branch-independent work: ergodic backbone + nearest-node index.
-        Returns `idx_all` so apply_branch_shift() can pull the per-rlz column
-        without redoing the lookup.
+        Branch-independent work: ergodic backbone + nearest-node index +
+        per-row site-name decode. Returns (idx_all, csids) so
+        apply_branch_shift() can pull the per-rlz column for the right
+        site without redoing the work.
 
         ``**_kw`` absorbs ContextMaker kwargs (e.g. ``gra_mon``) that this
         GSIM has no use for - accepted for interface compatibility only.
         """
-        missing = sorted({imt.frequency for imt in imts} - set(self.dat))
+        missing = sorted({imt.frequency for imt in imts} - set(self.freqs))
         if missing:
             raise ValueError(
                 '%s: no adjustment dataset for frequency %s Hz '
                 '(available: %s Hz)' % (
                     os.path.basename(self.adjustment_h5),
                     ', '.join('%g' % f for f in missing),
-                    ', '.join('%g' % f for f in sorted(self.dat))))
-        grid = self.dat[next(iter(self.dat))]
+                    ', '.join('%g' % f for f in self.freqs)))
+
+        # Decode custom_site_id per row and reject any unknown ones
+        csids = np.array([s.decode('utf-8').strip('\x00')
+                          if isinstance(s, (bytes, bytearray))
+                          else str(s).strip('\x00')
+                          for s in ctx.custom_site_id])
+        unknown = sorted(set(csids) - set(self.sites))
+        if unknown:
+            raise ValueError(
+                '%s: custom_site_id(s) not present in the adjustment h5: '
+                '%s. Known sites: %s'
+                % (os.path.basename(self.adjustment_h5),
+                   unknown, self.sites))
+        # Every (site, freq) pair touched by this batch must exist
+        for site in set(csids):
+            for imt in imts:
+                if (site, imt.frequency) not in self.dat:
+                    raise ValueError(
+                        '%s: no adjustment for site=%s at frequency=%g Hz'
+                        % (os.path.basename(self.adjustment_h5),
+                           site, imt.frequency))
+
+        grid = self.dat[(self.sites[0], self.freqs[0])]
         # Nearest-node index from lattice arithmetic; O(n_ctx) ops total
         i_lon = np.round(
             (ctx.clon - self._lon0) / self._lon_step).astype(np.int64)
@@ -303,21 +326,24 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
             sigma[m] = C['tot']
             tau[m] = C['tau']
             phi[m] = np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.))
-        return idx_all
+        return idx_all, csids
 
     # Generic func name so method accepted in get_mean_stds for speedup
-    def apply_branch_shift(self, idx_all, imts, mean):
+    def apply_branch_shift(self, central, imts, mean):
         """
-        Branch-specific shift: add Delta-mu for this `rlz_id` into the
-        central mean. `idx_all` is the per-rupture nearest-node index
-        returned by compute_central() and cached by ContextMaker.
+        Branch-specific shift: for each unique custom_site_id in the batch,
+        add Delta-mu from that site's rlz column into the central mean.
         """
-        for m, imt in enumerate(imts):
-            dat = self.dat[imt.frequency]
-            if self.rlz_id == 'mean':
-                mean[m] += dat['mean'][idx_all]
-            else:
-                mean[m] += dat['rlz'][idx_all, int(self.rlz_id)]
+        idx_all, csids = central
+        for site in np.unique(csids):
+            mask = csids == site
+            nidx = idx_all[mask]
+            for m, imt in enumerate(imts):
+                dat = self.dat[(site, imt.frequency)]
+                if self.rlz_id == 'mean':
+                    mean[m, mask] += dat['mean'][nidx]
+                else:
+                    mean[m, mask] += dat['rlz'][nidx, int(self.rlz_id)]
 
     # The Coefficients used here are the same of the ergodic model BUT the
     # standard deviations differ given they are for the non-ergodic variant

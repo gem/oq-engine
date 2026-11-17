@@ -9,7 +9,7 @@
                 <logicTreeBranch branchID="b1">
                     <uncertaintyModel>
                         [SungEtAl2022NonErgodic]
-                        adjustment_h5 = "adj_RE_Site1.h5"
+                        adjustment_h5 = "adj_RE_france.h5"
                         rlz_id = "mean"
                     </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
