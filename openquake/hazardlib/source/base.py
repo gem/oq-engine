@@ -45,14 +45,24 @@ TWO30 = I64(2**30)
 
 @dataclass
 class SourceParam:
+    """Shared parameters accepted by ``from_param`` on these source classes:
+
+    * PointSource
+    * AreaSource
+    * MultiPointSource
+    * SimpleFaultSource
+    * ComplexFaultSource
+    * KiteFaultSource
+    * CharacteristicFaultSource
+    """
     source_id: str
     name: str
-    tectonic_region_type: str
+    trt: str
     mfd: object
-    rupture_mesh_spacing: float
-    magnitude_scaling_relationship: object
-    rupture_aspect_ratio: float
-    temporal_occurrence_model: object
+    rms: float
+    msr: object
+    rar: float
+    tom: object
 
 
 def get_code2cls():
@@ -469,6 +479,16 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         If either rupture aspect ratio or rupture mesh spacing is not positive
         (if not None).
     """
+
+    @classmethod
+    def from_param(cls, param, *args):
+        """Build a source from shared parameters and source-specific args.
+
+        The concrete source constructor must use the common parametric
+        arguments first, followed by its source-specific arguments.
+        """
+        return cls(param.source_id, param.name, param.trt, param.mfd,
+                   param.rms, param.msr, param.rar, param.tom, *args)
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
