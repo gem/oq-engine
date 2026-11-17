@@ -17,7 +17,7 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import numpy
-from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource, SourceParam
 from openquake.hazardlib.codes import MULTI_POINT
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.geo import utils, NodalPlane
@@ -60,14 +60,24 @@ class MultiPointSource(ParametricSeismicSource):
         'set_hypo_depth_dist',
     }
 
-    def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, magnitude_scaling_relationship, rupture_aspect_ratio,
+    def __init__(self, source_id, name, tectonic_region_type, mfd,
+                 rupture_mesh_spacing, magnitude_scaling_relationship,
+                 rupture_aspect_ratio, temporal_occurrence_model,
                  # point-specific parameters (excluding location)
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 nodal_plane_distribution, hypocenter_distribution,
-                 mesh, temporal_occurrence_model=None):
+                 nodal_plane_distribution, hypocenter_distribution=None,
+                 mesh=None):
+        # Old positional calls omit mesh spacing and put TOM last.
+        if mesh is None:
+            raise TypeError(
+                'MultiPointSource constructor arguments have changed: '
+                'insert rupture_mesh_spacing (use None) immediately after '
+                'mfd and pass temporal_occurrence_model immediately after '
+                'rupture_aspect_ratio, before upper_seismogenic_depth '
+                '(None can be passed if you just want to instantiate '
+                'the source for serialization). '
+                'The final argument must be mesh.')
         assert len(mfd) == len(mesh), (len(mfd), len(mesh))
-        rupture_mesh_spacing = None
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship,
@@ -84,16 +94,16 @@ class MultiPointSource(ParametricSeismicSource):
     def __iter__(self):
         for i, (mfd, point) in enumerate(zip(self.mfd, self.mesh)):
             name = '%s:%s' % (self.source_id, i)
-            ps = PointSource(
-                name, name, self.tectonic_region_type,
-                mfd, self.rupture_mesh_spacing,
+            param = SourceParam(
+                name, name, self.tectonic_region_type, mfd,
+                self.rupture_mesh_spacing,
                 self.magnitude_scaling_relationship,
                 get(self.rupture_aspect_ratio, i),
-                self.temporal_occurrence_model,
-                self.upper_seismogenic_depth,
-                self.lower_seismogenic_depth,
-                point,
-                self.nodal_plane_distribution,
+                self.temporal_occurrence_model)
+            ps = PointSource.from_param(
+                param,
+                self.upper_seismogenic_depth, self.lower_seismogenic_depth,
+                point, self.nodal_plane_distribution,
                 self.hypocenter_distribution)
             ps.scaling_rate = getattr(self, 'scaling_rate', 1)
             yield ps
