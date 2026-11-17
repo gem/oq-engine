@@ -27,43 +27,31 @@ and its collaborators.
 
     .. grid-item-card::  :ref:`getting-started`
 	:text-align: center
-
-	:octicon:`rocket;5em;sd-text-info`
-	^^^
+	:header: :octicon:`rocket;5em;sd-text-info`
 
     .. grid-item-card::  :ref:`user-guide`
 	:text-align: center
-
-	:octicon:`book;5em;sd-text-info`
-	^^^
+	:header: :octicon:`book;5em;sd-text-info`
 
 .. grid:: 2
 
     .. grid-item-card::  :ref:`api-reference`
 	:text-align: center
-
-	:octicon:`codescan;5em;sd-text-info`
-	^^^
+	:header: :octicon:`codescan;5em;sd-text-info`
 
     .. grid-item-card::  :ref:`underlying-science`
 	:text-align: center
-
-	:octicon:`archive;5em;sd-text-info`
-	^^^
+	:header: :octicon:`archive;5em;sd-text-info`
 
 .. grid:: 2
 
     .. grid-item-card::  :ref:`release-notes`
 	:text-align: center
-
-	:octicon:`tag;5em;sd-text-info`
-	^^^
+	:header: :octicon:`tag;5em;sd-text-info`
 
     .. grid-item-card::  :ref:`contributing`
 	:text-align: center
-
-	:octicon:`people;5em;sd-text-info`
-	^^^
+	:header: :octicon:`people;5em;sd-text-info`
 
 
 Introductory video

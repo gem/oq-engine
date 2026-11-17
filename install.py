@@ -226,15 +226,18 @@ PLATFORM = {
 }
 
 # Keep this list in sync with openquake/server/standalone.py. The installer
-# must also work when downloaded on its own, before openquake is installed.
+# must also work when downloaded on its own, before openquake is installed,
+# so it can not import the object from openquake/server/standalone.py
 STANDALONE_APP_INFO = [
-    {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.16.4"},
+    # All engine Django app need oq-platform-standalone
+    {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.19.1"},
+    # Django apps to install
     {"pkg": "oq-platform-ipt", "name": "openquakeplatform_ipt",
-     "ver": "~=1.21.0"},
+     "ver": "~=1.22.1"},
     {"pkg": "oq-platform-taxonomy", "name": "openquakeplatform_taxonomy",
-     "ver": "~=1.2.0"},
+     "ver": "~=1.2.1"},
     {"pkg": "django-gem-taxonomy", "name": "django_gem_taxonomy",
-     "ver": "~=1.4.4"}]
+     "ver": "~=1.5.1"}]
 WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
 
@@ -251,6 +254,9 @@ def install_standalone(pycmd, apps=STANDALONE_APP_INFO):
                  "--find-links", WHEELHOUSE_URL,
                  "--find-links", URL_STANDALONE,
                  app["pkg"] + app["ver"]])
+            subprocess.check_call([pycmd, "-m", "pip", "check"])
+        except subprocess.CalledProcessError:
+            raise
         except Exception as exc:
             # for instance if somebody removed a wheel from the wheelhouse
             errors.append(f"{exc}: could not install {app['pkg']}")
@@ -517,6 +523,7 @@ def install_requirements(inst, pycmd, version, from_fork):
         [pycmd, "-m", "pip", "install", "--force-reinstall",
          "--trusted-host", "wheelhouse.openquake.org",
          "--trusted-host", "raw.githubusercontent.com", "-r", req])
+    subprocess.check_call([pycmd, "-m", "pip", "check"])
 
 
 def git_zip_url(commit):
@@ -553,6 +560,7 @@ def install_engine(inst, pycmd, version, noupgrade):
                 [pycmd, "-m", "pip", "install"] + upgrade
                 + [git_zip_url(commit), "--no-clean"], env=custom_env)
         fix_version(commit, inst.VENV)
+    subprocess.check_call([pycmd, "-m", "pip", "check"])
 
 
 def create_cfg(inst):

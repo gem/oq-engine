@@ -27,6 +27,13 @@ The script allows the user to select between different kinds of installation:
 >_**Note 6.** On Windows, the Microsoft App Store may suggest a Python version which is not supported by the engine, so you have to be careful and install a supported Python version. You can do  from the Python official download page._
 > <br />
 >_**Note 7.** Windows users can use a traditional .exe installer which can be downloaded from https://downloads.openquake.org/pkgs/windows/oq-engine/ and includes Python 3.11 and all dependencies. However users needing to develop with the engine are better off with the universal installation script, even on Windows._
+> <br />
+>**Note 8.**
+> **Database Requirements (RHEL 8.x & Derivatives)**
+> 
+> With the upgrade to **Django 5.2 LTS**, Red Hat Enterprise Linux 8.x and its derivatives (e.g., Rocky Linux, AlmaLinux) require installing and configuring a newer version of **SQLite** (3.31.0 or higher), as the default version bundled with the OS (3.26) is no longer supported.
+> 
+> For more details, please refer to the official [Django 5.2 Release Notes](https://docs.djangoproject.com/en/5.2/releases/5.2/#dropped-support-for-sqlite-3-31-0).
 
 After installing, you can get the location of the engine virtual enviroment with the command
 ```
@@ -187,7 +194,9 @@ $ sudo -H python3.11 install.py server
 
 The first WebUI startup applies database migrations and synchronizes the
 optional standalone application data. New standard taxonomy records are
-added without replacing existing records.
+loaded after dropping existing taxonomy records on application or data
+upgrades. The taxonomy application is still in development, and its content
+is stored in Git; a content-preserving dump/restore procedure is planned.
 
 The installation script will automatically create a user called
 `openquake` and will install the engine in the directory
