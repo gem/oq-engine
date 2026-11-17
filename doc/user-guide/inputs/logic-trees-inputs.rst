@@ -117,6 +117,8 @@ attribute of the ``logicTreeBranchSet`` element, described in
   MFD (a float).
 - ``maxMagGRAbsolute``: replaces the Gutenberg-Richter maximum magnitude
   (a float).
+- ``minMagGRAbsolute``: replaces the Gutenberg-Richter minimum magnitude
+  (a float).
 - ``maxMagGRRelative``: adds a delta to the Gutenberg-Richter maximum
   magnitude (a float).
 - ``maxMagGRRelativeNoMoBalance``: as ``maxMagGRRelative``, without
@@ -129,6 +131,8 @@ attribute of the ``logicTreeBranchSet`` element, described in
 - ``incrementalMFDAbsolute``: replaces the incremental MFD of a single
   source (an ``incrementalMFD`` node with minimum magnitude, bin width and
   rates).
+- ``multiMFDAbsolute``: replaces the MFDs of all the points of a
+  multiPointSource (a ``multiMFD`` node).
 - ``truncatedGRFromSlipAbsolute``: builds a truncated Gutenberg-Richter
   MFD from a slip rate.
 - ``setMSRAbsolute``: replaces the magnitude scaling relationship.
@@ -1097,7 +1101,7 @@ sampling method.
   With this sampling method, the engine randomly choose branches ignoring the weights in the logic tree, but still using an hypercube sampling; then, the hazard curve statistics are computed by taking into account the weights.
 
 The engine samples the paths with the method ``sample_paths`` of
-the ``CompositeLogicTree`` object, which takes the number of samples,
+the ``BranchSetLogicTree`` object, which takes the number of samples,
 the seed and the sampling method::
 
     clt.sample_paths(num_samples, seed, sampling_method)

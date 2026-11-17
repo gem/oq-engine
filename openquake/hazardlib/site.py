@@ -37,6 +37,7 @@ from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, get_middle_point, geolocate)
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.boundaries import read_countries_df
 
 TWO32 = 2 ** 32
 U32 = numpy.uint32
@@ -56,13 +57,15 @@ param = dict(
 #: hazard; lon/lat included because valid.coordinates accepts 'nan'
 CORE_SITE_PARAMS = ('lon', 'lat', 'vs30', 'z1pt0', 'z2pt5', 'z1pt4')
 
+# Site params that should not be rejected if zero
+PERMIT_ZERO_SITE_PARAMS = ('ch_ampl', 'ch_phis2s', 'ch_phiss')
+
 
 def get_countries(lons, lats):
     """
     :returns: array of 3-letter country codes
     """
-    from openquake.commonlib import readinput
-    geom_df = readinput.read_countries_df()
+    geom_df = read_countries_df()
     lonlats = numpy.zeros((len(lons), 2), numpy.float32)
     lonlats[:, 0] = lons
     lonlats[:, 1] = lats
@@ -277,11 +280,17 @@ site_param_dt = {
     'h800': numpy.float64,
     'geology': (numpy.bytes_, 20),
     'amplfactor': numpy.float64,
+    'ch_ampl02': numpy.float64,
     'ch_ampl03': numpy.float64,
+    'ch_ampl04': numpy.float64,
     'ch_ampl06': numpy.float64,
+    'ch_phis2s02': numpy.float64,
     'ch_phis2s03': numpy.float64,
+    'ch_phis2s04': numpy.float64,
     'ch_phis2s06': numpy.float64,
+    'ch_phiss02': numpy.float64,
     'ch_phiss03': numpy.float64,
+    'ch_phiss04': numpy.float64,
     'ch_phiss06': numpy.float64,
     'f0': numpy.float64,
     # Fundamental period and and amplitude of HVRSR spectra
@@ -890,6 +899,8 @@ class SiteCollection(object):
         for param in self.req_site_params:
             if param in ignore:
                 continue
+            if param.startswith(PERMIT_ZERO_SITE_PARAMS):
+                continue # Some are permitted e.g. swiss 2026 site spec amp params
             dt = site_param_dt[param]
             if dt is numpy.float64 and (self.array[param] == 0.).all():
                 raise ValueError('The site parameter %s is always zero: please'

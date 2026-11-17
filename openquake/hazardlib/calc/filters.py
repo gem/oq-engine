@@ -299,8 +299,7 @@ def split_source(src):
     :param src: a splittable (or not splittable) source
     :returns: the underlying sources (or the source itself)
     """
-    from openquake.hazardlib.source import splittable  # avoid circular import
-    if not splittable(src):
+    if not src.is_splittable():
         return [src]
     splits = list(src)
     if len(splits) == 1:

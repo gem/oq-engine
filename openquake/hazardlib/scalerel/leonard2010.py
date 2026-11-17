@@ -115,10 +115,10 @@ class Leonard2010(BaseMSRSigma, BaseASRSigma):
 
     Bilinear magnitude-to-rupture-length relations for interplate dip-slip
     (normal and reverse) faults, with average displacement derived from the
-    rupture length as ``AD = 1.7e-5 * L`` (``L`` in metres).  Added for PR-2
-    of the oq-engine integration plan as the ``LEONARD2010`` scaling relation
-    of the PFD distributed-displacement model (Visini et al., 2025); it is
-    additive to the stable-continental-region classes above.
+    rupture length as ``AD = 1.7e-5 * L`` (``L`` in metres).  It is the
+    ``LEONARD2010`` scaling relation of the PFD distributed-displacement model
+    (Visini et al., 2025); it is additive to the stable-continental-region
+    classes above.
     """
 
     SIGMA_L = 0.23  # log10 standard deviation of rupture length

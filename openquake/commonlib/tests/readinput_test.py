@@ -28,6 +28,7 @@ from io import BytesIO
 from openquake.baselib import general, hdf5
 from openquake.hazardlib import (
     InvalidFile, site_amplification, gsim_lt, source_reader)
+from openquake.hazardlib.lt import LogicTreeError
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.risklib import asset
@@ -748,7 +749,7 @@ class LogicTreeTestCase(unittest.TestCase):
         oq = readinput.get_oqparam(job_ini)
         lt = readinput.get_logic_tree(oq)
         # (2+1) x 4 = 12 realizations
-        paths = [rlz.lt_path for rlz in lt]
+        paths = [rlz.lt_path for rlz in lt.get_realizations()]
         expected = [('SM1', '.', 'gA0', 'gA1'),
                     ('SM1', '.', 'gA0', 'gB1'),
                     ('SM1', '.', 'gB0', 'gA1'),
@@ -883,8 +884,10 @@ class PotentialPathsTestCase(unittest.TestCase):
         self.assertIn('use_rates=true is not enough', str(ctx.exception))
 
     def test_quantiles_without_use_rates(self):
-        with self.assertRaises(ValueError) as ctx:
-            self.get_full_lt(quantile_hazard_curves='0.1,0.9')
+        with mock.patch.object(readinput.logictree, 'FullLogicTree',
+                               side_effect=AssertionError('enumeration')):
+            with self.assertRaises(ValueError) as ctx:
+                self.get_full_lt(quantile_hazard_curves='0.1,0.9')
         self.assertIn('or set use_rates=true', str(ctx.exception))
 
 
@@ -904,3 +907,40 @@ class RelaxVs30TestCase(unittest.TestCase):
         with hdf5.File(fname, 'r') as f:
             [gsim] = f['gsim_lt'].values['*']
         self.assertFalse(gsim.vs30_strict)
+
+
+PFD_LT = '''<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt">
+    <logicTreeBranchSet branchSetID="bs1" uncertaintyType="fdhaPrimarySRModel">
+      <logicTreeBranch branchID="B1">
+        <uncertaintyModel>MossRoss2011PrimarySR</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="bs2" uncertaintyType="fdhaCalcRSigma">
+      <logicTreeBranch branchID="SIG">
+        <uncertaintyModel>1</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>'''
+
+
+class GetPfdLtTestCase(unittest.TestCase):
+    # a scalar r_sigma_km in the job.ini is rejected if the PFD logic tree
+    # has an fdhaCalcRSigma branchset
+    def test_r_sigma_conflict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, 'pfd_lt.xml'), 'w') as f:
+                f.write(PFD_LT)
+            oq = SimpleNamespace(
+                inputs={'pfd_logic_tree': 'pfd_lt.xml', 'job_ini': 'job.ini'},
+                base_path=tmp, random_seed=42, number_of_logic_tree_samples=0,
+                sampling_method='early_weights')
+            readinput.get_pfd_lt(oq)  # r_sigma_km is not in the job.ini
+            oq.r_sigma_km = 1.0
+            with self.assertRaises(LogicTreeError) as ctx:
+                readinput.get_pfd_lt(oq)
+            self.assertIn('fdhaCalcRSigma', str(ctx.exception))

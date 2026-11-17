@@ -57,7 +57,7 @@ class Petersen2011SecondaryFD(BaseSecondarySurfDispl):
     # the mean displacement diverges as r -> 0 (ln r -> -inf). The tool floors
     # the distance fed to that regression at the footprint half-width z/2; the
     # clamp is applied at the calc/ adapter boundary so get_prob below stays
-    # paper-faithful (docs/design/rupture_location_uncertainty.md, D7).
+    # paper-faithful.
     NEAR_FIELD_FLOOR = "footprint_half"
 
     # Pixel ("cell") size parameters from Table 4 (Page 812, Petersen et al., 2011)

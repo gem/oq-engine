@@ -45,6 +45,9 @@ import argparse
 import platform
 import subprocess
 from urllib.request import urlopen, Request
+
+from openquake.server import standalone
+
 try:
     # used for "server" modes only, not available on windows
     import pwd
@@ -109,12 +112,19 @@ class server:
     OQDATA = "/opt/openquake/oqdata"
     ETC = "/etc/openquake"
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
-    CONFIG = f"""[server]
+    USER = "openquake"
+
+    @classmethod
+    def config(cls, authkey):
+        # the authkey is the key of the internal API, which the users need
+        # to reach the engine from their calculations: it is random
+        return f"""[server]
     host = localhost
-    dbfile = {DBPATH}
+    dbfile = {cls.DBPATH}
+    [webapi]
+    authkey = {authkey}
     [directory]
     """
-    USER = "openquake"
 
     @classmethod
     def manage_py(cls):
@@ -177,7 +187,7 @@ class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
-    INST_TYPE = 'devel_user'
+    INST_TYPE = 'devel'
 
     @classmethod
     def manage_py(cls):
@@ -216,22 +226,6 @@ PLATFORM = {
     "darwin": ("macos",),
     "win32": ("win64",),
 }
-# FIXME just for devel test
-# URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
-URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
-WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
-STANDALONE_APP_INFO = [
-    # All engine Django app need oq-platform-standalone
-    {"pkg": "oq-platform-standalone", "name": None,
-     "ver": "~=2.16.4"},
-    # Django apps to install
-    {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt",
-     "ver": "~=1.21.0"},
-    {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy",
-     "ver": "~=1.2.0"},
-    {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy",
-     "ver": "~=1.4.4"},
-]
 
 
 def python_exe(inst):
@@ -294,76 +288,6 @@ def get_requirements_branch(version, inst, from_fork):
     if mo:
         return "engine-" + mo.group(0)
     return version
-
-
-def _run_subprocess(inst, args):
-    # Run subprocess use sudo if inst.USER != None
-    if inst.USER is None:
-        subprocess.check_call(args)
-    else:
-        # user=inst.USER does not appear to work in the same
-        # way as sudo -u $USER
-        subprocess.check_call(
-            ['sudo', '--preserve-env=DJANGO_SECRET_KEY',
-             '-u', inst.USER] + args)
-
-
-def install_standalone(inst):
-    """
-    Install the standalone Django applications if possible
-    """
-    print("The standalone applications are not installed yet")
-    pycmd = python_exe(inst)
-    errors = []
-    for app in STANDALONE_APP_INFO:
-        try:
-            print(f"Applications {app['pkg']} are not installed yet \n")
-            subprocess.check_call(
-                [pycmd, "-m", "pip", "install",
-                 "--no-index", "--no-cache-dir",
-                 "--find-links", WHEELHOUSE_URL,
-                 "--find-links", URL_STANDALONE,
-                 app['pkg'] + app['ver']])
-        except Exception as exc:
-            # for instance if somebody removed a wheel from the wheelhouse
-            errors.append(f"{exc}: could not install {app['pkg']}")
-    return errors
-
-
-def postinstall_standalone(inst):
-    """
-    Run '<app>_postinstall' command for each standalone Django application,
-    if it exists.
-    """
-    print("Run '<app>_postinstall' command for each standalone\n"
-          " Django applications, if it exists")
-    # we cannot use site.getsitepackages here since we are not yet
-    # running in the target environment
-    pycmd = python_exe(inst)
-    if inst in (server, devel_server):
-        secret_dir = "/etc/openquake"
-        secret_name = "django_secret.env"
-        secret_file = os.path.join(secret_dir, secret_name)
-        with open(secret_file, "r") as f:
-            # from something like DJANGO_SECRET_KEY='XXXXXX=XX=XX',
-            # so we split by quote instead of by the equal sign
-            os.environ["DJANGO_SECRET_KEY"] = f.read().strip().split('\'')[1]
-    # Run python manage.py migrate before running app postinstall
-    _run_subprocess(inst, [pycmd, inst.manage_py(), "migrate"])
-    errors = []
-    for app in STANDALONE_APP_INFO:
-        if not app['name']:
-            continue
-        try:
-            # Run python manage.py postinstall
-            _run_subprocess(
-                inst, [pycmd, inst.manage_py(),
-                       "openquake_engine_postinstall", app['name']])
-        except Exception as exc:
-            # for instance if somebody removed a wheel from the wheelhouse
-            errors.append(f"{exc}: error during {app['name']} postinstall "
-                          "command execution")
-    return errors
 
 
 def check_venv(inst, args, usage):
@@ -610,10 +534,11 @@ def create_cfg(inst):
         return
     if os.path.exists(inst.CFG):
         print(f"There is an old file {inst.CFG}; it will not be "
-              f"overwritten, but consider updating it with\n{inst.CONFIG}")
+              f"overwritten, but consider updating it with\n"
+              f"{inst.config('<a random key>')}")
     else:
         with open(inst.CFG, "w") as cfg:
-            cfg.write(inst.CONFIG)
+            cfg.write(inst.config(secrets.token_urlsafe(32)))
         print(f"Created {inst.CFG}")
 
 
@@ -627,17 +552,6 @@ def oq_path(inst):
     if sys.platform == "win32":
         return f"{inst.VENV}\\Scripts\\oq"
     return f"{inst.VENV}/bin/oq"
-
-
-def upgrade_db(inst, oqreal):
-    """
-    Create or upgrade the database.
-    """
-    if inst in (server, devel_server):
-        subprocess.run(
-            ['sudo', '-u', 'openquake', oqreal, "engine", "--upgrade-db"])
-    else:  # create/upgrade the db in the default location
-        subprocess.run([oqreal, "engine", "--upgrade-db"])
 
 
 def create_symlink(inst, oqreal):
@@ -703,6 +617,12 @@ def create_services(inst):
                     for i in range(50))
                 f.write(f"DJANGO_SECRET_KEY='{key}'\n")
         os.chmod(secret_file, stat.S_IRUSR | stat.S_IWUSR)
+        # openquake is not a system user, so when its last login session ends
+        # (e.g. after `sudo -i -u openquake`) systemd-logind removes its IPC
+        # objects (RemoveIPC=yes), including the semaphores of the running
+        # calculations, which then fail with BrokenProcessPool; with lingering
+        # the user is never considered logged out and its IPC objects are kept
+        subprocess.check_call(["loginctl", "enable-linger", "openquake"])
         os.chown(secret_file,
                  openquake_user.pw_uid,
                  openquake_user.pw_gid)
@@ -737,9 +657,9 @@ def install(inst, version, from_fork, noupgrade):
         print(f"Created {inst.VENV}")
 
     # store in the venv dir a file specifying the type of installation (server,
-    # user, devel_server, devel_user)
+    # user, devel, devel_server)
     if inst.VENV:
-        inst_type_file_path = os.path.join(inst.VENV, 'OQ_ENGINE_INST_TYPE')
+        inst_type_file_path = os.path.join(inst.VENV, 'INST_TYPE')
         with open(inst_type_file_path, 'w') as inst_type_file:
             inst_type_file.write(inst.INST_TYPE)
 
@@ -749,18 +669,15 @@ def install(inst, version, from_fork, noupgrade):
     install_requirements(inst, pycmd, version, from_fork)
     install_engine(inst, pycmd, version, noupgrade)
 
-    errors = install_standalone(inst)
+    errors = standalone.install_standalone(pycmd)
 
     create_cfg(inst)
 
     oqreal = oq_path(inst)
     print("Compiling python/numba modules")
     subprocess.run([oqreal, "--version"])  # compile numba
-    upgrade_db(inst, oqreal)
 
     create_services(inst)
-
-    errors += postinstall_standalone(inst)
 
     create_symlink(inst, oqreal)
     activation_message(inst)

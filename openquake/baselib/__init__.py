@@ -129,7 +129,7 @@ def is_server_installation():
     """
     :returns: True if we are in a server installation
     """
-    inst_type_file_path = os.path.join(sys.prefix, 'OQ_ENGINE_INST_TYPE')
+    inst_type_file_path = os.path.join(sys.prefix, 'INST_TYPE')
     if os.path.exists(inst_type_file_path):
         if os.path.isfile(inst_type_file_path):
             with open(inst_type_file_path, 'r') as inst_type_file:

@@ -40,10 +40,12 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.map_array import MapArray
+from openquake.hazardlib.source import rupture
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
+from openquake.hazardlib.site_amplification import get_poes_site
 
 U8 = numpy.uint8
 I32 = numpy.int32
@@ -279,7 +281,7 @@ def simple_cmaker(gsims, imts, **params):
 # and then in classical with a single distance; in the calibration of the
 # pointsource_distance (see autogrid) the contexts for several distances
 # are built at once, sharing the planars and the contexts
-def _quintets(cmaker, src, sitecol, psdists):
+def _sextets(cmaker, src, sitecol, psdists):
     with cmaker.ir_mon:
         # building planar geometries
         planardict = src.get_planar(cmaker.shift_hypo)
@@ -310,6 +312,17 @@ def _quintets(cmaker, src, sitecol, psdists):
     # splitting by magnitude
     if src.count_nphc() == 1:
         # one rupture per magnitude, the same for all distances
+        if (getattr(cmaker, 'batch_point_sources', False) and
+                not cmaker.fewsites):
+            items = [(mag, pla[0]) for mag, pla in planardict.items()
+                     if minmag <= mag <= maxmag]
+            if items:
+                mags = numpy.array([mag for mag, _pla in items])
+                mdists = numpy.array([magdist[mag] for mag in mags])
+                planars = numpy.concatenate(
+                    [pla for _mag, pla in items]).view(numpy.recarray)
+                yield ks, 0, mags, mdists, [planars], sites
+            return
         for m, (mag, pla) in enumerate(planardict.items()):
             if minmag <= mag <= maxmag:
                 yield ks, m, mag, magdist[mag], pla, sites
@@ -538,7 +551,7 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
     mrate = dict(src.get_annual_occurrence_rates())
-    for ks, magi, mag, magdist, planars, sites in _quintets(
+    for ks, magi, mag, magdist, planars, sites in _sextets(
             cmaker, src, sitecol, psdists):
         if not planars:
             continue
@@ -548,10 +561,15 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
             pla = numpy.concatenate(planars).view(numpy.recarray)
         else:
             pla = planars[0]
+        batched = isinstance(mag, numpy.ndarray)
+        rate = numpy.array([mrate[m] for m in mag]) if batched else mrate[mag]
         # building contexts
         with cmaker.ctx_mon:
-            ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
+            ctx = _get_ctx_planar(cmaker, builder, mag, rate, magi,
                                   pla, sites, src.id, src.offset, tom)
+        if batched:
+            magdist = numpy.repeat(magdist, len(sites))
+            cmaker.ctx_mon.counts += len(mag) - 1
         ctxt = ctx[ctx.rrup < magdist]
         if getattr(src, 'count_nogrid', False):
             cmaker.cfactor[2] += len(ctxt)
@@ -583,22 +601,32 @@ def estimate_nctxs(cmaker, srcs, sitecol):
     groups = {}
     for src in srcs:
         mags = tuple(mag for mag, _rate in src.get_annual_occurrence_rates())
-        radii = src._get_rupture_projection_radii()
-        key = (src.count_nphc(), mags, tuple(radii))
+        nphc = src.count_nphc()
+        # With one rupture per magnitude, close and far sites use it alike.
+        radii = (() if nphc == 1 else
+                 tuple(src._get_rupture_projection_radii()))
+        key = (nphc, mags, radii)
         groups.setdefault(key, []).append(src)
     fewsites = len(sitecol.complete) <= cmaker.max_sites_disagg
     nctxs = 0
     for (nphc, mags, radii), group in groups.items():
         mesh = Mesh.from_points_list([src.location for src in group])
         magdist = {mag: cmaker.maximum_distance(mag) for mag in mags}
+        previous_mdist = None
         for m, mag in enumerate(mags):
             mdist = magdist[mag]
             if mdist <= 0:  # also excludes magnitudes outside the range
                 continue
+            # Constant integration distances are common across magnitudes.
+            if mdist != previous_mdist:
+                mcnt = sitecol.count_close(mesh, mdist)
+                previous_mdist = mdist
+            if nphc == 1:
+                nctxs += mcnt.sum()
+                continue
             psdist = group[0].get_psdist(
                 m, mag, cmaker.pointsource_distance, magdist, radii)
             # Count pairs within the magnitude and pointsource distances.
-            mcnt = sitecol.count_close(mesh, mdist)
             pcnt = (mcnt if psdist >= mdist else
                     sitecol.count_close(mesh, psdist))
             if fewsites:  # the close and far sites are not separated
@@ -728,7 +756,7 @@ class ContextMaker(object):
         # (see calc.gmf) and the contexts (see the gid column of the rup
         # dataframe)
         self.gsim_idx = numpy.arange(len(gsims), dtype=numpy.uint16)
-        self._gid = None  # set by restrict_trt_smrs, see the gid property
+        self._gid = None  # explicit output binding for postprocessors
         self.oq = oq
         self.monitor = monitor
         self._init1(param)
@@ -840,11 +868,17 @@ class ContextMaker(object):
         # once per rupture; the counts tell how many ruptures were
         # considered (the ruptures beyond the integration time included)
         self.ctx_mon = monitor('building contexts', measuremem=False)
+        # the updates of the probability maps of the variants, see
+        # rmap_maker.update_variants
+        self.upd_mon = monitor('updating pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         # [0] contexts after collapsing, [1] removed by collapse_precision,
-        # [2] contexts before collapse_precision for the gridding baseline
-        self.cfactor = numpy.zeros(3)
+        # [2] contexts before collapse_precision for the gridding baseline,
+        # [3] contexts saved by the variant sources optimization, i.e. the
+        # extra contexts the variants would generate if computed separately
+        # (see rmap_maker.update_variants)
+        self.cfactor = numpy.zeros(4)
 
     def copy(self, **kw):
         """
@@ -914,7 +948,7 @@ class ContextMaker(object):
         """
         :returns: the ids of the columns of the rates generated by this
             cmaker, i.e. the gids of an index of rate attribution if the
-            cmaker has been restricted (see restrict_trt_smrs), otherwise
+            cmaker has an explicit output binding, otherwise
             the gsim_idx, since for a whole group the ids of the rates
             and the indexes of the gsims coincide
         """
@@ -938,30 +972,6 @@ class ContextMaker(object):
             new.gsim_idx = gsim_idx
             new.wei = wei
             yield new
-
-    def restrict_trt_smrs(self, trt_smrs, gid, wei):
-        """
-        :param trt_smrs: the trt_smrs of the index of rate attribution
-        :param gid: the gids identifying the index of rate attribution,
-            i.e. the columns of the rates generated by the new cmaker;
-            NB: the gsim_idx are not changed, since the gsims are not
-            restricted either
-        :param wei: the weights of the gids
-        :returns: a shallow copy of the cmaker restricted to the
-            realizations trt_smrs, since a group has the trt_smrs of all
-            the realizations but the sources can have different
-            uncertainties in different ones
-
-        NB: the gsims are not restricted, since the number of gsims of an
-        index of rate attribution is the number of gsims of its TRT, see
-        get_rlzs_by_gsim, and must match the number of gids, see get_gids
-        """
-        new = copy.copy(self)
-        new.trt_smrs = numpy.array(trt_smrs, U32)
-        new.gid = gid
-        new.wei = wei
-        assert len(new.gsims) == len(gid), (len(new.gsims), len(gid))
-        return new
 
     def apply_horiz_comp_conv(self, mean_stds, gsim):
         """
@@ -1483,7 +1493,6 @@ class ContextMaker(object):
                        slice(slc.start + start, slc.stop + start))
 
     def _gen_chunk_poes(self, ctx):
-        from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
 
         # split large context arrays to avoid filling the CPU cache
@@ -1560,8 +1569,6 @@ class ContextMaker(object):
         rmap.fill(0)
         self.tom = tom or PoissonTOM(self.investigation_time)
         self.update(rmap, ctx)
-        rmap.gid = self.gid
-        rmap.wei = self.wei
         return rmap
 
     def update(self, pmap, ctx, rup_mutex=None):
@@ -1715,7 +1722,6 @@ class ContextMaker(object):
             4 attenuation curves mea, sig, tau, phi
             (up to 500 km from the site at steps of 5 km)
         """
-        from openquake.hazardlib.source import rupture
         rup = rupture.get_planar(
             site, msr, mag, aratio, strike, dip, rake, self.trt)
         ctx = self.from_planar(rup, hdist=500, step=5)

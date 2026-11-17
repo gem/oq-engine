@@ -30,7 +30,6 @@ from openquake.commonlib.readinput import (
     get_oqparam, get_full_lt, get_composite_source_model, get_site_collection,
     get_gsim_lt)
 from openquake.hazardlib.calc.displacement import calc_rates
-from openquake.hazardlib.source_reader import get_core_trt_smrs
 from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.pfd.adapter import PFDModelAdapter, style_from_rake
 from openquake.pfd.gsim import PFDGMPE, get_pfd_gsim_lt
@@ -73,12 +72,16 @@ class EngineContextsTestCase(unittest.TestCase):
         oq = get_oqparam(os.path.join(DATADIR, 'job.ini'))
         csm = get_composite_source_model(oq)
         sitecol = get_site_collection(oq)
-        cmakers = csm.get_cmakers(get_core_trt_smrs(csm.src_groups))
+        cmakers = csm.get_cmakers()
         [src] = list(csm.src_groups[0])
-        [branch] = csm.full_lt.extra_lt.enumerate(
-            [(src.source_id.split(';')[0], style_from_rake(src.rake))])
+        # the selections of the single PFD realization for this source,
+        # as the displacement calculator gets them
+        [rlz] = csm.full_lt.get_realizations()
+        selections = csm.full_lt.extra_lt.selections_for(
+            rlz.extra_rlz.lt_path, src.source_id.split(';')[0],
+            style_from_rake(src.rake))
         adapters = {}
-        for slot, choice in branch.selections.items():
+        for slot, choice in selections.items():
             cls = get_available(slot)[choice.class_name]
             ad = PFDModelAdapter(cls(**choice.params), choice.params)
             adapters[ad.model_type] = ad

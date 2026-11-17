@@ -26,20 +26,46 @@ import psutil
 from openquake.baselib import config, general
 from openquake.commonlib import dbapi
 from openquake.commonlib.auth import API_KEY
+from openquake.server import standalone
 from openquake.server.db import actions
 from openquake.server.utils import check_webserver_running
 
 commands = ['start', 'status', 'stop']
 
 
+# the health check uses a public route of the WebUI: any answer means that
+# the WebUI is running, whatever its status code
+def _health_url(hostport):
+    return 'http://' + hostport + '/v1/engine_version'
+
+
+def _listens(proc, port):
+    """True if the process holds a TCP socket listening on the port."""
+    try:
+        return any(conn.status == psutil.CONN_LISTEN and
+                   conn.laddr.port == port
+                   for conn in proc.net_connections(kind='tcp'))
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return False
+
+
 def _find_webui_process(hostport):
-    """Find the process listening on the requested port."""
+    """
+    Find the topmost process listening on the requested port. With gunicorn
+    the master and the workers share the socket, and psutil reports it only
+    for a worker: going up to the master, we stop the whole server.
+    """
     _host, port = hostport.rsplit(':', 1)
+    port = int(port)
     for connection in psutil.net_connections(kind='tcp'):
         if (connection.status == psutil.CONN_LISTEN and
-                connection.laddr.port == int(port)):
+                connection.laddr.port == port):
             try:
-                return psutil.Process(connection.pid)
+                proc = psutil.Process(connection.pid)
+                parent = proc.parent()
+                while parent is not None and _listens(parent, port):
+                    proc, parent = parent, parent.parent()
+                return proc
             except psutil.NoSuchProcess:
                 return None
     return None
@@ -47,8 +73,8 @@ def _find_webui_process(hostport):
 
 def _status(hostport):
     """Print whether the WebUI responds on the requested address."""
-    url = 'http://' + hostport
-    running = check_webserver_running(url, max_retries=1, warn=False)
+    running = check_webserver_running(
+        _health_url(hostport), max_retries=1, warn=False)
     print('running' if running else 'stopped')
     return running
 
@@ -71,7 +97,8 @@ def _stop(hostport):
 def runserver(hostport=None, skip_browser=False):
     """Start the Django development server and serve the WebUI application."""
     url = 'http://' + hostport
-    if check_webserver_running(url, max_retries=1, warn=False):
+    health = _health_url(hostport)
+    if check_webserver_running(health, max_retries=1, warn=False):
         if not skip_browser:
             webbrowser.open(url)
         return
@@ -82,7 +109,7 @@ def runserver(hostport=None, skip_browser=False):
     args.append('--noreload')
     args.append(hostport)
     process = subprocess.Popen(args)
-    if not skip_browser and check_webserver_running(url):
+    if not skip_browser and check_webserver_running(health):
         webbrowser.open(url)
     try:
         process.wait()
@@ -118,6 +145,9 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
     actions.upgrade_db(dbapi.db)
+    errors = standalone.postinstall(sys.executable)
+    if errors:
+        sys.exit('\n'.join(errors))
     print('Starting, using version %s' % general.engine_version())
     runserver(hostport, skip_browser)
 

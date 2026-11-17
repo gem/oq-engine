@@ -32,6 +32,7 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib import nrml
 from openquake.commonlib import tests, readinput
+from openquake.qa_tests_data.logictree import case_17
 
 # directory where the example files are
 NRML_DIR = os.path.dirname(htests.__file__)
@@ -748,7 +749,6 @@ Subduction Interface,gA1,[SadighEtAl1997],w=1.0>''')
         self.assertEqual([2, 1], list(map(len, csm.src_groups)))
 
     def test_oversampling(self):
-        from openquake.qa_tests_data.logictree import case_17
         oq = readinput.get_oqparam(
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         csm = readinput.get_composite_source_model(oq)

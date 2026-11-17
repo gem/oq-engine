@@ -1333,6 +1333,14 @@ stewart_2016_vh
     :undoc-members:
     :show-inheritance:
 
+swiss_amplification
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mgmpe.swiss_amplification
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 taherian_2024_inland
 -----------------------------------------------
 

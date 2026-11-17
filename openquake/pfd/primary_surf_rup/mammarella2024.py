@@ -179,8 +179,7 @@ def _resolve_width_model(width_model):
     ``None`` passes through.  A string is resolved through
     :func:`openquake.hazardlib.valid.mag_scale_rel` (the canonical
     magnitude-scaling-relationship registry), so callers can use either a
-    scalerel instance or its registered name - PR-2 of the oq-engine
-    integration plan.  The instance must expose ``get_median_width`` and
+    scalerel instance or its registered name.  The instance must expose ``get_median_width`` and
     ``get_std_dev_width``.
     """
     if width_model is None:

@@ -524,6 +524,8 @@ def export_gmf_data_csv(ekey, dstore):
         sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
         sig_eps = dstore['gmf_data/sigma_epsilon'][()]
         # NB: sig_eps['eid'] already contains event IDs, not indices
+        # keep only the events with GMFs, consistently with gmf_data.csv
+        sig_eps = sig_eps[numpy.isin(sig_eps['eid'], df['event_id'])]
         sig_eps.sort(order='eid')
         header = list(sig_eps.dtype.names)
         header[0] = 'event_id'

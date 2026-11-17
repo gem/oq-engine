@@ -24,14 +24,13 @@ import numpy
 from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
-from openquake.hazardlib.rmap_maker import get_cmakers
+from openquake.hazardlib.rmap_maker import get_cmakers, read_unc_ts_sets
 from openquake.hazardlib.contexts import estimate_nctxs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
-from openquake.hazardlib.source_reader import get_core_trt_smrs
-from openquake.hazardlib.rmap_maker import read_core_trt_smrs
+from openquake.hazardlib.source_reader import get_unc_ts_sets
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -52,9 +51,12 @@ PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
 # pointsource_distance of config.performance (or with the one of the user,
 # when not gridding, see count_psdist), 'gridded' is the number of contexts
 # of the gridded point sources before collapse_precision, 'collapsed' the
-# number of contexts after collapse_precision
+# number of contexts after collapse_precision and 'separate' the number of
+# contexts without the variant sources optimization, i.e. if the variants
+# of the sources were computed separately
 CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
-                       ('gridded', numpy.int64), ('collapsed', numpy.int64)])
+                       ('gridded', numpy.int64), ('collapsed', numpy.int64),
+                       ('separate', numpy.int64)])
 
 
 # one real site per H3 cell of resolution `res`, as a complete collection;
@@ -182,7 +184,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     bysrc_unc, see build_groups) are neither split nor filtered here: the
     splitting would destroy the geometry (and the MFD of the fault
     sources) and the filtering depends on the occurrence rates, which are
-    modified in the workers; there they are split (see cmakers_groups_gkeys
+    modified in the workers; there they are split (see groups_gkeys
     in classical.py) and filtered (see filter_mag).
     """
     oq = cmaker.oq
@@ -417,33 +419,37 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.store()
         logging.info('Building cmakers')
         trt_smrs = csm.get_trt_smrs()
-        # NB: core_trt_smrs is stored by source_reader.build_groups, i.e.
-        # before the preclassical; if the groups were read from the parent
-        # calculation, the core list is taken from the parent
-        parent = self.datastore.parent
-        if 'core_trt_smrs' in self.datastore:
-            core = read_core_trt_smrs(self.datastore)
-        elif parent and 'core_trt_smrs' in parent:
-            core = read_core_trt_smrs(parent)
-        else:
-            core = get_core_trt_smrs(csm.src_groups)
-        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq, core)
+        # NB: unc_ts_sets is stored by source_reader.build_groups, before
+        # preclassical; the reader also looks in the parent calculation.
+        unc_ts_sets = read_unc_ts_sets(self.datastore)
+        if unc_ts_sets is None:
+            unc_ts_sets = get_unc_ts_sets(csm.src_groups)
+        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
         elif oq.auto_grid or (oq.ps_grid_spacing and not oq.psd_given):
             # with a fixed ps_grid_spacing only pointsource_distance
-            # is calibrated, see autogrid.calibrate
-            self.calibrate_grid(sites)
+            # is calibrated, see autogrid.calibrate; with few sites
+            # the calibration is skipped and the defaults are kept
+            if self.few_sites:
+                logging.info('Few sites: skipping the calibration of '
+                             'ps_grid_spacing and pointsource_distance')
+            else:
+                self.calibrate_grid(sites)
+
+        if oq.calibration_only:  # stop here, the calibration is stored
+            logging.info('Stopping after the calibration')
+            return
 
         # the core size Gt, i.e. the number of columns of the global
         # RateMap, is known already at build time (see
         # source_reader.store_unc_signatures)
-        if 'core_trt_smrs' not in self.datastore:
+        if 'unc_ts_sets' not in self.datastore:
             # this happens if the groups were read from the parent
             # calculation, so the units are taken from the parent
-            self.datastore.hdf5.save_vlen('core_trt_smrs', core)
+            self.datastore.hdf5.save_vlen('unc_ts_sets', unc_ts_sets)
 
         sf = _get_srcfilter(sites, self.few_sites, oq.maximum_distance)
         atomic_sources = []
@@ -491,9 +497,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         cmakers = self.cmakers.to_array()
-        with self.monitor('calibrating ps_grid_spacing'):
-            best = autogrid.calibrate(
-                self.csm, cmakers, sites, oq, self.datastore.hdf5)
+        best = autogrid.calibrate(
+            self.csm, cmakers, sites, oq, self.datastore.hdf5)
         if best is None:  # no point sources
             return
         psgs, psd = best
@@ -537,7 +542,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         exact_ctxs = res.pop('exact_ctxs', 0)
         if exact_ctxs:  # used in classical.log_cfactor
             self.datastore['nctxs'] = numpy.array(
-                [(exact_ctxs, psdist_ctxs, 0, 0)], CTX_EST)
+                [(exact_ctxs, psdist_ctxs, 0, 0, 0)], CTX_EST)
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
             for grp_id, srcs in groupby(
@@ -576,6 +581,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         # Melbourne it was wasting ~50 seconds in the reduce
         with general.gc_disabled():
             self.populate_csm()
+        if self.oqparam.calibration_only:
+            return  # nothing else to do, see populate_csm
         return self.csm
 
     def post_execute(self, csm):

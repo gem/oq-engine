@@ -57,9 +57,9 @@ class Lavrentiadis2023PrimaryFD_aggregate(BasePrimarySurfDispl):
     WITHOUT distributed ruptures -- a sum-of-principal definition), is a
     different physical quantity and lives in its own class,
     :class:`Lavrentiadis2023PrimaryFD_principal`; requesting it here raises
-    ValueError (and is rejected at logic-tree validation time, FDLT-015).
+    ValueError (and is rejected at logic-tree validation time).
     As an aggregate model, this class runs single-bucket and forbids
-    secondary-slot models (FDLT-013).
+    secondary-slot models.
     """
 
     DISPLACEMENT_DEFINITION = "aggregate"
@@ -661,15 +661,14 @@ class Lavrentiadis2023PrimaryFD_principal(Lavrentiadis2023PrimaryFD_aggregate):
     ruptures. Following the Petersen2011PrimaryFD_* variant idiom, the class
     choice IS the definition -- ``output_type`` is fixed by this class and
     passing any explicit value raises ValueError (also rejected at
-    logic-tree validation time, FDLT-015).
+    logic-tree validation time).
 
     Model contract: DISPLACEMENT_DEFINITION = "sum-of-principal",
     DISPLACEMENT_COMPONENT = "net" -- Lavrentiadis & Abrahamson (2023)
     derive the principal-prime profile from the aggregate one (their b_2
     offset and zero-slip probability); like Chiou et al. (2025)'s D_SP it
     excludes distributed ruptures, so secondary-slot models remain
-    legitimate alongside this class (it is NOT aggregate; FDLT-013 does not
-    apply).
+    legitimate alongside this class (it is NOT aggregate).
     """
 
     DISPLACEMENT_DEFINITION = "sum-of-principal"

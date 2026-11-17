@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import pickle
 import unittest
 from unittest import mock
 import numpy
@@ -30,8 +31,8 @@ from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.classical import read_gid_dic, read_full_lt
-from openquake.hazardlib.rmap_maker import read_core_trt_smrs
+from openquake.calculators.classical import bysrc_results
+from openquake.hazardlib.rmap_maker import read_unc_ts_sets
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
@@ -294,7 +295,8 @@ hazard_uhs-std.csv
                          ('0.010000', '0.100000', '0.200000'))
 
         # check ordering by rm_rlz.pid
-        r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']
+        smlt = self.calc.datastore['full_lt/source_model_lt']
+        r0, r1, r2 = smlt.get_realizations()
         self.assertEqual(repr(r0),
                          "<Realization #0 ['source_model_1.xml', None], "
                          "path=SM1~., weight=0.5>")
@@ -345,26 +347,43 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hazard_curve-mean_bis.csv', fname)
 
         # the cfactor counts the contexts once, also for the MFD variants
-        # computed together by make_results (it was 225 = 9 x 25)
+        # computed together by make_results (it was 225 = 9 x 25); the 9
+        # variants of a depth are computed together, since their magnitudes
+        # are nested, so there are 6 + 9 contexts, the ones of the variants
+        # with maxMag 7.6 at the two depths
         nctxs = self.calc.datastore.read_df('source_data').nctxs.sum()
-        self.assertEqual(nctxs, 25)
+        self.assertEqual(nctxs, 15)
         self.assertEqual(self.calc.cfactor[0], nctxs)
 
+        # without the variant sources optimization each variant would
+        # generate its contexts: at the first depth 4 for the 6 variants
+        # with magnitudes 5.5, 6.5 and 6 for the 3 variants with maxMag 7.6,
+        # i.e. 42, and at the second depth 6 x 6 + 3 x 9 = 63
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['collapsed'], 15)
+        self.assertEqual(est['separate'], 105)
+        tbl = view('context_reduction', self.calc.datastore)
+        self.assertIn('| variants factor | 7.00', tbl)
+
     def test_gids_numbering(self):
-        # the gids of the cmakers must be numbered as the core list, the
-        # one used by read_gid_dic in the master, otherwise the rates are
-        # attributed to the wrong RateMap columns (this happened in ARB)
+        # Task routing uses core gids; context makers keep local GSIM
+        # columns even when the group spans several uncertainty sets.
         self.run_calc(case_18.__file__, 'job_bis.ini')
         ds = self.calc.datastore
-        core = read_core_trt_smrs(ds)
-        full_lt = read_full_lt(ds)
-        gid_dic = read_gid_dic(ds, full_lt)
-        cmakers = rmap_maker.get_cmakers(
-            ds['trt_smrs'][:], full_lt, ds['oqparam'], core)
-        for cm in cmakers:
-            # the first set of realizations of the group, see _core_gids
-            ts = [t for t in core if set(t) <= set(cm.trt_smrs)][0]
-            numpy.testing.assert_equal(cm.gsim_idx, gid_dic[ts][0])
+        unc_ts_sets = read_unc_ts_sets(ds)
+        full_lt = ds['full_lt'].init()
+        global_ts2gids = dict(zip(unc_ts_sets,
+                                  full_lt.get_gids(unc_ts_sets)))
+        cmakers = self.calc.cmdict['Default'].to_array()
+        for grp, cm in zip(self.calc.csm.src_groups, cmakers):
+            sources = list(grp)
+            task_ts2gids = {ts: global_ts2gids[ts] for src in sources
+                            for ts in src.get_ts_sets()}
+            numpy.testing.assert_equal(cm.gsim_idx, range(len(cm.gsims)))
+            for src in grp:
+                for ts in src.get_ts_sets():
+                    numpy.testing.assert_equal(task_ts2gids[ts],
+                                               global_ts2gids[ts])
 
     def test_case_19(self):
         # test for nontrivial GMPE logictree and AvgGMPE
@@ -426,8 +445,9 @@ hazard_uhs-std.csv
                          ['site_id', 'stat', 'imt', 'value'])
 
         # check the realizations contains only literals
+        smlt = self.calc.datastore['full_lt'].source_model_lt
         got = [dict(zip(rlz.lt_path, rlz.value))
-               for rlz in self.calc.datastore['full_lt'].source_model_lt]
+               for rlz in smlt.get_realizations()]
         self._check(got)
 
     def _check(self, got):
@@ -549,6 +569,40 @@ hazard_uhs-std.csv
             'expected/hazard_curve-mean-PGA.csv', got, delta=5E-4)
         self.assertEqual(len(self.calc.full_lt.get_realizations()), 50)
 
+        # Moving every output column must leave the computed rates
+        # unchanged, including the overlapping sets {15}, {15, 16}, {16}.
+        ds = self.calc.datastore
+        unc_ts_sets = read_unc_ts_sets(ds)
+        self.assertEqual(len(unc_ts_sets), 27)
+        expected = numpy.zeros((27, self.calc.oqparam.imtls.size))
+        numpy.add.at(expected, (ds['_rates/gid'][:], ds['_rates/lid'][:]),
+                     ds['_rates/rate'][:])
+        # 26 is the last of the 27 original gids (0..26); 100 shifts
+        # them outside that range, reversing their order to 126..100.
+        ts2gids = {ts: numpy.array([100 + 26 - i])
+                   for i, ts in enumerate(unc_ts_sets)}
+        actual = numpy.zeros_like(expected)
+        cmakers = self.calc.cmdict['Default'].to_array()
+        for grp, cm in zip(self.calc.csm.src_groups, cmakers):
+            # Exercise the same serialization used by distributed tasks.
+            sources = list(grp)
+            task_ts2gids = {ts: ts2gids[ts] for src in sources
+                            for ts in src.get_ts_sets()}
+            bset_values = source_reader.prepare_bset_values(
+                self.calc.full_lt, sources)
+            cm, task_ts2gids, bset_values = pickle.loads(pickle.dumps(
+                (cm, task_ts2gids, bset_values)))
+            self.assertFalse(hasattr(cm, 'trt_smrs'))
+            for program in bset_values.values():
+                for bset, _ in program:
+                    self.assertEqual(bset.branches, [])
+            for dic in bysrc_results([grp], self.calc.sitecol, cm,
+                                     task_ts2gids, bset_values, False):
+                rmap = dic['rmap']
+                original = 126 - rmap.gid
+                actual[original] += rmap.array[0].T
+        aac(actual, expected, rtol=1e-6, atol=1e-12)
+
     def test_case_26(self):
         # 3-branch amp LT, classical, full enumeration and sampling
         for kwargs, prefix, nrlz in [
@@ -565,6 +619,15 @@ hazard_uhs-std.csv
             self.assertEqual(len(expected), len(got), str(got))
             for fname, actual in zip(expected, got):
                 self.assertEqualFiles('expected/%s' % fname, actual)
+
+        # With more samples than amplification branches, sample ordinals
+        # cannot be used as indices into the amplification functions.
+        self.run_calc(case_26.__file__, 'job.ini',
+                      number_of_logic_tree_samples='10')
+        names = self.calc.amplifier.names
+        expected = [names.index(r.extra_rlz.lt_path[0])
+                    for r in self.calc.full_lt.get_realizations()]
+        ae(self.calc.amplifier.rlz_ampl_ord, expected)
 
     def test_case_27(self):
         # 3-branch amp LT, disaggregation, full enum + sampling
@@ -625,6 +688,22 @@ hazard_uhs-std.csv
         aw = extract(self.calc.datastore, 'realizations')
         tbl = general.gettemp(text_table(aw.array, ext='org'))
         self.assertEqualFiles('expected/realizations.org', tbl)
+
+    def test_case_28_multimfd(self):
+        # multiMFDAbsolute is equivalent to abGRAbsolute when the MFDs of
+        # all the points of the MultiPointSource are the same, also in
+        # combination with the relative uncertainties
+        self.run_calc(case_28.__file__, 'job.ini',
+                      source_model_logic_tree_file=
+                      'source_model_logic_tree_ab.xml')
+        expected = self.calc.datastore['hcurves-stats'][:, 0]
+        self.run_calc(case_28.__file__, 'job.ini',
+                      source_model_logic_tree_file=
+                      'source_model_logic_tree_multimfd.xml')
+        got = self.calc.datastore['hcurves-stats'][:, 0]
+        aac(got, expected, rtol=1e-6)
+        # the uncertainties are not trivial
+        self.assertGreater(len(self.calc.datastore['full_lt'].rlzs), 4)
 
     def test_case_28_bis(self):
         # missing z1pt0

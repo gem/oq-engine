@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+xmlns="http://openquake.org/xmlns/nrml/0.5">
+<logicTree logicTreeID="lt1">
+  <logicTreeBranchSet uncertaintyType="sourceModel"
+                      branchSetID="mod1">
+    <logicTreeBranch branchID="smoothed_model">
+      <uncertaintyModel>GridSources.xml</uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <!-- NB: this branchset is correlated (applyToSources="*") on purpose,
+       to check that the sources of a correlated branchset are looked up in
+       the whole realization and not in a single source group: source 21 is
+       in a different group than source 22 -->
+  <logicTreeBranchSet uncertaintyType="multiMFDAbsolute" applyToSources="*"
+                      branchSetID="mfd">
+    <logicTreeBranch branchID="mfd1">
+      <uncertaintyModel>
+        <correlated src="21">
+          <multiMFD kind="truncGutenbergRichterMFD" size="2">
+            <a_val>1.1E-03 1.1E-03</a_val>
+            <b_val>8.0E-01</b_val>
+            <max_mag>6.93</max_mag>
+            <min_mag>5.5</min_mag>
+          </multiMFD>
+        </correlated>
+      </uncertaintyModel>
+      <uncertaintyWeight>0.6</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="mfd2">
+      <uncertaintyModel>
+        <correlated src="21">
+          <multiMFD kind="truncGutenbergRichterMFD" size="2">
+            <a_val>1.3E-03 1.3E-03</a_val>
+            <b_val>8.7E-01</b_val>
+            <max_mag>6.93</max_mag>
+            <min_mag>5.5</min_mag>
+          </multiMFD>
+        </correlated>
+      </uncertaintyModel>
+      <uncertaintyWeight>0.4</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet uncertaintyType="maxMagGRRelative" applyToSources="21"
+                      branchSetID="mmax">
+    <logicTreeBranch branchID="m_0.2">
+      <uncertaintyModel>+0.2</uncertaintyModel>
+      <uncertaintyWeight>0.6</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="m_0.4">
+      <uncertaintyModel>+0.4</uncertaintyModel>
+      <uncertaintyWeight>0.4</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet uncertaintyType="bGRRelative" applyToSources="21"
+                      branchSetID="bval">
+    <logicTreeBranch branchID="b_0.05">
+      <uncertaintyModel>+0.05</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b_0.0">
+      <uncertaintyModel>0.0</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>
