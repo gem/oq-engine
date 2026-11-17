@@ -1174,3 +1174,128 @@ def _get_profiles(fname):
                     section_profiles = [profiles]
             all_profiles[section['id']] = section_profiles
     return all_profiles
+
+
+def _planar_mesh(lons_top, lats_top, dlon=0.05, nrow=4, ddep=2.0):
+    # Rectangular mesh with rows shifted eastward and deepening downward
+    from openquake.hazardlib.geo.mesh import RectangularMesh
+    lons_top = np.asarray(lons_top, dtype=float)
+    lats_top = np.asarray(lats_top, dtype=float)
+    lons = np.array([lons_top + i * dlon for i in range(nrow)])
+    lats = np.array([lats_top for _ in range(nrow)])
+    deps = np.array([np.full(len(lons_top), ddep * i) for i in range(nrow)])
+    return RectangularMesh(lons, lats, deps)
+
+
+class KiteRobustnessTest(unittest.TestCase):
+    """
+    Regression tests for geometric properties of kite surfaces with
+    irregular shapes and NaN nodes
+    """
+
+    def test_strike_close_to_north(self):
+        # The azimuths of the top edge alternate between ~359.7 and ~0.3.
+        # An arithmetic mean would give ~216
+        lons = [0.0005, 0.0, 0.0005, 0.0, 0.0005, 0.0]
+        lats = np.linspace(0, 0.5, 6)
+        sfc = KiteSurface(_planar_mesh(lons, lats))
+        dff = (sfc.get_strike() + 180) % 360 - 180
+        self.assertLess(abs(dff), 0.5)
+
+    def test_rjb_vertical_curved(self):
+        # A vertical fault whose trace is a half circle: a site on the
+        # trace must have Rjb ~0 and a site at the centre of the circle an
+        # Rjb equal to the radius
+        from openquake.hazardlib.geo.mesh import RectangularMesh
+        t = np.linspace(0, np.pi, 41)
+        lons = np.array([np.cos(t)] * 4)
+        lats = np.array([np.sin(t)] * 4)
+        deps = np.array([np.full(41, 3. * i) for i in range(4)])
+        sfc = KiteSurface(RectangularMesh(lons, lats, deps))
+        self.assertTrue(sfc.is_vertical())
+        sites = Mesh(np.array([0.0, 0.0]), np.array([1.0, 0.0]))
+        rjb = sfc.get_joyner_boore_distance(sites)
+        self.assertLess(rjb[0], 0.2)
+        radius = geodetic.geodetic_distance(0., 0., 1., 0.)
+        np.testing.assert_allclose(rjb[1], radius, rtol=2e-2)
+
+    def test_rjb_inside_wide_surface(self):
+        # A site above the middle of a ~150 x ~200 km dipping surface is
+        # more than 40 km from all the vertexes of the boundary but its Rjb
+        # must be zero
+        nrow = 37
+        lats = np.linspace(0, 1.35, 28)
+        sfc = KiteSurface(_planar_mesh(np.zeros(28), lats, dlon=0.05,
+                                       nrow=nrow, ddep=40. / (nrow - 1)))
+        rjb = sfc.get_joyner_boore_distance(
+            Mesh(np.array([0.9]), np.array([0.675])))
+        aae(rjb, [0.0])
+
+    def test_area_irregular_cell(self):
+        # A flat, non-symmetric quadrilateral cell. Its exact area is 203 km2
+        from openquake.hazardlib.geo.mesh import RectangularMesh
+        d = 1 / 111.195
+        pnts = np.array([[0, 0], [10, 0], [25, -12], [-3, -10]]) * d
+        lons = np.array([[pnts[0, 0], pnts[1, 0]], [pnts[3, 0], pnts[2, 0]]])
+        lats = np.array([[pnts[0, 1], pnts[1, 1]], [pnts[3, 1], pnts[2, 1]]])
+        sfc = KiteSurface(RectangularMesh(lons, lats, np.zeros((2, 2))))
+        np.testing.assert_allclose(sfc.get_area(), 203., rtol=1e-2)
+
+    def test_top_edge_depth_and_center_with_nans(self):
+        from openquake.hazardlib.geo.mesh import RectangularMesh
+        nan = np.nan
+        lons = np.array([[0, 0, 0, 0], [0.05] * 4, [0.1, 0.1, nan, nan],
+                         [0.15, 0.15, nan, nan]])
+        lats = np.array([[0, .1, .2, .3]] * 4)
+        lats[2:, 2:] = nan
+        deps = np.array([[3., 3., nan, nan], [2., 2., 1., 2.],
+                         [4, 4, nan, nan], [6, 6, nan, nan]])
+        lons[0, 2:] = nan
+        lats[0, 2:] = nan
+        sfc = KiteSurface(RectangularMesh(lons, lats, deps))
+        # The shallowest node is not in the first row
+        self.assertEqual(sfc.get_top_edge_depth(), 1.0)
+        # The central node is NaN, the center must be a node of the mesh
+        cen = sfc.get_center()
+        self.assertTrue(np.isfinite([cen.longitude, cen.latitude,
+                                     cen.depth]).all())
+
+    def test_right_hand_first_cell_in_last_column(self):
+        # The only cell with four finite vertexes is in the last column and
+        # below the first row. This used to raise an IndexError
+        from openquake.hazardlib.geo.mesh import RectangularMesh
+        nan = np.nan
+        lons = np.array([[nan, 0.0], [nan, 0.0], [0.05, 0.05], [0.1, 0.1]])
+        lats = np.array([[nan, 0.1], [nan, 0.1], [0, 0.1], [0, 0.1]])
+        deps = np.array([[nan, 0], [nan, 2], [4, 4], [6, 6.]])
+        sfc = KiteSurface(RectangularMesh(lons, lats, deps))
+        self.assertEqual(sfc.mesh.shape, (4, 2))
+
+
+class KiteAuxiliaryFunctionsTest(unittest.TestCase):
+
+    def test_align_profiles(self):
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            _align_profiles)
+        prfr = [[[0, 0, 0], [0, 0.01, 2], [0, 0.02, 4], [0, 0.03, 6]]]
+        prfl = [[[1, 0, 4], [1, 0.01, 6]]]
+        _align_profiles(prfr, prfl)
+        deps = np.array(prfl[0])[:, 2]
+        self.assertEqual(len(prfl[0]), len(prfr[0]))
+        self.assertTrue(np.isnan(deps[:2]).all())
+        np.testing.assert_array_equal(deps[2:], [4., 6.])
+
+    def test_check_sampling(self):
+        from openquake.hazardlib.geo.utils import OrthographicProjection
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            _check_sampling)
+        proj = OrthographicProjection(-1, 1, 1, -1)
+        # Regular sampling, with and without NaNs, passes
+        edg = np.array([[0.01 * i, 0, 0] for i in range(6)])
+        _check_sampling(edg, proj)
+        edg[3] = np.nan
+        _check_sampling(edg, proj)
+        # Irregular sampling without NaNs is detected
+        edg = np.array([[0, 0, 0], [0.01, 0, 0], [0.5, 0, 0], [0.51, 0, 0]])
+        with self.assertRaises(ValueError):
+            _check_sampling(edg, proj)
