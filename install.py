@@ -45,6 +45,7 @@ import argparse
 import platform
 import subprocess
 from urllib.request import urlopen, Request
+
 try:
     # used for "server" modes only, not available on windows
     import pwd
@@ -223,34 +224,50 @@ PLATFORM = {
     "darwin": ("macos",),
     "win32": ("win64",),
 }
-# FIXME just for devel test
-# URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
-URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
-WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
+
+# Keep this list in sync with openquake/server/standalone.py. The installer
+# must also work when downloaded on its own, before openquake is installed.
 STANDALONE_APP_INFO = [
     # All engine Django app need oq-platform-standalone
-    # {"pkg": "oq-platform-standalone", "name": None,
-    #  "ver": "~=2.16.4"},
+    # {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.16.4"},
     {"pkg": "https://github.com/gem/oq-platform-standalone/archive/refs/heads/django52.zip",
-     "name": None,
-     "ver": ""},
+     "name": None, "ver": ""},
     # Django apps to install
-    # {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt",
+    # {"pkg": "oq-platform-ipt", "name": "openquakeplatform_ipt",
     #  "ver": "~=1.21.0"},
     {"pkg": "https://github.com/gem/oq-platform-ipt/archive/refs/heads/django52.zip",
-     "name": "openquakeplatform_ipt",
-     "ver": ""},
-    # {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy",
+     "name": "openquakeplatform_ipt", "ver": ""},
+    # {"pkg": "oq-platform-taxonomy", "name": "openquakeplatform_taxonomy",
     #  "ver": "~=1.2.0"},
     {"pkg": "https://github.com/gem/oq-platform-taxonomy/archive/refs/heads/django52.zip",
-     "name": "openquakeplatform_taxonomy",
-     "ver": ""},
-    # {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy",
+     "name": "openquakeplatform_taxonomy", "ver": ""},
+    # {"pkg": "django-gem-taxonomy", "name": "django_gem_taxonomy",
     #  "ver": "~=1.4.4"},
     {"pkg": "https://github.com/gem/django-gem-taxonomy/archive/refs/heads/django52.zip",
-     "name": "django_gem_taxonomy",
-     "ver": ""},
-]
+     "name": "django_gem_taxonomy", "ver": ""}]
+WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
+URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
+
+
+def install_standalone(pycmd, apps=STANDALONE_APP_INFO):
+    """Install the optional Django applications using the target Python."""
+    errors = []
+    for app in apps:
+        try:
+            print(f"Applications {app['pkg']} are not installed yet \n")
+            subprocess.check_call(
+                [pycmd, "-m", "pip", "install",
+                 "--no-index", "--no-cache-dir",
+                 "--find-links", WHEELHOUSE_URL,
+                 "--find-links", URL_STANDALONE,
+                 app["pkg"] + app["ver"]])
+            subprocess.check_call([pycmd, "-m", "pip", "check"])
+        except subprocess.CalledProcessError:
+            raise
+        except Exception as exc:
+            # for instance if somebody removed a wheel from the wheelhouse
+            errors.append(f"{exc}: could not install {app['pkg']}")
+    return errors
 
 
 def python_exe(inst):
@@ -313,79 +330,6 @@ def get_requirements_branch(version, inst, from_fork):
     if mo:
         return "engine-" + mo.group(0)
     return version
-
-
-def _run_subprocess(inst, args):
-    # Run subprocess use sudo if inst.USER != None
-    if inst.USER is None:
-        subprocess.check_call(args)
-    else:
-        # user=inst.USER does not appear to work in the same
-        # way as sudo -u $USER
-        subprocess.check_call(
-            ['sudo', '--preserve-env=DJANGO_SECRET_KEY',
-             '-u', inst.USER] + args)
-
-
-def install_standalone(inst):
-    """
-    Install the standalone Django applications if possible
-    """
-    print("The standalone applications are not installed yet")
-    pycmd = python_exe(inst)
-    errors = []
-    for app in STANDALONE_APP_INFO:
-        try:
-            print(f"Applications {app['pkg']} are not installed yet \n")
-            subprocess.check_call(
-                [pycmd, "-m", "pip", "install",
-                 "--no-index", "--no-cache-dir",
-                 "--find-links", WHEELHOUSE_URL,
-                 "--find-links", URL_STANDALONE,
-                 app['pkg'] + app['ver']])
-            subprocess.check_call([pycmd, "-m", "pip", "check"])
-        except subprocess.CalledProcessError:
-            raise
-        except Exception as exc:
-            # for instance if somebody removed a wheel from the wheelhouse
-            errors.append(f"{exc}: could not install {app['pkg']}")
-    return errors
-
-
-def postinstall_standalone(inst):
-    """
-    Run '<app>_postinstall' command for each standalone Django application,
-    if it exists.
-    """
-    print("Run '<app>_postinstall' command for each standalone\n"
-          " Django applications, if it exists")
-    # we cannot use site.getsitepackages here since we are not yet
-    # running in the target environment
-    pycmd = python_exe(inst)
-    if inst in (server, devel_server):
-        secret_dir = "/etc/openquake"
-        secret_name = "django_secret.env"
-        secret_file = os.path.join(secret_dir, secret_name)
-        with open(secret_file, "r") as f:
-            # from something like DJANGO_SECRET_KEY='XXXXXX=XX=XX',
-            # so we split by quote instead of by the equal sign
-            os.environ["DJANGO_SECRET_KEY"] = f.read().strip().split('\'')[1]
-    # Run python manage.py migrate before running app postinstall
-    _run_subprocess(inst, [pycmd, inst.manage_py(), "migrate"])
-    errors = []
-    for app in STANDALONE_APP_INFO:
-        if not app['name']:
-            continue
-        try:
-            # Run python manage.py postinstall
-            _run_subprocess(
-                inst, [pycmd, inst.manage_py(),
-                       "openquake_engine_postinstall", app['name']])
-        except Exception as exc:
-            # for instance if somebody removed a wheel from the wheelhouse
-            errors.append(f"{exc}: error during {app['name']} postinstall "
-                          "command execution")
-    return errors
 
 
 def check_venv(inst, args, usage):
@@ -654,17 +598,6 @@ def oq_path(inst):
     return f"{inst.VENV}/bin/oq"
 
 
-def upgrade_db(inst, oqreal):
-    """
-    Create or upgrade the database.
-    """
-    if inst in (server, devel_server):
-        subprocess.run(
-            ['sudo', '-u', 'openquake', oqreal, "engine", "--upgrade-db"])
-    else:  # create/upgrade the db in the default location
-        subprocess.run([oqreal, "engine", "--upgrade-db"])
-
-
 def create_symlink(inst, oqreal):
     """
     Create the /usr/bin/oq symlink for server installations.
@@ -780,18 +713,15 @@ def install(inst, version, from_fork, noupgrade):
     install_requirements(inst, pycmd, version, from_fork)
     install_engine(inst, pycmd, version, noupgrade)
 
-    errors = install_standalone(inst)
+    errors = install_standalone(pycmd)
 
     create_cfg(inst)
 
     oqreal = oq_path(inst)
     print("Compiling python/numba modules")
     subprocess.run([oqreal, "--version"])  # compile numba
-    upgrade_db(inst, oqreal)
 
     create_services(inst)
-
-    errors += postinstall_standalone(inst)
 
     create_symlink(inst, oqreal)
     activation_message(inst)

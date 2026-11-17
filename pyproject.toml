@@ -38,7 +38,7 @@ dependencies = [
 
     # unplanned deps
     "decorator~=5.1.1",
-    "pillow~=12.2.0",
+    "pillow~=13.0.0",
     "toml~=0.10.2",
     "numba~=0.67",
     "alpha_shapes~=1.1.0",

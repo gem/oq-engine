@@ -201,6 +201,7 @@ class ParseConfigTestCase(unittest.TestCase):
         oqparam = SimpleNamespace(
             inputs={'rupture_model': rupture_model},
             rupture_mesh_spacing=5,
+            dip_spacing='mesh_spacing',
             rupture_dict=None)
         rup = readinput.get_rupture(oqparam)
         self.assertIsInstance(rup, BaseRupture)

@@ -99,15 +99,16 @@ def splitMF(sources, disagg_by_src, blocksize=1000):
                     name=src.name,
                     tectonic_region_type=src.tectonic_region_type,
                     mfd=src.mfd[slc],
+                    rupture_mesh_spacing=src.rupture_mesh_spacing,
                     magnitude_scaling_relationship=(
                         src.magnitude_scaling_relationship),
                     rupture_aspect_ratio=src.rupture_aspect_ratio,
+                    temporal_occurrence_model=src.temporal_occurrence_model,
                     upper_seismogenic_depth=src.upper_seismogenic_depth,
                     lower_seismogenic_depth=src.lower_seismogenic_depth,
                     nodal_plane_distribution=src.nodal_plane_distribution,
                     hypocenter_distribution=src.hypocenter_distribution,
-                    mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]),
-                    temporal_occurrence_model=src.temporal_occurrence_model)
+                    mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]))
                 _copy_uncertainty_attrs(src, segment)
                 splits.append(segment)
         elif src.code == b'F' and not disagg_by_src:
@@ -320,7 +321,8 @@ def get_csm(oq, full_lt, dstore=None):
         floating_y_step=oq.floating_y_step,
         source_nodes=oq.source_nodes,
         infer_occur_rates=oq.infer_occur_rates,
-        filter_sourcecodes=oq.filter_sourcecodes)
+        filter_sourcecodes=oq.filter_sourcecodes,
+        dip_spacing=oq.dip_spacing)
     full_lt.ses_seed = oq.ses_seed
     logging.info('Reading the source model(s) in parallel')
 
