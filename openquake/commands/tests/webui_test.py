@@ -18,6 +18,7 @@ import time
 import unittest
 from pathlib import Path
 
+import psutil
 import requests
 
 ROOT = Path(__file__).parents[3]
@@ -63,21 +64,34 @@ class WebuiTestCase(unittest.TestCase):
             self.assertEqual(stopped.stdout.strip(), 'stopped')
             self.assertIn(process.wait(timeout=10), [0, 15])
         finally:
-            if process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=10)
+            self._terminate_webui(process)
+
+    def _terminate_webui(self, process):
+        # On Windows oq.exe wraps a Python process, which in turn can spawn
+        # migration commands or runserver. All must release the scratch DB
+        # before TemporaryDirectory cleanup attempts to remove its files.
+        try:
+            children = psutil.Process(process.pid).children(recursive=True)
+        except psutil.NoSuchProcess:
+            children = []
+        for child in reversed(children):
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                pass
+        if process.poll() is None:
+            process.kill()
+        psutil.wait_procs(children, timeout=10)
+        process.wait(timeout=10)
 
     def _free_hostport(self):
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             return '127.0.0.1:%d' % sock.getsockname()[1]
 
-    def _wait_for_webui(self, process, hostport, logpath):
-        deadline = time.monotonic() + 30
+    def _wait_for_webui(self, process, hostport, logpath, timeout=120):
+        # A fresh DB also requires Django migrations and taxonomy imports.
+        deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if process.poll() is not None:
                 output = logpath.read_text(errors='replace')
@@ -92,7 +106,8 @@ class WebuiTestCase(unittest.TestCase):
                 pass
             time.sleep(0.5)
         output = logpath.read_text(errors='replace')
-        self.fail('WebUI did not start within 30 seconds:\n%s' % output)
+        self.fail('WebUI did not start within %s seconds:\n%s' % (
+            timeout, output))
 
 
 if __name__ == '__main__':
