@@ -23,6 +23,10 @@ Reference:
     Sung, C.-H., Abrahamson, N.A., Kuehn, N.M., Traversa, P., Zentner, I.
     (2023). A non-ergodic ground-motion model of Fourier amplitude spectra
     for France. Bulletin of Earthquake Engineering 21: 5293-5317.
+
+The non-ergodic standard deviations in the coefficient tables were provided
+directly by Karen Sung on September 4th 2020. They seem to match well to
+the values in the later published paper (we can only verify for 5 Hz).
 """
 
 import os
@@ -207,6 +211,8 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     """
     REQUIRES_DISTANCES = {'rrup', 'clon_clat'}
 
+    experimental = True # For now
+
     def __init__(self, adjustment_h5, rlz_id="mean"):
         # Resolve the per-site adjustment table path (bare filenames are
         # looked up under gsim/sung_2022/; absolute paths pass through)
@@ -314,7 +320,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
                 mean[m] += dat['rlz'][idx_all, int(self.rlz_id)]
 
     # The Coefficients used here are the same of the ergodic model BUT the
-    # standard deviations differ given they are for teh non-ergodic variant
+    # standard deviations differ given they are for the non-ergodic variant
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT                c1   c2           c3     c4          c5          c6           c7           c8           c9          cn          cM         chm   tot   tau
 EAS(1.0) -3.831335618 1.27 -0.339593397 -2.165 7.581303952 0.451924112 -0.003743823 -1.220089093 -0.002488724 3.714155909       5.616 3.811150377 0.705 0.476
