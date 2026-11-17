@@ -11,6 +11,8 @@
     moving the related code into the associated parts of the OQ-MBTK.
 
   [Michele Simionato]
+  * Changed the signature of MultiPointSource to be consistent with the other
+    parametric sources
   * Internal: overhauled the logic tree classes and added `oq info logic_trees`
   * Reduced the size of the yielded packets in classical_bysrc and
     raised an error in case of lost zmq packets

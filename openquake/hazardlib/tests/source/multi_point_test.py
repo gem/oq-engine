@@ -29,6 +29,17 @@ from openquake.hazardlib.pmf import PMF
 
 class MultiPointTestCase(unittest.TestCase):
 
+    def test_old_constructor_signature(self):
+        old_args = ('mp1', 'test', 'Active Shallow Crust', None,
+                    PeerMSR(), 1.0, 0, 20, None, None, None)
+        for args in (old_args, old_args + (None,)):
+            with self.subTest(num_args=len(args)):
+                with self.assertRaisesRegex(
+                        TypeError, 'insert rupture_mesh_spacing.*'
+                        'temporal_occurrence_model immediately after '
+                        'rupture_aspect_ratio'):
+                    MultiPointSource(*args)
+
     def test(self):
         npd = PMF([(0.5, NodalPlane(1, 20, 3)),
                    (0.5, NodalPlane(2, 2, 4))])
@@ -41,7 +52,7 @@ class MultiPointTestCase(unittest.TestCase):
                         occurRates=[[.3, .1], [.4, .2, .1]])
         mps = MultiPointSource('mp1', 'multi point source',
                                'Active Shallow Crust',
-                               mmfd, PeerMSR(), 1.0,
+                               mmfd, None, PeerMSR(), 1.0, None,
                                10, 20, npd, hd, mesh)
         # test the splitting
         splits = list(mps)
@@ -95,7 +106,8 @@ multiPointSource{id='mp1', name='multi point source'}
                         bin_width=[1.0], occurRates=[[0.1], [0.2]])
         hd.hypo_dip_fracs = fracs
         mps = MultiPointSource('mp2', 'test', 'Active Shallow Crust',
-                               mmfd, PeerMSR(), 1.0, 0, 20, npd, hd, mesh)
+                               mmfd, None, PeerMSR(), 1.0, None,
+                               0, 20, npd, hd, mesh)
         for ps in mps:
             self.assertEqual(ps.hypo_dip_fracs, fracs)
 
@@ -107,7 +119,8 @@ multiPointSource{id='mp1', name='multi point source'}
         mmfd = MultiMFD('incrementalMFD', size=2, min_mag=[4.5],
                         bin_width=[1.0], occurRates=[[0.1], [0.2]])
         mps = MultiPointSource('mp3', 'test', 'Active Shallow Crust',
-                               mmfd, PeerMSR(), 1.0, 0, 15, npd, hd, mesh)
+                               mmfd, None, PeerMSR(), 1.0, None,
+                               0, 15, npd, hd, mesh)
         mps.modify_set_lower_seismogenic_depth(10.0)
         data = mps.hypocenter_distribution.data
         self.assertEqual([d for _, d in data], [4.0, 8.0])
