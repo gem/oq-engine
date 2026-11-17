@@ -38,13 +38,16 @@ class WebuiTestCase(unittest.TestCase):
                 '[server]', f'[server]\ndbfile = {scratch / "db.sqlite3"}'))
         env['OQ_CONFIG_FILE'] = str(cfgfile)
         env['OQ_DATADIR'] = str(scratch)
+        env['PYTHONUNBUFFERED'] = '1'
         hostport = self._free_hostport()
+        logpath = scratch / 'webui.log'
+        # A pipe can fill up during migrations and block server startup.
+        logfile = self.enterContext(logpath.open('w'))
         process = subprocess.Popen(
             [oq, 'webui', 'start', hostport, '-s'],
-            cwd=ROOT, env=env, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, text=True)
+            cwd=ROOT, env=env, stdout=logfile, stderr=subprocess.STDOUT)
         try:
-            self._wait_for_webui(process, hostport)
+            self._wait_for_webui(process, hostport, logpath)
             repeated = subprocess.run(
                 [oq, 'webui', 'start', hostport, '-s'], cwd=ROOT, env=env,
                 capture_output=True, text=True, timeout=10)
@@ -52,27 +55,32 @@ class WebuiTestCase(unittest.TestCase):
             self.assertIn('already in use', repeated.stderr)
             status = subprocess.run(
                 [oq, 'webui', 'status', hostport], cwd=ROOT, env=env,
-                capture_output=True, text=True, check=True)
+                capture_output=True, text=True, check=True, timeout=15)
             self.assertEqual(status.stdout.strip(), 'running')
             stopped = subprocess.run(
                 [oq, 'webui', 'stop', hostport], cwd=ROOT, env=env,
-                capture_output=True, text=True, check=True)
+                capture_output=True, text=True, check=True, timeout=30)
             self.assertEqual(stopped.stdout.strip(), 'stopped')
             self.assertIn(process.wait(timeout=10), [0, 15])
         finally:
             if process.poll() is None:
                 process.terminate()
-                process.wait(timeout=10)
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=10)
 
     def _free_hostport(self):
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             return '127.0.0.1:%d' % sock.getsockname()[1]
 
-    def _wait_for_webui(self, process, hostport):
-        for _ in range(60):
+    def _wait_for_webui(self, process, hostport, logpath):
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
             if process.poll() is not None:
-                output = process.stdout.read()
+                output = logpath.read_text(errors='replace')
                 self.fail('WebUI exited early:\n%s' % output)
             try:
                 response = requests.head(
@@ -83,7 +91,8 @@ class WebuiTestCase(unittest.TestCase):
             except requests.RequestException:
                 pass
             time.sleep(0.5)
-        self.fail('WebUI did not start within 30 seconds')
+        output = logpath.read_text(errors='replace')
+        self.fail('WebUI did not start within 30 seconds:\n%s' % output)
 
 
 if __name__ == '__main__':
