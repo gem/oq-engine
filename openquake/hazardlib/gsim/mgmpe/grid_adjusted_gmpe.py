@@ -761,6 +761,7 @@ class GridAdjustedGMPE(GMPE):
         resolved = self.compute_central(ctx, imts, mean, sig, tau, phi)
         self.apply_branch_shift(resolved, imts, mean)
 
+    # Needs to be a class method to be permitted in get_mean_stds whitelist
     def compute_central(self, ctx, imts, mean, sig, tau, phi,
                         gra_mon=nullcontext()):
         """
@@ -825,6 +826,7 @@ class GridAdjustedGMPE(GMPE):
                                  sig[m], tau[m], phi[m])
         return resolved
 
+    # Needs to be a class method to be permitted in get_mean_stds whitelist
     def apply_branch_shift(self, resolved, imts, mean):
         """
         Add this branch's eps * mean_se shift to the central mean.
