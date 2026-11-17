@@ -18,16 +18,21 @@ import os
 import re
 import glob
 import unittest
+from unittest import mock
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib.nrml import read
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import Point, Line
-from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.geodetic import distance
+from openquake.hazardlib.geo.utils import OrthographicProjection
+from openquake.hazardlib.geo.surface import kite_fault as kf
 from openquake.hazardlib.geo.surface.kite_fault import (
     KiteSurface, kite_to_geom, geom_to_kite,
-    get_profiles_from_simple_fault_data)
+    get_profiles_from_simple_fault_data, VERY_BIG, fix_mesh,
+    profiles_depth_alignment, _align_profiles, _check_sampling,
+    _fix_right_hand, _get_intersections, _warn_if_edges_cross)
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.geo.geodetic import npoints_towards, azimuth
@@ -1178,7 +1183,6 @@ def _get_profiles(fname):
 
 def _planar_mesh(lons_top, lats_top, dlon=0.05, nrow=4, ddep=2.0):
     # Rectangular mesh with rows shifted eastward and deepening downward
-    from openquake.hazardlib.geo.mesh import RectangularMesh
     lons_top = np.asarray(lons_top, dtype=float)
     lats_top = np.asarray(lats_top, dtype=float)
     lons = np.array([lons_top + i * dlon for i in range(nrow)])
@@ -1206,7 +1210,6 @@ class KiteRobustnessTest(unittest.TestCase):
         # A vertical fault whose trace is a half circle: a site on the
         # trace must have Rjb ~0 and a site at the centre of the circle an
         # Rjb equal to the radius
-        from openquake.hazardlib.geo.mesh import RectangularMesh
         t = np.linspace(0, np.pi, 41)
         lons = np.array([np.cos(t)] * 4)
         lats = np.array([np.sin(t)] * 4)
@@ -1233,7 +1236,6 @@ class KiteRobustnessTest(unittest.TestCase):
 
     def test_area_irregular_cell(self):
         # A flat, non-symmetric quadrilateral cell. Its exact area is 203 km2
-        from openquake.hazardlib.geo.mesh import RectangularMesh
         d = 1 / 111.195
         pnts = np.array([[0, 0], [10, 0], [25, -12], [-3, -10]]) * d
         lons = np.array([[pnts[0, 0], pnts[1, 0]], [pnts[3, 0], pnts[2, 0]]])
@@ -1242,7 +1244,6 @@ class KiteRobustnessTest(unittest.TestCase):
         np.testing.assert_allclose(sfc.get_area(), 203., rtol=1e-2)
 
     def test_top_edge_depth_and_center_with_nans(self):
-        from openquake.hazardlib.geo.mesh import RectangularMesh
         nan = np.nan
         lons = np.array([[0, 0, 0, 0], [0.05] * 4, [0.1, 0.1, nan, nan],
                          [0.15, 0.15, nan, nan]])
@@ -1263,7 +1264,6 @@ class KiteRobustnessTest(unittest.TestCase):
     def test_right_hand_first_cell_in_last_column(self):
         # The only cell with four finite vertexes is in the last column and
         # below the first row. This used to raise an IndexError
-        from openquake.hazardlib.geo.mesh import RectangularMesh
         nan = np.nan
         lons = np.array([[nan, 0.0], [nan, 0.0], [0.05, 0.05], [0.1, 0.1]])
         lats = np.array([[nan, 0.1], [nan, 0.1], [0, 0.1], [0, 0.1]])
@@ -1275,8 +1275,6 @@ class KiteRobustnessTest(unittest.TestCase):
 class KiteAuxiliaryFunctionsTest(unittest.TestCase):
 
     def test_align_profiles(self):
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            _align_profiles)
         prfr = [[[0, 0, 0], [0, 0.01, 2], [0, 0.02, 4], [0, 0.03, 6]]]
         prfl = [[[1, 0, 4], [1, 0.01, 6]]]
         _align_profiles(prfr, prfl)
@@ -1286,9 +1284,6 @@ class KiteAuxiliaryFunctionsTest(unittest.TestCase):
         np.testing.assert_array_equal(deps[2:], [4., 6.])
 
     def test_check_sampling(self):
-        from openquake.hazardlib.geo.utils import OrthographicProjection
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            _check_sampling)
         proj = OrthographicProjection(-1, 1, 1, -1)
         # Regular sampling, with and without NaNs, passes
         edg = np.array([[0.01 * i, 0, 0] for i in range(6)])
@@ -1308,19 +1303,15 @@ class KiteMeshBuildingTest(unittest.TestCase):
     """
 
     def setUp(self):
-        from openquake.hazardlib.geo.utils import OrthographicProjection
         self.proj = OrthographicProjection(-1, 1, 1, -1)
 
     def _line_x(self, lon):
         # A vertical line (in the projected space) through longitude `lon`
-        from openquake.hazardlib.geo.surface.kite_fault import VERY_BIG
         xx, _ = self.proj(np.array([lon]), np.array([0.0]))
         return [VERY_BIG, xx[0]]
 
     def test_intersection_north_south_edge(self):
         # A N-S edge crossing an E-W line. This used to fail in linregress
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            _get_intersections)
         _, yy = self.proj(np.array([0.0]), np.array([0.0]))
         edge = np.array([[0., -0.1, 5.], [0., 0.1, 7.]])
         pnts, idx = _get_intersections(edge, [[0.0, yy[0]]], self.proj)
@@ -1330,8 +1321,6 @@ class KiteMeshBuildingTest(unittest.TestCase):
     def test_intersection_at_vertex(self):
         # The line crosses the edge exactly at a vertex shared by two
         # segments: the intersection must be found once
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            _get_intersections)
         edge = np.array([[-0.1, -0.1, 5.], [0., 0., 6.], [0.1, 0.1, 7.]])
         pnts, idx = _get_intersections(edge, [self._line_x(0.0)], self.proj)
         self.assertEqual(idx, 0)
@@ -1339,8 +1328,6 @@ class KiteMeshBuildingTest(unittest.TestCase):
 
     def test_intersection_oblique_and_index(self):
         # Two lines, the edge crosses only the second one
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            _get_intersections)
         edge = np.array([[-0.1, -0.1, 5.], [0.1, 0.1, 7.]])
         lines = [self._line_x(0.5), self._line_x(0.05)]
         pnts, idx = _get_intersections(edge, lines, self.proj)
@@ -1348,15 +1335,12 @@ class KiteMeshBuildingTest(unittest.TestCase):
         aae(pnts[:, 2], [6.5], decimal=3)
 
     def test_intersection_none(self):
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            _get_intersections)
         edge = np.array([[-0.1, -0.1, 5.], [0.1, 0.1, 7.]])
         with self.assertRaises(ValueError):
             _get_intersections(edge, [self._line_x(0.5)], self.proj)
 
     def test_fix_mesh_incomplete_cell(self):
         # No cell has four finite vertexes: all the nodes must be removed
-        from openquake.hazardlib.geo.surface.kite_fault import fix_mesh
         msh = np.ones((2, 2, 3))
         msh[1, 1] = np.nan
         out = fix_mesh(msh)
@@ -1364,7 +1348,6 @@ class KiteMeshBuildingTest(unittest.TestCase):
 
     def test_fix_mesh_keeps_complete_cells(self):
         # Nodes of complete cells are kept, isolated ones are removed
-        from openquake.hazardlib.geo.surface.kite_fault import fix_mesh
         nan = np.nan
         fin = np.array([[1, 1, 1, nan],
                         [1, 1, 1, 1],
@@ -1380,8 +1363,6 @@ class KiteMeshBuildingTest(unittest.TestCase):
 
     def test_depth_alignment_short_profile(self):
         # Profiles too short to test any shift used to return None
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            profiles_depth_alignment)
         pro1 = Line([Point(0, 0, 0), Point(0, 0.01, 1)])
         pro2 = Line([Point(1, 0, 0), Point(1, 0.01, 1), Point(1, 0.02, 2)])
         self.assertEqual(profiles_depth_alignment(pro1, pro2), 0)
@@ -1389,15 +1370,11 @@ class KiteMeshBuildingTest(unittest.TestCase):
     def test_depth_alignment_shift(self):
         # The second profile starts at the depth of the third point of the
         # first one
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            profiles_depth_alignment)
         pro1 = Line([Point(0, 0.01 * i, 2. * i) for i in range(8)])
         pro2 = Line([Point(1, 0.01 * i, 4. + 2. * i) for i in range(8)])
         self.assertEqual(profiles_depth_alignment(pro1, pro2), 2)
 
     def test_depth_alignment_last_shift(self):
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            profiles_depth_alignment)
         pro1 = Line([Point(0, 0.01 * i, float(i)) for i in range(5)])
         pro2 = Line([Point(1, 0.01 * i, 3. + i) for i in range(3)])
         self.assertEqual(profiles_depth_alignment(pro1, pro2), 3)
@@ -1423,7 +1400,6 @@ class KiteSurfaceValidationTest(unittest.TestCase):
     def test_surface_nodes_without_profiles(self):
         # Surfaces created from a mesh (e.g. with geom_to_kite) used to
         # raise a TypeError
-        from openquake.hazardlib.geo.mesh import RectangularMesh
         msh = self._arc()
         sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
                                           msh[..., 2]))
@@ -1435,7 +1411,6 @@ class KiteSurfaceValidationTest(unittest.TestCase):
         self.assertEqual(len(pos.text), 15)
 
     def test_clean_nodes_with_undefined_coordinates(self):
-        from openquake.hazardlib.geo.mesh import RectangularMesh
         msh = self._arc(ncol=5)
         deps = msh[..., 2].copy()
         deps[2, 2] = np.nan
@@ -1448,7 +1423,6 @@ class KiteSurfaceValidationTest(unittest.TestCase):
         self.assertTrue(np.isfinite(msh[..., 0]).all())
 
     def test_surface_nodes_reject_internal_gaps(self):
-        from openquake.hazardlib.geo.mesh import RectangularMesh
         msh = self._arc(ncol=5)
         msh[2, 2] = np.nan
         sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
@@ -1458,7 +1432,6 @@ class KiteSurfaceValidationTest(unittest.TestCase):
             _ = sfc.surface_nodes
 
     def test_strike_after_cleaning_sparse_top_row(self):
-        from openquake.hazardlib.geo.mesh import RectangularMesh
         msh = np.array([
             [[0., 0., 0.], [.1, .1, np.nan], [.2, .2, np.nan]],
             [[0., -.1, 1.], [.1, .1, 1.], [.2, .2, 1.]],
@@ -1471,7 +1444,6 @@ class KiteSurfaceValidationTest(unittest.TestCase):
         self.assertAlmostEqual(sfc.get_strike(), 45., places=3)
 
     def test_single_row_mesh(self):
-        from openquake.hazardlib.geo.mesh import RectangularMesh
         msh = self._arc()[:1]
         with self.assertRaises(ValueError):
             KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
@@ -1480,8 +1452,6 @@ class KiteSurfaceValidationTest(unittest.TestCase):
     def test_fix_right_hand_single_node_in_first_row(self):
         # The first row contains a single finite node. This used to raise
         # an error when building the line of the top edge
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            _fix_right_hand)
         for inward in [True, False]:
             msh = self._arc(180., inward)
             msh[0, 1:, :] = np.nan
@@ -1494,8 +1464,6 @@ class KiteSurfaceValidationTest(unittest.TestCase):
     def test_fix_right_hand_fallback(self):
         # When neither orientation of the top edge is within 60 degrees of
         # the strike, the closest one is kept instead of failing
-        from unittest import mock
-        from openquake.hazardlib.geo.surface import kite_fault as kf
         msh = self._arc(30.)
         with mock.patch.object(kf.GriddedSurface, 'get_strike',
                                return_value=75.):
@@ -1504,8 +1472,6 @@ class KiteSurfaceValidationTest(unittest.TestCase):
         self.assertEqual(out.shape, msh.shape)
 
     def test_warn_if_edges_cross(self):
-        from openquake.hazardlib.geo.surface.kite_fault import (
-            _warn_if_edges_cross)
         msh = self._arc(ncol=4)
         self.assertFalse(_warn_if_edges_cross(msh))
         msh[1, 2, 2] = -1.
@@ -1513,7 +1479,6 @@ class KiteSurfaceValidationTest(unittest.TestCase):
             self.assertTrue(_warn_if_edges_cross(msh))
 
     def test_boundary_cache(self):
-        from openquake.hazardlib.geo.mesh import RectangularMesh
         msh = self._arc()
         sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
                                           msh[..., 2]))
