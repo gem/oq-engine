@@ -19,6 +19,7 @@ the postinstall commands run after their installation.
 import subprocess
 
 # Keep this list in sync with the standalone installer install.py.
+# NOTE: install.py is outside openquake and can not be imported here
 STANDALONE_APP_INFO = [
     # All engine Django app need oq-platform-standalone
     # {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.16.4"},

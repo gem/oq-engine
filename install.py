@@ -226,7 +226,8 @@ PLATFORM = {
 }
 
 # Keep this list in sync with openquake/server/standalone.py. The installer
-# must also work when downloaded on its own, before openquake is installed.
+# must also work when downloaded on its own, before openquake is installed,
+# so it can not import the object from openquake/server/standalone.py
 STANDALONE_APP_INFO = [
     # All engine Django app need oq-platform-standalone
     # {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.16.4"},

@@ -29,7 +29,7 @@ from openquake.commonlib.logs import get_datadir
 
 
 def _taxonomy_postinstall_state():
-    # Track both packages so taxonomy data is rebuilt on upgrades.
+    # Track both packages so the taxonomy is reloaded on upgrades.
     signature = ':'.join((version('django-gem-taxonomy'),
                           version('openquake-gem-taxonomy-data')))
     marker = os.path.join(get_datadir(), '.django_gem_taxonomy_version')
@@ -84,7 +84,6 @@ class Command(BaseCommand):
         # still in development: content is safely stored in Git. A dump/restore
         # upgrade procedure will be implemented later.
         call_command(postinstall_cmd)
-
         if marker:
             os.makedirs(os.path.dirname(marker), exist_ok=True)
             with open(marker + '.tmp', 'w') as f:
