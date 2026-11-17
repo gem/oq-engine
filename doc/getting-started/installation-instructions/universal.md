@@ -193,6 +193,12 @@ The installation script will automatically create a user called
 `openquake` and will install the engine in the directory
 `/opt/openquake/venv`. Calculation data will be stored in `$HOME/oqdata`.
 
+*NB*: currently, the `openquake` user is hard coded, i.e. you cannot
+perform a server installation with a different username. In the same
+sense, the directory `/opt/openquake/venv` is hard coded. If you want
+to install as a different user on a different directory perform a
+`user` installation instead.
+
 *NB*: if you already have an engine installation made with debian or rpm
 packages, before installing the new version you must uninstall the old
 version, make sure that the webui is actually
