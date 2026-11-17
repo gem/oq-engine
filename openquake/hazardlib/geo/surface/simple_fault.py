@@ -144,6 +144,14 @@ class SimpleFaultSurface(BaseSurface):
         if dip_spacing is not None and not dip_spacing > 0.0:
             raise ValueError("dip spacing must be positive")
 
+    @staticmethod
+    def get_dip_spacing(width, dip_spacing):
+        """Return the closest spacing that divides the down-dip width."""
+        intervals = max(1, math.floor(width / dip_spacing))
+        return min(
+            (width / intervals, width / (intervals + 1)),
+            key=lambda spacing: abs(spacing - dip_spacing))
+
     @classmethod
     def from_fault_data(cls, fault_trace, upper_seismogenic_depth,
                         lower_seismogenic_depth, dip, mesh_spacing, *,
@@ -195,10 +203,7 @@ class SimpleFaultSurface(BaseSurface):
         else:
             width = ((lower_seismogenic_depth - upper_seismogenic_depth)
                      / math.sin(math.radians(dip)))
-            intervals = max(1, math.floor(width / dip_spacing))
-            dip_spacing = min(
-                (width / intervals, width / (intervals + 1)),
-                key=lambda spacing: abs(spacing - dip_spacing))
+            dip_spacing = cls.get_dip_spacing(width, dip_spacing)
 
         strike = fault_trace[0].azimuth(fault_trace[-1])
         azimuth = (strike + 90.0) % 360
