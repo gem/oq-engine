@@ -45,6 +45,8 @@ class MultiPointSource(ParametricSeismicSource):
     MFDs and the same rupture_mesh_spacing, magnitude_scaling_relationship,
     rupture_aspect_ratio, temporal_occurrence_model, upper_seismogenic_depth,
     lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution.
+    The rupture_mesh_spacing parameter is present only for API compatibility
+    with the other parametric sources and can be None.
     An optional hypo_dip_fracs attribute on the hypocenter_distribution PMF
     propagates to each yielded PointSource.
     """

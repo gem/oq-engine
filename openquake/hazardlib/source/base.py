@@ -52,7 +52,7 @@ class SourceParam:
     * MultiPointSource
     * SimpleFaultSource
     * ComplexFaultSource
-    * KiteFaultSource (also through ``as_simple_fault``)
+    * KiteFaultSource
     * CharacteristicFaultSource
     """
     source_id: str

@@ -213,10 +213,9 @@ class AreaSource(ParametricSeismicSource):
                                 self.rupture_aspect_ratio,
                                 self.temporal_occurrence_model)
             pt = PointSource.from_param(
-                param,
-                self.upper_seismogenic_depth, self.lower_seismogenic_depth,
-                geo.Point(lon, lat), self.nodal_plane_distribution,
-                self.hypocenter_distribution)
+                param, self.upper_seismogenic_depth,
+                self.lower_seismogenic_depth, geo.Point(lon, lat),
+                self.nodal_plane_distribution, self.hypocenter_distribution)
             pt._num_ruptures = pt.count_ruptures()
             if hasattr(self, 'mmax_offset'):
                 pt.mmax_offset = self.mmax_offset

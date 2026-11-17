@@ -725,8 +725,7 @@ class SourceConverter(RuptureConverter):
             self.convert_mfdist(node), self.rupture_mesh_spacing, msr,
             get_aspect_ratio(node), self.get_tom(node))
         area = source.AreaSource.from_param(
-            param,
-            ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
+            param, ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
             self.convert_npdist(node), hdd, polygon, area_discretization)
         # Optional per-source offset applied to recurSet's max_mag
         # (used by the BC Hydro NVA alt3 bg sources: bg_mmax = fault_mmax - 0.5)
@@ -870,8 +869,7 @@ class SourceConverter(RuptureConverter):
                     mfd, self.rupture_mesh_spacing, msr, rar,
                     self.get_tom(node))
                 outsrc = source.KiteFaultSource.from_param(
-                    param,
-                    profiles, ~node.rake, xstep, ystep)
+                    param, profiles, ~node.rake, xstep, ystep)
             else:
                 param = source.base.SourceParam(
                     node['id'], node['name'], node.attrib.get('tectonicRegion'),
