@@ -21,12 +21,15 @@ NOTE: Current values are based on this implementation, but will be updated
 if author-provided values can be obtained.
 """
 
+import os
+import tempfile
 import unittest
+import h5py
 import numpy as np
 
 from openquake.hazardlib import imt
 from openquake.hazardlib.gsim.sung_2022 import (
-    SungEtAl2022, SungEtAl2022NonErgodic)
+    SungEtAl2022, SungEtAl2022NonErgodic, _load_adjustments)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 H5 = "adj_RE_france.h5"
@@ -170,6 +173,20 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             gsim.compute_central(ctx, imts, mean, sigma, tau, phi)
 
+    def test_adj_name_pattern_enforced(self):
+        # A dataset starting with 'adj_' but not matching the adj_<N>hz
+        # convention (e.g. uppercase 'Hz', missing 'hz', trailing junk)
+        # must raise rather than silently drop or misparse.
+        rec_dtype = [('lon', '<f4'), ('lat', '<f4'), ('mean', '<f4')]
+        payload = np.zeros(1, dtype=rec_dtype)
+        for bad_name in ('adj_1Hz', 'adj_5', 'adj_5hzz', 'adj_hz'):
+            with tempfile.TemporaryDirectory() as tmp:
+                path = os.path.join(tmp, 'bad.h5')
+                with h5py.File(path, 'w') as f:
+                    f.create_dataset('site1/' + bad_name, data=payload)
+                with self.assertRaises(ValueError, msg=bad_name):
+                    _load_adjustments(path)
+
 
 class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
     """
@@ -294,3 +311,6 @@ class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
         a = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id="mean")
         b = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id=5)
         self.assertEqual(a.central_key, b.central_key)
+        c = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id="mean")
+        c.adjustment_h5 = c.adjustment_h5 + ".other"
+        self.assertNotEqual(a.central_key, c.central_key)

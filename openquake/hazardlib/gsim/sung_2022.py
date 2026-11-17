@@ -30,6 +30,7 @@ the values in the later published paper (we can only verify for 5 Hz).
 """
 
 import os
+import re
 import h5py
 import numpy as np
 
@@ -59,19 +60,31 @@ def _magnitude_scaling(C, ctx):
     return t1 + t2 + t3
 
 
+ADJ_NAME_RE = re.compile(r'^adj_(?P<freq>\d+(?:\.\d+)?)hz$')
+
+
 def _load_adjustments(path):
     """
-    Read every /<site>/adj_<Nhz> dataset out of the h5 at `path` and return
-    a dict keyed by (site_name, freq_hz).
+    Read every /<site>/adj_<N>hz dataset out of the h5 at `path` and return
+    a dict keyed by (site_name, freq_hz). Any dataset starting with ``adj_``
+    whose name doesn't match the ``adj_<N>hz`` pattern raises ValueError so
+    typos don't silently drop frequencies.
     """
     dat = {}
     with h5py.File(path, 'r') as f:
         for site_name in f:
             site = f[site_name]
             for ds_name in site:
-                if ds_name.startswith('adj_'):
-                    freq = float(ds_name[len('adj_'):].rstrip('hz'))
-                    dat[(site_name, freq)] = site[ds_name][:]
+                if not ds_name.startswith('adj_'):
+                    continue
+                match = ADJ_NAME_RE.match(ds_name)
+                if match is None:
+                    raise ValueError(
+                        '%s: dataset /%s/%s does not match the expected '
+                        'adj_<N>hz naming convention'
+                        % (os.path.basename(path), site_name, ds_name))
+                freq = float(match.group('freq'))
+                dat[(site_name, freq)] = site[ds_name][:]
     return dat
 
 
