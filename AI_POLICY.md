@@ -1,8 +1,8 @@
 # AI Contribution Policy
 
-Since September 2026 the GEM team is using AI tools (such as OpenAI Codex,
-Anthropic Claude, Google Antigravity and open source agents like pi and opencode)
-to assist development on the engine code base.
+Since September 2026, the GEM team has been using AI tools (such as OpenAI
+Codex, Anthropic Claude, Google Antigravity and open-source harnesses like
+pi and opencode) to assist development on the engine code base.
 
 AI-assisted contributions are welcome, provided they meet the same
 standards of quality, correctness, and maintainability as any other
