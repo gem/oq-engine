@@ -22,22 +22,14 @@ import subprocess
 # NOTE: install.py is outside openquake and can not be imported here
 STANDALONE_APP_INFO = [
     # All engine Django app need oq-platform-standalone
-    # {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.16.4"},
-    {"pkg": "https://github.com/gem/oq-platform-standalone/archive/refs/heads/django52.zip",
-     "name": None, "ver": ""},
+    {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.19.1"},
     # Django apps to install
-    # {"pkg": "oq-platform-ipt", "name": "openquakeplatform_ipt",
-    #  "ver": "~=1.21.0"},
-    {"pkg": "https://github.com/gem/oq-platform-ipt/archive/refs/heads/django52.zip",
-     "name": "openquakeplatform_ipt", "ver": ""},
-    # {"pkg": "oq-platform-taxonomy", "name": "openquakeplatform_taxonomy",
-    #  "ver": "~=1.2.0"},
-    {"pkg": "https://github.com/gem/oq-platform-taxonomy/archive/refs/heads/django52.zip",
-     "name": "openquakeplatform_taxonomy", "ver": ""},
-    # {"pkg": "django-gem-taxonomy", "name": "django_gem_taxonomy",
-    #  "ver": "~=1.4.4"},
-    {"pkg": "https://github.com/gem/django-gem-taxonomy/archive/refs/heads/django52.zip",
-     "name": "django_gem_taxonomy", "ver": ""}]
+    {"pkg": "oq-platform-ipt", "name": "openquakeplatform_ipt",
+     "ver": "~=1.22.1"},
+    {"pkg": "oq-platform-taxonomy", "name": "openquakeplatform_taxonomy",
+     "ver": "~=1.2.1"},
+    {"pkg": "django-gem-taxonomy", "name": "django_gem_taxonomy",
+     "ver": "~=1.5.1"}]
 
 
 def postinstall(pycmd, apps=STANDALONE_APP_INFO):

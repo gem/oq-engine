@@ -230,22 +230,14 @@ PLATFORM = {
 # so it can not import the object from openquake/server/standalone.py
 STANDALONE_APP_INFO = [
     # All engine Django app need oq-platform-standalone
-    # {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.16.4"},
-    {"pkg": "https://github.com/gem/oq-platform-standalone/archive/refs/heads/django52.zip",
-     "name": None, "ver": ""},
+    {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.19.1"},
     # Django apps to install
-    # {"pkg": "oq-platform-ipt", "name": "openquakeplatform_ipt",
-    #  "ver": "~=1.21.0"},
-    {"pkg": "https://github.com/gem/oq-platform-ipt/archive/refs/heads/django52.zip",
-     "name": "openquakeplatform_ipt", "ver": ""},
-    # {"pkg": "oq-platform-taxonomy", "name": "openquakeplatform_taxonomy",
-    #  "ver": "~=1.2.0"},
-    {"pkg": "https://github.com/gem/oq-platform-taxonomy/archive/refs/heads/django52.zip",
-     "name": "openquakeplatform_taxonomy", "ver": ""},
-    # {"pkg": "django-gem-taxonomy", "name": "django_gem_taxonomy",
-    #  "ver": "~=1.4.4"},
-    {"pkg": "https://github.com/gem/django-gem-taxonomy/archive/refs/heads/django52.zip",
-     "name": "django_gem_taxonomy", "ver": ""}]
+    {"pkg": "oq-platform-ipt", "name": "openquakeplatform_ipt",
+     "ver": "~=1.22.1"},
+    {"pkg": "oq-platform-taxonomy", "name": "openquakeplatform_taxonomy",
+     "ver": "~=1.2.1"},
+    {"pkg": "django-gem-taxonomy", "name": "django_gem_taxonomy",
+     "ver": "~=1.5.1"}]
 WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
 
