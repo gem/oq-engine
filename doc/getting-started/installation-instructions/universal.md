@@ -33,6 +33,9 @@ After installing, you can get the location of the engine virtual enviroment with
 $ oq info venv
 ```
 
+When the virtual environment is created, a file named `INST_TYPE` is also created and stored into the root folder of the virtual environment.
+It contains a string that indicates the kind of installation (`user`, `server`, `devel` or `devel_server`).
+
 ## `user` installation
 
 If you do not need to modify the engine codebase or develop new
@@ -190,6 +193,12 @@ The installation script will automatically create a user called
 `openquake` and will install the engine in the directory
 `/opt/openquake/venv`. Calculation data will be stored in `$HOME/oqdata`.
 
+*NB*: currently, the `openquake` user is hard coded, i.e. you cannot
+perform a server installation with a different username. In the same
+sense, the directory `/opt/openquake/venv` is hard coded. If you want
+to install as a different user on a different directory perform a
+`user` installation instead.
+
 *NB*: if you already have an engine installation made with debian or rpm
 packages, before installing the new version you must uninstall the old
 version, make sure that the webui is actually
@@ -216,6 +225,28 @@ Then, running as `openquake` user:
 $ git clone https://github.com/gem/oq-engine.git
 $ cd oq-engine && sudo -H python3.11 install.py devel_server
 ```
+
+
+## Management of the Django SECRET_KEY
+
+Installing the engine in `server` or `devel_server` mode, a Django `SECRET_KEY` is generated automatically
+and stored into `/etc/openquake/django_secret.env` with the format `DJANGO_SECRET_KEY='any_string'`,
+referenced by the `EnviornmentFile` variable of the systemd service configuration file.
+Before running any Django command (e.g. `manage.py collectstatic`) you need to make sure the
+`DJANGO_SECRET_KEY` is available in the system environment:
+```
+$ source venv/bin/activate
+$ source /etc/openquake/django_secret.env
+$ export DJANGO_SECRET_KEY
+```
+
+If the engine is installed in `user` or `devel` mode, a Django SECRET_KEY is generated automatically
+and stored into the user home directory as `.oq_django_secret_key`. When any Django command (e.g. `manage.py migrate`)
+is executed, the Django `SECRET_KEY` is read from that file, if exists, otherwise the file is regenerated.
+
+For any kind of installation, it is possible to override the value of the Django `SECRET_KEY` by
+specifying the `SECRET_KEY` variable in the `openquake/server/local_settings.py` file.
+
 
 ## Cluster installation
 

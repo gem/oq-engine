@@ -171,6 +171,15 @@ ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --t
 where `N` is the number of workers. 
 Refer to the official Gunicorn documentation for the optimal choice of this value based on your system's hardware specifications.
 
+### Two installations on the same machine
+
+The installer does not allow two server installations on the same machine. Manually, you could create two
+different virtual environments, use different ports for the WebUI and use different systemd services,
+however we advice against that approach. Engine calculations tend to be resource hungry, so calculations
+running on the first installation could run out of memory and break also the second installation. We
+recommend implementing standard server installations on containers, with memory limits and process
+limits.
+
 ### Using Environment Variables in systemd Units
 
 Systemd has Environment directive which sets environment variables for executed processes. It takes a space-separated list of variable assignments. This option may be specified more than once in which case all listed variables will be set. If the same variable is set twice, the later setting will override the earlier setting. If the empty string is assigned to this option, the list of environment variables is reset, all prior assignments have no effect.
