@@ -321,7 +321,8 @@ def get_csm(oq, full_lt, dstore=None):
         floating_y_step=oq.floating_y_step,
         source_nodes=oq.source_nodes,
         infer_occur_rates=oq.infer_occur_rates,
-        filter_sourcecodes=oq.filter_sourcecodes)
+        filter_sourcecodes=oq.filter_sourcecodes,
+        dip_spacing=oq.dip_spacing)
     full_lt.ses_seed = oq.ses_seed
     logging.info('Reading the source model(s) in parallel')
 

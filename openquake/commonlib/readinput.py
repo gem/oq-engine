@@ -1064,7 +1064,8 @@ def get_rupture(oqparam):
         # NB: this is tested in aristotle_run
     if rupture_model and rupture_model.endswith('.xml'):
         [rup_node] = nrml.read(rupture_model)
-        conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
+        conv = sourceconverter.RuptureConverter(
+            oqparam.rupture_mesh_spacing, dip_spacing=oqparam.dip_spacing)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
     elif rupture_model and rupture_model.endswith('.csv'):

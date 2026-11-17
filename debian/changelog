@@ -1,3 +1,7 @@
+  [Richard Styron, Michele Simionato]
+  * Added a dip_spacing option to control down-dip meshing of simple faults.
+    Set dip_spacing=inferred in job.ini to enable the new behavior.
+
   [Marco Pagani]
   * Fixed geometry calculations and improved robustness of KiteSurface.
     This changes the outputs; the observed effect is minor and visible only
