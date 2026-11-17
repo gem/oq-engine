@@ -297,7 +297,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = (_magnitude_scaling(C, ctx) +
-                       _path_scaling(C, ctx) +
+                       _path_scaling(C, ctx) + # Assuming cRB = 50 km as in BA18
                        _ztor_scaling(C, ctx) +
                        _linear_site_response(C, ctx))
             sigma[m] = C['tot']
