@@ -902,10 +902,9 @@ class SourceConverter(RuptureConverter):
                 param = source.base.SourceParam(
                     node['id'], node['name'],
                     node.attrib.get('tectonicRegion'),
-                    mfd, self.rupture_mesh_spacing,
-                    msr, rar, self.get_tom(node))
+                    mfd, msr, rar, self.get_tom(node))
                 outsrc = source.KiteFaultSource.as_simple_fault(
-                    param,
+                    param, self.rupture_mesh_spacing,
                     ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
                     fault_trace, ~geom.dip, ~node.rake,
                     xstep, ystep)

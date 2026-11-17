@@ -47,12 +47,11 @@ TWO30 = I64(2**30)
 class SourceParam:
     source_id: str
     name: str
-    tectonic_region_type: str
+    trt: str
     mfd: object
-    rupture_mesh_spacing: float
-    magnitude_scaling_relationship: object
-    rupture_aspect_ratio: float
-    temporal_occurrence_model: object
+    msr: object
+    rar: float
+    tom: object
 
 
 def get_code2cls():
