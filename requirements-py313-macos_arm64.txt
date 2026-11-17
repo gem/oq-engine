@@ -28,7 +28,7 @@ https://wheelhouse.openquake.org/unified/shapely-2.1.0-cp313-cp313-macosx_11_0_a
 https://wheelhouse.openquake.org/unified/alpha_shapes-1.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/asgiref-3.11.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/attrs-23.1.0-py3-none-any.whl
-https://wheelhouse.openquake.org/unified/certifi-2026.4.22-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/certifi-2026.10.23-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/chardet-5.2.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/click_plugins-1.1.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/cligj-0.7.2-py3-none-any.whl
