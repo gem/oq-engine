@@ -706,7 +706,7 @@ class ClassicalTestCase(CalculatorTestCase):
     @mock.patch('openquake.calculators.autogrid.random_filter',
                 new=lambda objs, _factor: objs)
     def test_calibration_only(self):
-        # oq run --calibrate: the calibration is stored and the
+        # oq engine --calibrate job.ini: the calibration is stored and the
         # preclassical stops before the splitting of the sources
         self.run_calc(case_43.__file__, 'job.ini',
                       calculation_mode='preclassical',

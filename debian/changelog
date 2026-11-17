@@ -39,7 +39,7 @@
     correlation model
 
  [Michele Simionato]
-  * Added a `--calibrate` option to `oq run`
+  * Added `oq engine --calibrate JOB_INI` to calibrate point-source settings
   * Added a warning for sources with different IDs, the same geometry and
     different MFDs, which are likely variants of a base source, and
     `oq check_input --better-smlt` now generates a job.zip

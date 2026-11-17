@@ -165,7 +165,7 @@ calculation_mode:
 calibration_only:
   Used in preclassical calculations: stop after the calibration of
   ps_grid_spacing and pointsource_distance, which is stored in the
-  datastore; it is set by *oq run --calibrate*.
+  datastore; it is set by *oq engine --calibrate JOB_INI*.
   Example: *calibration_only = true*
   Default: False
 

@@ -134,10 +134,9 @@ full model with hundreds of thousands of sites, the speedup can be even larger.
 How to determine the right value for the ``ps_grid_spacing`` parameter
 ************************************************************************
 
-The recommended way is to set ``ps_grid_spacing = auto`` and to run the calculation with
-the ``--calibrate`` option, for instance::
+The recommended way is to calibrate the point-source approximations with::
 
-	$ oq run job.ini -p ps_grid_spacing=auto --calibrate
+	$ oq engine --calibrate job.ini
 
 With this setting the engine determines both ``ps_grid_spacing`` and ``pointsource_distance`` (unless the
 ``pointsource_distance`` is set in the job.ini) by comparing the hazard of the point sources on a sample of sites
