@@ -136,6 +136,12 @@ class KiteSurface(BaseSurface):
                 ok = np.isfinite(self.mesh.lons[:, icol])
                 if ok.sum() < 2:
                     continue
+                # NRML profiles cannot represent disconnected runs of nodes.
+                if np.any(np.diff(np.flatnonzero(ok)) > 1):
+                    raise ValueError(
+                        f'Cannot serialize section (id: {self.sec_id}): mesh '
+                        f'column {icol} has internal gaps that cannot be '
+                        'represented by an NRML profile')
                 profiles.append([
                     Point(lo, la, de) for lo, la, de in zip(
                         self.mesh.lons[ok, icol], self.mesh.lats[ok, icol],
@@ -464,14 +470,16 @@ class KiteSurface(BaseSurface):
         if self.strike is None:
             idx = np.nonzero(np.isfinite(self.mesh.lons[0, :]))[0]
             if len(idx) < 2:
-                raise ValueError('Cannot compute the strike: the first row '
-                                 'of the mesh has less than two finite nodes')
-            azi = azimuth(self.mesh.lons[0, idx[:-1]],
-                          self.mesh.lats[0, idx[:-1]],
-                          self.mesh.lons[0, idx[1:]],
-                          self.mesh.lats[0, idx[1:]])
-            # Azimuths are averaged as angles i.e. 359 and 1 give 0, not 180
-            self.strike = _circular_mean(azi)
+                msh = self.mesh.array.transpose(1, 2, 0)
+                self.strike = _top_edge_azimuth(msh)
+            else:
+                azi = azimuth(self.mesh.lons[0, idx[:-1]],
+                              self.mesh.lats[0, idx[:-1]],
+                              self.mesh.lons[0, idx[1:]],
+                              self.mesh.lats[0, idx[1:]])
+                # Azimuths are averaged as angles i.e. 359 and 1 give 0,
+                # not 180
+                self.strike = _circular_mean(azi)
         return self.strike
 
     def get_top_edge_depth(self):
@@ -1612,7 +1620,7 @@ def profiles_depth_alignment(pro1, pro2):
     # test any shift are not shifted.
     mindff = 1e20
     minidx = 0
-    for i1 in range(0, len(coo1) - minwdt):
+    for i1 in range(0, len(coo1) - minwdt + 1):
         lle = np.min([len(coo1[i1:, 2]), len(coo2[:, 2])])
         dff = np.mean(np.abs(coo1[i1:i1 + lle, 2] - coo2[0:lle, 2]))
         if mindff > dff:

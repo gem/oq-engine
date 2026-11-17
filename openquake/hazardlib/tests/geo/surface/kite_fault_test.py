@@ -1395,6 +1395,13 @@ class KiteMeshBuildingTest(unittest.TestCase):
         pro2 = Line([Point(1, 0.01 * i, 4. + 2. * i) for i in range(8)])
         self.assertEqual(profiles_depth_alignment(pro1, pro2), 2)
 
+    def test_depth_alignment_last_shift(self):
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            profiles_depth_alignment)
+        pro1 = Line([Point(0, 0.01 * i, float(i)) for i in range(5)])
+        pro2 = Line([Point(1, 0.01 * i, 3. + i) for i in range(3)])
+        self.assertEqual(profiles_depth_alignment(pro1, pro2), 3)
+
 
 class KiteSurfaceValidationTest(unittest.TestCase):
     """
@@ -1439,6 +1446,29 @@ class KiteSurfaceValidationTest(unittest.TestCase):
         self.assertTrue(np.isnan(sfc.mesh.lats[bad]).all())
         # The input arrays are not modified
         self.assertTrue(np.isfinite(msh[..., 0]).all())
+
+    def test_surface_nodes_reject_internal_gaps(self):
+        from openquake.hazardlib.geo.mesh import RectangularMesh
+        msh = self._arc(ncol=5)
+        msh[2, 2] = np.nan
+        sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
+                                          msh[..., 2]), sec_id='gap')
+        with self.assertRaisesRegex(
+                ValueError, 'gap.*column 2.*internal gaps'):
+            _ = sfc.surface_nodes
+
+    def test_strike_after_cleaning_sparse_top_row(self):
+        from openquake.hazardlib.geo.mesh import RectangularMesh
+        msh = np.array([
+            [[0., 0., 0.], [.1, .1, np.nan], [.2, .2, np.nan]],
+            [[0., -.1, 1.], [.1, .1, 1.], [.2, .2, 1.]],
+            [[0., -.2, 2.], [.1, 0., 2.], [.2, .1, 2.]]])
+        sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
+                                          msh[..., 2]))
+        # The top envelope runs north-east, although its first row has
+        # only one finite node after cleaning the undefined depths.
+        self.assertEqual(np.isfinite(sfc.mesh.lons[0]).sum(), 1)
+        self.assertAlmostEqual(sfc.get_strike(), 45., places=3)
 
     def test_single_row_mesh(self):
         from openquake.hazardlib.geo.mesh import RectangularMesh
