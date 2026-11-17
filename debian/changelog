@@ -1,3 +1,7 @@
+  [Richard Styron, Michele Simionato]
+  * Added a dip_spacing option to control down-dip meshing of simple faults.
+    Set dip_spacing=inferred in job.ini to enable the new behavior.
+
   [Marco Pagani]
   * Fixed geometry calculations and improved robustness of KiteSurface.
     This changes the outputs; the observed effect is minor and visible only
@@ -11,6 +15,8 @@
     moving the related code into the associated parts of the OQ-MBTK.
 
   [Michele Simionato]
+  * Changed the signature of MultiPointSource to be consistent with the other
+    parametric sources
   * Internal: overhauled the logic tree classes and added `oq info logic_trees`
   * Reduced the size of the yielded packets in classical_bysrc and
     raised an error in case of lost zmq packets
@@ -53,6 +59,7 @@
   * The classical calculator now logs the reduction of the contexts due to
     the variant sources optimization, stored in the new `separate` field of
     the `nctxs` dataset and displayed by `oq show context_reduction`
+  * Internal: moved the database upgrade outside of install.py
   * Internal: fixed `oq --version` in devel_server installations by calling
     automatically `git config --global --add safe.directory`
 

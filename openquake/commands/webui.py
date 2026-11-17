@@ -26,6 +26,7 @@ import psutil
 from openquake.baselib import config, general
 from openquake.commonlib import dbapi
 from openquake.commonlib.auth import API_KEY
+from openquake.server import standalone
 from openquake.server.db import actions
 from openquake.server.utils import check_webserver_running
 
@@ -97,11 +98,6 @@ def runserver(hostport=None, skip_browser=False):
     """Start the Django development server and serve the WebUI application."""
     url = 'http://' + hostport
     health = _health_url(hostport)
-    if check_webserver_running(health, max_retries=1, warn=False):
-        if not skip_browser:
-            webbrowser.open(url)
-        return
-
     args = [sys.executable, '-m', 'openquake.server.manage', 'runserver']
     # the reload functionality of the Django development server interferes
     # with SIGCHLD and causes zombies, thus it is disabled
@@ -133,10 +129,13 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         _stop(hostport)
         return
 
-    os.environ.setdefault('OQ_API_KEY', API_KEY)
     api_host, api_port = hostport.rsplit(':', 1)
     if api_host == '0.0.0.0':
         api_host = '127.0.0.1'
+    if general.socket_ready((api_host, int(api_port))):
+        sys.exit('Port %s is already in use' % api_port)
+
+    os.environ.setdefault('OQ_API_KEY', API_KEY)
     os.environ.setdefault(
         'OQ_WEBAPI_SERVER', 'http://%s:%s' % (api_host, api_port))
     dbpath = os.path.realpath(os.path.expanduser(config.server.dbfile))
@@ -144,6 +143,9 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
     actions.upgrade_db(dbapi.db)
+    errors = standalone.postinstall(sys.executable)
+    if errors:
+        sys.exit('\n'.join(errors))
     print('Starting, using version %s' % general.engine_version())
     runserver(hostport, skip_browser)
 

@@ -80,6 +80,50 @@ class SimpleFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
 
 
 class SimpleFaultSurfaceGetMeshTestCase(utils.SurfaceTestCase):
+    def test_dip_spacing(self):
+        trace = Line([Point(0, 0), Point(0, 0.3)])
+        # Include both neighboring interval counts and spacing above the width.
+        for spacing, intervals in ((5., 2), (4., 2), (6., 1), (20., 1)):
+            with self.subTest(spacing=spacing):
+                surface = SimpleFaultSurface.from_fault_data(
+                    trace, 0., 7., 90., mesh_spacing=4.,
+                    dip_spacing=spacing)
+                self.assertEqual(surface.mesh.shape[0], intervals + 1)
+                numpy.testing.assert_allclose(
+                    surface.mesh.depths[:, 0],
+                    numpy.linspace(0., 7., intervals + 1), atol=1e-7)
+
+    def test_dip_spacing_inclined(self):
+        trace = Line([Point(0, 0, -1), Point(0, 0.3, -1)])
+        surface = SimpleFaultSurface.from_fault_data(
+            trace, 2., 9., 45., 4., dip_spacing=3.)
+        self.assertEqual(surface.mesh.shape[0], 4)
+        numpy.testing.assert_allclose(surface.mesh.depths[0], 2., atol=1e-7)
+        numpy.testing.assert_allclose(surface.mesh.depths[-1], 9., atol=1e-7)
+
+    def test_default_dip_spacing(self):
+        trace = Line([Point(0, 0), Point(0, 0.3)])
+        for spacing, bottom in ((5., 5.), (4., 8.)):
+            with self.subTest(spacing=spacing):
+                surface = SimpleFaultSurface.from_fault_data(
+                    trace, 0., 7., 90., mesh_spacing=spacing)
+                explicit_none = SimpleFaultSurface.from_fault_data(
+                    trace, 0., 7., 90., spacing, dip_spacing=None)
+                self.assertAlmostEqual(surface.mesh.depths.max(), bottom)
+                for field in ('lons', 'lats', 'depths'):
+                    numpy.testing.assert_array_equal(
+                        getattr(surface.mesh, field),
+                        getattr(explicit_none.mesh, field))
+
+    def test_invalid_dip_spacing(self):
+        trace = Line([Point(0, 0), Point(0, 0.3)])
+        for spacing in (0., -1.):
+            with self.subTest(spacing=spacing):
+                with self.assertRaisesRegex(
+                        ValueError, 'dip spacing must be positive'):
+                    SimpleFaultSurface.check_fault_data(
+                        trace, 0., 7., 90., 4., dip_spacing=spacing)
+
     def test_get_mesh_1(self):
         p1 = Point(0.0, 0.0, 0.0)
         p2 = Point(0.0, 0.0359728811759, 0.0)

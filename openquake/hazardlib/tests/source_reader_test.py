@@ -44,7 +44,8 @@ def make_mps():
     mmfd = MultiMFD('incrementalMFD', size=3, min_mag=[4.5],
                     bin_width=[1.0], occurRates=[[0.1], [0.2], [0.3]])
     mps = MultiPointSource('mp1', 'test', 'Active Shallow Crust',
-                           mmfd, PeerMSR(), 1.0, 0, 20, npd, hd, mesh)
+                           mmfd, None, PeerMSR(), 1.0, None,
+                           0, 20, npd, hd, mesh)
     # two sets of realizations with different uncertainties, identified
     # by the smallest trt_smr in the field ts (see get_ts_sets)
     mps.ts_samples = numpy.array(

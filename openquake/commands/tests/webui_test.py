@@ -13,6 +13,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -30,8 +31,13 @@ class WebuiTestCase(unittest.TestCase):
         oq = shutil.which('oq')
         self.assertIsNotNone(oq)
         env = os.environ.copy()
-        env['OQ_CONFIG_FILE'] = str(
-            ROOT / 'openquake/engine/multiuser.cfg')
+        scratch = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        cfgfile = scratch / 'openquake.cfg'
+        cfgfile.write_text(
+            (ROOT / 'openquake/engine/multiuser.cfg').read_text().replace(
+                '[server]', f'[server]\ndbfile = {scratch / "db.sqlite3"}'))
+        env['OQ_CONFIG_FILE'] = str(cfgfile)
+        env['OQ_DATADIR'] = str(scratch)
         hostport = self._free_hostport()
         process = subprocess.Popen(
             [oq, 'webui', 'start', hostport, '-s'],
@@ -39,6 +45,11 @@ class WebuiTestCase(unittest.TestCase):
             stderr=subprocess.STDOUT, text=True)
         try:
             self._wait_for_webui(process, hostport)
+            repeated = subprocess.run(
+                [oq, 'webui', 'start', hostport, '-s'], cwd=ROOT, env=env,
+                capture_output=True, text=True, timeout=10)
+            self.assertNotEqual(repeated.returncode, 0)
+            self.assertIn('already in use', repeated.stderr)
             status = subprocess.run(
                 [oq, 'webui', 'status', hostport], cwd=ROOT, env=env,
                 capture_output=True, text=True, check=True)

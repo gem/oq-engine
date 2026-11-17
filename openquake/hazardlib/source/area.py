@@ -20,7 +20,7 @@ import math
 from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.codes import AREA
 from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource, SourceParam
 
 
 class AreaSource(ParametricSeismicSource):
@@ -205,22 +205,17 @@ class AreaSource(ParametricSeismicSource):
         else:
             raise TypeError('Unknown MFD: %s' % area_mfd)
         for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
-            pt = PointSource(
-                # Generate a new ID and name
-                source_id='%s:%s' % (self.source_id, i),
-                name=self.name,
-                tectonic_region_type=self.tectonic_region_type,
-                mfd=new_mfd,
-                rupture_mesh_spacing=self.rupture_mesh_spacing,
-                magnitude_scaling_relationship=
-                self.magnitude_scaling_relationship,
-                rupture_aspect_ratio=self.rupture_aspect_ratio,
-                upper_seismogenic_depth=self.upper_seismogenic_depth,
-                lower_seismogenic_depth=self.lower_seismogenic_depth,
-                location=geo.Point(lon, lat),
-                nodal_plane_distribution=self.nodal_plane_distribution,
-                hypocenter_distribution=self.hypocenter_distribution,
-                temporal_occurrence_model=self.temporal_occurrence_model)
+            # Generate a new ID and name
+            param = SourceParam('%s:%s' % (self.source_id, i), self.name,
+                                self.tectonic_region_type, new_mfd,
+                                self.rupture_mesh_spacing,
+                                self.magnitude_scaling_relationship,
+                                self.rupture_aspect_ratio,
+                                self.temporal_occurrence_model)
+            pt = PointSource.from_param(
+                param, self.upper_seismogenic_depth,
+                self.lower_seismogenic_depth, geo.Point(lon, lat),
+                self.nodal_plane_distribution, self.hypocenter_distribution)
             pt._num_ruptures = pt.count_ruptures()
             if hasattr(self, 'mmax_offset'):
                 pt.mmax_offset = self.mmax_offset
