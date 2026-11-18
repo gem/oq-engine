@@ -32,15 +32,29 @@ import django
 from django.apps import apps
 from django.conf import settings
 from django.http import HttpResponseNotFound
+from django.urls import reverse
 from openquake.baselib.general import gettemp
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import loadnpz
 from openquake.server.views import format_oqparam
+from openquake.server.services import _impact_urls
 from openquake.server.tests.views_test import (
     get_or_create_user, start_webui, stop_webui)
 
 CALC_RUN_TIMEOUT = 100
+
+
+def test_impact_urls_match_the_routes():
+    # the URLs returned by impact_run are built without Django, so they
+    # must be kept in sync with the named routes of urls.py
+    urls = _impact_urls('http://localhost:8800')(42)
+    expected = {'outputs_uri_web': reverse('outputs_impact', args=[42]),
+                'outputs_uri': reverse('results', args=[42]),
+                'log_uri': reverse('log', args=[42, '0', '']),
+                'traceback_uri': reverse('traceback', args=[42])}
+    assert urls == {key: 'http://localhost:8800' + path
+                    for key, path in expected.items()}
 
 
 def test_format_oqparam_displays_selected_nodal_plane():
