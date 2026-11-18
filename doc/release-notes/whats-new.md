@@ -2,7 +2,7 @@ Release notes v3.27
 ===================
 
 Version 3.27 is the largest release ever in terms of new capabilities,
-performance improvements and bug fixes, involving more than 400 pull
+performance improvements and bug fixes, involving more than 450 pull
 requests.
 
 The complete set of changes is listed in the changelog:
@@ -14,35 +14,45 @@ the LTS release, currently at version 3.23.5.
 
 # Hazard
 
-## Classical PSHA: performance improvements
+## Classical PSHA: variant sources
 
 There is a major new optimization for the case of logic trees generating
 variations of a base source with different magnitude-frequency
 distributions. This case is extremely common in site-specific analyses and
 much less common in continental-scale calculations, which is why it had
 remained unoptimized until now. Thanks to a project with BCHydro the case
-is now managed properly by the engine, with a large speedup (60x in a
-reduced model).
+is now managed properly by the engine, with a large speedup (we measured
+a 60x).
 
-As a consequence of this project the implementation of the logic tree is
-much cleaner, and the internals are now documented in
+Moreover we removed a limitation of the previous implementation that made it impossible
+to run the BCHydro calculation with full numeration. The internals of the classical calculator
+and the logic tree management are now finally documented in
 [Management of the uncertainties](https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/advanced/classical-internals.html#management-of-the-uncertainties).
 
-Source uncertainties are now applied in the workers, one set of
-realizations at a time, for both classical and event-based calculations.
-In event-based calculations the event samples can differ for the same
-`random_seed`, while remaining statistically consistent. The new
-`unc_signatures` dataset and the `oq show usignatures` view summarize the
-uncertainty signatures associated with the sources.
+The engine is now able to detect models where variant sources are
+treated inefficiently and to raise a warning in that case. The warning
+suggests to run `oq check_input job.ini --better-smlt` which will
+rewrite the source models and the logic tree file in such a way that
+the variant sources optimization can be applied. In the GEM mosaic
+models this will hardly make a difference, however there a cases were
+the difference is impressive (we have a model for France use by EDF where
+the variant sources optimization gives a 32x speedup).
+
+Note: as a consequence of the change in event-based calculations with
+variant sources the event samples can differ for the same
+`random_seed`, while remaining statistically consistent.
+
+## Classical PSHA: performance improvements
 
 We revisited the old `ps_grid_spacing` optimization, which is now much
 more precise than it used to be (around an order of magnitude more
-precise, i.e. common 10% maximum errors are now below 1%) and often
-faster. A fixed global grid is now used, thus avoiding a bug that caused
-distant sources to change the results for nearby sources.
+precise, i.e. 10% maximum errors which were relatively common before
+are now below 1%) and often faster. Moreover, we are now using a fixed global grid,
+thus avoiding a bug that caused distant sources to change the results
+for nearby sources.
 
-There is a new `oq run job.ini --calibrate -p ps_grid_spacing=auto`
-command that automatically determines the best combination of
+There is a new commands `oq engine --calibrate job.ini`
+that automatically determines the best combination of
 `ps_grid_spacing` and `pointsource_distance`. The approximation can now
 also be used with `disagg_by_src`, provided the calculation has few sites.
 
@@ -73,6 +83,10 @@ The engine now records the number of contexts in the `nctxs` dataset and
 provides the `oq show context_reduction` view, which displays the
 reduction factors due to gridding, `pointsource_distance`,
 `collapse_precision` and the variant-sources optimization.
+
+Classical calculations with `disagg_by_src` send smaller packets from
+workers. If a ZeroMQ packet is lost, the calculation now fails with an
+error instead of continuing with incomplete data.
 
 Other performance work includes faster Joyner-Boore distances for 2D
 meshes (about 4x in an Alaska calculation), a better source weighting
@@ -107,6 +121,17 @@ New job parameters useful for debugging and performance work include
 `filter_sourcecodes` (keep only sources with the given codes),
 `keep_rupdata` (store rupture data also when there are many sites) and
 `collapse_precision` (see above).
+
+For simple fault sources, set `dip_spacing = inferred` in the job file to
+adjust the down-dip mesh spacing to fit the fault width. The default,
+`dip_spacing = mesh_spacing`, uses the rupture mesh spacing unchanged.
+The piecewise linear magnitude-dependent rupture aspect ratio can now
+use more than two entries.
+
+Two new source logic-tree uncertainties are available.
+`minMagGRAbsolute` replaces the minimum magnitude of a truncated
+Gutenberg–Richter MFD, and `multiMFDAbsolute` replaces the MFDs of all
+points in a multi-point source.
 
 ## Ground-motion models and correlation
 
@@ -213,6 +238,8 @@ The default `region_grid_spacing` of the impact form is 1 km.
 
 # WebUI, server and IT
 
+The WebUI now uses Django 5.2 LTS and django-cookie-consent 1.0.
+
 The WebUI supports sharing and unsharing jobs through a Django
 permission: authorized job owners can share their jobs with other users,
 while level-2 users cannot share or unshare jobs they do not own.
@@ -222,6 +249,8 @@ version 0.67.0, GDAL to version 3.13.1, GeoPandas to 1.1.4, pyogrio to
 0.12.1.
 
 We recommend Python 3.13, although versions 3.11 to 3.13 are supported.
+
+The repository now includes an AI contribution policy in `AI_POLICY.md`.
 
 # Other commands and exports
 
@@ -269,6 +298,14 @@ conditional spectra normalization have also been corrected.
 
 With `maximum_rupture_depth`, ruptures deeper than the limit are now
 discarded without an assertion failure.
+
+Kite fault surface geometry calculations have been corrected and made
+more robust. The regression cases showed minor changes in Türkiye.
+Simple fault rupture floating now preserves the intended weights of the
+hypocentral depth distribution.
+
+Uncertainty histogram calculations preserve probability mass at zero
+rates and retain global uncertainty indices during convolution.
 
 Requests for quantile hazard maps without mean outputs no longer crash.
 The `ps_grid_spacing` grid no longer depends on the bounding box of a
@@ -333,7 +370,17 @@ m/s (thanks to Ozan Bilal and Kyle Smith for the report).
 
 The Swiss site-specific SA corrections can be applied with
 `ModifiableGMPE`; only the site columns for the selected periods are
-required.
+required. For PGA, the correction retains the mean, phi and tau and
+recomputes total sigma.
+
+The Bayless and Abrahamson (2018) model now corrects high-frequency
+total sigma and missing mean predictions near 24 Hz. It applies the
+missing smoothing step to the nonlinear site term and interpolates the
+computed log EAS and standard deviations for off-grid frequencies.
+
+Planar rupture contexts now supply the closest-point coordinates
+requested by ground-motion models, including the combined `clon_clat`
+parameter used by the nonergodic Zhao et al. (2016) slab model.
 
 ## Other
 
@@ -344,6 +391,15 @@ paths" message now explains when `use_rates` can help.
 
 # Upgrading
 
+- The Hazard Modeller's Toolkit (HMTK) is no longer bundled with the
+  engine. Its components are planned to move to the OpenQuake Model
+  Building Toolkit (OQ-MBTK).
+- On Red Hat Enterprise Linux 8 and its derivatives, the Django upgrade
+  requires SQLite 3.31 or newer for the WebUI.
+- Python callers that construct `MultiPointSource` directly must supply
+  `rupture_mesh_spacing` after `mfd` and pass
+  `temporal_occurrence_model` after `rupture_aspect_ratio`. The final
+  argument is still `mesh`.
 - The correlation parameters have been renamed (see the warning above).
   The ShakeMap `spatial_correlation` parameter is obsolete: leave
   `within_event_correlation_model` unset to disable correlation.
