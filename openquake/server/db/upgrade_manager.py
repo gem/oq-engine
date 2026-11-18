@@ -25,6 +25,7 @@ import urllib.request
 import logging
 import importlib
 import sqlite3
+import contextlib
 from openquake.commonlib.dbapi import db
 
 
@@ -82,6 +83,26 @@ class WrappedConnection(object):
             print(query)
         curs.execute(query)
         return curs
+
+
+# Take the write lock of the database with BEGIN IMMEDIATE, so that
+# concurrent processes (e.g. the WebUI starting and `oq engine --upgrade-db`)
+# initialize or upgrade it one at the time: the others wait for the lock (up
+# to the timeout of the connection) and read the versions only after it.
+# The lock is released by committing or, in case of error, by rolling back;
+# since SQLite DDL is transactional, a failed upgrade leaves the database
+# at the previous version. This is needed since dbapi.db works in autocommit
+# mode (isolation_level=None) and would commit every single statement.
+@contextlib.contextmanager
+def _write_lock(conn):
+    conn.execute('BEGIN IMMEDIATE')
+    try:
+        yield
+    except BaseException:
+        conn.rollback()
+        raise
+    else:
+        conn.commit()
 
 
 # not used right now
@@ -171,7 +192,8 @@ class UpgradeManager(object):
         :param conn: a DB API 2 connection
         """
         logging.info('Creating the versioning table %s', self.version_table)
-        conn.executescript(CREATE_VERSIONING % self.version_table)
+        # not using executescript, which would commit the current transaction
+        conn.execute(CREATE_VERSIONING % self.version_table)
         self._insert_script(self.read_scripts()[0], conn)
 
     def init(self, conn):
@@ -319,16 +341,21 @@ class UpgradeManager(object):
             raise SystemExit(
                 'The upgrade_dir does not contain scripts matching '
                 'the pattern %s' % upgrader.pattern)
-        curs = conn.cursor()
-        # check if there is already a versioning table
-        curs.execute("SELECT name FROM sqlite_master "
-                     "WHERE name=%r" % upgrader.version_table)
-        versioning_table = curs.fetchall()
-        # if not, run the base script and create the versioning table
-        if not versioning_table:
-            upgrader.init(conn)
-            conn.commit()
+        # if there is no versioning table, run the base script and create it
+        if not upgrader._has_versioning(conn):
+            with _write_lock(conn):
+                # check again, another process could have created it
+                # while we were waiting for the lock
+                if not upgrader._has_versioning(conn):
+                    upgrader.init(conn)
         return upgrader
+
+    # True if the versioning table exists
+    def _has_versioning(self, conn):
+        curs = conn.cursor()
+        curs.execute("SELECT name FROM sqlite_master WHERE name=?",
+                     (self.version_table,))
+        return bool(curs.fetchall())
 
 
 def upgrade_db(conn=None, pkg_name='openquake.server.db.schema.upgrades',
@@ -345,14 +372,10 @@ def upgrade_db(conn=None, pkg_name='openquake.server.db.schema.upgrades',
         conn = db.conn
     upgrader = UpgradeManager.instance(conn, pkg_name)
     t0 = time.time()
-    # run the upgrade scripts
-    try:
+    # run the upgrade scripts holding the write lock, so that the versions
+    # already applied are read after any concurrent upgrade has finished
+    with _write_lock(conn):
         versions_applied = upgrader.upgrade(conn, skip_versions)
-    except Exception:
-        conn.rollback()
-        raise
-    else:
-        conn.commit()
     if versions_applied:
         logging.info('Upgrade completed in %s seconds', time.time() - t0)
     return versions_applied

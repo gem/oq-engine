@@ -22,11 +22,13 @@ import sqlite3
 import unittest
 import tempfile
 import importlib
+import threading
+import time
 from contextlib import contextmanager
 
 from openquake.server.db.upgrade_manager import (
     upgrade_db, db_version, what_if_I_upgrade,
-    VersionTooSmall, DuplicatedVersion)
+    VersionTooSmall, DuplicatedVersion, UpgradeManager)
 
 pkg = 'openquake.server.tests.db.upgrades'
 upgrader = importlib.import_module(pkg).upgrader
@@ -116,6 +118,36 @@ class UpgradeManagerTestCase(unittest.TestCase):
         with self.assertRaises(DuplicatedVersion):
             with temp_script('0001-do-nothing.sql', 'SELECT 1'):
                 upgrade_db(conn, pkg)
+
+    def test_concurrent_upgrade(self):
+        # emulate two processes upgrading the database at the same time,
+        # like the WebUI starting and `oq engine --upgrade-db`: the second
+        # one must wait for the first and then find nothing to apply,
+        # instead of applying again the same scripts
+        skip = ['0002', '0003']
+        UpgradeManager.instance(conn, pkg)  # create the base schema
+        results, errors = [], []
+
+        def other_process():
+            conn2 = sqlite3.connect(tmpfile, timeout=20)
+            try:
+                results.append(upgrade_db(conn2, pkg, skip_versions=skip))
+            except Exception as exc:
+                errors.append(exc)
+            finally:
+                conn2.close()
+
+        conn.execute('BEGIN IMMEDIATE')  # the first process takes the lock
+        thread = threading.Thread(target=other_process)
+        thread.start()
+        time.sleep(.5)  # give the time to the other process to start
+        applied = upgrader.upgrade(conn, skip)
+        conn.commit()
+        thread.join()
+        self.assertEqual(applied, ['0001', '0005'])
+        self.assertEqual(errors, [])
+        self.assertEqual(results, [[]])
+        self.assertEqual(count(conn, 'test_hazard_calculation'), 2)
 
     def test_db_version(self):
         self.assertEqual(db_version(conn, pkg), '0000')
