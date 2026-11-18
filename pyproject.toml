@@ -45,6 +45,7 @@ dependencies = [
     "django_cors_headers~=4.9.0",
     "django_cookie_consent~=1.0.0",
     "urllib3~=2.8.0",
+    "sqlparse~=0.6.1",
 
     # geopackages
     "gdal~=3.11.4; sys_platform == 'win32'",
