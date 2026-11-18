@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+from contextlib import closing
 import numpy
 import pytest
-from openquake.baselib import hdf5
 from openquake.baselib.performance import Monitor
+from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.hazardlib import logictree
 from openquake.hazardlib.map_array import rates_dt
@@ -35,11 +36,11 @@ def test_empty_hazard_chunk(tmp_path, fastmean):
                  individual_rlzs='false' if fastmean else 'true')
     rates = numpy.array([(0, 0, 0, .2), (0, 1, 0, .1),
                          (2, 0, 0, .4), (2, 1, 0, .3)], rates_dt)
-    with hdf5.File(str(tmp_path / 'rates.hdf5'), 'w') as dstore:
+    with closing(DataStore(str(tmp_path / 'rates.hdf5'))) as dstore:
         dstore['oqparam'] = oq
         dstore['full_lt'] = logictree.FullLogicTree.fake().init()
         dstore['sitecol/sids'] = numpy.uint32([0, 2])
-        classical._store(rates, 2, dstore)
+        classical._store(rates, 2, dstore.hdf5)
         populated, empty = getters.map_getters(dstore)
         assert populated.sids.tolist() == [0, 2]
         assert empty.sids.tolist() == []
