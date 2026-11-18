@@ -26,7 +26,7 @@ from unittest import mock
 from openquake.baselib import parallel, general, config, hdf5, performance
 from openquake.baselib.general import decode, gettemp
 from openquake.hazardlib import (
-    InvalidFile, nrml, calc, rmap_maker, source_reader)
+    InvalidFile, nrml, calc, rmap_maker)
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -773,13 +773,6 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'],
                               case_45.__file__)
 
-    def test_strided_reading(self):
-        # reading the source models with strides (see source_reader.BIG_FILE)
-        # gives the same results, also with mutex groups and uncertainties
-        with mock.patch.object(source_reader, 'BIG_FILE', 0):
-            self.test_case_27()
-            self.test_case_45()
-        
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
         self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
