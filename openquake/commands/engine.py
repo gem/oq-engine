@@ -121,7 +121,8 @@ def main(
         exports='',
         log_level='info',
         sample_sources=False,
-        nodes: int = 1):
+        nodes: int = 1,
+        calibrate=None):
     """
     Run a calculation using the traditional command line API
     """
@@ -137,6 +138,11 @@ def main(
     if sample_sources:
         assert 0 < float(sample_sources) < 1
         os.environ['OQ_SAMPLE_SOURCES'] = sample_sources
+
+    if calibrate:
+        if run:
+            sys.exit('--calibrate cannot be combined with --run')
+        run = [calibrate]
 
     # check if the datadir exists
     datadir = datastore.get_datadir()
@@ -179,6 +185,9 @@ def main(
         hc_id = None
     if run:
         pars = dict(p.split('=', 1) for p in param) if param else {}
+        if calibrate:
+            pars.update(calculation_mode='preclassical',
+                        calibration_only='true', ps_grid_spacing='auto')
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
@@ -297,4 +306,7 @@ main.log_level = dict(help='Defaults to "info"',
                       choices=['debug', 'info', 'warn', 'error', 'critical'])
 main.sample_sources = dict(abbrev='--ss',
                            help="Sample fraction in the range 0..1")
+main.calibrate = dict(
+    help='calibrate ps_grid_spacing and pointsource_distance, then stop',
+    metavar='JOB_INI')
 main.nodes = 'Number of SLURM nodes (if applicable)'

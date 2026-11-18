@@ -60,7 +60,11 @@
                     |
                   </li>
                   <li class="user">
-                    <a href="{% url "logout" %}">logout</a>
+                    {# Django >= 5.0 only accepts POST requests to log out #}
+                    <form id="logout-form" class="logout-form" method="post" action="{% url "logout" %}">
+                      {% csrf_token %}
+                      <button type="submit" class="logout-btn">logout</button>
+                    </form>
                   </li>
                   {% endif %}
                   <li class="actions">

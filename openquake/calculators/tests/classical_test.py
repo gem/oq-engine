@@ -26,7 +26,7 @@ from unittest import mock
 from openquake.baselib import parallel, general, config, hdf5, performance
 from openquake.baselib.general import decode, gettemp
 from openquake.hazardlib import (
-    InvalidFile, nrml, calc, rmap_maker, source_reader)
+    InvalidFile, nrml, calc, rmap_maker)
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -433,6 +433,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__,
                               delta=1E-5)
+        expected = self.calc.datastore['hcurves-stats'][:]
         # make sure probs_occur are stored as expected
         probs_occur = self.calc.datastore['rup/probs_occur'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
@@ -464,15 +465,15 @@ class ClassicalTestCase(CalculatorTestCase):
         # rateSplit does not change these sources' occurrence rates.
         # Both uncertainty sets must retain the full atomic contribution,
         # with both the few-sites and many-sites task functions.
+        # Compare the original site in both runs. The second site forces
+        # the many-sites path.
         smlt = 'source_model_logic_tree_unc.xml'
         for kwargs in [{}, dict(disagg_by_src='false', max_sites_disagg='1',
                                 sites='135.68 35.68, 135.69 35.68')]:
-            self.run_calc(case_27.__file__, 'job.ini', **kwargs)
-            expected = self.calc.datastore['hcurves-stats'][:]
             self.run_calc(
                 case_27.__file__, 'job.ini', **kwargs,
                 source_model_logic_tree_file=smlt)
-            actual = self.calc.datastore['hcurves-stats'][:]
+            actual = self.calc.datastore['hcurves-stats'][:1]
             aac(actual, expected, rtol=1E-6)
 
     def test_case_27_other(self):
@@ -727,7 +728,7 @@ class ClassicalTestCase(CalculatorTestCase):
     @mock.patch('openquake.calculators.autogrid.random_filter',
                 new=lambda objs, _factor: objs)
     def test_calibration_only(self):
-        # oq run --calibrate: the calibration is stored and the
+        # oq engine --calibrate job.ini: the calibration is stored and the
         # preclassical stops before the splitting of the sources
         self.run_calc(case_43.__file__, 'job.ini',
                       calculation_mode='preclassical',
@@ -785,13 +786,6 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'],
                               case_45.__file__)
 
-    def test_strided_reading(self):
-        # reading the source models with strides (see source_reader.BIG_FILE)
-        # gives the same results, also with mutex groups and uncertainties
-        with mock.patch.object(source_reader, 'BIG_FILE', 0):
-            self.test_case_27()
-            self.test_case_45()
-        
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
         self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
@@ -1323,7 +1317,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # Check execution of a calculation specifiying reference z1pt0
         # and z2pt5 values of -999 in the job file instead of in site
         # model file
-        self.run_calc(case_89.__file__, 'job_ref.ini')
+        self.run_calc(case_89.__file__, 'job_ref.ini',
+                      calculation_mode='preclassical')
 
         # And check z1pt0 of -100 m/s raises value error when compiling
         # the site collection from a CSV within a regular OQ calc

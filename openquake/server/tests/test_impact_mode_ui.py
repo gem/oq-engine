@@ -17,10 +17,16 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 # NB: run these tests with OQ_APPLICATION_MODE=IMPACT,
+from pathlib import Path
+
 import pytest
+from openquake.server.tests.pages.login_page import LoginPage
+from openquake.server.tests.pages.cookie_bar import CookieBar
 from openquake.server.tests.pages.impact_page import (
     ImpactPageLevel0, ImpactPageLevel1, ImpactPageLevel2)
 from playwright.sync_api import expect
+
+REPORT_CITIES = Path(__file__).with_name('data') / 'impact_report_cities.csv'
 
 
 @pytest.mark.parametrize("user", [0], indirect=True)
@@ -42,6 +48,7 @@ def test_impact_ui_level_0(
 @pytest.mark.parametrize("user", [1], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
+@pytest.mark.parametrize("webui_config", [REPORT_CITIES], indirect=True)
 def test_impact_ui_level_1(
         application_mode, authenticated_page, user, default_usgs_id,
         should_remove_job):
@@ -57,24 +64,24 @@ def test_impact_ui_level_1(
     expect(page.local_timestamp()).not_to_be_editable()
     # the default maximum distance depends on the magnitude
     expect(page.maximum_distance()).to_be_visible()
-    expect(page.maximum_distance()).not_to_have_value('')
+    expect(page.maximum_distance()).to_have_value('250')
     expect(page.maximum_distance()).to_be_editable()
-    # selecting another ShakeMap version invalidates the retrieved data
+    expect(page.run_impact_calc_btn()).to_be_enabled()
+    page.set_time_of_the_event('Night')
+    expect(page.no_uncertainty_ckb()).to_have_count(0)
+    # The smaller area still produces a Venezuela report.
+    page.maximum_distance().fill('100')
+    page.set_make_impact_reports()
+    page.run_impact_calc()
+    job_id = page.get_job_id_from_new_job()
+    # Wait for submission to finish before checking that selecting another
+    # ShakeMap version invalidates the retrieved data.
+    expect(page.run_impact_calc_btn()).to_be_enabled()
     page.select_another_shakemap_version()
     for elem in (page.intensity_map(), page.pga_map(), page.local_timestamp(),
                  page.maximum_distance(), page.description()):
         expect(elem).not_to_be_visible()
     expect(page.run_impact_calc_btn()).to_be_disabled()
-    page.select_shakemap_version(
-        value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
-    page.retrieve_data()
-    expect(page.maximum_distance()).to_be_visible(timeout=30_000)
-    expect(page.run_impact_calc_btn()).to_be_enabled()
-    page.set_time_of_the_event('Night')
-    expect(page.no_uncertainty_ckb()).to_have_count(0)
-    page.set_make_impact_reports()
-    page.run_impact_calc()
-    job_id = page.get_job_id_from_new_job()
     page.wait_for_job_completion(job_id)
     page.to_outputs(job_id)
     with page.page.context.expect_page() as report_page_info:
@@ -297,3 +304,33 @@ def test_impact_ui_level_2_provide_rupture_params(
             page.abort_job(job_id)
         if should_remove_job:
             page.remove_job(job_id)
+
+
+@pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
+def test_cookie_bar(page, live_server, essential_cookie_groups,
+                    application_mode):
+    # a new visitor accepts the essential cookies from the cookie bar
+    CookieBar(page, live_server.url).check_accept_essential_cookies()
+
+
+@pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
+def test_cookies_info_page(page, live_server, essential_cookie_groups,
+                           application_mode):
+    CookieBar(page, live_server.url).check_cookies_info_page()
+
+
+@pytest.mark.parametrize("user", [1], indirect=True)
+@pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
+def test_login_logout(page, live_server, user, test_credentials,
+                      application_mode):
+    # log in and out by clicking on the buttons of the web interface
+    LoginPage(page, live_server.url).check_login_and_logout(
+        test_credentials['username'], test_credentials['password'])
+
+
+@pytest.mark.parametrize("user", [1], indirect=True)
+@pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
+def test_login_wrong_password(page, live_server, user, test_credentials,
+                              application_mode):
+    LoginPage(page, live_server.url).check_wrong_password(
+        test_credentials['username'])
