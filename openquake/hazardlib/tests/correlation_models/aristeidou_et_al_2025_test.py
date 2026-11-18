@@ -33,7 +33,7 @@ import pytest
 
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.cross_imt.aristeidou_et_al_2025 \
-    import AristeidouEtAl2025, _get_networks
+    import AristeidouEtAl2025
 from openquake.hazardlib.correlation_models.registry import (
     get_model, get_model_specs)
 from openquake.hazardlib.imt import (
@@ -79,7 +79,7 @@ def test_all_published_pairs_are_covered():
     names = {'RSD575': 'Ds575', 'RSD595': 'Ds595'}
     pairs = {'-'.join(names.get(n, n) for n in pair.split('-'))
              for pair in pairs}
-    assert pairs == set(_get_networks())
+    assert pairs == set(AristeidouEtAl2025().networks)
     assert len(pairs) == 24
 
 

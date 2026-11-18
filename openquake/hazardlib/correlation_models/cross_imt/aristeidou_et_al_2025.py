@@ -45,7 +45,6 @@ Authors' implementation:
 https://github.com/Savvinos-Aristeidou/ANN_correlation_models
 """
 
-import functools
 from pathlib import Path
 from typing import NamedTuple
 
@@ -117,16 +116,14 @@ def _read_network(group):
     return _Network(weights, biases, acts, bool(group.attrs['log_input']))
 
 
-@functools.lru_cache(maxsize=None)
-def _get_networks():
-    """Read the networks the first time they are needed, e.g. 'SA-FIV3'."""
+def _read_networks():
+    # dictionary pair -> network, for instance 'SA-FIV3' -> _Network
     with h5py.File(_DATA, 'r') as h5:
         return {pair: _read_network(group) for pair, group in h5.items()}
 
 
-def _find_pair(imt1, imt2):
-    """Return the key of the network and the IMTs in the order it expects."""
-    networks = _get_networks()
+def _find_pair(networks, imt1, imt2):
+    # return the key of the network and the IMTs in the order it expects
     name1, name2 = _NAMES[imt1.name], _NAMES[imt2.name]
     if f'{name1}-{name2}' in networks:
         return f'{name1}-{name2}', imt1, imt2
@@ -169,6 +166,10 @@ class AristeidouEtAl2025(CrossIMTCorrelationModel):
     DEFINED_FOR_DAMPING = 5.0
     DEFINED_FOR_PERIOD_RANGE = (0.01, 5.0)
 
+    def __init__(self):
+        # read the weights and biases of the networks from the HDF5 file
+        self.networks = _read_networks()
+
     def _validate_imt_combination(self, imts):
         name = self.__class__.__name__
         unique = tuple(dict.fromkeys(imts))
@@ -182,7 +183,7 @@ class AristeidouEtAl2025(CrossIMTCorrelationModel):
                     f'{minimum:g} to {maximum:g} s, not {imt.period:g} s')
         for i, imt1 in enumerate(unique):
             for imt2 in unique[i + 1:]:
-                if _find_pair(imt1, imt2)[0] is None:
+                if _find_pair(self.networks, imt1, imt2)[0] is None:
                     raise ValueError(
                         f'{name} does not define a correlation between '
                         f'{imt1.string} and {imt2.string}')
@@ -190,7 +191,7 @@ class AristeidouEtAl2025(CrossIMTCorrelationModel):
     def _rho(self, from_imt, to_imt, context=None):
         if from_imt == to_imt:
             return 1.0
-        key, imt1, imt2 = _find_pair(from_imt, to_imt)
-        correlation = _get_networks()[key].predict(_periods(imt1, imt2))
-
+        key, imt1, imt2 = _find_pair(self.networks, from_imt, to_imt)
+        correlation = self.networks[key].predict(_periods(imt1, imt2))
+        # the ANN output is not bounded, as opposed to a correlation
         return min(max(correlation, -1.0), 1.0)
