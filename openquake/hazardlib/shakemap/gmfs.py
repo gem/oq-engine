@@ -26,7 +26,8 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, imt
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
-from openquake.hazardlib.calc.gmf import _site_positions
+from openquake.hazardlib.calc.gmf import (
+    _site_positions, _truncated_normals)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor, RegularGridLayout)
 
@@ -272,9 +273,9 @@ def _correlate_residuals(Z, imts, sites, spatial_model,
             if truncation_level <= 1E-9:
                 samples = numpy.zeros(shape)
             else:
-                samples = truncnorm.rvs(
-                    -truncation_level, truncation_level, loc=0, scale=1,
-                    size=shape, random_state=rng)
+                # in place, as in the scenario calculator: truncnorm.rvs
+                # would need ~25 times the memory of the samples
+                samples = _truncated_normals(shape, truncation_level, rng)
             residuals[:, start:stop] = factor.apply(samples)
         return residuals
     if M * N > cholesky_limit:
