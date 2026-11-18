@@ -34,7 +34,7 @@ import psutil
 from threading import Event
 from collections import defaultdict
 from datetime import datetime, timezone
-from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
+from urllib.parse import unquote_plus, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -572,7 +572,7 @@ def calc_list(request, id=None):
             owner == username and can_share_own_jobs)
         if settings.DISPLAY_USER_HOST and host:
             owner += '@' + host.split('.')[0]
-        url = urljoin(base_url, 'v1/calc/%d' % hc_id)
+        url = base_url + reverse('calc', args=[hc_id])
         abortable = False
         if is_running:
             try:
@@ -1457,8 +1457,7 @@ def calc_results(request, calc_id):
             continue  # non-exportable outputs should not be shown
         if not outtypes:  # happens for 'exposure', since it is hidden
             continue
-        path = f'v1/calc/result/{result.id}'
-        url = urljoin(base_url, path)
+        url = base_url + reverse('result', args=[result.id])
         # NOTE: in case of multiple available export types, we provide only
         # the url to download the data in the first of the types. We may want
         # to expose multiple urls, one per export type, or a single url with
