@@ -312,6 +312,26 @@ def test_crop_preserves_distances_and_cell_order():
         numpy.array([1, 2]) * layout.spacing * 1000)
 
 
+@pytest.mark.parametrize('model', [JayaramBaker2009(False), DuNing2021()])
+def test_cropped_covariance(model):
+    # Cropping changes the seeded FFT draws, but must preserve the model's
+    # covariance at each requested site, including reordered sparse cells.
+    layout = RegularGridLayout(
+        (6, 7), (10., 10.), numpy.arange(42), 'EPSG:32610',
+        (4_200_000., 500_000.), 0.)
+    indices = numpy.array([24, 9, 16])
+    cropped = layout.cropped(indices)
+    factor = CirculantEmbeddingFactor.build(
+        model, IMTS, cropped.grid_shape, cropped.spacing,
+        site_indices=cropped.site_indices)
+    applied = factor.apply(numpy.eye(factor.input_size))
+    full = dense_covariance(model, IMTS, layout.grid_shape, layout.spacing)
+    selected = (numpy.arange(len(IMTS))[:, None] * numpy.prod(
+        layout.grid_shape) + indices).ravel()
+    numpy.testing.assert_allclose(
+        applied @ applied.T, full[numpy.ix_(selected, selected)], atol=EPS)
+
+
 @pytest.mark.parametrize('crs', ['EPSG:4326', 'EPSG:2263', 'invalid'])
 def test_metric_crs(crs):
     sites, _ = geographic_grid((3, 4))
