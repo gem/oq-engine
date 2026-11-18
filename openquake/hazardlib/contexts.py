@@ -640,6 +640,38 @@ def estimate_nctxs(cmaker, srcs, sitecol):
     return int(nctxs)
 
 
+# Cubic Taylor coefficients of the normal CDF on [-9, 9]. With 64
+# intervals per unit, the nearest grid point is at most 1/128 away.
+_CDF_GRID = 64
+_CDF_LIMIT = 9
+_CDF_OFFSET = _CDF_LIMIT * _CDF_GRID
+
+
+def _cdf_coefficients():
+    # Each row stores Phi and its first three Taylor coefficients.
+    x = numpy.arange(-_CDF_OFFSET, _CDF_OFFSET + 1) / _CDF_GRID
+    d = numpy.exp(-x*x/2) / numpy.sqrt(2*numpy.pi)
+    return numpy.column_stack((ndtr(x), d, -x*d/2, (x*x - 1)*d/6))
+
+
+_CDF = _cdf_coefficients()
+
+
+@compile("float64(float64, float64, float64, float64)")
+def _poe_cubic(phi_b, tmax, scale, x):
+    # Scale zero selects the exact formula for narrow truncation.
+    if x > tmax:
+        return 0.
+    if scale == 0. or not abs(x) <= _CDF_LIMIT:
+        return _truncnorm_sf(phi_b, tmax, x)
+    i = round(x * _CDF_GRID)
+    dx = x - i / _CDF_GRID
+    row = i + _CDF_OFFSET
+    p = phi_b - _CDF[row, 0]
+    d = _CDF[row, 1] + dx * (_CDF[row, 2] + dx * _CDF[row, 3])
+    return min(max((p - dx*d) * scale, 0.), 1.)
+
+
 # this is the critical function for the performance of the classical calculator
 # the performance is dominated by the CPU cache, i.e. large arrays are slow
 # the only way to speedup is to reduce the maximum_distance, then the array
@@ -651,14 +683,15 @@ def estimate_nctxs(cmaker, srcs, sitecol):
 def _set_poes_(mean_std, loglevels, phi_b, tmax, out):
     M, L1 = loglevels.shape
     N = mean_std.shape[2]
+    scale = 1. / (2*phi_b - 1) if .75 <= phi_b <= 1. else 0.
     for m in range(M):
         mL1 = m * L1
         for n in range(N):
             mea = mean_std[0, m, n]
             std = mean_std[1, m, n]
             for lvl in range(L1):
-                out[mL1 + lvl, n] = _truncnorm_sf(
-                    phi_b, tmax, (loglevels[m, lvl] - mea) / std)
+                out[mL1 + lvl, n] = _poe_cubic(
+                    phi_b, tmax, scale, (loglevels[m, lvl] - mea) / std)
 
 
 def _set_poes(mean_std, loglevels, phi_b, out):
