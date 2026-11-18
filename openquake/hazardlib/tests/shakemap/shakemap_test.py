@@ -1,12 +1,17 @@
 import os.path
 import unittest
-from unittest import mock
 import numpy
 from openquake.hazardlib import geo, imt, site
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
     BakerCornell2006)
+from openquake.hazardlib.correlation_models.cross_imt.\
+    abrahamson_et_al_2014 import AbrahamsonEtAl2014BetweenEvent
+from openquake.hazardlib.correlation_models.cross_imt.\
+    full_cross_correlation import FullCrossCorrelation
+from openquake.hazardlib.correlation_models.cross_imt.\
+    no_cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
-    loth_baker_2013 import LothBaker2013, ShakeMapLothBaker2013
+    loth_baker_2013 import LothBaker2013
 from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
     JayaramBaker2009)
 from openquake.hazardlib.shakemap.maps import \
@@ -14,8 +19,7 @@ from openquake.hazardlib.shakemap.maps import \
 from openquake.hazardlib.shakemap.gmfs import (
     to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
-    cross_correlation_matrix, cholesky, _correlate_residuals,
-    _realization_residuals)
+    cross_correlation_matrix, cholesky, _correlate_residuals, _psd_factor)
 
 F64 = numpy.float64
 imts = [imt.from_string(x)
@@ -35,6 +39,42 @@ gmf_dict = {'kind': 'Silva&Horspool',
 
 def aae(x, y):
     numpy.testing.assert_almost_equal(x, y, decimal=4)
+
+
+# a 3x3 grid with spacing of about 5.5 km and two IMTs
+GRID_LONS = numpy.tile([0., 0.05, 0.1], 3)
+GRID_LATS = numpy.repeat([0., 0.05, 0.1], 3)
+GRID_IMTS = [imt.from_string('PGA'), imt.from_string('SA(1.0)')]
+
+
+def _grid_shakemap_stds():
+    # conditional std and tau of shape (M, N), varying with the site
+    rng = numpy.random.default_rng(42)
+    std = rng.uniform(.3, .6, (2, 9))
+    tau = rng.uniform(.05, .25, (2, 9))
+    return std, tau
+
+
+def _sample_grid(std, tau, between_model, strategy, num_gmfs=60_000):
+    # GMFs of shape (N, E, M) of a shake_result.hdf-like array on the grid
+    names = [str(im) for im in GRID_IMTS]
+    dt = [(name, float) for name in names]
+    shakemap = numpy.zeros(9, [('lon', float), ('lat', float),
+                               ('vs30', float), ('val', dt), ('std', dt),
+                               ('tau', dt)])
+    shakemap['lon'] = GRID_LONS
+    shakemap['lat'] = GRID_LATS
+    for m, name in enumerate(names):
+        shakemap['val'][name] = 100.  # 1 g, so that the log is the residual
+        shakemap['std'][name] = std[m]
+        shakemap['tau'][name] = tau[m]
+    method = {'kind': 'Silva&Horspool', 'spatial_model': LothBaker2013(),
+              'cross_imt_model': None, 'cholesky_limit': 10000,
+              'between_event_model': between_model,
+              'correlation_strategy': strategy,
+              'sites': site.SiteCollection.from_points(GRID_LONS, GRID_LATS)}
+    return to_gmfs(shakemap, method, vs30=None, truncation_level=99,
+                   num_gmfs=num_gmfs, seed=42, imts=names)[1]
 
 
 def mean_std(shakemap, vs30):
@@ -103,8 +143,8 @@ class ShakemapTestCase(unittest.TestCase):
             self.assertTrue(numpy.isfinite(gmfs).all())
 
     def test_conditional_phi(self):
-        # the stored phi is the prior within-event sigma: the variance of
-        # the log GMFs must be the conditional std^2 = phi_c^2 + tau^2
+        # the stored phi is the prior within-event sigma and is not used:
+        # the variance of the log GMFs must be the conditional std^2
         lons = numpy.array([0., 0.1, 0.2])
         lats = numpy.zeros(3)
         component_dt = numpy.dtype([
@@ -171,28 +211,26 @@ class ShakemapTestCase(unittest.TestCase):
             numpy.testing.assert_allclose(empirical, target, atol=0.05)
 
     def test_loth_baker_no_uncertainty_is_deterministic(self):
-        # with truncation_level=0 the stored between-event components
-        # must not add any noise: every event is the ShakeMap median
+        # with truncation_level=0 the between-event terms must not add
+        # any noise: every event is the ShakeMap median
         names = ['PGA', 'SA(0.3)']
-        N = 4
-        imt_dt = [(name, float) for name in names]
         dt = numpy.dtype([
             ('lon', float), ('lat', float), ('vs30', float),
-            ('val', imt_dt), ('std', imt_dt), ('phi', imt_dt),
-            ('tau', imt_dt), ('CL', [(name, float, (3,)) for name in names])])
-        shakemap = numpy.zeros(N, dt)
+            ('val', [(name, float) for name in names]),
+            ('std', [(name, float) for name in names]),
+            ('tau', [(name, float) for name in names])])
+        shakemap = numpy.zeros(4, dt)
         shakemap['lon'] = [0., 0.1, 0., 0.1]
         shakemap['lat'] = [0., 0., 0.1, 0.1]
         shakemap['vs30'] = 400.
         for name in names:
             shakemap['val'][name] = [10., 20., 30., 40.]
             shakemap['std'][name] = .5
-            shakemap['phi'][name] = .4
             shakemap['tau'][name] = .3
-            shakemap['CL'][name][:, 0] = .3
         gmf_dict = {'kind': 'Silva&Horspool',
                     'spatial_model': LothBaker2013(),
                     'cross_imt_model': None,
+                    'between_event_model': FullCrossCorrelation(),
                     'cholesky_limit': 10000}
         _, gmfs = to_gmfs(shakemap, gmf_dict, vs30=None, truncation_level=0,
                           num_gmfs=3, seed=42, imts=names)
@@ -201,99 +239,45 @@ class ShakemapTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             gmfs[:, 0], numpy.tile([0.1, 0.2, 0.3, 0.4], (2, 1)).T)
 
-    def test_realization_residuals_variance(self):
-        # the residual variance of each point must be the total variance
-        # std^2 stored by ShakeMap, whatever the prior phi
-        pair = [imt.from_string('PGA'), imt.from_string('SA(0.3)')]
-        rng = numpy.random.default_rng(4)
-        N, E = 6, 100_000
-        lons = rng.uniform(0, 0.5, N)
-        lats = rng.uniform(0, 0.5, N)
-        dt = numpy.dtype([
-            ('lon', float), ('lat', float),
-            ('std', [(str(im), float) for im in pair]),
-            ('phi', [(str(im), float) for im in pair]),
-            ('CL', [(str(im), float, (3,)) for im in pair])])
-        shakemap = numpy.zeros(N, dt)
-        shakemap['lon'] = lons
-        shakemap['lat'] = lats
-        for im in pair:
-            shakemap['std'][str(im)] = rng.uniform(0.2, 0.5, N)
-            # the prior phi is larger than the conditional one
-            shakemap['phi'][str(im)] = .6
-            shakemap['CL'][str(im)][:, :1] = rng.uniform(-0.1, 0.1, (N, 1))
-        Z = rng.standard_normal((N * len(pair), E))
-        # a large truncation level gives untruncated between-event terms
-        res = _realization_residuals(shakemap, pair, Z, 0, 99)
-        variance = numpy.var(res, axis=1)
-        expected = numpy.concatenate([
-            shakemap['std'][str(im)] ** 2 for im in pair])
-        numpy.testing.assert_allclose(variance, expected, rtol=0.03)
+    def test_marginal_variance_is_preserved(self):
+        # the conditional ShakeMap std is preserved at every site, also
+        # where tau exceeds std because of the float32 rounding
+        std, tau = _grid_shakemap_stds()
+        tau[0, 0] = std[0, 0] + 1E-4
+        gmfs = _sample_grid(std, tau, AbrahamsonEtAl2014BetweenEvent(),
+                            'circulant_embedding')
+        variance = numpy.log(gmfs).var(axis=1).T  # shape (M, N)
+        numpy.testing.assert_allclose(variance, std ** 2, rtol=.04)
 
-    def test_realization_residuals_correlation(self):
-        # without between-event terms the residuals have the Loth and
-        # Baker (2013) correlation between points and IMTs, whatever std;
-        # PGV is correlated through its SA(1.0) proxy
-        ims = [imt.from_string(im) for im in ('PGA', 'SA(0.3)', 'PGV')]
-        proxies = [imt.from_string(im)
-                   for im in ('PGA', 'SA(0.3)', 'SA(1.0)')]
-        # points along a parallel at 0, 5, 15, 40 and 100 km
-        lons = numpy.array([0, 5, 15, 40, 100]) / 111.195
-        lats = numpy.zeros_like(lons)
-        N, E = len(lons), 200_000
-        rng = numpy.random.default_rng(42)
-        dt = numpy.dtype([
-            ('lon', float), ('lat', float),
-            ('std', [(str(im), float) for im in ims]),
-            ('CL', [(str(im), float, (1,)) for im in ims])])
-        shakemap = numpy.zeros(N, dt)
-        shakemap['lon'] = lons
-        shakemap['lat'] = lats
-        for im in ims:
-            shakemap['std'][str(im)] = rng.uniform(0.2, 0.8, N)
-        Z = rng.standard_normal((N * len(ims), E))
-        res = _realization_residuals(shakemap, ims, Z, 0, 99)
-        dist = geo.geodetic.distance_matrix(lons, lats)
-        expected = ShakeMapLothBaker2013().correlation_block(dist, proxies)
-        numpy.testing.assert_allclose(
-            numpy.corrcoef(res), expected, atol=0.01)
+    def test_within_between_decomposition(self):
+        # the within-event residuals have the correlation of the model and
+        # the variance std^2 - tau^2; the between-event terms are common
+        # to all the sites and correlated across IMTs by the between-event
+        # model; both strategies give the same distribution
+        std, tau = _grid_shakemap_stds()
+        phi = numpy.sqrt(std ** 2 - tau ** 2)
+        dist = geo.geodetic.distance_matrix(GRID_LONS, GRID_LATS)
+        within = LothBaker2013().correlation_block(dist, GRID_IMTS)
+        within *= numpy.outer(phi.ravel(), phi.ravel())
+        for between_model, rho in [(NoCrossCorrelation(), 0.),
+                                   (FullCrossCorrelation(), 1.)]:
+            rho_b = numpy.array([[1., rho], [rho, 1.]])
+            between = numpy.kron(rho_b, numpy.ones((9, 9)))
+            between *= numpy.outer(tau.ravel(), tau.ravel())
+            for strategy in ('circulant_embedding',
+                             'cholesky_decomposition'):
+                gmfs = _sample_grid(std, tau, between_model, strategy)
+                residuals = numpy.log(gmfs).transpose(2, 0, 1).reshape(
+                    18, -1)
+                numpy.testing.assert_allclose(
+                    numpy.cov(residuals), within + between, atol=.012)
 
-    def test_realization_residuals_many_points(self):
-        # 2500 points and 5 IMTs exceed the old limit M * N <= 10000;
-        # the sites associated to the same point share its residuals
-        ims = [imt.from_string(im) for im in (
-            'PGA', 'PGV', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)')]
-        lon, lat = numpy.meshgrid(numpy.arange(50) * .02,
-                                  numpy.arange(50) * .02)
-        lons = numpy.concatenate([lon.ravel(), [0., .5]])
-        lats = numpy.concatenate([lat.ravel(), [0., .5]])
-        N, E = len(lons), 3
-        dt = numpy.dtype([
-            ('lon', float), ('lat', float),
-            ('std', [(str(im), float) for im in ims]),
-            ('CL', [(str(im), float, (1,)) for im in ims])])
-        shakemap = numpy.zeros(N, dt)
-        shakemap['lon'] = lons
-        shakemap['lat'] = lats
-        for im in ims:
-            shakemap['std'][str(im)] = .5
-        Z = numpy.random.default_rng(42).standard_normal((N * 5, E))
-        res = _realization_residuals(shakemap, ims, Z, 0, 3).reshape(5, N, E)
-        self.assertTrue(numpy.isfinite(res).all())
-        aae(res[:, 0], res[:, N - 2])  # the point (0, 0)
-        aae(res[:, 25 * 50 + 25], res[:, N - 1])  # the point (.5, .5)
-
-    def test_realization_residuals_memory_budget(self):
-        shakemap = numpy.zeros(4, [
-            ('lon', float), ('lat', float), ('std', [('PGA', float)]),
-            ('CL', [('PGA', float, (1,))])])
-        shakemap['lon'] = [0, .1, .2, .3]
-        with mock.patch('openquake.hazardlib.shakemap.gmfs.'
-                        '_correlation_budget', return_value=100):
-            with self.assertRaisesRegex(ValueError, 'correlated_gmf_gb'):
-                _realization_residuals(
-                    shakemap, [imt.from_string('PGA')],
-                    numpy.zeros((4, 2)), 0, 3)
+    def test_psd_factor(self):
+        matrix = numpy.array([[1., 1.], [1., 1.]])  # singular
+        factor = _psd_factor(matrix)
+        numpy.testing.assert_allclose(factor @ factor.T, matrix, atol=1E-12)
+        with self.assertRaisesRegex(ValueError, 'not positive semidef'):
+            _psd_factor(numpy.array([[1., 2.], [2., 1.]]))
 
     def test_amplify(self):
         gmvs = numpy.array([0.1, 0.2, 0.3])

@@ -28,7 +28,7 @@ from openquake.commonlib import readinput
 from openquake.commonlib.oqvalidation import CORRELATION_STRATEGIES
 from openquake.commonlib.readinput import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import (
-    get_nodal_planes_and_product, get_rup_dic, save_shakemap)
+    get_nodal_planes_and_product, get_rup_dic)
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -118,9 +118,8 @@ class ImpactParam:
             make_impact_reports=bool(self.make_impact_reports),
             inputs=inputs)
         if use_shakemap:
-            fname = general.gettemp(suffix='.npz')
-            # keeping the stations of the shake_result.hdf products
-            save_shakemap(fname, shakemap_array)
+            fname = general.gettemp(suffix='.npy')
+            numpy.save(fname, shakemap_array)
             params['shakemap_uri'] = str(dict(kind='file_npy', fname=fname))
             params['gsim'] = '[FromFile]'
         if self.local_timestamp is not None:
@@ -248,10 +247,12 @@ def _accepts(cls, imts):
     return True
 
 
-# The correlation models offered to the level 2 users, by kind of job.
-# The ShakeMap jobs use the within-event model of the ShakeMap conditioning;
-# the other jobs the joint models enabled for circulant embedding, since a
-# dense factorization of the impact grids could exhaust the memory
+# The correlation models offered to the level 2 users, by kind of job:
+# the joint within-event models enabled for circulant embedding, since a
+# dense factorization of the impact grids could exhaust the memory, and
+# the between-event models, accepting the IMTs of the job. For the ShakeMap
+# jobs they impose the spatial and cross-IMT dependence on the conditional
+# means and standard deviations of the ShakeMap
 def _impact_correlation_models():
     within = {name: spec.cls for name, spec in get_model_specs(
         'spatial_cross_imt').items()
@@ -261,10 +262,8 @@ def _impact_correlation_models():
         if spec.residual_component == ResidualComponent.BETWEEN_EVENT}
     models = {}
     for scope, imts in IMPACT_IMTS.items():
-        scope_within = ({'LothBaker2013': within['LothBaker2013']}
-                        if scope == 'shakemap' else within)
         for field, classes in (
-                ('within_event_correlation_model', scope_within),
+                ('within_event_correlation_model', within),
                 ('between_event_correlation_model', between)):
             default = DEFAULT_CORRELATION_MODELS[field]
             # the default model first, then in alphabetical order

@@ -51,16 +51,16 @@ class ImpactValidateTestCase(unittest.TestCase):
             del timezonefinder
 
     def test_correlation_models_by_kind_of_job(self):
-        # ShakeMap jobs use LothBaker2013, the other jobs the joint models
-        # supporting circulant embedding; any between-event model
-        # accepting the IMTs of the job
+        # all the jobs use the joint models supporting circulant
+        # embedding and any between-event model accepting their IMTs;
+        # the ShakeMap jobs impose them on the conditional ShakeMap
+        # medians and standard deviations
         models = IMPACT_CORRELATION_MODELS
-        self.assertEqual(
-            models['within_event_correlation_model', 'shakemap'],
-            ['LothBaker2013'])
-        self.assertEqual(
-            models['within_event_correlation_model', 'rupture'],
-            ['LothBaker2013', 'DuNing2021Interpolated', 'MonteiroEtAl2026'])
+        for scope in ('shakemap', 'rupture'):
+            self.assertEqual(
+                models['within_event_correlation_model', scope],
+                ['LothBaker2013', 'DuNing2021Interpolated',
+                 'MonteiroEtAl2026'])
         # GodaAtkinson2009 does not support the PGV of the ShakeMap jobs
         self.assertEqual(
             models['between_event_correlation_model', 'shakemap'],
@@ -94,7 +94,7 @@ class ImpactValidateTestCase(unittest.TestCase):
                          'GodaAtkinson2009')
         # and cannot use a model not available for their kind of job
         for field, model, use_shakemap in [
-                ('within_event_correlation_model', 'DuNing2021Interpolated',
+                ('within_event_correlation_model', 'MarkhvidaEtAl2018',
                  True),
                 ('within_event_correlation_model', 'JayaramBaker2009',
                  False),

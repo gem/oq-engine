@@ -306,10 +306,11 @@ def test_impact_ui_level_2_provide_rupture_nrml_correlation_models(
         application_mode, authenticated_page, user, default_usgs_id,
         should_abort_job, should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
-    # the ShakeMap jobs can only use LothBaker2013
+    # the ShakeMap jobs can use the same models supporting circulant
+    # embedding as the other jobs
     within = authenticated_page.locator(
         'select#within_event_correlation_model')
-    expect(within.locator('option')).to_have_count(1)
+    expect(within.locator('option')).to_have_count(3)
     page.set_approach('Provide earthquake rupture in OpenQuake NRML format')
     page.choose_rupture_model()
     correlation = within

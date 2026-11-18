@@ -56,9 +56,7 @@ from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import (
-    to_gmfs, circulant_embedding_feasible, between_event_description)
-from openquake.hazardlib.shakemap.realization import (
-    get_metadata, conditioning_stations)
+    to_gmfs, circulant_embedding_feasible)
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
 from openquake.commonlib.model_provenance import copy_model_provenance
@@ -1875,57 +1873,53 @@ def store_events(dstore, eids):
 
 
 def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
-    # record for the outputs page the correlation really used
+    # record for the outputs page the correlation really used; in all
+    # cases the conditional medians and standard deviations of the
+    # ShakeMap are preserved, while the dependence is imposed by the
+    # models, since the station-conditioned covariance is not available
     calc.datastore['correlation_strategy_used'] = numpy.array(
         [strategy], dtype=hdf5.vstr)
     if gmf_dict.get('spatial_model') is None:
         return
     name = gmf_dict['spatial_model'].__class__.__name__
+    model = f'{name}, {strategy}'
+    if strategy != calc.oqparam.correlation_strategy:
+        model += (f' ({calc.oqparam.correlation_strategy} is not '
+                  'applicable to these sites)')
+    model += ('; approximation imposing the model on the conditional '
+              'ShakeMap medians and standard deviations')
     between_model = gmf_dict.get('between_event_model')
-    if 'CL' in shakemap.dtype.names:
-        # the stored posterior components are sampled with Loth and
-        # Baker (2013), whatever correlation model was requested
-        conditioning = (
-            'station-conditioned'
-            if conditioning_stations(shakemap) is not None
-            else 'marginal approximation, no station conditioning')
-        model = (f'LothBaker2013 (shake_result.hdf, {conditioning}; '
-                 'approximate cross-IMT dependence, between-event terms '
-                 f'{between_event_description(between_model)})')
-    else:
-        # XML ShakeMaps or shake_result.hdf without the posterior factors
-        model = (f'{name}, {strategy} (approximation from the marginal '
-                 'ShakeMap uncertainties)')
-        if strategy != calc.oqparam.correlation_strategy:
-            model += (f'; {calc.oqparam.correlation_strategy} is not '
-                      'applicable to these sites')
-        if between_model is not None and 'tau' not in shakemap.dtype.names:
-            # only the total uncertainty is known
-            logging.warning('The between-event correlation model is not '
-                            'used, since the ShakeMap has no tau')
-            model += (f'; {between_model.__class__.__name__} not used, '
-                      'the ShakeMap has no between-event uncertainty')
-    note = get_metadata(shakemap, 'note')
-    if note:  # for instance why shake_result.hdf was not used
-        model += f'; {note}'
+    if 'tau' in shakemap.dtype.names:
+        model += ('; between-event terms with the conditional tau, ' + (
+            'independent across IMTs' if between_model is None else
+            f'correlated across IMTs with '
+            f'{between_model.__class__.__name__}'))
+    elif between_model is not None:
+        # only the total uncertainty is known
+        logging.warning('The between-event correlation model is not '
+                        'used, since the ShakeMap has no tau')
+        model += (f'; {between_model.__class__.__name__} not used, '
+                  'the ShakeMap has no between-event uncertainty')
     calc.datastore['correlation_model_used'] = numpy.array(
         [model], dtype=hdf5.vstr)
 
 
-def store_gmfs(calc, sitecol, shakemap, gmf_dict):
+def store_gmfs(calc, sitecol, shakemap, gmf_dict, haz_sites=None):
     """
     Store a ShakeMap array as a gmf_data dataset.
+
+    :param haz_sites: the sites of sitecol in the hazard site collection,
+        whose complete grid is used by the circulant embedding (by default
+        sitecol)
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
     if gmf_dict['kind'] == 'Silva&Horspool':
         rupture_dict = oq.rupture_dict or {}
         strategy = oq.correlation_strategy
-        # shake_result.hdf products are sampled with Loth and Baker (2013)
-        # and do not use circulant embedding
+        haz_sites = sitecol if haz_sites is None else haz_sites
         if (strategy == 'circulant_embedding' and
-                'CL' not in shakemap.dtype.names and
-                not circulant_embedding_feasible(sitecol)):
+                not circulant_embedding_feasible(haz_sites)):
             # sparse sites, e.g. a ShakeMap with gaps: use Cholesky instead
             logging.warning(
                 'Circulant embedding is not applicable to these sites, '
@@ -1934,7 +1928,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
         _save_correlation_info(calc, shakemap, gmf_dict, strategy)
         gmf_dict.update(
             correlation_strategy=strategy,
-            sites=sitecol,
+            sites=haz_sites,
             context=CorrelationContext(
                 mag=rupture_dict.get('mag'),
                 rake=rupture_dict.get('rake'),
@@ -1993,7 +1987,7 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     """
     oq = calc.oqparam
     with calc.monitor('getting/reducing shakemap'):
-        sitecol, shakemap = readinput.assoc_to_shakemap(
+        sitecol, shakemap, haz_sites = readinput.assoc_to_shakemap(
             oq, haz_sitecol, assetcol)  # also reducing assetcol
         calc.datastore['assetcol'] = assetcol
     # assemble dictionary to decide on the calculation method for the gmfs
@@ -2030,7 +2024,7 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
         else:
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
-    store_gmfs(calc, sitecol, shakemap, gmf_dict)
+    store_gmfs(calc, sitecol, shakemap, gmf_dict, haz_sites)
     return sitecol, assetcol
 
 

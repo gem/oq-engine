@@ -22,8 +22,6 @@ import logging
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, site
 from openquake.hazardlib.shakemap.parsers import get_array
-from openquake.hazardlib.shakemap.realization import (
-    with_metadata, get_metadata)
 
 F32 = numpy.float32
 
@@ -104,28 +102,24 @@ def get_sitecol_usgs(uridict, required_imts, sitecol=None,
             filtered_imts)
 
 
-def _posterior_fields(shakemap, required_imts):
-    # The posterior components of the required IMTs: a field is dropped
-    # if a required IMT misses it (NaN values, see
-    # get_array_shake_result_hdf), and CL is dropped without phi
-    fields = []
-    for field in ('phi', 'tau', 'CL'):
-        if field not in shakemap.dtype.names:
-            continue
-        missing = [im for im in sorted(required_imts) if len(shakemap) and
-                   numpy.isnan(shakemap[field][im]).all()]
-        if missing:
-            logging.warning('The ShakeMap has no %s for %s', field,
-                            ', '.join(missing))
-        elif field != 'CL' or 'phi' in fields:
-            fields.append(field)
-    return fields
+def _has_tau(shakemap, required_imts):
+    # True if the ShakeMap stores the conditional between-event standard
+    # deviation tau of all the required IMTs (NaN values mark the missing
+    # ones, see get_array_shake_result_hdf)
+    if 'tau' not in shakemap.dtype.names:
+        return False
+    missing = [im for im in sorted(required_imts) if len(shakemap) and
+               numpy.isnan(shakemap['tau'][im]).all()]
+    if missing:
+        logging.warning('The ShakeMap has no tau for %s', ', '.join(missing))
+    return not missing
 
 
 def filter_unused_imts(shakemap, required_imts,
                        site_fields=('lon', 'lat', 'vs30')):
     """
-    build a copy of the ShakeMap with only the relevant IMTs
+    build a copy of the ShakeMap with only the relevant IMTs, keeping
+    the conditional between-event standard deviation tau, if any
 
     :param shakemap: shakemap array which should be filtered
     :param required_imts: imts to keep in shakemap array
@@ -135,30 +129,19 @@ def filter_unused_imts(shakemap, required_imts,
         raise ValueError('The downloaded ShakeMap is missing SA(0.6)!')
 
     dt = [(imt, F32) for imt in sorted(required_imts)]
-    # Shapefiles supply vs30 only; their centroid coordinates are assigned
-    # later. HDF coordinates retain double precision for station matching.
-    dtlist = [(name, shakemap.dtype[name] if name in site_fields else F32)
-              for name in ('lon', 'lat', 'vs30')]
-    dtlist.extend([('val', dt), ('std', dt)])
-    extra_fields = _posterior_fields(shakemap, required_imts)
-    # Retain each IMT's factor width and precision.
-    for field in extra_fields:
-        dtype = shakemap.dtype[field]
-        dtlist.append((field, [(im, dtype[im])
-                               for im in sorted(required_imts)]))
+    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
+              ('val', dt), ('std', dt)]
+    fields = ['val', 'std']
+    if _has_tau(shakemap, required_imts):
+        dtlist.append(('tau', dt))
+        fields.append('tau')
     data = numpy.zeros(len(shakemap), dtlist)
     for name in site_fields:
         data[name] = shakemap[name]
-    for name in ('val', 'std', *extra_fields):
+    for name in fields:
         for im in required_imts:
             data[name][im] = shakemap[name][im]
-    # the new dtype has no metadata: keep the stations of the required IMTs
-    stations = (get_metadata(shakemap, 'stations')
-                if 'CL' in extra_fields else None)
-    if stations is not None:
-        imts = numpy.array(sorted(required_imts), stations.dtype['imt'])
-        stations = stations[numpy.isin(stations['imt'], imts)]
-    return with_metadata(data, stations, get_metadata(shakemap, 'note'))
+    return data
 
 
 def check_required_imts(required_imts, available_imts, mode='strict'):
