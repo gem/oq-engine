@@ -14,6 +14,7 @@ The result is the following::
 	                 [--list-hazard-calculations] [--list-risk-calculations]
 	                 [--delete-uncompleted-calculations] [-m] [-L LOG_FILE]
 	                 [--make-report YYYY-MM-DD|today]
+	                 [--calibrate JOB_INI]
 	                 [--run JOB_INI [JOB_INI ...]]
 	                 [--delete-calculation CALCULATION_ID]
 	                 [--hazard-calculation-id HAZARD_CALCULATION_ID]
@@ -54,6 +55,7 @@ The result is the following::
 	                        date
 	  --run, --run JOB_INI [JOB_INI ...]
 	                        Run a job with the specified config file
+	  --calibrate JOB_INI   Calibrate point-source settings and stop
 	  --delete-calculation, --dc CALCULATION_ID
 	                        Delete a calculation and all associated outputs
 	  --hazard-calculation-id, --hc HAZARD_CALCULATION_ID

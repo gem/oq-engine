@@ -1146,7 +1146,7 @@ class HazardCalculator(BaseCalculator):
 
             # check that we are covering all the taxonomies in the exposure
             # (exercised in EventBasedRiskTestCase::test_missing_taxonomy)
-            missing = risk_ids - set(self.crmodel.riskids)
+            missing = risk_ids - self.crmodel.riskids
             msg = f'tmap.risk_id {missing} not in the CompositeRiskModel'
             if self.crmodel and missing:
                 # in scenario_damage/case_14 the fragility model contains

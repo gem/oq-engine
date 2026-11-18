@@ -60,7 +60,9 @@ def main(calc_id: int, rup_id: str):
         calc.offset = 0
         calc.datastore = dstore
         calc._monitor =  performance.Monitor('debug_rupturre', h5=dstore)
-        run(event_based, oq, rups[0], calc)
+        # Serial GMF tasks borrow the open datastore while the job runs.
+        with patch.object(dstore, 'close_on_exit', False):
+            run(event_based, oq, rups[0], calc)
         dstore['sitecol'] = sites
         save_version_checksum(oq, dstore)
         logging.info(f'Created {dstore.filename}')
