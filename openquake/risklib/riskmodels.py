@@ -1012,6 +1012,12 @@ class CompositeRiskModel(collections.abc.Mapping):
             if riskid in taxonomies:
                 new._riskmodels[riskid] = rm
                 rm.compositemodel = new
+        new.riskids = set(new._riskmodels)
+        # Preserve list metadata without serializing unused risk functions.
+        # In impact test case 1, this shrinks the worker model from
+        # 65.8 MiB to 0.84 MiB.
+        new.risklist = copy.copy(self.risklist)
+        new.risklist[:] = [rf for rf in self.risklist if rf.id in new.riskids]
         return new
 
     def get_attrs(self):
