@@ -623,6 +623,8 @@ def _overlay_cities(ax, cities, city_font_size):
         from adjustText import adjust_text
         if texts:
             legend = ax.get_legend()
+            # Resolving city label overlaps is particularly slow when a
+            # report repeats this step across several maps.
             # adjustText otherwise runs until it reaches zero overlap.  For
             # some city layouts that condition is never reached, leaving the
             # impact report running indefinitely.
