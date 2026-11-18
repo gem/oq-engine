@@ -149,10 +149,19 @@ class ClassicalTestCase(CalculatorTestCase):
                       str(ctx.exception))
 
     def test_case_04(self):
-        # make sure the UHS are sorted correctly
-        self.run_calc(case_04.__file__, 'job.ini')
+        # The simple fault's down-dip mesh changes with inferred spacing.
+        # Here inferred selects 3 intervals where the default uses 2.
+        self.run_calc(case_04.__file__, 'job.ini', rupture_mesh_spacing='4.7')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/uhs.csv', fname)
+        self.assertEqualFiles('expected/uhs_mesh_spacing.csv', fname)
+        default = self.calc.datastore['source_info']['num_ruptures'][:]
+
+        self.run_calc(case_04.__file__, 'job.ini', rupture_mesh_spacing='4.7',
+                      dip_spacing='inferred')
+        [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs_inferred.csv', fname)
+        automatic = self.calc.datastore['source_info']['num_ruptures'][:]
+        self.assertFalse(numpy.array_equal(default, automatic))
 
     def test_case_05(self):
         # make sure `oq show rlz` works

@@ -115,7 +115,8 @@ class SimpleFaultSurface(BaseSurface):
 
     @classmethod
     def check_fault_data(cls, fault_trace, upper_seismogenic_depth,
-                         lower_seismogenic_depth, dip, mesh_spacing):
+                         lower_seismogenic_depth, dip, mesh_spacing, *,
+                         dip_spacing=None):
         """
         Verify the fault data and raise ``ValueError`` if anything is wrong.
 
@@ -140,10 +141,21 @@ class SimpleFaultSurface(BaseSurface):
                              "or equal to depth of fault trace")
         if not mesh_spacing > 0.0:
             raise ValueError("mesh spacing must be positive")
+        if dip_spacing is not None and not dip_spacing > 0.0:
+            raise ValueError("dip spacing must be positive")
+
+    @staticmethod
+    def get_dip_spacing(width, dip_spacing):
+        """Return the closest spacing that divides the down-dip width."""
+        intervals = max(1, math.floor(width / dip_spacing))
+        return min(
+            (width / intervals, width / (intervals + 1)),
+            key=lambda spacing: abs(spacing - dip_spacing))
 
     @classmethod
     def from_fault_data(cls, fault_trace, upper_seismogenic_depth,
-                        lower_seismogenic_depth, dip, mesh_spacing):
+                        lower_seismogenic_depth, dip, mesh_spacing, *,
+                        dip_spacing=None):
         """
         Create and return a fault surface using fault source data.
 
@@ -163,14 +175,19 @@ class SimpleFaultSurface(BaseSurface):
             Dip angle (i.e. angle between fault surface
             and earth surface), in degrees.
         :param mesh_spacing:
-            Distance between two subsequent points in a mesh, in km.
+            Distance between subsequent points along the fault trace, in km.
+        :param dip_spacing:
+            Desired spacing down dip, in km, adjusted to the closest spacing
+            that honors the lower seismogenic depth. If None, use
+            mesh_spacing down dip without adjustment.
         :returns:
             An instance of :class:`SimpleFaultSurface` created using that data.
 
         Uses :meth:`check_fault_data` for checking parameters.
         """
-        cls.check_fault_data(fault_trace, upper_seismogenic_depth,
-                             lower_seismogenic_depth, dip, mesh_spacing)
+        cls.check_fault_data(
+            fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+            dip, mesh_spacing, dip_spacing=dip_spacing)
         # Loops over points in the top edge, for each point
         # on the top edge compute corresponding point on the bottom edge, then
         # computes equally spaced points between top and bottom points.
@@ -181,6 +198,13 @@ class SimpleFaultSurface(BaseSurface):
         hdist_top = vdist_top / math.tan(math.radians(dip))
         hdist_bottom = vdist_bottom / math.tan(math.radians(dip))
 
+        if dip_spacing is None:
+            dip_spacing = mesh_spacing
+        else:
+            width = ((lower_seismogenic_depth - upper_seismogenic_depth)
+                     / math.sin(math.radians(dip)))
+            dip_spacing = cls.get_dip_spacing(width, dip_spacing)
+
         strike = fault_trace[0].azimuth(fault_trace[-1])
         azimuth = (strike + 90.0) % 360
 
@@ -188,7 +212,7 @@ class SimpleFaultSurface(BaseSurface):
         for point in fault_trace.resample(mesh_spacing):
             top = point.point_at(hdist_top, vdist_top, azimuth)
             bottom = point.point_at(hdist_bottom, vdist_bottom, azimuth)
-            mesh.append(top.equally_spaced_points(bottom, mesh_spacing))
+            mesh.append(top.equally_spaced_points(bottom, dip_spacing))
 
         # number of rows corresponds to number of points along dip
         # number of columns corresponds to number of points along strike

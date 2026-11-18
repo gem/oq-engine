@@ -18,16 +18,21 @@ import os
 import re
 import glob
 import unittest
+from unittest import mock
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib.nrml import read
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import Point, Line
-from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.geodetic import distance
+from openquake.hazardlib.geo.utils import OrthographicProjection
+from openquake.hazardlib.geo.surface import kite_fault as kf
 from openquake.hazardlib.geo.surface.kite_fault import (
     KiteSurface, kite_to_geom, geom_to_kite,
-    get_profiles_from_simple_fault_data)
+    get_profiles_from_simple_fault_data, VERY_BIG, fix_mesh,
+    profiles_depth_alignment, _align_profiles, _check_sampling,
+    _fix_right_hand, _get_intersections, _warn_if_edges_cross)
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.geo.geodetic import npoints_towards, azimuth
@@ -1174,3 +1179,315 @@ def _get_profiles(fname):
                     section_profiles = [profiles]
             all_profiles[section['id']] = section_profiles
     return all_profiles
+
+
+def _planar_mesh(lons_top, lats_top, dlon=0.05, nrow=4, ddep=2.0):
+    # Rectangular mesh with rows shifted eastward and deepening downward
+    lons_top = np.asarray(lons_top, dtype=float)
+    lats_top = np.asarray(lats_top, dtype=float)
+    lons = np.array([lons_top + i * dlon for i in range(nrow)])
+    lats = np.array([lats_top for _ in range(nrow)])
+    deps = np.array([np.full(len(lons_top), ddep * i) for i in range(nrow)])
+    return RectangularMesh(lons, lats, deps)
+
+
+class KiteRobustnessTest(unittest.TestCase):
+    """
+    Regression tests for geometric properties of kite surfaces with
+    irregular shapes and NaN nodes
+    """
+
+    def test_strike_close_to_north(self):
+        # The azimuths of the top edge alternate between ~359.7 and ~0.3.
+        # An arithmetic mean would give ~216
+        lons = [0.0005, 0.0, 0.0005, 0.0, 0.0005, 0.0]
+        lats = np.linspace(0, 0.5, 6)
+        sfc = KiteSurface(_planar_mesh(lons, lats))
+        dff = (sfc.get_strike() + 180) % 360 - 180
+        self.assertLess(abs(dff), 0.5)
+
+    def test_rjb_vertical_curved(self):
+        # A vertical fault whose trace is a half circle: a site on the
+        # trace must have Rjb ~0 and a site at the centre of the circle an
+        # Rjb equal to the radius
+        t = np.linspace(0, np.pi, 41)
+        lons = np.array([np.cos(t)] * 4)
+        lats = np.array([np.sin(t)] * 4)
+        deps = np.array([np.full(41, 3. * i) for i in range(4)])
+        sfc = KiteSurface(RectangularMesh(lons, lats, deps))
+        self.assertTrue(sfc.is_vertical())
+        sites = Mesh(np.array([0.0, 0.0]), np.array([1.0, 0.0]))
+        rjb = sfc.get_joyner_boore_distance(sites)
+        self.assertLess(rjb[0], 0.2)
+        radius = geodetic.geodetic_distance(0., 0., 1., 0.)
+        np.testing.assert_allclose(rjb[1], radius, rtol=2e-2)
+
+    def test_rjb_inside_wide_surface(self):
+        # A site above the middle of a ~150 x ~200 km dipping surface is
+        # more than 40 km from all the vertexes of the boundary but its Rjb
+        # must be zero
+        nrow = 37
+        lats = np.linspace(0, 1.35, 28)
+        sfc = KiteSurface(_planar_mesh(np.zeros(28), lats, dlon=0.05,
+                                       nrow=nrow, ddep=40. / (nrow - 1)))
+        rjb = sfc.get_joyner_boore_distance(
+            Mesh(np.array([0.9]), np.array([0.675])))
+        aae(rjb, [0.0])
+
+    def test_area_irregular_cell(self):
+        # A flat, non-symmetric quadrilateral cell. Its exact area is 203 km2
+        d = 1 / 111.195
+        pnts = np.array([[0, 0], [10, 0], [25, -12], [-3, -10]]) * d
+        lons = np.array([[pnts[0, 0], pnts[1, 0]], [pnts[3, 0], pnts[2, 0]]])
+        lats = np.array([[pnts[0, 1], pnts[1, 1]], [pnts[3, 1], pnts[2, 1]]])
+        sfc = KiteSurface(RectangularMesh(lons, lats, np.zeros((2, 2))))
+        np.testing.assert_allclose(sfc.get_area(), 203., rtol=1e-2)
+
+    def test_top_edge_depth_and_center_with_nans(self):
+        nan = np.nan
+        lons = np.array([[0, 0, 0, 0], [0.05] * 4, [0.1, 0.1, nan, nan],
+                         [0.15, 0.15, nan, nan]])
+        lats = np.array([[0, .1, .2, .3]] * 4)
+        lats[2:, 2:] = nan
+        deps = np.array([[3., 3., nan, nan], [2., 2., 1., 2.],
+                         [4, 4, nan, nan], [6, 6, nan, nan]])
+        lons[0, 2:] = nan
+        lats[0, 2:] = nan
+        sfc = KiteSurface(RectangularMesh(lons, lats, deps))
+        # The shallowest node is not in the first row
+        self.assertEqual(sfc.get_top_edge_depth(), 1.0)
+        # The central node is NaN, the center must be a node of the mesh
+        cen = sfc.get_center()
+        self.assertTrue(np.isfinite([cen.longitude, cen.latitude,
+                                     cen.depth]).all())
+
+    def test_right_hand_first_cell_in_last_column(self):
+        # The only cell with four finite vertexes is in the last column and
+        # below the first row. This used to raise an IndexError
+        nan = np.nan
+        lons = np.array([[nan, 0.0], [nan, 0.0], [0.05, 0.05], [0.1, 0.1]])
+        lats = np.array([[nan, 0.1], [nan, 0.1], [0, 0.1], [0, 0.1]])
+        deps = np.array([[nan, 0], [nan, 2], [4, 4], [6, 6.]])
+        sfc = KiteSurface(RectangularMesh(lons, lats, deps))
+        self.assertEqual(sfc.mesh.shape, (4, 2))
+
+
+class KiteAuxiliaryFunctionsTest(unittest.TestCase):
+
+    def test_align_profiles(self):
+        prfr = [[[0, 0, 0], [0, 0.01, 2], [0, 0.02, 4], [0, 0.03, 6]]]
+        prfl = [[[1, 0, 4], [1, 0.01, 6]]]
+        _align_profiles(prfr, prfl)
+        deps = np.array(prfl[0])[:, 2]
+        self.assertEqual(len(prfl[0]), len(prfr[0]))
+        self.assertTrue(np.isnan(deps[:2]).all())
+        np.testing.assert_array_equal(deps[2:], [4., 6.])
+
+    def test_check_sampling(self):
+        proj = OrthographicProjection(-1, 1, 1, -1)
+        # Regular sampling, with and without NaNs, passes
+        edg = np.array([[0.01 * i, 0, 0] for i in range(6)])
+        _check_sampling(edg, proj)
+        edg[3] = np.nan
+        _check_sampling(edg, proj)
+        # Irregular sampling without NaNs is detected
+        edg = np.array([[0, 0, 0], [0.01, 0, 0], [0.5, 0, 0], [0.51, 0, 0]])
+        with self.assertRaises(ValueError):
+            _check_sampling(edg, proj)
+
+
+class KiteMeshBuildingTest(unittest.TestCase):
+    """
+    Regression tests for the functions used to build the mesh of a kite
+    surface from profiles
+    """
+
+    def setUp(self):
+        self.proj = OrthographicProjection(-1, 1, 1, -1)
+
+    def _line_x(self, lon):
+        # A vertical line (in the projected space) through longitude `lon`
+        xx, _ = self.proj(np.array([lon]), np.array([0.0]))
+        return [VERY_BIG, xx[0]]
+
+    def test_intersection_north_south_edge(self):
+        # A N-S edge crossing an E-W line. This used to fail in linregress
+        _, yy = self.proj(np.array([0.0]), np.array([0.0]))
+        edge = np.array([[0., -0.1, 5.], [0., 0.1, 7.]])
+        pnts, idx = _get_intersections(edge, [[0.0, yy[0]]], self.proj)
+        self.assertEqual(idx, 0)
+        aae(pnts, [[0., 0., 6.]], decimal=6)
+
+    def test_intersection_at_vertex(self):
+        # The line crosses the edge exactly at a vertex shared by two
+        # segments: the intersection must be found once
+        edge = np.array([[-0.1, -0.1, 5.], [0., 0., 6.], [0.1, 0.1, 7.]])
+        pnts, idx = _get_intersections(edge, [self._line_x(0.0)], self.proj)
+        self.assertEqual(idx, 0)
+        aae(pnts, [[0., 0., 6.]], decimal=6)
+
+    def test_intersection_oblique_and_index(self):
+        # Two lines, the edge crosses only the second one
+        edge = np.array([[-0.1, -0.1, 5.], [0.1, 0.1, 7.]])
+        lines = [self._line_x(0.5), self._line_x(0.05)]
+        pnts, idx = _get_intersections(edge, lines, self.proj)
+        self.assertEqual(idx, 1)
+        aae(pnts[:, 2], [6.5], decimal=3)
+
+    def test_intersection_none(self):
+        edge = np.array([[-0.1, -0.1, 5.], [0.1, 0.1, 7.]])
+        with self.assertRaises(ValueError):
+            _get_intersections(edge, [self._line_x(0.5)], self.proj)
+
+    def test_fix_mesh_incomplete_cell(self):
+        # No cell has four finite vertexes: all the nodes must be removed
+        msh = np.ones((2, 2, 3))
+        msh[1, 1] = np.nan
+        out = fix_mesh(msh)
+        self.assertFalse(np.isfinite(out).any())
+
+    def test_fix_mesh_keeps_complete_cells(self):
+        # Nodes of complete cells are kept, isolated ones are removed
+        nan = np.nan
+        fin = np.array([[1, 1, 1, nan],
+                        [1, 1, 1, 1],
+                        [nan, nan, 1, 1],
+                        [nan, 1, nan, 1]])
+        msh = np.stack([fin, fin, fin], axis=2)
+        out = fix_mesh(msh.copy())
+        expected = np.array([[1, 1, 1, 0],
+                             [1, 1, 1, 1],
+                             [0, 0, 1, 1],
+                             [0, 0, 0, 0]], dtype=bool)
+        np.testing.assert_array_equal(np.isfinite(out[:, :, 0]), expected)
+
+    def test_depth_alignment_short_profile(self):
+        # Profiles too short to test any shift used to return None
+        pro1 = Line([Point(0, 0, 0), Point(0, 0.01, 1)])
+        pro2 = Line([Point(1, 0, 0), Point(1, 0.01, 1), Point(1, 0.02, 2)])
+        self.assertEqual(profiles_depth_alignment(pro1, pro2), 0)
+
+    def test_depth_alignment_shift(self):
+        # The second profile starts at the depth of the third point of the
+        # first one
+        pro1 = Line([Point(0, 0.01 * i, 2. * i) for i in range(8)])
+        pro2 = Line([Point(1, 0.01 * i, 4. + 2. * i) for i in range(8)])
+        self.assertEqual(profiles_depth_alignment(pro1, pro2), 2)
+
+    def test_depth_alignment_last_shift(self):
+        pro1 = Line([Point(0, 0.01 * i, float(i)) for i in range(5)])
+        pro2 = Line([Point(1, 0.01 * i, 3. + i) for i in range(3)])
+        self.assertEqual(profiles_depth_alignment(pro1, pro2), 3)
+
+
+class KiteSurfaceValidationTest(unittest.TestCase):
+    """
+    Regression tests for input validation and for surfaces created
+    directly from a mesh
+    """
+
+    def _arc(self, deg=90., inward=True, nrow=5, ncol=25):
+        # Mesh with a trace shaped as an arc of circle, dipping towards or
+        # away from the centre of the circle
+        t = np.radians(np.linspace(0, deg, ncol))
+        rows = []
+        for i in range(nrow):
+            rad = 0.5 - 0.05 * i if inward else 0.5 + 0.05 * i
+            rows.append(np.c_[rad * np.cos(t), rad * np.sin(t),
+                              np.full(ncol, 3. * i)])
+        return np.array(rows)
+
+    def test_surface_nodes_without_profiles(self):
+        # Surfaces created from a mesh (e.g. with geom_to_kite) used to
+        # raise a TypeError
+        msh = self._arc()
+        sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
+                                          msh[..., 2]))
+        node = sfc.surface_nodes
+        self.assertEqual(node.tag, 'kiteSurface')
+        self.assertEqual(len(node), sfc.mesh.shape[1])
+        # Each profile contains the 5 nodes of a column (x 3 coordinates)
+        pos = node[0][0][0]  # profile -> gml:LineString -> gml:posList
+        self.assertEqual(len(pos.text), 15)
+
+    def test_clean_nodes_with_undefined_coordinates(self):
+        msh = self._arc(ncol=5)
+        deps = msh[..., 2].copy()
+        deps[2, 2] = np.nan
+        sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1], deps))
+        bad = ~np.isfinite(sfc.mesh.depths)
+        self.assertEqual(bad.sum(), 1)
+        self.assertTrue(np.isnan(sfc.mesh.lons[bad]).all())
+        self.assertTrue(np.isnan(sfc.mesh.lats[bad]).all())
+        # The input arrays are not modified
+        self.assertTrue(np.isfinite(msh[..., 0]).all())
+
+    def test_surface_nodes_reject_internal_gaps(self):
+        msh = self._arc(ncol=5)
+        msh[2, 2] = np.nan
+        sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
+                                          msh[..., 2]), sec_id='gap')
+        with self.assertRaisesRegex(
+                ValueError, 'gap.*column 2.*internal gaps'):
+            _ = sfc.surface_nodes
+
+    def test_strike_after_cleaning_sparse_top_row(self):
+        msh = np.array([
+            [[0., 0., 0.], [.1, .1, np.nan], [.2, .2, np.nan]],
+            [[0., -.1, 1.], [.1, .1, 1.], [.2, .2, 1.]],
+            [[0., -.2, 2.], [.1, 0., 2.], [.2, .1, 2.]]])
+        sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
+                                          msh[..., 2]))
+        # The top envelope runs north-east, although its first row has
+        # only one finite node after cleaning the undefined depths.
+        self.assertEqual(np.isfinite(sfc.mesh.lons[0]).sum(), 1)
+        self.assertAlmostEqual(sfc.get_strike(), 45., places=3)
+
+    def test_single_row_mesh(self):
+        msh = self._arc()[:1]
+        with self.assertRaises(ValueError):
+            KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
+                                        msh[..., 2]), sec_id='abc')
+
+    def test_fix_right_hand_single_node_in_first_row(self):
+        # The first row contains a single finite node. This used to raise
+        # an error when building the line of the top edge
+        for inward in [True, False]:
+            msh = self._arc(180., inward)
+            msh[0, 1:, :] = np.nan
+            out = _fix_right_hand(msh.copy())
+            # An arc running counterclockwise and dipping towards its
+            # centre dips to the left: it must be flipped
+            flipped = np.isnan(out[0, 0, 0])
+            self.assertEqual(flipped, inward)
+
+    def test_fix_right_hand_fallback(self):
+        # When neither orientation of the top edge is within 60 degrees of
+        # the strike, the closest one is kept instead of failing
+        msh = self._arc(30.)
+        with mock.patch.object(kf.GriddedSurface, 'get_strike',
+                               return_value=75.):
+            with self.assertLogs(level='WARNING'):
+                out = kf._fix_right_hand(msh.copy())
+        self.assertEqual(out.shape, msh.shape)
+
+    def test_warn_if_edges_cross(self):
+        msh = self._arc(ncol=4)
+        self.assertFalse(_warn_if_edges_cross(msh))
+        msh[1, 2, 2] = -1.
+        with self.assertLogs(level='WARNING'):
+            self.assertTrue(_warn_if_edges_cross(msh))
+
+    def test_boundary_cache(self):
+        msh = self._arc()
+        sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
+                                          msh[..., 2]))
+        lo1, la1 = sfc._get_external_boundary()
+        lo1[:] = 0.  # modifying the output must not alter the cache
+        lo2, _ = sfc._get_external_boundary()
+        self.assertFalse(np.all(lo2 == 0.))
+        # A new mesh invalidates the cache
+        old = sfc.mesh
+        sfc.mesh = RectangularMesh(old.lons + 1., old.lats, old.depths)
+        lo3, _ = sfc._get_external_boundary()
+        aae(lo3, lo2 + 1., decimal=6)

@@ -161,7 +161,8 @@ class FromSimpleFaultDataTestCase(unittest.TestCase):
         param = SourceParam(
             source_id, name, trt, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio, tom)
-        src = KiteFaultSource.as_simple_fault(param, upper_seismogenic_depth,
+        src = KiteFaultSource.as_simple_fault(
+            param, upper_seismogenic_depth,
             lower_seismogenic_depth, fault_trace, dip, rake,
             floating_x_step, floating_y_step)
 

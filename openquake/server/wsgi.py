@@ -24,12 +24,15 @@ except ImportError:
     def setproctitle(title):
         """Do nothing when setproctitle is unavailable."""
 
-from openquake.baselib import config
+from openquake.baselib import config, use_server
 from openquake.commonlib import dbapi
 from openquake.server.db import actions
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "openquake.server.settings")
 setproctitle('oq-webui')
+assert not use_server(), \
+    "The webui cannot call itself [can happen if a devel installation is identified as devel server]"
+
 # Initialize the database before the application starts serving requests
 logging.warning(f'Using {config.found[-1]}')
 logging.warning(f'Using {dbapi.db.path}')
