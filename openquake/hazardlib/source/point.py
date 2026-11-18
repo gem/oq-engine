@@ -28,7 +28,7 @@ from openquake.hazardlib.geo.surface.planar import (
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.aspect_ratio import MagDepAspectRatio
-from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource, SourceParam
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture)
 from openquake.hazardlib.geo.utils import (
@@ -481,20 +481,11 @@ def pdata_to_psources(pdata):
     out = []
     for i, rec in enumerate(pdata['array']):
         hcd[i].hypo_dip_fracs = hdf[i]
-        ps = PointSource(
-            source_id=f'{name}:{i}',
-            name=name,
-            tectonic_region_type=trt,
-            mfd=mfd[i],
-            rupture_mesh_spacing=rms,
-            magnitude_scaling_relationship=msr[i],
-            rupture_aspect_ratio=rar[i],
-            upper_seismogenic_depth=rec['usd'],
-            lower_seismogenic_depth=rec['lsd'],
-            location=Point(rec['lon'], rec['lat']),
-            nodal_plane_distribution=npd[i],
-            hypocenter_distribution=hcd[i],
-            temporal_occurrence_model=tom)
+        param = SourceParam(f'{name}:{i}', name, trt, mfd[i], rms, msr[i],
+                            rar[i], tom)
+        ps = PointSource.from_param(
+            param, rec['usd'], rec['lsd'],
+            Point(rec['lon'], rec['lat']), npd[i], hcd[i])
         ps.scaling_rate = (1. if scaling_rate is None
                            else float(scaling_rate[i]))
         out.append(ps)

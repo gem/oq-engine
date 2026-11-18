@@ -42,7 +42,8 @@ HypoData = namedtuple('HypoData', ['hypo_list', 'slip_list', 'depth_list'],
 
 
 @lru_cache(maxsize=256)
-def whole_fault_shape(trace_key, upper, lower, dip, mesh_spacing):
+def whole_fault_shape(trace_key, upper, lower, dip, mesh_spacing,
+                      dip_spacing=None):
     """
     :param trace_key: tuple of (lon, lat, depth) tuples of the fault trace
     :returns: shape of the whole-fault mesh (rows, cols)
@@ -53,7 +54,7 @@ def whole_fault_shape(trace_key, upper, lower, dip, mesh_spacing):
     """
     trace = Line([Point(*p) for p in trace_key])
     surface = SimpleFaultSurface.from_fault_data(
-        trace, upper, lower, dip, mesh_spacing)
+        trace, upper, lower, dip, mesh_spacing, dip_spacing=dip_spacing)
     return surface.mesh.shape
 
 
@@ -146,6 +147,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         magnitude value.
     """
     code = SIMPLE_FAULT
+    dip_spacing = 'mesh_spacing'
     # the dip and the seismogenic depths are scalars, rebound by the
     # modifications and never mutated in place
     shallow_uncertainties = frozenset([
@@ -379,11 +381,16 @@ class SimpleFaultSource(ParametricSeismicSource):
         n_slip = len(self.slip_list) or 1
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
-            self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing)
+            self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing,
+            dip_spacing=(self.rupture_mesh_spacing
+                         if self.dip_spacing == 'inferred' else None))
         whole_fault_mesh = whole_fault_surface.mesh
         mesh_rows, mesh_cols = whole_fault_mesh.shape
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
-        fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
+        if self.dip_spacing == 'mesh_spacing':
+            fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
+        else:
+            fault_width = whole_fault_surface.get_width()
         if not only_rates:
             cums, on_surface = _cum_terms(whole_fault_mesh)
 
@@ -395,7 +402,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup = num_rup_along_length * num_rup_along_width
             if self.hypo_depth_list:
                 alloc = self._hypo_depth_allocation_or_raise(
-                    mag, rup_rows, num_rup_along_width, num_rup_along_length)
+                    mag, rup_rows, num_rup_along_width,
+                    num_rup_along_length)
             else:
                 occurrence_rate = mag_occ_rate / float(num_rup)
             if only_rates:
@@ -465,13 +473,20 @@ class SimpleFaultSource(ParametricSeismicSource):
             mesh_rows, mesh_cols = whole_fault_shape(
                 trace_key, self.upper_seismogenic_depth,
                 self.lower_seismogenic_depth, self.dip,
-                self.rupture_mesh_spacing)
+                self.rupture_mesh_spacing,
+                (self.rupture_mesh_spacing
+                 if self.dip_spacing == 'inferred' else None))
         except Exception as exc:
             source_id = self.source_id
             exc.args = (f'in {source_id=}: {exc.args[0]}',) + exc.args[1:]
             raise
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
-        fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
+        if self.dip_spacing == 'mesh_spacing':
+            fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
+        else:
+            fault_width = ((self.lower_seismogenic_depth -
+                            self.upper_seismogenic_depth) /
+                           math.sin(math.radians(self.dip)))
         self._nr = []
         n_slip = len(self.slip_list) or 1
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
@@ -483,7 +498,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_width = mesh_rows - rup_rows + 1
             if self.hypo_depth_list:
                 alloc = self._hypo_depth_allocation_or_raise(
-                    mag, rup_rows, num_rup_along_width, num_rup_along_length)
+                    mag, rup_rows, num_rup_along_width,
+                    num_rup_along_length)
                 n_hypo_total = sum(len(entries) for entries in alloc.values())
                 self._nr.append(num_rup_along_length * n_hypo_total * n_slip)
             else:

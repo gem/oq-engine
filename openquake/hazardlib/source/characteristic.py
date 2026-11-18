@@ -59,6 +59,12 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         'set_geometry',
     }
 
+    @classmethod
+    def from_param(cls, param, surface, rake, surface_node=None):
+        """Build a source from shared parameters and characteristic args."""
+        return cls(param.source_id, param.name, param.trt, param.mfd,
+                   param.tom, surface, rake, surface_node)
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, temporal_occurrence_model, surface, rake,
                  surface_node=None):

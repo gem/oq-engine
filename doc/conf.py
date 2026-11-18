@@ -158,3 +158,4 @@ extensions = [
 
 autosectionlabel_prefix_document = True
 myst_heading_anchors = 3
+sd_card_legacy_separators = False

@@ -13,10 +13,12 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 from pathlib import Path
 
+import psutil
 import requests
 
 ROOT = Path(__file__).parents[3]
@@ -30,38 +32,69 @@ class WebuiTestCase(unittest.TestCase):
         oq = shutil.which('oq')
         self.assertIsNotNone(oq)
         env = os.environ.copy()
-        env['OQ_CONFIG_FILE'] = str(
-            ROOT / 'openquake/engine/multiuser.cfg')
+        scratch = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        cfgfile = scratch / 'openquake.cfg'
+        cfgfile.write_text(
+            (ROOT / 'openquake/engine/multiuser.cfg').read_text().replace(
+                '[server]', f'[server]\ndbfile = {scratch / "db.sqlite3"}'))
+        env['OQ_CONFIG_FILE'] = str(cfgfile)
+        env['OQ_DATADIR'] = str(scratch)
+        env['PYTHONUNBUFFERED'] = '1'
         hostport = self._free_hostport()
+        logpath = scratch / 'webui.log'
+        # A pipe can fill up during migrations and block server startup.
+        logfile = self.enterContext(logpath.open('w'))
         process = subprocess.Popen(
             [oq, 'webui', 'start', hostport, '-s'],
-            cwd=ROOT, env=env, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, text=True)
+            cwd=ROOT, env=env, stdout=logfile, stderr=subprocess.STDOUT)
         try:
-            self._wait_for_webui(process, hostport)
+            self._wait_for_webui(process, hostport, logpath)
+            repeated = subprocess.run(
+                [oq, 'webui', 'start', hostport, '-s'], cwd=ROOT, env=env,
+                capture_output=True, text=True, timeout=10)
+            self.assertNotEqual(repeated.returncode, 0)
+            self.assertIn('already in use', repeated.stderr)
             status = subprocess.run(
                 [oq, 'webui', 'status', hostport], cwd=ROOT, env=env,
-                capture_output=True, text=True, check=True)
+                capture_output=True, text=True, check=True, timeout=15)
             self.assertEqual(status.stdout.strip(), 'running')
             stopped = subprocess.run(
                 [oq, 'webui', 'stop', hostport], cwd=ROOT, env=env,
-                capture_output=True, text=True, check=True)
+                capture_output=True, text=True, check=True, timeout=30)
             self.assertEqual(stopped.stdout.strip(), 'stopped')
             self.assertIn(process.wait(timeout=10), [0, 15])
         finally:
-            if process.poll() is None:
-                process.terminate()
-                process.wait(timeout=10)
+            self._terminate_webui(process)
+
+    def _terminate_webui(self, process):
+        # On Windows oq.exe wraps a Python process, which in turn can spawn
+        # migration commands or runserver. All must release the scratch DB
+        # before TemporaryDirectory cleanup attempts to remove its files.
+        try:
+            children = psutil.Process(process.pid).children(recursive=True)
+        except psutil.NoSuchProcess:
+            children = []
+        for child in reversed(children):
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                pass
+        if process.poll() is None:
+            process.kill()
+        psutil.wait_procs(children, timeout=10)
+        process.wait(timeout=10)
 
     def _free_hostport(self):
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             return '127.0.0.1:%d' % sock.getsockname()[1]
 
-    def _wait_for_webui(self, process, hostport):
-        for _ in range(60):
+    def _wait_for_webui(self, process, hostport, logpath, timeout=120):
+        # A fresh DB also requires Django migrations and taxonomy imports.
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
             if process.poll() is not None:
-                output = process.stdout.read()
+                output = logpath.read_text(errors='replace')
                 self.fail('WebUI exited early:\n%s' % output)
             try:
                 response = requests.head(
@@ -72,7 +105,9 @@ class WebuiTestCase(unittest.TestCase):
             except requests.RequestException:
                 pass
             time.sleep(0.5)
-        self.fail('WebUI did not start within 30 seconds')
+        output = logpath.read_text(errors='replace')
+        self.fail('WebUI did not start within %s seconds:\n%s' % (
+            timeout, output))
 
 
 if __name__ == '__main__':

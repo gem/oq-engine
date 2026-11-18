@@ -291,6 +291,12 @@ disagg_outputs:
   Example: *disagg_outputs = Mag_Dist*
   Default: list of all possible outputs
 
+dip_spacing:
+  Set to *inferred* to determine the down-dip spacing of simple fault surfaces
+  from the rupture mesh spacing, or to *mesh_spacing* to use it unchanged.
+  Example: *dip_spacing = inferred*.
+  Default: mesh_spacing
+
 discard_assets:
   Flag used in risk calculations to discard assets from the exposure.
   Example: *discard_assets = true*.
@@ -1232,6 +1238,8 @@ class OqParam(valid.ParamSet):
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, list(valid.pmf_map))
     disagg_bin_edges = valid.Param(valid.dictionary, {})
+    dip_spacing = valid.Param(valid.Choice('inferred', 'mesh_spacing'),
+                              'mesh_spacing')
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     discrete_damage_distribution = valid.Param(valid.boolean, False)
