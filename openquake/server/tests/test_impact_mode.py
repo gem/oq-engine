@@ -26,18 +26,20 @@ import tempfile
 from types import SimpleNamespace
 import numpy
 import pandas
+import pytest
 from io import BytesIO
 
 import django
 from django.apps import apps
 from django.conf import settings
 from django.http import HttpResponseNotFound
+from django.test import RequestFactory
 from django.urls import reverse
 from openquake.baselib.general import gettemp
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import loadnpz
-from openquake.server.views import format_oqparam
+from openquake.server.views import format_oqparam, _impact_base_url
 from openquake.server.services import _impact_urls
 from openquake.server.tests.views_test import (
     get_or_create_user, start_webui, stop_webui)
@@ -45,15 +47,20 @@ from openquake.server.tests.views_test import (
 CALC_RUN_TIMEOUT = 100
 
 
-def test_impact_urls_match_the_routes():
-    # the URLs returned by impact_run are built without Django, so they
-    # must be kept in sync with the named routes of urls.py
-    urls = _impact_urls('http://localhost:8800')(42)
+@pytest.mark.parametrize('prefix', ['', '/oq'])
+def test_impact_urls_match_the_routes(settings, prefix):
+    # the URLs returned by impact_run and sent by email are built without
+    # Django, so they must be kept in sync with the named routes of urls.py,
+    # including the path prefix of the WebUI, if any (the routes are not
+    # mounted under the prefix here, so it is added to the expected paths)
+    settings.WEBUI_PATHPREFIX = prefix
+    request = RequestFactory().get('/', HTTP_HOST='localhost:8800')
+    urls = _impact_urls(_impact_base_url(request))(42)
     expected = {'outputs_uri_web': reverse('outputs_impact', args=[42]),
                 'outputs_uri': reverse('results', args=[42]),
                 'log_uri': reverse('log', args=[42, '0', '']),
                 'traceback_uri': reverse('traceback', args=[42])}
-    assert urls == {key: 'http://localhost:8800' + path
+    assert urls == {key: 'http://localhost:8800' + prefix + path
                     for key, path in expected.items()}
 
 

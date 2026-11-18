@@ -192,6 +192,13 @@ def _get_base_url(request):
     return base_url
 
 
+def _impact_base_url(request):
+    # Base URL of the links returned by the IMPACT runs and sent by email:
+    # services._impact_urls builds them without Django, so the path prefix
+    # of the WebUI, which reverse() would add, must be added here
+    return _get_base_url(request) + settings.WEBUI_PATHPREFIX
+
+
 def _get_bool_param(obj, name, default=False):
     val = obj.get(name)
     if val is None:
@@ -1108,7 +1115,7 @@ def impact_run(request):
         user_level=str(request.user.level),
         username=utils.get_username(request),
         email=getattr(request.user, 'email', ''),
-        base_url=_get_base_url(request))
+        base_url=_impact_base_url(request))
     return internal_api.run(
         services.impact_run, internal_api.make_form(data, request.FILES))
 
@@ -1154,7 +1161,7 @@ def impact_run_with_shakemap(request):
         user_level=str(request.user.level),
         username=utils.get_username(request),
         email=getattr(request.user, 'email', ''),
-        base_url=_get_base_url(request))
+        base_url=_impact_base_url(request))
     return internal_api.run(
         services.impact_run, internal_api.make_form(post, request.FILES))
 
