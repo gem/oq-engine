@@ -65,7 +65,7 @@ https://wheelhouse.openquake.org/unified/pytz-2023.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/requests-2.33.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/setuptools-84.2.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/six-1.16.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/unified/sqlparse-0.5.5-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/sqlparse-0.6.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/sympy-1.12-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/toml-0.10.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/tzdata-2023.3-py2.py3-none-any.whl
