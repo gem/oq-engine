@@ -28,7 +28,6 @@ import pathlib
 import subprocess
 import tempfile
 import zipfile
-from configparser import ConfigParser
 from django.contrib.auth import get_user_model
 from openquake.baselib import config
 from openquake.server.tests.views_test import start_webui, stop_webui
@@ -317,26 +316,8 @@ def authenticated_session(django_db_blocker, user):
 
 
 @pytest.fixture
-def webui_config(request, tmp_path):
-    cfg_path = os.environ['OQ_CONFIG_FILE']
-    city_file = getattr(request, 'param', None)
-    if city_file is None:
-        return cfg_path
-    config = ConfigParser(interpolation=None)
-    config.read(cfg_path, encoding='utf8')
-    config['directory']['world_cities_file'] = str(city_file)
-    cfg_path = tmp_path / 'openquake.cfg'
-    with cfg_path.open('w', encoding='utf8') as cfg:
-        config.write(cfg)
-    return str(cfg_path)
-
-
-@pytest.fixture
-def authenticated_page(page, authenticated_session, application_mode,
-                       webui_config, monkeypatch):
-    with monkeypatch.context() as env:
-        env.setenv('OQ_CONFIG_FILE', webui_config)
-        server, thread, client = start_webui()
+def authenticated_page(page, authenticated_session, application_mode):
+    server, thread, client = start_webui()
     try:
         page.context.clear_cookies()
         page.context.add_cookies([{
