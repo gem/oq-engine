@@ -607,7 +607,7 @@ def _impact_urls(base_url):
             'outputs_uri_web': build_absolute_uri(
                 f'/engine/{job_id}/outputs_impact'),
             'outputs_uri': build_absolute_uri(
-                f'/v1/calc/result/{job_id}'),
+                f'/v1/calc/{job_id}/results'),
             'log_uri': build_absolute_uri(
                 f'/v1/calc/{job_id}/log/0:'),
             'traceback_uri': build_absolute_uri(
