@@ -12,7 +12,8 @@ include openquake/server/local_settings.py.server
 recursive-include openquake/server/templates/registration *.default.tmpl
 # OpenQuake server data
 recursive-include openquake/server/db *.sql
-recursive-include openquake/server *.html *.css *.png *.js *.map *.ttf
+recursive-include openquake/server *.html *.css *.png *.js *.map
+recursive-include openquake/server/static/font *.ttf
 # Hazardlib data
 recursive-include openquake/hazardlib/gsim *.csv *.hdf5 *.onnx *.onnx.gz
 recursive-include openquake/hazardlib/correlation_models *.csv
