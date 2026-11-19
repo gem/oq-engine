@@ -27,23 +27,33 @@ except ImportError:
 from openquake.baselib import config, use_server
 from openquake.commonlib import dbapi
 from openquake.server.db import actions
+from openquake.server.db.upgrade_manager import VersioningNotInstalled
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "openquake.server.settings")
 setproctitle('oq-webui')
 assert not use_server(), \
     "The webui cannot call itself [can happen if a devel installation is identified as devel server]"
 
-# Initialize the database before the application starts serving requests.
-# NB: every gunicorn worker imports this module, so with N workers there are
-# N upgrades at the same time; in production the database should be upgraded
-# once before starting gunicorn (ExecStartPre=oq engine --upgrade-db, see
-# doc/getting-started/installation-instructions/server.md) and then here
-# there is nothing left to apply. The call is kept for the installations
-# without ExecStartPre; upgrade_db takes the write lock of the database, so
-# the workers upgrade it one at the time and do not apply a script twice
+# Check the database before the application starts serving requests.
+# The WebUI does not upgrade the database: every gunicorn worker imports this
+# module, so with N workers there would be N upgrades of the same database
+# at the same time. Upgrading is an explicit action of the administrator,
+# with `oq engine --upgrade-db` before starting the WebUI (see
+# doc/getting-started/installation-instructions/server.md); here the WebUI
+# refuses to start telling what to do. NB: `oq webui start` upgrades the
+# database by itself before starting the server (a single process).
 logging.warning(f'Using {config.found[-1]}')
 logging.warning(f'Using {dbapi.db.path}')
-actions.upgrade_db(dbapi.db)
+try:
+    outdated = actions.check_outdated(dbapi.db)
+except VersioningNotInstalled:  # the database has not been created yet
+    outdated = ('The database has not been created yet. You can create it '
+                'by running oq engine --upgrade-db')
+if outdated:
+    raise RuntimeError(
+        f'{dbapi.db.path}: {outdated}\nThe command must be run by the owner '
+        'of the database (the user openquake in a server installation) '
+        'before starting the WebUI.')
 
 from django.core.wsgi import get_wsgi_application  # noqa: E402
 

@@ -166,13 +166,19 @@ On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunico
 Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
 ```console
 WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
-ExecStartPre=/opt/openquake/venv/bin/oq engine --upgrade-db
 ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --timeout 1200 wsgi:application
 ```
 where `N` is the number of workers. 
-The `ExecStartPre` line upgrades the database once, before the workers start: each worker would upgrade it otherwise, all at the same time.
-If the upgrade fails, the service does not start and the error is in `journalctl -u openquake-webui`.
 Refer to the official Gunicorn documentation for the optimal choice of this value based on your system's hardware specifications.
+
+The WebUI run by gunicorn does not upgrade the database: if the database is outdated, e.g. after installing a new version of the engine, the WebUI refuses to start and the error in `journalctl -u openquake-webui` tells which versions are missing.
+In that case stop the WebUI, upgrade the database as the user owning it and start the WebUI again:
+```console
+sudo systemctl stop openquake-webui
+sudo -u openquake /opt/openquake/venv/bin/oq engine --upgrade-db
+sudo systemctl start openquake-webui
+```
+Make a backup copy of the database (`/opt/openquake/oqdata/db.sqlite3`) before upgrading it.
 
 ### Two installations on the same machine
 
