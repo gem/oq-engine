@@ -179,6 +179,7 @@ sudo -u openquake /opt/openquake/venv/bin/oq engine --upgrade-db
 sudo systemctl start openquake-webui
 ```
 Make a backup copy of the database (`/opt/openquake/oqdata/db.sqlite3`) before upgrading it.
+The installer (`install.py server`) upgrades the database by itself before starting the WebUI service, so this is needed only if the engine is upgraded in another way.
 
 ### Two installations on the same machine
 

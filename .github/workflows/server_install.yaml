@@ -149,13 +149,6 @@ jobs:
           set +a
           mkdir -p /var/log/oq-engine/
           chown -R openquake /var/log/oq-engine/
-          # install.py has just started the WebUI service, which upgrades
-          # the database at startup: stop it before upgrading the database,
-          # migrating and creating the users, otherwise the service and
-          # these commands would change the same database at the same time
-          # (sporadic "duplicate column name" errors); this is what the
-          # devel_server step does too
-          systemctl stop openquake-webui
           runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db'
           oq --version
           #
@@ -172,7 +165,9 @@ jobs:
             "${SITE_PKG}openquake/server" openquake user2 user3 user4
           # gunicorn instead of runserver, as in the documentation
           "$SCRIPTS/webui_unit.sh" "${SITE_PKG}openquake/server"
-          # START WEBUI (it was stopped at the beginning of this step)
+          # STOP AND START WEBUI
+          systemctl stop openquake-webui
+          sleep 10
           systemctl start openquake-webui
       - name: Server checks (WebUI as openquake and user2, user3 and user4)
         # as root, for the journal; the checks are in server_checks.sh
