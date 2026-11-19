@@ -761,7 +761,9 @@ def rates_table(sources, bset_values, paths, renamed, detail):
             mfd = getattr(src, 'mfd', None)
             if mfd is None:
                 continue
-            srcid = re.split('[!;]', src.source_id)[0]
+            # the point sources of a multiPointSource are named ID:i, so
+            # they are grouped with the original ID (see multi_point.py)
+            srcid = re.split('[!;:]', src.source_id)[0]
             srcid = renamed.get(srcid, srcid)
             h = _digest(srcid, mfd.get_annual_occurrence_rates())
             for t in trt_smrs:
