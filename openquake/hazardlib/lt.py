@@ -24,8 +24,8 @@ from ExtraLogicTree. Here is the hierarchy, with the methods defined or
 overridden by each class::
 
     AbstractLogicTree
-    │   [abstract] get_num_paths, get_realizations, __toh5__, __fromh5__
-    │   sample, to_node, to_nrml
+    │   get_realizations, sample, get_num_paths, __toh5__, __fromh5__
+    │   to_node, to_nrml
     ├── BranchSetLogicTree
     │   │   __init__, root_branchset, set_num_paths, get_num_paths,
     │   │   get_realizations, sample, get_all_paths, sample_paths,
