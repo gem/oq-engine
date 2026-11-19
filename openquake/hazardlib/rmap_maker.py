@@ -35,11 +35,11 @@ from openquake.hazardlib.contexts import (
     ContextMaker, concat, F32, F64, U32, TWO20, TWO24)
 
 # the MFD variants of a block of contexts stored once by store_ctxs: the
-# rows start:stop of the rup datasets belong to the base variant base_gid,
-# and the variant gid has the occurrence rates multiplied by the ratios
+# rows start:stop of the rup datasets belong to the base variant (the
+# grp_id and base gid are the ones of the rows) and the variant gid has
+# the occurrence rates multiplied by the ratios
 # rup_ratio[rstart:rstart + stop - start], see make_results
-VARIANT_DT = numpy.dtype([('grp_id', numpy.uint16), ('base_gid', U32),
-                          ('gid', U32), ('start', numpy.int64),
+VARIANT_DT = numpy.dtype([('gid', U32), ('start', numpy.int64),
                           ('stop', numpy.int64), ('rstart', numpy.int64)])
 
 

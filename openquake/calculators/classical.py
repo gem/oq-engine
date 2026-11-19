@@ -126,8 +126,7 @@ def store_ctxs(dstore, rupdata, grp_id, gid, ratios=()):
     for vgid, ratio in ratios:
         rstart = len(dstore['rup_ratio'])
         hdf5.extend(dstore['rup_ratio'], F32(ratio))
-        rec = numpy.array([(grp_id, gid, vgid, start, start + nr, rstart)],
-                          VARIANT_DT)
+        rec = numpy.array([(vgid, start, start + nr, rstart)], VARIANT_DT)
         hdf5.extend(dstore['rup_variants'], rec)
     known = set(rupdata.dtype.names)
     for par in dstore['rup']:
