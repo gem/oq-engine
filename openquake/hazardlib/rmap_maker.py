@@ -24,6 +24,7 @@ import numpy
 from openquake.baselib.general import (
     AccumDict, getsizeof)
 from openquake.baselib.general import decode
+from openquake.baselib.hdf5 import vfloat32
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import (
@@ -37,10 +38,10 @@ from openquake.hazardlib.contexts import (
 # the MFD variants of a block of contexts stored once by store_ctxs: the
 # rows start:stop of the rup datasets belong to the base variant (the
 # grp_id and base gid are the ones of the rows) and the variant gid has
-# the occurrence rates multiplied by the ratios
-# rup_ratio[rstart:rstart + stop - start], see make_results
+# the occurrence rates multiplied by the ratios, one per row (zero for the
+# rows missing in the variant), see make_results
 VARIANT_DT = numpy.dtype([('gid', U32), ('start', numpy.int64),
-                          ('stop', numpy.int64), ('rstart', numpy.int64)])
+                          ('stop', numpy.int64), ('ratios', vfloat32)])
 
 
 class RmapMaker(object):
@@ -544,7 +545,7 @@ def _keep_rups(rupdata, src_ratios, rups, ratios):
             ratio.append(fac[mask])
 
 
-def _add_variants(ctx, variants, ratios):
+def _add_variants(ctx, variants):
     # Rebuild the contexts of the MFD variants computed together by
     # make_results, stored once with the gid of the base variant: the
     # contexts of a variant are the base rows with the occurrence rates
@@ -552,11 +553,9 @@ def _add_variants(ctx, variants, ratios):
     #
     # :param ctx: a recarray with all the stored contexts, in storage order
     # :param variants: an array of dtype VARIANT_DT
-    # :param ratios: the stored ratios, indexed by the rstart field
     out = [ctx]
     for rec in variants:
-        start, stop, rstart = rec['start'], rec['stop'], rec['rstart']
-        ratio = ratios[rstart: rstart + stop - start]
+        start, stop, ratio = rec['start'], rec['stop'], rec['ratios']
         ok = ratio > 0
         new = ctx[start:stop][ok].copy()
         new.occurrence_rate *= ratio[ok]
@@ -865,8 +864,7 @@ def read_ctx_by_grp(dstore):
     if 'rup_variants' in dstore and len(dstore['rup_variants']):
         # must be done before sorting, since the variants refer to
         # the storage order
-        ctx = _add_variants(ctx, dstore['rup_variants'][:],
-                            dstore['rup_ratio'][:])
+        ctx = _add_variants(ctx, dstore['rup_variants'][:])
     grp_ids = numpy.unique(ctx.grp_id)
     ctx = ctx[numpy.argsort(ctx.mag)]  # NB: crucial for performance
     return {grp_id: ctx[ctx.grp_id == grp_id] for grp_id in grp_ids}

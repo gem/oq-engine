@@ -119,15 +119,18 @@ def store_ctxs(dstore, rupdata, grp_id, gid, ratios=()):
         contexts of a group have different gids
     :param ratios: a list of pairs (gid, ratios) for the MFD variants
         sharing the contexts, see make_results; they are stored in the
-        rup_variants and rup_ratio datasets, see read_ctx_by_grp
+        rup_variants dataset, see read_ctx_by_grp
     """
     nr = len(rupdata)
     start = len(dstore['rup/grp_id'])
-    for vgid, ratio in ratios:
-        rstart = len(dstore['rup_ratio'])
-        hdf5.extend(dstore['rup_ratio'], F32(ratio))
-        rec = numpy.array([(vgid, start, start + nr, rstart)], VARIANT_DT)
-        hdf5.extend(dstore['rup_variants'], rec)
+    if len(ratios):
+        recs = numpy.zeros(len(ratios), VARIANT_DT)
+        for rec, (vgid, ratio) in zip(recs, ratios):
+            rec['gid'] = vgid
+            rec['start'] = start
+            rec['stop'] = start + nr
+            rec['ratios'] = F32(ratio)
+        hdf5.extend(dstore['rup_variants'], recs)
     known = set(rupdata.dtype.names)
     for par in dstore['rup']:
         if par == 'rup_id':
@@ -860,7 +863,6 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_df('rup', descr, 'gzip')
             # the MFD variants sharing the contexts, see store_ctxs
             self.datastore.create_dset('rup_variants', VARIANT_DT)
-            self.datastore.create_dset('rup_ratio', F32, compression='gzip')
             # NB: the gid is the gid of the index of rate attribution,
             # stored since the contexts of a group have different gids,
             # i.e. the same rupture is stored once per index of rate
