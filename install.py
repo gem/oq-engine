@@ -663,11 +663,13 @@ def create_services(inst):
         os.chown(secret_file,
                  openquake_user.pw_uid,
                  openquake_user.pw_gid)
-        # create or upgrade the database before starting the WebUI, so that
-        # the WebUI finds it ready and nothing else upgrades it while the
-        # WebUI is starting; the upgrade is done as the user openquake, the
-        # owner of the database (runuser also sets USER and LOGNAME, so that
-        # the engine uses the database directly and not through the WebUI)
+        # create or upgrade the database before starting the WebUI: run by
+        # gunicorn, the WebUI refuses to start with an outdated database,
+        # and run by `oq webui start` it would upgrade it at startup, at the
+        # same time as any `oq engine --upgrade-db` run after the
+        # installation; the upgrade is done as the user openquake, the owner
+        # of the database (runuser also sets USER and LOGNAME, so that the
+        # engine uses the database directly and not through the WebUI)
         subprocess.check_call(
             ["runuser", "-u", "openquake", "--",
              oq_path(inst), "engine", "--upgrade-db"], cwd=inst.OQDATA)

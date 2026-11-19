@@ -36,12 +36,14 @@ assert not use_server(), \
 
 # Check the database before the application starts serving requests.
 # The WebUI does not upgrade the database: every gunicorn worker imports this
-# module, so with N workers there would be N upgrades of the same database
-# at the same time. Upgrading is an explicit action of the administrator,
-# with `oq engine --upgrade-db` before starting the WebUI (see
-# doc/getting-started/installation-instructions/server.md); here the WebUI
-# refuses to start telling what to do. NB: `oq webui start` upgrades the
-# database by itself before starting the server (a single process).
+# module (unless gunicorn runs with --preload), so with N workers there would
+# be N upgrades of the same database at the same time. The database must be
+# upgraded with `oq engine --upgrade-db` before starting the WebUI: install.py
+# does it before starting the service, otherwise it is an explicit action of
+# the administrator (see doc/getting-started/installation-instructions/
+# server.md); here the WebUI refuses to start telling what to do.
+# NB: `oq webui start` upgrades the database by itself before starting the
+# server (a single process).
 logging.warning(f'Using {config.found[-1]}')
 logging.warning(f'Using {dbapi.db.path}')
 try:
