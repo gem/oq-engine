@@ -33,7 +33,14 @@ setproctitle('oq-webui')
 assert not use_server(), \
     "The webui cannot call itself [can happen if a devel installation is identified as devel server]"
 
-# Initialize the database before the application starts serving requests
+# Initialize the database before the application starts serving requests.
+# NB: every gunicorn worker imports this module, so with N workers there are
+# N upgrades at the same time; in production the database should be upgraded
+# once before starting gunicorn (ExecStartPre=oq engine --upgrade-db, see
+# doc/getting-started/installation-instructions/server.md) and then here
+# there is nothing left to apply. The call is kept for the installations
+# without ExecStartPre; upgrade_db takes the write lock of the database, so
+# the workers upgrade it one at the time and do not apply a script twice
 logging.warning(f'Using {config.found[-1]}')
 logging.warning(f'Using {dbapi.db.path}')
 actions.upgrade_db(dbapi.db)

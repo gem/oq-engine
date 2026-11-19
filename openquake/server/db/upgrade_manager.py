@@ -85,14 +85,23 @@ class WrappedConnection(object):
         return curs
 
 
-# Take the write lock of the database with BEGIN IMMEDIATE, so that
-# concurrent processes (e.g. the WebUI starting and `oq engine --upgrade-db`)
-# initialize or upgrade it one at the time: the others wait for the lock (up
-# to the timeout of the connection) and read the versions only after it.
-# The lock is released by committing or, in case of error, by rolling back;
-# since SQLite DDL is transactional, a failed upgrade leaves the database
-# at the previous version. This is needed since dbapi.db works in autocommit
-# mode (isolation_level=None) and would commit every single statement.
+# Run an initialization or upgrade of the database in a single transaction.
+# dbapi.db stays in autocommit mode (isolation_level=None) on purpose; here
+# BEGIN IMMEDIATE opens an explicit transaction, as done in actions.py. It is
+# needed for two reasons:
+# 1. without it every statement of a script is committed on its own, so a
+#    failure in the middle of an upgrade (or a process killed during it,
+#    e.g. by `systemctl stop`) leaves the database half upgraded, with the
+#    changes applied but the version not recorded, and every later upgrade
+#    fails on the same script (e.g. "duplicate column name"); here the
+#    failed upgrade is rolled back and the database stays at its version;
+# 2. the database can be upgraded by more processes at the same time, e.g.
+#    by every gunicorn worker importing wsgi.py: BEGIN IMMEDIATE takes the
+#    write lock, so the other processes wait for it (up to the busy timeout
+#    of the connection) and read the versions after the upgrade, finding
+#    nothing to apply; if the wait is too long they fail with "database is
+#    locked", without changing the database.
+# Errors in the scripts are not hidden: they are raised after the rollback.
 @contextlib.contextmanager
 def _write_lock(conn):
     conn.execute('BEGIN IMMEDIATE')

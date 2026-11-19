@@ -9,9 +9,14 @@ UNIT=/etc/systemd/system/openquake-webui.service
 # gunicorn is an optional dependency: install it in the venv, but not the
 # openquake.engine[server] extra, which would replace the engine under test
 /opt/openquake/venv/bin/pip install "gunicorn>=26.2"
+# ExecStartPre upgrades the database once, before gunicorn starts: every
+# gunicorn worker imports wsgi.py, which upgrades the database too, so
+# without it the workers would upgrade the same database at the same time;
+# the ExecStartPre line is deleted first to keep the script idempotent
 sed -i \
   -e "s|^WorkingDirectory=.*|WorkingDirectory=$1|" \
   -e "s|^Environment=$|Environment=MPLCONFIGDIR=/tmp|" \
-  -e "s|^ExecStart=.*|ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 2 --timeout 120 wsgi:application|" \
+  -e "/^ExecStartPre=/d" \
+  -e "s|^ExecStart=.*|ExecStartPre=/opt/openquake/venv/bin/oq engine --upgrade-db\nExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 2 --timeout 120 wsgi:application|" \
   "$UNIT"
 systemctl daemon-reload
