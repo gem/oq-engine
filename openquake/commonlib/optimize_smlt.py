@@ -87,7 +87,7 @@ ps_grid_spacing the difference is at the level of the numerical noise
 (about 1E-5, like the difference between two runs of the original job with
 a different number of tasks).
 
-Use it with `oq check_input --better-smlt job.ini`.
+Use it with `oq check_input --optimize job.ini`.
 """
 import os
 import copy
