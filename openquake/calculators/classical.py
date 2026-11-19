@@ -38,7 +38,8 @@ from openquake.hazardlib.rmap_maker import read_unc_ts_sets
 from openquake.hazardlib.lt import (
     get_bset_value, GEOMETRY_PRESERVING)
 from openquake.hazardlib.rmap_maker import (
-    build_cmakers, read_full_lt_by_label, make_results, mag_support)
+    build_cmakers, read_full_lt_by_label, make_results, mag_support,
+    VARIANT_DT)
 from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
@@ -110,14 +111,24 @@ class Set(set):
     __iadd__ = set.__ior__
 
 
-def store_ctxs(dstore, rupdata, grp_id, gid):
+def store_ctxs(dstore, rupdata, grp_id, gid, ratios=()):
     """
     Store contexts in the datastore
 
     :param gid: the gid of the index of rate attribution, stored since the
         contexts of a group have different gids
+    :param ratios: a list of pairs (gid, ratios) for the MFD variants
+        sharing the contexts, see make_results; they are stored in the
+        rup_variants and rup_ratio datasets, see read_ctx_by_grp
     """
     nr = len(rupdata)
+    start = len(dstore['rup/grp_id'])
+    for vgid, ratio in ratios:
+        rstart = len(dstore['rup_ratio'])
+        hdf5.extend(dstore['rup_ratio'], F32(ratio))
+        rec = numpy.array([(grp_id, gid, vgid, start, start + nr, rstart)],
+                          VARIANT_DT)
+        hdf5.extend(dstore['rup_variants'], rec)
     known = set(rupdata.dtype.names)
     for par in dstore['rup']:
         if par == 'rup_id':
@@ -360,6 +371,10 @@ def _make_results(pairs, sites, cmaker, remove_zeros, as_rmap):
         # sources were filtered away
         return None
     for (_, gids), dic in zip(pairs, dics):
+        if 'rup_ratios' in dic:
+            # replace the variant index with the gid used by store_ctxs
+            dic['rup_ratios'] = [(U32(pairs[v][1]).min(), ratio)
+                                 for v, ratio in dic['rup_ratios']]
         dic['rmap'] = dic['rmap'].remove_zeros() \
             if remove_zeros else dic['rmap']
         dic['rmap'].gid = gids
@@ -525,6 +540,7 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
         if cmaker.oq.disagg_by_src:
             # Reduce packet sizes to avoid hanging ZMQ due to lost packets.
             rup_data = dic.pop('rup_data')
+            ratios = dic.pop('rup_ratios', ())  # see make_results
             if len(rup_data):
                 max_rows = max(1, 32 * 1024**2 // rup_data.dtype.itemsize)
                 grp_id = dic['source_data']['grp_id'][0]
@@ -532,7 +548,8 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
                 # of this realization set; the rmap retains all gids.
                 gid = dic['rmap'].gid.min()
                 for slc in general.gen_slices(0, len(rup_data), max_rows):
-                    yield dict(rup_data=rup_data[slc], grp_id=grp_id, gid=gid)
+                    yield dict(rup_data=rup_data[slc], grp_id=grp_id, gid=gid,
+                               rup_ratios=[(g, r[slc]) for g, r in ratios])
         yield dic
 
 
@@ -772,7 +789,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.few_sites:
                 with self.monitor('saving rup_data'):
                     store_ctxs(self.datastore, dic['rup_data'], dic['grp_id'],
-                               dic['gid'])
+                               dic['gid'], dic.get('rup_ratios', ()))
             return acc
         elif not dic['source_data']:
             # all the sources were filtered out
@@ -791,7 +808,7 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 # NB: each result has its own gid, see bysrc_results
                 store_ctxs(self.datastore, dic['rup_data'], grp_id,
-                           dic['rmap'].gid.min())
+                           dic['rmap'].gid.min(), dic.pop('rup_ratios', ()))
 
         rmap = dic.pop('rmap', None)
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
@@ -842,6 +859,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
+            # the MFD variants sharing the contexts, see store_ctxs
+            self.datastore.create_dset('rup_variants', VARIANT_DT)
+            self.datastore.create_dset('rup_ratio', F32, compression='gzip')
             # NB: the gid is the gid of the index of rate attribution,
             # stored since the contexts of a group have different gids,
             # i.e. the same rupture is stored once per index of rate

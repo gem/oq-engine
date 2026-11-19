@@ -32,7 +32,7 @@ from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.classical import bysrc_results
-from openquake.hazardlib.rmap_maker import read_unc_ts_sets
+from openquake.hazardlib.rmap_maker import read_unc_ts_sets, read_ctx_by_grp
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
@@ -602,6 +602,29 @@ hazard_uhs-std.csv
                 original = 126 - rmap.gid
                 actual[original] += rmap.array[0].T
         aac(actual, expected, rtol=1e-6, atol=1e-12)
+
+    def test_case_25_rup_variants(self):
+        # the contexts of the MFD variants computed together by make_results
+        # are stored once (3,326 rows), with the ratios of the rates of each
+        # variant (34 variants); read_ctx_by_grp rebuilds the 10,867 rows
+        # that were stored before, with a rescaled copy per variant (checked
+        # row by row against engine master, same rates up to float32 errors)
+        self.run_calc(case_25.__file__, 'job.ini')
+        ds = self.calc.datastore
+        self.assertEqual(len(ds['rup/grp_id']), 3326)
+        self.assertEqual(len(ds['rup_variants']), 34)
+        ctx_by_grp = read_ctx_by_grp(ds)
+        self.assertEqual(sum(len(ctx) for ctx in ctx_by_grp.values()), 10867)
+        # each rupture affects the site once per gid
+        for ctx in ctx_by_grp.values():
+            keys = numpy.unique(ctx[['gid', 'src_id', 'rup_id', 'sids']])
+            self.assertEqual(len(keys), len(ctx))
+
+        # with keep_rupdata=false nothing is stored
+        self.run_calc(case_25.__file__, 'job.ini', keep_rupdata='false')
+        ds = self.calc.datastore
+        self.assertEqual(len(ds['rup/grp_id']), 0)
+        self.assertEqual(len(ds['rup_variants']), 0)
 
     def test_case_26(self):
         # 3-branch amp LT, classical, full enumeration and sampling
