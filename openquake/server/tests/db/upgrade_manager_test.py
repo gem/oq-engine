@@ -111,6 +111,45 @@ class UpgradeManagerTestCase(unittest.TestCase):
         self.assertEqual(count(conn, 'test_hazard_calculation'), 0)
         self.assertEqual(count(conn, 'test_lt_source_model'), 0)
 
+    def test_rollback_in_autocommit_mode(self):
+        # the engine database (dbapi.db) is opened in autocommit mode;
+        # a script failing after an ALTER TABLE must not leave the column
+        # added, nor the scripts before it applied
+        aconn = sqlite3.connect(tmpfile, isolation_level=None)
+        skip = ['0002', '0003']
+        script = ('ALTER TABLE test_hazard_calculation ADD COLUMN extra FLOAT'
+                  '\n\nSELECT * FROM not_existing')
+        try:
+            with temp_script('0006-alter-then-fail.sql', script):
+                with self.assertRaises(sqlite3.OperationalError):
+                    upgrade_db(aconn, pkg, skip_versions=skip)
+            columns = [row[1] for row in aconn.execute(
+                'PRAGMA table_info(test_hazard_calculation)')]
+            self.assertNotIn('extra', columns)
+            self.assertEqual(count(aconn, 'test_version'), 1)
+            self.assertEqual(count(aconn, 'test_hazard_calculation'), 0)
+            # the database is not half upgraded, so the upgrade can be
+            # repeated once the failing script is gone
+            applied = upgrade_db(aconn, pkg, skip_versions=skip)
+            self.assertEqual(applied, ['0001', '0005'])
+        finally:
+            aconn.close()
+
+    def test_init_rollback_in_autocommit_mode(self):
+        # if the creation of the base schema fails, nothing must be left,
+        # otherwise the next attempt would fail with "table already exists"
+        aconn = sqlite3.connect(tmpfile, isolation_level=None)
+        try:
+            with mock.patch.object(upgrader, 'install_versioning',
+                                   side_effect=RuntimeError('failed')):
+                with self.assertRaises(RuntimeError):
+                    upgrade_db(aconn, pkg)
+            tables = aconn.execute('SELECT name FROM sqlite_master').fetchall()
+            self.assertEqual(tables, [])
+            self.assertEqual(db_version(aconn, pkg), '0000')
+        finally:
+            aconn.close()
+
     def test_duplicated_version(self):
         # there are two scripts with version '0001'
         with self.assertRaises(DuplicatedVersion):

@@ -25,6 +25,7 @@ import urllib.request
 import logging
 import importlib
 import sqlite3
+import contextlib
 from openquake.commonlib.dbapi import db
 
 
@@ -82,6 +83,29 @@ class WrappedConnection(object):
             print(query)
         curs.execute(query)
         return curs
+
+
+# Run the block in a single transaction, committed at the end or rolled back
+# in case of error (also KeyboardInterrupt), and then the error is raised.
+# The explicit BEGIN is needed since dbapi.db is opened in autocommit mode
+# (isolation_level=None, on purpose): without it, every statement of an
+# upgrade script would be committed as soon as it runs, conn.rollback()
+# would do nothing and an upgrade stopped in the middle would leave the
+# changes applied but not recorded in the versioning table, so that every
+# later upgrade would fail on the same script (e.g. "duplicate column name").
+# SQLite DDL statements (CREATE, ALTER, DROP) are transactional, so they are
+# rolled back too. A process killed during the transaction leaves nothing
+# committed: SQLite rolls back the transaction at the next connection.
+@contextlib.contextmanager
+def _transaction(conn):
+    conn.execute('BEGIN')
+    try:
+        yield
+    except BaseException:
+        conn.rollback()
+        raise
+    else:
+        conn.commit()
 
 
 # not used right now
@@ -171,7 +195,8 @@ class UpgradeManager(object):
         :param conn: a DB API 2 connection
         """
         logging.info('Creating the versioning table %s', self.version_table)
-        conn.executescript(CREATE_VERSIONING % self.version_table)
+        # not using conn.executescript, which commits the current transaction
+        conn.execute(CREATE_VERSIONING % self.version_table)
         self._insert_script(self.read_scripts()[0], conn)
 
     def init(self, conn):
@@ -332,9 +357,10 @@ class UpgradeManager(object):
                      "WHERE name=%r" % upgrader.version_table)
         versioning_table = curs.fetchall()
         # if not, run the base script and create the versioning table
+        # in a single transaction
         if not versioning_table:
-            upgrader.init(conn)
-            conn.commit()
+            with _transaction(conn):
+                upgrader.init(conn)
         return upgrader
 
 
@@ -352,14 +378,10 @@ def upgrade_db(conn=None, pkg_name='openquake.server.db.schema.upgrades',
         conn = db.conn
     upgrader = UpgradeManager.instance(conn, pkg_name)
     t0 = time.time()
-    # run the upgrade scripts
-    try:
+    # run the upgrade scripts in a single transaction: if one of them fails
+    # the database stays at the version it had before
+    with _transaction(conn):
         versions_applied = upgrader.upgrade(conn, skip_versions)
-    except Exception:
-        conn.rollback()
-        raise
-    else:
-        conn.commit()
     if versions_applied:
         logging.info('Upgrade completed in %s seconds', time.time() - t0)
     return versions_applied
