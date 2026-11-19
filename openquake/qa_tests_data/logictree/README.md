@@ -34,7 +34,6 @@
 | case_28_bis     | Test missing z1pt0                                                         |
 | case_28_multimfd | Test multiMFDAbsolute on a multiPointSource                               |
 | case_25         | BC Hydro NVA SSC LT source model LT                                        |
-| case_25_rup_variants | Contexts of the MFD variants stored once, with the rate ratios        |
 | case_26         | 3-branch amp LT with classical for full enumeration and sampling           |
 | case_27         | 3-branch amp LT with disagg for full enumeration and sampling              |
 | case_29         | Set hypo depth dist epistemic uncertainty                                  |
