@@ -298,7 +298,10 @@ class UpgradeManager(object):
         link_pattern = r'>\s*{0}\s*<'.format(self.pattern[1:-1])
         # the page is bytes, the link pattern is a string
         page = urllib.request.urlopen(self.upgrades_url).read().decode('utf8')
-        seen = set()  # each script is linked more than once in the page
+        # GitHub renders each row of the directory listing twice, once in
+        # the large-screen and once in the small-screen name cell, so each
+        # script is matched twice
+        seen = set()
         for mo in re.finditer(link_pattern, page):
             scriptname = mo.group(0)[1:-1].strip()
             if scriptname not in seen:
