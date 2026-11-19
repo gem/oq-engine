@@ -364,9 +364,8 @@ conversion before generating ground-motion fields.
 # IT
 
 ## OQ commands
-I wa
-- `oq -v` returns the Git hash in development installations, now reliably also on
-  `devel_server` installations
+
+- `oq -v` returns the Git hash in development installations
 - `oq engine --param` now accepts space-separated `name=value`
   pairs, matching `oq run --param`, instead of comma-separated pairs
 - `oq engine --make-report` now generates a Markdown report instead of an
