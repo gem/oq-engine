@@ -22,7 +22,7 @@ import operator
 import psutil
 import numpy
 from openquake.baselib import general, parallel, hdf5, config
-from openquake.hazardlib import pmf, geo
+from openquake.hazardlib import pmf, geo, valid
 from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.rmap_maker import get_cmakers, read_unc_ts_sets
 from openquake.hazardlib.contexts import estimate_nctxs
@@ -237,6 +237,20 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
         if pts:
             dic.update(count_psdist(pts, sf, cmaker, monitor))
     return dic
+
+
+def _warn_ungridded(src_groups, ps_grid_spacing):
+    # the area and multipoint sources modified by the uncertainties are
+    # split in the workers (see classical.groups_gkeys) and never gridded
+    if not ps_grid_spacing:
+        return
+    ids = sorted({valid.corename(src) for sg in src_groups for src in sg
+                  if src.code in b'AM' and src.bysrc_unc})
+    if ids:
+        logging.warning(
+            'ps_grid_spacing is not used for %d source(s) modified by the '
+            'uncertainties: %s', len(ids), ' '.join(ids[:10]) +
+            (' ...' if len(ids) > 10 else ''))
 
 
 def count_nogrid(srcs, sf, cmaker, monitor):
@@ -459,6 +473,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning(
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
+        _warn_ungridded(csm.src_groups, oq.ps_grid_spacing)
         multifaults = []
         cmakers = self.cmakers.to_array()
         for sg in csm.src_groups:
