@@ -64,7 +64,11 @@ sites and correlated across the IMTs by the
 ``between_event_correlation_model`` (independent across the IMTs if no
 model is given), and :math:`\varepsilon_{ij}` a standard normal field,
 correlated in space and across the IMTs by the within-event model (and by
-the cross-IMT model, if any). The within-event variance is the conditional
+the cross-IMT model, if any; with separate spatial and cross-IMT models
+the circulant embedding uses the cross-spectra
+:math:`c_{jk}\sqrt{S_j S_k}`, :math:`S_j` being the spectrum of the
+spatial correlation of the IMT :math:`j`, the stationary analogue of the
+dense factorization). The within-event variance is the conditional
 total variance minus the variance of the between-event term actually
 sampled, so that the uncertainty is not counted twice and the marginal
 variance :math:`\sigma_c^2` of ShakeMap is preserved; :math:`\tau_c` is
@@ -87,8 +91,13 @@ In impact mode the outputs page reports the correlation models and the
 strategy actually used.
 
 As in ordinary scenario calculations, a finite truncation level reduces
-the residual variances by the variance of the truncated normal, and a zero
-truncation level reproduces the ShakeMap median.
+the residual variances by the variance :math:`v_T` of the truncated
+normal, and a zero truncation level reproduces the ShakeMap median. The
+between-event models truncate the IMTs jointly, so their event terms have
+smaller variances than :math:`v_T` (up to ~25% smaller at truncation
+level 1); the engine estimates them and enlarges the within-event
+variance accordingly, so that the marginal variance is
+:math:`v_T\,\sigma_c^2` for every IMT.
 
 
 The concept of “mean” ground motion field

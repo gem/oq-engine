@@ -29,13 +29,15 @@ from openquake.hazardlib.correlation_models.base import (
 from openquake.hazardlib.calc.gmf import (
     _site_positions, _truncated_normals)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
-    CirculantEmbeddingFactor, RegularGridLayout)
+    CirculantEmbeddingFactor, RegularGridLayout, _embedding_shape,
+    _lag_distances, _spectral_root)
 
 F32 = numpy.float32
 F64 = numpy.float64
 PCTG = 100  # percent of g, the gravity acceleration
 MAX_GMV = 5.  # 5 g
 MAX_PGV_GMV = 500.  # cm/s
+NUM_VARIANCE_SAMPLES = 200_000  # see _between_variance_ratio
 
 
 def spatial_correlation_array(dmatrix, imts, model, context=None):
@@ -173,43 +175,64 @@ def _build_imt_scaling_vector(imts, shakemap_std, pctg_value):
     ]).reshape(-1, 1)
 
 
-class _SeparableCorrelationModel:
-    # Compose spatial and cross-IMT models for circulant embedding: the
-    # correlation between IMT i at a site and IMT j at another site is the
-    # cross-IMT coefficient times the larger of the spatial correlations of
-    # the two IMTs, i.e. the one with the longer range (the dense path
-    # combines instead the factors, L_i @ L_j.T, see cholesky); without a
-    # spatial model the sites are independent
-    SUPPORTS_CIRCULANT_EMBEDDING = True
+def _spectral_sqrts(spatial_model, imts, shape, spacing, context):
+    # Square roots of the spectra of the spatial correlations of the IMTs
+    # on the periodic grid of the given shape, with shape (M, *shape), or
+    # None if a spectrum is materially negative, i.e. the embedding is too
+    # small; without a spatial model the sites are independent (flat
+    # spectra). The tolerance is the one of _spectral_root
+    if spatial_model is None:
+        return numpy.ones((len(imts),) + shape)
+    distances = _lag_distances(shape, spacing).reshape(-1, 1)
+    sqrts = numpy.zeros((len(imts),) + shape)
+    for m, im in enumerate(imts):
+        rho = spatial_model.correlation_matrix(
+            distances, im, context=context).reshape(shape)
+        # the correlation is even on the torus, so its spectrum is real
+        spectrum = numpy.fft.fft2(rho).real
+        tolerance = (100 * numpy.finfo(float).eps * spectrum.size *
+                     max(1., numpy.abs(spectrum).max()))
+        if spectrum.min() < -tolerance:
+            return None
+        sqrts[m] = numpy.sqrt(numpy.maximum(spectrum, 0))
+    return sqrts
 
-    def __init__(self, spatial_model, cross_imt_model):
-        self.spatial_model = spatial_model
-        self.cross_imt_model = cross_imt_model
 
-    def correlation_block(self, distances, imts1, imts2=None,
-                          component=None, context=None):
-        if imts2 is None:
-            imts2 = imts1
-        blocks = numpy.zeros((len(imts1) * len(distances),
-                              len(imts2) * distances.shape[1]))
-        for i, imt1 in enumerate(imts1):
-            for j, imt2 in enumerate(imts2):
-                if self.spatial_model is None:
-                    spatial = (distances == 0).astype(float)
-                else:
-                    corr1 = self.spatial_model.correlation_matrix(
-                        distances, imt1, context=context)
-                    corr2 = self.spatial_model.correlation_matrix(
-                        distances, imt2, context=context)
-                    spatial = numpy.maximum(corr1, corr2)
-                cross = (self.cross_imt_model.rho(
-                    imt1, imt2, context=context)
-                    if self.cross_imt_model else float(imt1 == imt2))
-                row = slice(i * len(distances), (i + 1) * len(distances))
-                col = slice(j * distances.shape[1],
-                            (j + 1) * distances.shape[1])
-                blocks[row, col] = spatial * cross
-        return blocks
+def _coregionalized_factor(spatial_model, cross_imt_model, imts,
+                           grid_shape, spacing, context, site_indices,
+                           max_multiplier=8):
+    # Circulant embedding of separate spatial and cross-IMT models, the
+    # stationary analogue of the dense c_ij L_i L_j^T (see cholesky): at
+    # every spatial frequency the cross-spectrum of the IMTs i and j is
+    # c_ij sqrt(S_i S_j), S_i being the spectrum of the spatial correlation
+    # of the IMT i. It is positive semidefinite by construction, being
+    # D C D with D = diag(sqrt(S_i)), and it keeps the spatial correlation
+    # of each IMT; the embedding is enlarged until every S_i is nonnegative
+    if spatial_model is not None:
+        spatial_model.validate_imts(imts)
+    cross = cross_correlation_matrix(imts, cross_imt_model)
+    indices = CirculantEmbeddingFactor._validate_indices(
+        site_indices, grid_shape)
+    M = len(imts)
+    for multiplier in range(1, max_multiplier + 1):
+        shape = _embedding_shape(grid_shape, multiplier)
+        sqrts = _spectral_sqrts(spatial_model, imts, shape, spacing,
+                                context)
+        if sqrts is None:
+            continue
+        lags = numpy.zeros(shape + (M, M))
+        for i in range(M):
+            for j in range(i, M):
+                lags[..., i, j] = lags[..., j, i] = cross[i, j] * (
+                    numpy.fft.ifft2(sqrts[i] * sqrts[j]).real)
+        minimum, root = _spectral_root(lags)
+        if root is not None:
+            return CirculantEmbeddingFactor(
+                root, tuple(grid_shape), shape, M, indices, multiplier,
+                minimum)
+    raise ValueError(
+        'The circulant embedding of the spatial correlation is not positive '
+        f'semidefinite through multiplier {max_multiplier}')
 
 
 def circulant_embedding_feasible(sites):
@@ -247,12 +270,15 @@ def _circulant_factor(sites, imts, spatial_model,
                         complete_error)
         layout = RegularGridLayout.from_sites(sites)
         site_indices = layout.site_indices
-    model = spatial_model
-    if cross_imt_model is not None or model is None:
-        model = _SeparableCorrelationModel(model, cross_imt_model)
-    return CirculantEmbeddingFactor.build(
-        model, imts, layout.grid_shape, layout.spacing,
-        ResidualComponent.WITHIN_EVENT, context, site_indices)
+    # the joint models ignore the cross-IMT model, as in _correlate_dense
+    if _is_joint_model(spatial_model) or (
+            spatial_model is not None and cross_imt_model is None):
+        return CirculantEmbeddingFactor.build(
+            spatial_model, imts, layout.grid_shape, layout.spacing,
+            ResidualComponent.WITHIN_EVENT, context, site_indices)
+    return _coregionalized_factor(
+        spatial_model, cross_imt_model, imts, layout.grid_shape,
+        layout.spacing, context, site_indices)
 
 
 # Apply the selected spatial factorization to sampled residuals.
@@ -377,22 +403,44 @@ def _has_tau(shakemap, imts, spatial_model):
     return False
 
 
-def _within_between_stds(shakemap, imts, has_tau):
+def _between_variance_ratio(imts, truncation_level, between_event_model):
+    # Ratio, for each IMT, between the variance of the between-event terms
+    # actually sampled and the variance of the truncated within-event
+    # samples. It is 1 for independent terms, truncated as the within-event
+    # samples; the between-event models instead truncate the IMTs jointly,
+    # which reduces the marginal variances further (by up to ~25% at
+    # truncation level 1), so their variances are estimated once, with a
+    # fixed seed, from NUM_VARIANCE_SAMPLES draws (~0.1 s)
+    if between_event_model is None:
+        return numpy.ones(len(imts))
+    within_var = truncnorm(-truncation_level, truncation_level).var()
+    eps = between_event_model.get_inter_eps(
+        imts, NUM_VARIANCE_SAMPLES, numpy.random.default_rng(42))
+    return eps.var(axis=1) / within_var
+
+
+def _within_between_stds(shakemap, imts, has_tau, var_ratio=None):
     # Return the within- and between-event standard deviations of shape
     # (M, N); without tau the within-event residuals have the total
     # conditional std and there are no separate between-event terms.
     # With tau, which in shake_result.hdf is conditional on the stations
     # (unlike phi, the prior one, which is not used), the within-event
     # variance is the conditional total variance minus the variance of
-    # the between-event terms actually sampled, so that the marginal
-    # variance std^2 of ShakeMap is preserved and nothing is counted
-    # twice; tau is clipped to std to absorb the float32 rounding
+    # the between-event terms actually sampled, i.e. tau^2 times var_ratio
+    # (see _between_variance_ratio) in units of the variance of the
+    # truncated within-event samples, so that the marginal variance std^2
+    # of ShakeMap is preserved (reduced by the truncation, as for all the
+    # residuals) and nothing is counted twice; tau is clipped to std to
+    # absorb the float32 rounding
     std = numpy.array([shakemap['std'][str(im)] for im in imts], F64)
     if not has_tau:
         return std, None
     tau = numpy.minimum(
         numpy.array([shakemap['tau'][str(im)] for im in imts], F64), std)
-    return numpy.sqrt(std ** 2 - tau ** 2), tau
+    if var_ratio is None:
+        var_ratio = numpy.ones(len(imts))
+    within_var = std ** 2 - var_ratio[:, None] * tau ** 2
+    return numpy.sqrt(numpy.maximum(within_var, 0)), tau
 
 
 def _between_eps(imts, num_events, truncation_level, seed,
@@ -497,7 +545,10 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
         Z[rows], corr_imts, sites, spatial_model, cross_imt_model,
         correlation_strategy, context, cholesky_limit,
         truncation_level, correlation_seed)
-    within, tau = _within_between_stds(shakemap, corr_imts, has_tau)
+    var_ratio = _between_variance_ratio(
+        corr_imts, truncation_level, between_event_model) if has_tau else None
+    within, tau = _within_between_stds(
+        shakemap, corr_imts, has_tau, var_ratio)
     residuals *= within.reshape(-1, 1)
     if has_tau:  # the event terms, spatially uniform
         eps = _between_eps(corr_imts, Z.shape[1], truncation_level,

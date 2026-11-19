@@ -1,11 +1,14 @@
 import os.path
 import unittest
 import numpy
+from scipy.stats import truncnorm
 from openquake.hazardlib import geo, imt, site
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
     BakerCornell2006)
 from openquake.hazardlib.correlation_models.cross_imt.\
     abrahamson_et_al_2014 import AbrahamsonEtAl2014BetweenEvent
+from openquake.hazardlib.correlation_models.cross_imt.\
+    baker_jayaram_2008 import BakerJayaram2008
 from openquake.hazardlib.correlation_models.cross_imt.\
     full_cross_correlation import FullCrossCorrelation
 from openquake.hazardlib.correlation_models.cross_imt.\
@@ -19,7 +22,8 @@ from openquake.hazardlib.shakemap.maps import \
 from openquake.hazardlib.shakemap.gmfs import (
     to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
-    cross_correlation_matrix, cholesky, _correlate_residuals, _psd_factor)
+    cross_correlation_matrix, cholesky, _correlate_residuals, _psd_factor,
+    _circulant_factor)
 
 F64 = numpy.float64
 imts = [imt.from_string(x)
@@ -55,9 +59,10 @@ def _grid_shakemap_stds():
     return std, tau
 
 
-def _sample_grid(std, tau, between_model, strategy, num_gmfs=60_000):
+def _sample_grid(std, tau, between_model, strategy, num_gmfs=60_000,
+                 imts=GRID_IMTS, truncation_level=99):
     # GMFs of shape (N, E, M) of a shake_result.hdf-like array on the grid
-    names = [str(im) for im in GRID_IMTS]
+    names = [str(im) for im in imts]
     dt = [(name, float) for name in names]
     shakemap = numpy.zeros(9, [('lon', float), ('lat', float),
                                ('vs30', float), ('val', dt), ('std', dt),
@@ -73,7 +78,8 @@ def _sample_grid(std, tau, between_model, strategy, num_gmfs=60_000):
               'between_event_model': between_model,
               'correlation_strategy': strategy,
               'sites': site.SiteCollection.from_points(GRID_LONS, GRID_LATS)}
-    return to_gmfs(shakemap, method, vs30=None, truncation_level=99,
+    return to_gmfs(shakemap, method, vs30=None,
+                   truncation_level=truncation_level,
                    num_gmfs=num_gmfs, seed=42, imts=names)[1]
 
 
@@ -248,6 +254,44 @@ class ShakemapTestCase(unittest.TestCase):
                             'circulant_embedding')
         variance = numpy.log(gmfs).var(axis=1).T  # shape (M, N)
         numpy.testing.assert_allclose(variance, std ** 2, rtol=.04)
+
+    def test_marginal_variance_with_truncation(self):
+        # the between-event model truncates the five IMTs jointly, so its
+        # terms have a variance smaller than the within-event samples (up
+        # to 25% at truncation level 1); the within-event variance makes
+        # up for it, so the marginal variance is v_1 std^2 for every IMT
+        names = ['PGA', 'PGV', 'SA(0.3)', 'SA(0.6)', 'SA(1.0)']
+        five = [imt.from_string(name) for name in names]
+        std = numpy.full((5, 9), .5)
+        tau = .9 * std
+        gmfs = _sample_grid(
+            std, tau, AbrahamsonEtAl2014BetweenEvent(truncation_level=1),
+            'circulant_embedding', imts=five, truncation_level=1)
+        variance = numpy.log(gmfs).var(axis=1).T  # shape (M, N)
+        v_1 = truncnorm(-1, 1).var()
+        numpy.testing.assert_allclose(variance, v_1 * std ** 2, rtol=.04)
+
+    def test_separate_models_circulant_embedding(self):
+        # separate spatial and cross-IMT models: the circulant embedding is
+        # positive semidefinite also where the larger of the two spatial
+        # correlations was not, and each IMT keeps its spatial correlation
+        sites = site.SiteCollection.from_points(GRID_LONS, GRID_LATS)
+        ims = [imt.from_string('PGA'), imt.from_string('SA(0.3)')]
+        model = JayaramBaker2009(vs30_clustering=False)
+        factor = _circulant_factor(
+            sites, ims, model, BakerJayaram2008(), None)
+        fields = factor.apply(numpy.eye(factor.input_size))
+        cov = fields @ fields.T  # exact covariance, shape (18, 18)
+        # the spatial model alone, on the same lattice, as reference
+        alone = _circulant_factor(sites, ims, model, None, None)
+        fields = alone.apply(numpy.eye(alone.input_size))
+        for m in range(2):
+            block = slice(m * 9, (m + 1) * 9)
+            numpy.testing.assert_allclose(
+                cov[block, block], (fields @ fields.T)[block, block],
+                atol=1E-9)
+        rho = BakerJayaram2008().rho(*ims)
+        assert numpy.abs(cov[:9, 9:]).max() <= rho + 1E-9
 
     def test_within_between_decomposition(self):
         # the within-event residuals have the correlation of the model and
