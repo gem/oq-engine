@@ -5,6 +5,11 @@
     variant (uses clon_clat).
 
   [Michele Simionato]
+  * Classical calculations with few sites now store the contexts of the MFD
+    variants computed together only once, with the ratios of the occurrence
+    rates of each variant in the new dataset `rup_variants`, instead of a
+    rescaled copy per variant: this saves GBs of memory in the
+    BC Hydro model; the copies are rebuilt when reading the contexts
   * Added file AI_POLICY.md
   * Changed the signature of MultiPointSource to be consistent with the other
     parametric sources
