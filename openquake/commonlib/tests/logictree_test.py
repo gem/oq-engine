@@ -1732,6 +1732,25 @@ class BranchSetFilterTestCase(unittest.TestCase):
             rake=0,
             temporal_occurrence_model=PoissonTOM(50.))
 
+    def test_split_segments(self):
+        # the segments ID:i of a split source get the uncertainties of ID,
+        # while an ID containing a colon, as written in the logic tree,
+        # must still match exactly
+        seg = deepcopy(self.point)
+        seg.source_id = 'point:0'
+
+        def test(ids, source):
+            return logictree.BranchSet(
+                'maxMagGRAbsolute', filters={'applyToSources': ids}
+            ).filter_source(source)
+
+        self.assertTrue(test(['point'], seg))
+        self.assertTrue(test(['point:0'], seg))
+        self.assertFalse(test(['point:1'], seg))
+        self.assertFalse(test([self.area.source_id], seg))
+        self.assertTrue(test(['point'], self.point))
+        self.assertFalse(test(['point'], self.area))
+
     def test_unknown_filter(self):
         bs = logictree.BranchSet(
             'maxMagGRAbsolute', filters={'applyToSources': [1], 'foo': 'bar'})

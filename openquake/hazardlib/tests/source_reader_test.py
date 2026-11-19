@@ -91,6 +91,19 @@ class SplitMFTestCase(unittest.TestCase):
                 [(0, 1), (2,)])
             self.assertEqual(list(seg.ts_samples['trt_smr']), [0, 1, 2])
 
+    def test_segments_apply_multimfd_slices(self):
+        # the MultiMFD uncertainty has the size of the whole source, so
+        # each segment must get its own slice of it
+        sources = [make_mps()]
+        splitMF(sources, disagg_by_src=False, blocksize=1)
+        value = ('incrementalMFD', 3, dict(
+            min_mag=[4.5], bin_width=[1.0], occurRates=[[.2], [.3], [.4]]))
+        for seg, rate in zip(sources, [.2, .3, .4]):
+            self.assertEqual(seg.mfd_slice.stop - seg.mfd_slice.start, 1)
+            apply_uncertainty('multiMFDAbsolute', seg, value)
+            self.assertEqual(list(seg.mfd.get_annual_occurrence_rates()),
+                             [(4.5, rate)])
+
 
 QA = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     __file__))), 'qa_tests_data')
