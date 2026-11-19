@@ -19,10 +19,8 @@
 import copy
 import time
 import collections
-from contextlib import nullcontext
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.general import (
     AccumDict, getsizeof)
 from openquake.baselib.general import decode
@@ -687,15 +685,14 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
 
 def read_unc_ts_sets(dstore):
     """
-    :param dstore: a DataStore instance, possibly closed, or an open HDF5 file
+    :param dstore: a DataStore instance, possibly closed
     :returns: the ordered list of unique trt_smrs tuples, one per
         realization set, or None if unc_ts_sets is not stored
 
     The stored row order determines the gid numbering.
     """
-    # Borrow open HDF5 files without closing the caller's handle.
-    ctx = nullcontext(dstore) if isinstance(dstore, hdf5.File) else dstore
-    with ctx:  # NB: the datastore is closed when passed to a task
+    with dstore:  # NB: the datastore is closed when passed to a task
+        # Preserve the stored order, which determines gid numbering.
         if 'unc_ts_sets' in dstore:
             return [tuple(t) for t in dstore['unc_ts_sets'][:]]
 
