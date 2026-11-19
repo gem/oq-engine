@@ -22,7 +22,7 @@ from openquake.hazardlib.shakemap.maps import \
 from openquake.hazardlib.shakemap.gmfs import (
     to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
-    cross_correlation_matrix, cholesky, _correlate_residuals, _psd_factor,
+    cross_correlation_matrix, cholesky, _correlate_residuals,
     _circulant_factor)
 
 F64 = numpy.float64
@@ -315,13 +315,6 @@ class ShakemapTestCase(unittest.TestCase):
                     18, -1)
                 numpy.testing.assert_allclose(
                     numpy.cov(residuals), within + between, atol=.012)
-
-    def test_psd_factor(self):
-        matrix = numpy.array([[1., 1.], [1., 1.]])  # singular
-        factor = _psd_factor(matrix)
-        numpy.testing.assert_allclose(factor @ factor.T, matrix, atol=1E-12)
-        with self.assertRaisesRegex(ValueError, 'not positive semidef'):
-            _psd_factor(numpy.array([[1., 2.], [2., 1.]]))
 
     def test_amplify(self):
         gmvs = numpy.array([0.1, 0.2, 0.3])

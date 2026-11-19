@@ -21,13 +21,14 @@ import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
 
-from openquake.baselib import config
 from openquake.baselib.general import CallableDict
-from openquake.hazardlib import geo, imt
+from openquake.hazardlib import geo, imt, site
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
+from openquake.hazardlib.correlation_models.cross_imt.\
+    no_cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.calc.gmf import (
-    _site_positions, _truncated_normals)
+    _ce_layout, _correlation_budget, _site_positions, _truncated_normals)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor, RegularGridLayout, _embedding_shape,
     _lag_distances, _spectral_root)
@@ -258,18 +259,10 @@ def _circulant_factor(sites, imts, spatial_model,
         raise ValueError(
             f'{spatial_model.__class__.__name__} does not support '
             'circulant_embedding')
-    complete = getattr(sites, 'complete', sites)
-    try:
-        layout = RegularGridLayout.from_sites(complete)
-        site_indices = (layout.site_indices if complete is sites else
-                        layout.site_indices[_site_positions(complete, sites)])
-    except ValueError as complete_error:
-        if complete is sites:
-            raise
-        logging.warning('Using selected sites for circulant embedding: %s',
-                        complete_error)
-        layout = RegularGridLayout.from_sites(sites)
-        site_indices = layout.site_indices
+    # the complete grid or, if it is not regular, the selected sites, as in
+    # GmfComputer._get_ce_factor
+    grid_sites, layout = _ce_layout(sites)
+    site_indices = layout.site_indices[_site_positions(grid_sites, sites)]
     # the joint models ignore the cross-IMT model, as in _correlate_dense
     if _is_joint_model(spatial_model) or (
             spatial_model is not None and cross_imt_model is None):
@@ -289,8 +282,7 @@ def _correlate_residuals(Z, imts, sites, spatial_model,
     if correlation_strategy == 'circulant_embedding':
         factor = _circulant_factor(
             sites, imts, spatial_model, cross_imt_model, context)
-        budget = int(float(config.memory.correlated_gmf_gb) * 1024 ** 3)
-        batch_size = factor.batch_size(budget)
+        batch_size = factor.batch_size(_correlation_budget())
         residuals = numpy.empty((factor.output_size, Z.shape[1]), F32)
         rng = numpy.random.default_rng(seed + 2)
         for start in range(0, Z.shape[1], batch_size):
@@ -308,8 +300,7 @@ def _correlate_residuals(Z, imts, sites, spatial_model,
         raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
             f'{M=} x {N=}', cholesky_limit))
     return _correlate_dense(
-        Z, imts, spatial_model, cross_imt_model, context,
-        sites.lons, sites.lats)
+        Z, imts, sites, spatial_model, cross_imt_model, context)
 
 
 # Dense correlation path for arbitrary site geometry.
@@ -353,19 +344,6 @@ def _correlate_legacy(Z, imts, shakemap, spatial_model,
     return cholesky(covariance, cross_corr) @ Z
 
 
-def _psd_factor(matrix):
-    # Return F such that F @ F.T is the positive semidefinite matrix; used
-    # when the Cholesky decomposition fails, for instance for coincident
-    # sites. Only numerical negative eigenvalues may be clipped: silently
-    # fixing an indefinite matrix would change the requested distribution
-    vals, vecs = numpy.linalg.eigh(matrix)
-    if vals.size and vals.min() < -1E-6 * max(1., abs(vals).max()):
-        raise ValueError('The correlation matrix is not '
-                         'positive semidefinite')
-    vecs *= numpy.sqrt(numpy.clip(vals, 0, None))
-    return vecs
-
-
 def _is_joint_model(model):
     # True for the within-event models correlating sites and IMTs jointly,
     # like LothBaker2013, which have no separate spatial correlation
@@ -373,24 +351,21 @@ def _is_joint_model(model):
         model, SpatialCorrelationModel)
 
 
-def _correlate_dense(Z, imts, spatial_model, cross_imt_model,
-                     context, lons, lats):
-    # Dense correlation for the unit-variance residuals of the points
-    dmatrix = geo.geodetic.distance_matrix(lons, lats)
+def _correlate_dense(Z, imts, sites, spatial_model, cross_imt_model,
+                     context):
+    # Dense correlation for the unit-variance residuals of the points; the
+    # joint models use their own factorization, as in GmfComputer
     if _is_joint_model(spatial_model):
-        corr = spatial_model.correlation_block(
-            dmatrix, imts, context=context)
-        try:
-            return numpy.linalg.cholesky(corr) @ Z
-        except numpy.linalg.LinAlgError:
-            return _psd_factor(corr) @ Z
+        return spatial_model.factor(
+            sites, imts, ResidualComponent.WITHIN_EVENT, context).apply(Z)
+    dmatrix = geo.geodetic.distance_matrix(sites.lons, sites.lats)
     cross_corr = cross_correlation_matrix(imts, cross_imt_model)
     spatial_corr = _spatial_correlation(
         dmatrix, imts, spatial_model, context)
     return cholesky(spatial_corr, cross_corr) @ Z
 
 
-def _has_tau(shakemap, imts, spatial_model):
+def _separate_between_terms(shakemap, imts, spatial_model):
     # True if the between-event terms are sampled separately, i.e. there
     # is a within-event model and the ShakeMap (a shake_result.hdf
     # product) stores tau for all the IMTs
@@ -406,14 +381,16 @@ def _has_tau(shakemap, imts, spatial_model):
 def _between_variance_ratio(imts, truncation_level, between_event_model):
     # Ratio, for each IMT, between the variance of the between-event terms
     # actually sampled and the variance of the truncated within-event
-    # samples. It is 1 for independent terms, truncated as the within-event
-    # samples; the between-event models instead truncate the IMTs jointly,
-    # which reduces the marginal variances further (by up to ~25% at
-    # truncation level 1), so their variances are estimated once, with a
-    # fixed seed, from NUM_VARIANCE_SAMPLES draws (~0.1 s)
-    if between_event_model is None:
-        return numpy.ones(len(imts))
+    # samples. The independent terms have the exact variance of their
+    # truncated normal (the ratio is 1 for the same truncation level); the
+    # other between-event models truncate the IMTs jointly, which reduces
+    # the marginal variances further (by up to ~25% at truncation level 1),
+    # so their variances are estimated once, with a fixed seed, from
+    # NUM_VARIANCE_SAMPLES draws (~0.1 s)
     within_var = truncnorm(-truncation_level, truncation_level).var()
+    if isinstance(between_event_model, NoCrossCorrelation):
+        return numpy.full(len(imts),
+                          between_event_model.distribution.var() / within_var)
     eps = between_event_model.get_inter_eps(
         imts, NUM_VARIANCE_SAMPLES, numpy.random.default_rng(42))
     return eps.var(axis=1) / within_var
@@ -441,20 +418,6 @@ def _within_between_stds(shakemap, imts, has_tau, var_ratio=None):
         var_ratio = numpy.ones(len(imts))
     within_var = std ** 2 - var_ratio[:, None] * tau ** 2
     return numpy.sqrt(numpy.maximum(within_var, 0)), tau
-
-
-def _between_eps(imts, num_events, truncation_level, seed,
-                 between_event_model):
-    # Standard normal event terms of shape (M, E), one per event and IMT
-    # and common to all the sites; they are correlated across IMTs by the
-    # between-event model, if any, otherwise they are independent and
-    # truncated as the within-event samples
-    if between_event_model is None:
-        return truncnorm.rvs(
-            -truncation_level, truncation_level, loc=0, scale=1,
-            size=(len(imts), num_events), random_state=seed + 1)
-    return between_event_model.get_inter_eps(
-        imts, num_events, numpy.random.default_rng(seed + 5))
 
 
 def _active_imts(shakemap, imts, correlated):
@@ -546,7 +509,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     if independent.any():
         result[independent] = _independent_gmfs(
             mu, Z, total_std, scale, independent)
-    has_tau = _has_tau(shakemap, corr_imts, spatial_model)
+    has_tau = _separate_between_terms(shakemap, corr_imts, spatial_model)
     if (correlation_strategy == 'cholesky_decomposition' and
             not has_tau and not _is_joint_model(spatial_model)):
         residuals = _correlate_legacy(
@@ -560,9 +523,13 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
         'medians and standard deviations', ', '.join(
             model.__class__.__name__ for model in (
                 spatial_model, cross_imt_model) if model is not None))
-    if sites is None:  # a minimal site collection, with lons and lats
-        sites = type('Sites', (), {
-            'lons': shakemap['lon'], 'lats': shakemap['lat']})()
+    if sites is None:
+        sites = site.SiteCollection.from_points(
+            shakemap['lon'], shakemap['lat'])
+    # without a model the event terms are independent across IMTs and
+    # truncated as the within-event samples, as in GmfComputer
+    between_event_model = between_event_model or NoCrossCorrelation(
+        truncation_level)
     # unit-variance within-event residuals, scaled by their conditional std
     residuals = _correlate_residuals(
         Z[rows], corr_imts, sites, spatial_model, cross_imt_model,
@@ -573,9 +540,10 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     within, tau = _within_between_stds(
         shakemap, corr_imts, has_tau, var_ratio)
     residuals *= within.reshape(-1, 1)
-    if has_tau:  # the event terms, spatially uniform
-        eps = _between_eps(corr_imts, Z.shape[1], truncation_level,
-                           correlation_seed, between_event_model)
+    if has_tau:  # the event terms of shape (M, E), spatially uniform
+        eps = between_event_model.get_inter_eps(
+            corr_imts, Z.shape[1],
+            numpy.random.default_rng(correlation_seed + 5))
         residuals += (tau[:, :, None] * eps[:, None, :]).reshape(
             -1, Z.shape[1])
     result[rows] = mu[rows] * numpy.exp(residuals) / scale[rows]
@@ -666,9 +634,8 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     mu = numpy.repeat(vals[:, None], num_gmfs, axis=1)
 
     # assemble dictionary for the calculation of the gmfs; the random
-    # streams are: seed for Z, seed + 1 for the independent between-event
-    # terms, seed + 2 for circulant embedding and seed + 5 for the
-    # between-event correlation model
+    # streams are: seed for Z, seed + 2 for circulant embedding and
+    # seed + 5 for the between-event terms
     gmf_dict.update({'shakemap': shakemap, 'imts': imts, 'Z': Z, 'mu': mu})
     if gmf_dict.get('kind') == 'Silva&Horspool':
         gmf_dict.update(
