@@ -110,10 +110,6 @@ _B3 = numpy.array([
 ])
 _TABLES = (_B1, _B2, _B3)
 
-# Ranges in km of the exponential short- and long-range structures.
-SHORT_RANGE = 20.
-LONG_RANGE = 70.
-
 
 def _period_interval(period):
     index = numpy.searchsorted(_PERIODS, period, side='right') - 1
@@ -204,8 +200,8 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the joint correlation block in IMT-major order."""
-        short_range = numpy.exp(-3 * distances / SHORT_RANGE)
-        long_range = numpy.exp(-3 * distances / LONG_RANGE)
+        short_range = numpy.exp(-3 * distances / 20)
+        long_range = numpy.exp(-3 * distances / 70)
         same_site = distances == 0
         blocks = []
         for imt1 in imts1:
@@ -218,4 +214,3 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
                     b1 * short_range + b2 * long_range + b3 * same_site)
             blocks.append(row)
         return numpy.block(blocks)
-

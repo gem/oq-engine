@@ -308,16 +308,15 @@ def test_impact_ui_level_2_provide_rupture_nrml_correlation_models(
     expect(within.locator('option')).to_have_count(3)
     page.set_approach('Provide earthquake rupture in OpenQuake NRML format')
     page.choose_rupture_model()
-    correlation = within
-    expect(correlation).to_be_visible()
-    correlation.select_option('MonteiroEtAl2026')
+    expect(within).to_be_visible()
+    within.select_option('MonteiroEtAl2026')
     page.retrieve_data()
     expect(page.rupture_map()).to_be_visible(timeout=50_000)
     page.confirm_relocated_hypocenter_warning()
     page.set_no_uncertainty()
     # the body of a request with an uploaded file is not visible to
     # Playwright, so check the value the form will submit
-    expect(correlation).to_have_value('MonteiroEtAl2026')
+    expect(within).to_have_value('MonteiroEtAl2026')
     page.run_impact_calc()
     if should_abort_job or should_remove_job:
         job_id = page.get_job_id_from_new_job()

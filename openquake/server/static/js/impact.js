@@ -146,8 +146,8 @@ window.initImpactForm = function() {
     }
 
     function set_retrieve_data_btn_state(state) { // state can be 'initial', 'running', 'retrieving_nodal_planes'
-        const impact_approach = get_selected_approach();
-        const msg = retrieve_data_btn_txt_map[impact_approach][state];
+        const approach = get_selected_approach();
+        const msg = retrieve_data_btn_txt_map[approach][state];
         if (state == 'initial') {
             $('.submit_impact_get_rupture_waiting').hide();
         } else {

@@ -56,7 +56,8 @@ on the conditional ShakeMap values:
 
    \ln Y_{ij} = \ln \mu_{ij} + \tau_{c,ij}\,\eta_j +
    \phi_{c,ij}\,\varepsilon_{ij},
-   \qquad \phi_c = \sqrt{\sigma_c^2 - \tau_c^2},
+   \qquad \phi_c = \sqrt{\sigma_c^2 - \tau_c^2}
+   \quad \text{(without truncation)},
 
 where :math:`i` is the site, :math:`j` the IMT, :math:`\mu` the ShakeMap
 median, :math:`\eta_j` a standard normal event term, common to all the
@@ -75,7 +76,8 @@ variance :math:`\sigma_c^2` of ShakeMap is preserved; :math:`\tau_c` is
 clipped to :math:`\sigma_c` to absorb the single precision rounding of the
 products. When :math:`\tau_c` is not available (``grid.xml`` products) the
 field :math:`\varepsilon` is scaled by :math:`\sigma_c` and the
-between-event model is not used (a warning is logged).
+between-event model is not used (a warning is logged). With a finite
+truncation level :math:`\phi_c` is adjusted as explained below.
 
 This is an approximation. The realizations reproduce the conditional
 marginal distributions of ShakeMap, but their spatial and cross-IMT
