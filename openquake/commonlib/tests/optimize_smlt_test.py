@@ -227,10 +227,10 @@ class MultiWriterTestCase(unittest.TestCase):
             ET.SubElement(root, tag).text = values
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'multi.xml'
-            optimize._write_xml(root, path)
+            optimize_smlt._write_xml(root, path)
             text = path.read_text()
         lengths = list(map(len, text.splitlines()))
-        self.assertLessEqual(max(lengths), optimize.LINE_WIDTH)
+        self.assertLessEqual(max(lengths), optimize_smlt.LINE_WIDTH)
         self.assertGreater(len(text.splitlines()), 20)
         # the element is parsed back to the same arrays
         root = ET.fromstring(text)
@@ -268,15 +268,15 @@ class SourceWriterTestCase(unittest.TestCase):
                             '\n'.join(sources) + f'</{prefix}sourceModel>')
                     base_el = ET.fromstring(text.replace(
                         other_mfd, base_mfd))[0]
-                    base = optimize.Copy('base.xml', 0, base_el, {})
-                    original = [optimize.Copy('sources.xml', i, el, {})
+                    base = optimize_smlt.Copy('base.xml', 0, base_el, {})
+                    original = [optimize_smlt.Copy('sources.xml', i, el, {})
                                 for i, el in enumerate(ET.fromstring(text))]
                     original[0].id = 'renamed'
                     original[2].id = 'combined'
                     with tempfile.TemporaryDirectory() as tmp:
                         path = Path(tmp)
                         (path / 'sources.xml').write_text(text)
-                        nfiles = optimize._write_files(
+                        nfiles = optimize_smlt._write_files(
                             path, path / 'out', original,
                             {'renamed': '0', 'combined': '2'},
                             [[base, original[1]], [base, original[2]]],
@@ -286,7 +286,7 @@ class SourceWriterTestCase(unittest.TestCase):
                     root = ET.fromstring(result)
                     self.assertEqual([el.attrib['id'] for el in root],
                                      ['renamed', '1', 'combined', '3'])
-                    copies = [optimize.Copy('out.xml', i, el, {})
+                    copies = [optimize_smlt.Copy('out.xml', i, el, {})
                               for i, el in enumerate(root)]
                     self.assertEqual(copies[1].params, base.params)
                     self.assertEqual(copies[2].params, base.params)
