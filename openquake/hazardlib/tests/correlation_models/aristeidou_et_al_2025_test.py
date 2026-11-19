@@ -37,19 +37,10 @@ from openquake.hazardlib.correlation_models.cross_imt.aristeidou_et_al_2025 \
 from openquake.hazardlib.correlation_models.registry import (
     get_model, get_model_specs)
 from openquake.hazardlib.imt import (
-    FIV3, IA, PGA, PGV, RSD575, RSD595, SA, Sa_avg2, Sa_avg3)
+    FIV3, IA, PGA, PGV, RSD575, RSD595, SA, Sa_avg2, Sa_avg3, from_string)
 
 DATA = Path(__file__).with_name('data') / 'ARISTEIDOU_ET_AL_2025'
-FACTORIES = {
-    'SA': SA, 'Sa_avg2': Sa_avg2, 'Sa_avg3': Sa_avg3, 'FIV3': FIV3,
-    'PGA': PGA, 'PGV': PGV, 'RSD575': RSD575, 'RSD595': RSD595}
 EPS = 1E-9
-
-
-def _imt(name, period):
-    if numpy.isnan(period):
-        return FACTORIES[name]()
-    return FACTORIES[name](float(period))
 
 
 def _reference():
@@ -64,8 +55,8 @@ def test_reference_values_in_both_orders():
     model = AristeidouEtAl2025()
     direct, swapped = [], []
     for row in reference:
-        imt1 = _imt(row['imt1'], row['period1'])
-        imt2 = _imt(row['imt2'], row['period2'])
+        imt1 = from_string(row['imt1'])
+        imt2 = from_string(row['imt2'])
         direct.append(model.rho(imt1, imt2))
         swapped.append(model.rho(imt2, imt1))
     numpy.testing.assert_allclose(
@@ -75,7 +66,8 @@ def test_reference_values_in_both_orders():
 
 
 def test_all_published_pairs_are_covered():
-    pairs = {f'{row["imt1"]}-{row["imt2"]}' for row in _reference()}
+    pairs = {f'{from_string(row["imt1"]).name}-'
+             f'{from_string(row["imt2"]).name}' for row in _reference()}
     names = {'RSD575': 'Ds575', 'RSD595': 'Ds595'}
     pairs = {'-'.join(names.get(n, n) for n in pair.split('-'))
              for pair in pairs}
