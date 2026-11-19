@@ -122,7 +122,8 @@ class UpgradeManagerTestCase(unittest.TestCase):
 
     def check_message(self, html, expected):
         with mock.patch('urllib.request.urlopen') as urlopen:
-            urlopen().read.return_value = html
+            # urlopen returns bytes, like the real GitHub page
+            urlopen().read.return_value = html.encode('utf8')
             got = what_if_I_upgrade(conn, pkg)
             self.assertEqual(got, expected)
 
