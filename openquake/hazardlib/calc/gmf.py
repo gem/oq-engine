@@ -209,14 +209,13 @@ def calc_gmf_simplified(ebrupture, sitecol, cmaker):
     _eid, rlz = get_eid_rlz(vars(ebrupture), rlzs, False)
     rng = np.random.default_rng(ebrupture.seed)
     between_correl = NoCrossCorrelation(cmaker.truncation_level_between)
-    within_dist = NoCrossCorrelation(
-        cmaker.truncation_level_within).distribution
+    level = cmaker.truncation_level_within
     gmfs = []
     for g, (gs, rlzs) in enumerate(cmaker.gsims.items()):
         idxs, = np.where(np.isin(rlz, rlzs))
         E = len(idxs)
         # build arrays of random numbers of shape (M, N, E) and (M, E)
-        within_eps = [within_dist.rvs((N, E), rng).astype(F32)
+        within_eps = [_truncated_normals((N, E), level, rng).astype(F32)
                       for _ in range(M)]
         eps = np.zeros((E, M), F32)
         eps[idxs] = between_correl.get_inter_eps(cmaker.imtls, E, rng).T
@@ -321,8 +320,6 @@ class GmfComputer(object):
         self._within_event_factor = None
         self._ce_factor = None
         self._ce_checked = False
-        self.within_dist = NoCrossCorrelation(
-            cmaker.truncation_level_within).distribution
         self.mea_tau_phi = []
         self.gmv_fields = [str(imt) for imt in cmaker.imts]
         self.mmi_index = -1
@@ -704,8 +701,11 @@ class GmfComputer(object):
             factor = self._get_ce_factor()
             if factor is not None:
                 return self._draw_ce_eps(factor, num_events)
+        # drawn in place, since scipy.stats.truncnorm.rvs would need ~25
+        # times the memory of the samples
         samples = np.asarray([
-            self.within_dist.rvs((self.N, num_events), self.rng).astype(F32)
+            _truncated_normals((self.N, num_events), self.tlw,
+                               self.rng).astype(F32)
             for _ in range(self.M)])
         if (not correlate or model is None or
                 isinstance(model, SpatialCorrelationModel)):

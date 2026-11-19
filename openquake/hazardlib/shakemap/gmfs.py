@@ -654,14 +654,16 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
         # samples are truncated before being correlated, so the variance
         # of the residuals is reduced by the variance of the truncated
         # normal (0.29, 0.77 and 0.97 for truncation levels 1, 2 and 3)
-        # while the correlation coefficients are preserved
-        Z = truncnorm.rvs(
-            -truncation_level, truncation_level, loc=0, scale=1,
-            size=(M * N, num_gmfs), random_state=seed)
+        # while the correlation coefficients are preserved; they are
+        # drawn in place, with the same numbers as truncnorm.rvs with
+        # random_state=seed, which would need ~25 times the memory
+        Z = _truncated_normals((M * N, num_gmfs), truncation_level,
+                               numpy.random.RandomState(seed))
 
     # build array of median values of shape (M*N, E)
-    mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
-                      for imt in imts for j in range(N)])
+    vals = numpy.concatenate(
+        [shakemap['val'][str(imt)] for imt in imts]).astype(float)
+    mu = numpy.repeat(vals[:, None], num_gmfs, axis=1)
 
     # assemble dictionary for the calculation of the gmfs; the random
     # streams are: seed for Z, seed + 1 for the independent between-event
