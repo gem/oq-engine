@@ -24,7 +24,7 @@ import unittest
 import zipfile
 import xml.etree.ElementTree as ET
 import pytest
-from openquake.commonlib import better_smlt
+from openquake.commonlib import optimize_smlt
 from openquake.qa_tests_data.event_based import case_7
 
 CASE7 = os.path.dirname(case_7.__file__)
@@ -111,7 +111,7 @@ def test_conversion_paths(tmp_path, version, kind):
         tree = tree.replace('</n:logicTree>', later + '</n:logicTree>')
     (tmp_path / 'source_model_logic_tree.xml').write_text(tree)
     originals = {f.name: f.read_bytes() for f in tmp_path.iterdir()}
-    assert better_smlt.main(tmp_path / 'job.ini')
+    assert optimize_smlt.main(tmp_path / 'job.ini')
     with zipfile.ZipFile(tmp_path / 'job.zip') as archive:
         text = archive.read('source_model_logic_tree.xml').decode()
     root = ET.fromstring(text)
@@ -146,7 +146,7 @@ class BetterSmltTestCase(unittest.TestCase):
             # an existing job.zip is overwritten
             with open(os.path.join(dname, 'job.zip'), 'w') as f:
                 f.write('old')
-            self.assertTrue(better_smlt.main(os.path.join(dname, 'job.ini')))
+            self.assertTrue(optimize_smlt.main(os.path.join(dname, 'job.ini')))
             # job.zip contains a job with the converted logic tree, saved
             # with the name of the original one, and the rewritten sources
             with zipfile.ZipFile(os.path.join(dname, 'job.zip')) as z:
@@ -191,7 +191,7 @@ def test_existing_nested_uncertainty(tmp_path):
     </logicTreeBranchSet>
     </logicTree></nrml>'''
     (tmp_path / 'source_model_logic_tree.xml').write_text(tree)
-    assert better_smlt.main(tmp_path / 'job.ini')
+    assert optimize_smlt.main(tmp_path / 'job.ini')
     with zipfile.ZipFile(tmp_path / 'job.zip') as archive:
         root = ET.fromstring(archive.read('source_model_logic_tree.xml'))
     later = root.find('.//{*}logicTreeBranchSet[@branchSetID="later"]')
@@ -209,7 +209,7 @@ def test_no_variants(tmp_path):
         (tmp_path / name).write_bytes(b'existing archive')
     before = {f.relative_to(tmp_path): f.read_bytes()
               for f in tmp_path.rglob('*') if f.is_file()}
-    assert better_smlt.main(tmp_path / 'job.ini')
+    assert optimize_smlt.main(tmp_path / 'job.ini')
     after = {f.relative_to(tmp_path): f.read_bytes()
              for f in tmp_path.rglob('*') if f.is_file()}
     assert after == before
@@ -227,10 +227,10 @@ class MultiWriterTestCase(unittest.TestCase):
             ET.SubElement(root, tag).text = values
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'multi.xml'
-            better_smlt._write_xml(root, path)
+            optimize._write_xml(root, path)
             text = path.read_text()
         lengths = list(map(len, text.splitlines()))
-        self.assertLessEqual(max(lengths), better_smlt.LINE_WIDTH)
+        self.assertLessEqual(max(lengths), optimize.LINE_WIDTH)
         self.assertGreater(len(text.splitlines()), 20)
         # the element is parsed back to the same arrays
         root = ET.fromstring(text)
@@ -268,15 +268,15 @@ class SourceWriterTestCase(unittest.TestCase):
                             '\n'.join(sources) + f'</{prefix}sourceModel>')
                     base_el = ET.fromstring(text.replace(
                         other_mfd, base_mfd))[0]
-                    base = better_smlt.Copy('base.xml', 0, base_el, {})
-                    original = [better_smlt.Copy('sources.xml', i, el, {})
+                    base = optimize.Copy('base.xml', 0, base_el, {})
+                    original = [optimize.Copy('sources.xml', i, el, {})
                                 for i, el in enumerate(ET.fromstring(text))]
                     original[0].id = 'renamed'
                     original[2].id = 'combined'
                     with tempfile.TemporaryDirectory() as tmp:
                         path = Path(tmp)
                         (path / 'sources.xml').write_text(text)
-                        nfiles = better_smlt._write_files(
+                        nfiles = optimize._write_files(
                             path, path / 'out', original,
                             {'renamed': '0', 'combined': '2'},
                             [[base, original[1]], [base, original[2]]],
@@ -286,7 +286,7 @@ class SourceWriterTestCase(unittest.TestCase):
                     root = ET.fromstring(result)
                     self.assertEqual([el.attrib['id'] for el in root],
                                      ['renamed', '1', 'combined', '3'])
-                    copies = [better_smlt.Copy('out.xml', i, el, {})
+                    copies = [optimize.Copy('out.xml', i, el, {})
                               for i, el in enumerate(root)]
                     self.assertEqual(copies[1].params, base.params)
                     self.assertEqual(copies[2].params, base.params)
