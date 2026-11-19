@@ -122,7 +122,8 @@ class UpgradeManagerTestCase(unittest.TestCase):
 
     def check_message(self, html, expected):
         with mock.patch('urllib.request.urlopen') as urlopen:
-            urlopen().read.return_value = html
+            # urlopen returns bytes, like the real GitHub page
+            urlopen().read.return_value = html.encode('utf8')
             got = what_if_I_upgrade(conn, pkg)
             self.assertEqual(got, expected)
 
@@ -135,6 +136,17 @@ Visit the links if you want to know what exactly the scripts are doing.'''
         self.check_message('''
 >0000-base_schema.sql<
 >0001-uniq-ruptures.sql<''', expected)
+
+    def test_script_linked_twice(self):
+        # the GitHub page links each script more than once, but the script
+        # must be listed only once
+        with mock.patch('urllib.request.urlopen') as urlopen:
+            urlopen().read.return_value = b'''
+>0000-base_schema.sql<
+>0001-uniq-ruptures.sql<
+>0001-uniq-ruptures.sql<'''
+            got = what_if_I_upgrade(conn, pkg)
+        self.assertEqual(got.count('0001-uniq-ruptures.sql'), 1)
 
     def test_tricky_upgrade(self):
         expected = '''\

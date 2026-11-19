@@ -296,10 +296,14 @@ class UpgradeManager(object):
         Extract the OpenQuake upgrade scripts from the links in the GitHub page
         """
         link_pattern = r'>\s*{0}\s*<'.format(self.pattern[1:-1])
-        page = urllib.request.urlopen(self.upgrades_url).read()
+        # the page is bytes, the link pattern is a string
+        page = urllib.request.urlopen(self.upgrades_url).read().decode('utf8')
+        seen = set()  # each script is linked more than once in the page
         for mo in re.finditer(link_pattern, page):
             scriptname = mo.group(0)[1:-1].strip()
-            yield self.parse_script_name(scriptname)
+            if scriptname not in seen:
+                seen.add(scriptname)
+                yield self.parse_script_name(scriptname)
 
     @classmethod
     def instance(cls, conn, pkg_name='openquake.server.db.schema.upgrades'):
