@@ -128,9 +128,8 @@ class UpgradeManagerTestCase(unittest.TestCase):
             self.assertEqual(got, expected)
 
     def test_safe_upgrade(self):
-        expected = '''\
-Your database is at version 0000.
-The following scripts can be applied safely:
+        expected = '''
+The following scripts have been applied safely:
 https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrades/0001-uniq-ruptures.sql
 Visit the links if you want to know what exactly the scripts are doing.'''
         self.check_message('''
@@ -149,8 +148,7 @@ Visit the links if you want to know what exactly the scripts are doing.'''
         self.assertEqual(got.count('0001-uniq-ruptures.sql'), 1)
 
     def test_tricky_upgrade(self):
-        expected = '''\
-Your database is at version 0000.
+        expected = '''
 Please note that the following scripts could be slow:
 https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrades/0001-slow-uniq-ruptures.sql
 Please note that the following scripts are potentially dangerous and could destroy your data:
