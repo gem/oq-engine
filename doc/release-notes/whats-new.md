@@ -16,20 +16,22 @@ the LTS release, currently at version 3.23.5.
 ## Logic trees: new features and optimizations
 
 Two new kinds of logic trees have been introduced: site amplification
-logic trees (by Christopher Brooks) and probabilistic fault displacement
-logic trees (by Yen-Shin Chen).
+logic trees (by [Christopher Brooks](https://github.com/CB-quakemodel)) 
+and probabilistic fault displacement logic trees 
+(by [Yen-Shin Chen](https://github.com/vup1120)).
 
 Site amplification logic trees are documented in
 [Site model inputs](https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/inputs/site-model-inputs.html#amplification-logic-trees).
 Test cases 26 and 27 in `qa_tests_data/logictree` demonstrate their use.
 
-Probabilistic displacement logic trees are documented in
+Probabilistic fault displacement logic trees are documented in
 [Probabilistic fault displacement](https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/advanced/probabilistic-fault-displacement.html).
 The `demos/hazard/DisplacementPSHA` demo exercises the new probabilistic
 fault-displacement calculator. Use it with
 `calculation_mode = displacement` and the required
 `pfd_logic_tree_file`, which selects from a library of 35 primary and
-secondary rupture and displacement models contributed by Yen-Shin Chen.
+secondary rupture and displacement models contributed by 
+[Yen-Shin Chen](https://github.com/vup1120).
 
 Both types of logic trees are new and should currently be considered
 experimental.
@@ -138,21 +140,23 @@ realizations and logic-tree views.
 
 ## Hazardlib
 
-Amir Banimahd contributed the Banimahd et al. (2026) ground-motion
-model for Türkiye.
+[Amir Banimahd](https://github.com/banimahd) contributed the 
+Banimahd et al. (2026) ground-motion model for Türkiye.
 
-Savas Ceylan contributed period-selectable Swiss site-specific SA
-corrections, which can be applied with `ModifiableGMPE`; only the site
-columns for the selected periods are required.
+[Savas Ceylan](https://github.com/sceylan) contributed period-selectable 
+Swiss site-specific SA corrections, which can be applied with `ModifiableGMPE`;
+only the site columns for the selected periods are required.
 
 The Novakovic et al. (2018) model is available for induced seismicity.
 
 The Campbell and Bozorgnia (2019) CAV and IA model has been moved to its
 own module. This also fixes a units error: CAV is now returned in g-sec
-rather than m/s. Thanks to Ozan Bilal and Kyle Smith for reporting it.
+rather than m/s. Thanks to [Ozan Bilal](https://github.com/ozanbilal) 
+and [Kyle Smith](https://github.com/kslytherin) for reporting it.
 
 CampbellBozorgnia models now apply the epistemic adjustment
-correctly. Thanks to Mohsen Kohrangi for the report.
+correctly. Thanks to [Mohsen Kohrangi](https://github.com/Mohsen-Kohrangi) 
+for the report.
 
 The `GridAdjustedGMPE` ground motion model now supports epsilon
 scaling, allowing users to specify the epsilon used by the
@@ -160,8 +164,8 @@ adjustment. Ray tracing for grid-adjusted models has also been
 substantially accelerated (more than 10x) and uses less memory.
 
 The Allen (2022) model now checks whether Vs30 values are in its
-calibrated range of 220-800 m/s (thanks to Anthony Carapetis). The
-default (`vs30_strict=true`) raises an error for out-of-range values;
+calibrated range of 220-800 m/s (thanks to [Anthony Carapetis](https://github.com/acarapetis)). 
+The default (`vs30_strict=true`) raises an error for out-of-range values;
 `vs30_strict=false` clamps them to the calibrated range.
 
 The US NSHM variant of the CEUS nonlinear site term now includes the Vs30
@@ -301,7 +305,7 @@ The `cross_correlation` parameter has been replaced by
 `total_residual_correlation_model`. The old names are still accepted for
 compatibility, but new job files should use the new names.
 
-# Risk: New Features
+# Risk: new features
 
 Scenario damage calculations can treat tsunami as an independent peril.
 
