@@ -152,7 +152,7 @@ class MFDVariantsTestCase(unittest.TestCase):
         self.assertEqual(found, ['mp1'])
         self.assertIn('mp1: 2 MultiMFD variants in a.xml b.xml c.xml',
                       cm.output[0])
-        self.assertIn('oq check_input job.ini --optimize', cm.output[0])
+        self.assertIn('oq check_input job.ini --better-smlt', cm.output[0])
 
     # different geometries are not MFD variants
     def test_no_variants(self):

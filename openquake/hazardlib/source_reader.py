@@ -950,7 +950,7 @@ def check_same_sources(smdict, fname):
             'copy is computed separately. They are likely variants of a '
             'base source: if so, give them the same ID and move the MFDs '
             'in the logic tree (see the warning about MFD variants; '
-            '`oq check_input --optimize` does not change sources with '
+            '`oq check_input --better-smlt` does not change sources with '
             'different IDs):\n%s%s', fname, len(variants), '\n'.join(shown),
             '\n  ...' if len(variants) > 3 else '')
     if errors:
@@ -970,7 +970,7 @@ def check_same_sources(smdict, fname):
 
 
 # uncertainty types for the MFD variants, by NRML tag: suggested by
-# check_mfd_variants and used by commonlib.optimize_smlt to convert them
+# check_mfd_variants and used by commonlib.better_smlt to convert them
 MFD_UNCERTAINTY = {
     'incrementalMFD': 'incrementalMFDAbsolute',
     'multiMFD': 'multiMFDAbsolute',
@@ -1044,7 +1044,7 @@ def check_mfd_variants(smdict, fname):
             'containing one branch\nper MFD; then the contexts are computed '
             'once for all the MFDs, which can be much faster. You can '
             'do it automatically with\n`oq check_input job.ini '
-            '--optimize`\nThe sources are:\n%s',
+            '--better-smlt`\nThe sources are:\n%s',
             fname, len(lines), '\n'.join(shown))
     return [line.split(':')[0].strip() for line in lines]
 
