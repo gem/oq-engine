@@ -15,6 +15,58 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""
+`oq check_input` checks the validity of job.ini files, job.zip files
+and .xml files. With the --optimize flag it converts the MFD variants
+of the source model logic trees into uncertainties, see
+openquake.commonlib.optimize_smlt. Here is an example, from
+qa_tests_data/event_based/case_7. The source model logic tree has two
+branches, containing the same source "1" with the same geometry but
+different truncated GR MFDs (aValue=5.0 in source_model1.xml and
+aValue=4.0 in source_model2.xml)::
+
+  <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+    <logicTreeBranch branchID="b11">
+      <uncertaintyModel>source_model1.xml</uncertaintyModel>
+      <uncertaintyWeight>0.6</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b12">
+      <uncertaintyModel>source_model2.xml</uncertaintyModel>
+      <uncertaintyWeight>0.4</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+
+so the contexts of the source are computed twice. Running
+`oq check_input -o job.ini` collapses the two branches into a single
+one, followed by a branchset changing the MFD of source "1"::
+
+  <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+    <logicTreeBranch branchID="b11_base">
+      <uncertaintyModel>source_model1.xml</uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet uncertaintyType="abMaxMagAbsolute"
+                      branchSetID="bs1_mfd" applyToBranches="b11_base"
+                      applyToSources="1">
+    <logicTreeBranch branchID="b11">
+      <uncertaintyModel>5.0 1.0 6.5</uncertaintyModel>
+      <uncertaintyWeight>0.6</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b12">
+      <uncertaintyModel>4.0 1.0 6.5</uncertaintyModel>
+      <uncertaintyWeight>0.4</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+
+so that the contexts are computed once for both MFDs. Then the source
+rates are compared realization by realization between the original
+and the converted logic tree and, if they are the same, the converted
+inputs are saved in a job.zip file next to the job.ini (here without
+source_model2.xml, which is not needed anymore), otherwise they are
+left in job_mfd.zip, to be inspected. The original files are never
+modified.
+"""
 import os
 import logging
 from unittest import mock

@@ -17,16 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 # NB: run these tests with OQ_APPLICATION_MODE=IMPACT,
-from pathlib import Path
-
 import pytest
 from openquake.server.tests.pages.login_page import LoginPage
 from openquake.server.tests.pages.cookie_bar import CookieBar
 from openquake.server.tests.pages.impact_page import (
     ImpactPageLevel0, ImpactPageLevel1, ImpactPageLevel2)
 from playwright.sync_api import expect
-
-REPORT_CITIES = Path(__file__).with_name('data') / 'impact_report_cities.csv'
 
 
 @pytest.mark.parametrize("user", [0], indirect=True)
@@ -48,7 +44,6 @@ def test_impact_ui_level_0(
 @pytest.mark.parametrize("user", [1], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
-@pytest.mark.parametrize("webui_config", [REPORT_CITIES], indirect=True)
 def test_impact_ui_level_1(
         application_mode, authenticated_page, user, default_usgs_id,
         should_remove_job):
