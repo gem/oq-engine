@@ -564,78 +564,51 @@ def _build_legend_labels(classifier, legend_digits):
 
 
 @functools.lru_cache(maxsize=1)
-def _read_basemap(basemap_path):
-    # basemap_path must identify a georeferenced raster supported by
-    # rasterio (for example, a GeoTIFF). The raster can cover the whole
-    # world or just the area being plotted, but its CRS must match the
-    # vector data, as checked by _overlay_basemap().
+def _read_basemap(basemap_path, bounds):
+    # Cache the visible pixels for successive maps with the same viewport.
+    # The georeferenced raster can cover the whole world or just the area
+    # being plotted. As before, its transform is assumed to be north-up.
     import rasterio
-    with rasterio.open(basemap_path) as src:
-        return src.read(), src.transform, src.crs
-
-
-def _crop_raster(data, transform, bounds):
-    # Return the part of the raster (with shape (bands, rows, cols))
-    # covering the given bounds (xmin, ymin, xmax, ymax), as an image
-    # for imshow (with shape (rows, cols, bands) or (rows, cols) for a
-    # single band), and its extent (left, right, bottom, top); return
-    # None if the raster does not intersect the bounds. Slicing returns
-    # a view, so the cached raster is not copied.
-    # NOTE: the raster is assumed to be north-up, i.e. not rotated
     xmin, ymin, xmax, ymax = bounds
-    cols, rows = ~transform * (numpy.array([xmin, xmax]),
-                               numpy.array([ymax, ymin]))
-    height, width = data.shape[-2:]
-    col0, col1 = numpy.clip(
-        [math.floor(cols.min()), math.ceil(cols.max())], 0, width)
-    row0, row1 = numpy.clip(
-        [math.floor(rows.min()), math.ceil(rows.max())], 0, height)
-    if col1 <= col0 or row1 <= row0:
-        return None
-    crop = data[..., row0:row1, col0:col1]
-    image = crop[0] if len(crop) == 1 else numpy.moveaxis(crop, 0, -1)
-    xs = transform.c + transform.a * numpy.array([col0, col1])
-    ys = transform.f + transform.e * numpy.array([row1, row0])
-    return image, (xs[0], xs[1], ys[0], ys[1])
+    with rasterio.open(basemap_path) as src:
+        # Round outwards to include partially visible pixels at the edges.
+        inverse = ~src.transform
+        x0, y0 = inverse * (xmin, ymax)
+        x1, y1 = inverse * (xmax, ymin)
+        col0 = max(0, math.floor(min(x0, x1)))
+        col1 = min(src.width, math.ceil(max(x0, x1)))
+        row0 = max(0, math.floor(min(y0, y1)))
+        row1 = min(src.height, math.ceil(max(y0, y1)))
+        if col1 <= col0 or row1 <= row0:
+            return None, None, src.crs
+        window = ((row0, row1), (col0, col1))
+        crop = src.read(window=window)
+        west, south, east, north = src.window_bounds(window)
+        image = crop[0] if len(crop) == 1 else numpy.moveaxis(crop, 0, -1)
+        return image, (west, east, south, north), src.crs
 
 
 def _overlay_basemap(ax, basemap_path, target_crs, margin_ratio=0.1):
-    """
-    Safely handles rasterio imports and displays the basemap overlay.
-    Raster data is cached after the first load via _read_basemap().
-    Only the part of the raster within the current axis limits (plus a
-    margin) is displayed, therefore this must be called after setting
-    the limits. Otherwise each draw of the figure would resample the
-    full raster (the whole world for the impact reports), which is
-    very slow.
-    """
+    # Call after setting the limits so each draw resamples only the
+    # viewport and its margin.
     if basemap_path is None:
         # Some plot callers do not use a raster basemap. Impact reports
         # configure one before calling this function.
         return
-    try:
-        import rasterio  # noqa
-    except ImportError as exc:
-        raise RuntimeError(
-            "In order to plot raster basemaps, 'rasterio' should be installed"
-        ) from exc
-    # Normalise to str for the cache key; resolve() collapses any symlinks
-    # or relative segments so the same file always hits the same cache slot.
+    # Resolve symlinks and relative segments for the cache key.
     path_str = str(Path(basemap_path).resolve())
-    data, transform, crs = _read_basemap(path_str)
-    if crs != target_crs:
-        raise ValueError("Raster CRS does not match vector CRS")
     xlim, ylim = ax.get_xlim(), ax.get_ylim()
     xpad = (max(xlim) - min(xlim)) * margin_ratio
     ypad = (max(ylim) - min(ylim)) * margin_ratio
-    cropped = _crop_raster(data, transform, (
+    image, extent, crs = _read_basemap(path_str, (
         min(xlim) - xpad, min(ylim) - ypad,
         max(xlim) + xpad, max(ylim) + ypad))
-    if cropped is None:  # the viewport is outside of the raster
+    if crs != target_crs:
+        raise ValueError("Raster CRS does not match vector CRS")
+    if image is None:  # the viewport is outside of the raster
         return
     # zorder=0 keeps the basemap below the other layers, even if it is
     # added after them
-    image, extent = cropped
     ax.imshow(image, extent=extent, alpha=0.8, zorder=0)
     # make sure that adding the image does not change the viewport
     ax.set_xlim(xlim)
