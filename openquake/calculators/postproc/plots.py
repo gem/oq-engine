@@ -568,12 +568,7 @@ def _read_basemap(basemap_path, bounds):
     # Cache the visible pixels for successive maps with the same viewport.
     # The georeferenced raster can cover the whole world or just the area
     # being plotted. As before, its transform is assumed to be north-up.
-    try:
-        import rasterio
-    except ImportError as exc:
-        raise RuntimeError(
-            "In order to plot raster basemaps, 'rasterio' should be "
-            "installed") from exc
+    import rasterio
     xmin, ymin, xmax, ymax = bounds
     with rasterio.open(basemap_path) as src:
         # Round outwards to include partially visible pixels at the edges.
