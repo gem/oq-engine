@@ -296,10 +296,17 @@ class UpgradeManager(object):
         Extract the OpenQuake upgrade scripts from the links in the GitHub page
         """
         link_pattern = r'>\s*{0}\s*<'.format(self.pattern[1:-1])
-        page = urllib.request.urlopen(self.upgrades_url).read()
+        # the page is bytes, the link pattern is a string
+        page = urllib.request.urlopen(self.upgrades_url).read().decode('utf8')
+        # GitHub renders each row of the directory listing twice, once in
+        # the large-screen and once in the small-screen name cell, so each
+        # script is matched twice
+        seen = set()
         for mo in re.finditer(link_pattern, page):
             scriptname = mo.group(0)[1:-1].strip()
-            yield self.parse_script_name(scriptname)
+            if scriptname not in seen:
+                seen.add(scriptname)
+                yield self.parse_script_name(scriptname)
 
     @classmethod
     def instance(cls, conn, pkg_name='openquake.server.db.schema.upgrades'):
@@ -378,7 +385,7 @@ def what_if_I_upgrade(conn, pkg_name='openquake.server.db.schema.upgrades',
     :param extract_scripts:
         name of the method to extract the scripts
     """
-    msg_safe_ = '\nThe following scripts have been applied safely:\n%s'
+    msg_safe_ = '\nThe following scripts can be applied safely:\n%s'
     msg_slow_ = '\nPlease note that the following scripts could be slow:\n%s'
     msg_danger_ = ('\nPlease note that the following scripts are potentially '
                    'dangerous and could destroy your data:\n%s')
@@ -412,7 +419,8 @@ def what_if_I_upgrade(conn, pkg_name='openquake.server.db.schema.upgrades',
     msg_safe = msg_safe_ % '\n'.join(safe)
     msg_slow = msg_slow_ % '\n'.join(slow)
     msg_danger = msg_danger_ % '\n'.join(danger)
-    msg = (msg_safe if safe else '') + (msg_slow if slow else '') \
+    header = 'Your database is at version %s.' % current_version
+    msg = header + (msg_safe if safe else '') + (msg_slow if slow else '') \
         + (msg_danger if danger else '')
     msg += ('\nVisit the links if you want to know what exactly the '
             'scripts are doing.')
