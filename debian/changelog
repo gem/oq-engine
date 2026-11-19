@@ -57,8 +57,8 @@
   * Added `oq engine --calibrate JOB_INI` to calibrate point-source settings
   * Added a warning for sources with different IDs, the same geometry and
     different MFDs, which are likely variants of a base source, and
-    `oq check_input --better-smlt` now generates a job.zip
-  * Added an option `oq check_input --better-smlt` to reduce sources with
+    `oq check_input --optimize` now generates a job.zip
+  * Added an option `oq check_input --optimize` to reduce sources with
     the same geometry
   * Added a new uncertainty `minMagGRAbsolute` to replace the minimum
     magnitude of a truncated Gutenberg-Richter MFD
