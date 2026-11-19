@@ -212,7 +212,58 @@ consistent with all the other parametric sources. If your code
 uses the old signature, you will get a very clear error message
 explaining which arguments have to be swapped.
 
-## Correlation models and conditioned GMFs
+## Bug fixes
+
+IMT-dependent logic-tree weights are now used correctly when computing
+hazard-curve statistics, fixing a regression in Canada's national hazard
+model. We also preserve precision for small rates.
+
+Atomic groups are computed for every site label, and disaggregation
+retains ruptures from all groups. Those bugs affected the USA and
+Japan model, but the numeric differences are minor.
+
+Disaggregation calculations had a bug in mean-curve realization ranking.
+It did not affect Global Hazard Mosaic results: the GHM uses the fast
+mean path, while the bug affected the slow mean path.
+
+A missing normalization factor in conditional-spectrum calculations has
+been added.
+
+Setting `maximum_rupture_depth` now discards deeper ruptures without
+raising an assertion error.
+
+Requests for quantile hazard maps without mean outputs no longer cause
+crashes.
+
+Postclassical and fast-mean calculations no longer crash on hazard chunks
+with no sites.
+
+The ASCE7 postprocessors no longer crash when the source logic tree has
+different realization counts or when an IMT has no deterministic source.
+
+The deterministic MCE sigmas are now combined in quadrature, and GSIM
+weights are matched to the actual source groups. Together, these
+corrections change AELO MCE results, including a 34% increase in PGA for
+PAC and a 0.8% increase in KOR in the regression cases.
+
+Site-model association respects a job-file `z1pt4` override when using
+`sites_csv` and reports missing required site parameters instead of
+silently producing zero hazard.
+
+Event-based rupture extraction (`get_ebruptures`) now reads each
+rupture's tectonic region type from its own source group. Previously, it
+used the first TRT for all ruptures.
+
+The error message "too many potential logic tree paths" now explains
+when `use_rates` can help.
+
+## Other
+
+The Hazard Modeller's Toolkit (HMTK) is no longer bundled with the
+engine, since it has been moved into the OpenQuake Model
+Building Toolkit (OQ-MBTK).
+
+# Correlation models and conditioned GMFs
 
 The correlation models have been reorganized into a common library, with
 one module per model and backward-compatible legacy imports. The
@@ -302,9 +353,15 @@ Average losses are now assigned to the correct realization, and exceeding
 Classical risk handles assets of different taxonomies at the same site
 without misplacing their loss curves or average losses.
 
-# OQ commands
+ShakeMap `grid.xml` values are now treated as medians. Previously they
+were treated as arithmetic means, causing an inappropriate mean-to-median
+conversion before generating ground-motion fields.
 
-- `oq -v` returns the Git hash in development installations, including
+# IT
+
+## OQ commands
+I wa
+- `oq -v` returns the Git hash in development installations, now reliably also on
   `devel_server` installations
 - `oq engine --param` now accepts space-separated `name=value`
   pairs, matching `oq run --param`, instead of comma-separated pairs
@@ -315,8 +372,8 @@ without misplacing their loss curves or average losses.
 - `oq show usignatures` displays the uncertainty signatures of a
   calculation, and `oq show context_reduction` displays the reduction of
   the contexts
-- The `oq check_input` command prints uncertainty signatures and a
-  calculation's core size without running it
+- `oq check_input` command prints uncertainty signatures and
+  logic tree core size without running the calculation
 - `oq extract agg_losses` works when calculations are aggregated by ID
   and reports the correct `site_id` tags
 - The `avg_gmf` extractor omits zero values by default. Set
@@ -326,58 +383,7 @@ without misplacing their loss curves or average losses.
 - `oq compare workflow` compares the mean hazard maps of a workflow
   with exported CSV files
 
-# Bug fixes
-
-## Hazard and disaggregation
-
-IMT-dependent logic-tree weights are now used correctly when computing
-hazard-curve statistics, fixing a regression in Canada's national hazard
-model. We also preserve precision for small rates.
-
-Atomic groups are computed for every site label, and disaggregation
-retains ruptures from all groups. Those bugs affected the USA and
-Japan model, but the numeric differences are minor.
-
-Disaggregation calculations had a bug in mean-curve realization ranking.
-It did not affect Global Hazard Mosaic results: the GHM uses the fast
-mean path, while the bug affected the slow mean path.
-
-A missing normalization factor in conditional-spectrum calculations has
-been added.
-
-Setting `maximum_rupture_depth` now discards deeper ruptures without
-raising an assertion error.
-
-Requests for quantile hazard maps without mean outputs no longer cause
-crashes.
-
-Postclassical and fast-mean calculations no longer crash on hazard chunks
-with no sites.
-
-ShakeMap `grid.xml` values are now treated as medians. Previously they
-were treated as arithmetic means, causing an inappropriate mean-to-median
-conversion before generating ground-motion fields.
-
-The ASCE7 postprocessors no longer crash when the source logic tree has
-different realization counts or when an IMT has no deterministic source.
-
-The deterministic MCE sigmas are now combined in quadrature, and GSIM
-weights are matched to the actual source groups. Together, these
-corrections change AELO MCE results, including a 34% increase in PGA for
-PAC and a 0.8% increase in KOR in the regression cases.
-
-Site-model association respects a job-file `z1pt4` override when using
-`sites_csv` and reports missing required site parameters instead of
-silently producing zero hazard.
-
-Event-based rupture extraction (`get_ebruptures`) now reads each
-rupture's tectonic region type from its own source group. Previously, it
-used the first TRT for all ruptures.
-
-The error message "too many potential logic tree paths" now explains
-when `use_rates` can help.
-
-# WebUI and IT
+## WebUI
 
 The WebUI calculation list is now paginated (10 items by default,
 configurable with `CALC_LIST_PAGE_SIZE`).
@@ -394,6 +400,8 @@ The WebUI now uses Django 5.2 LTS and django-cookie-consent 1.0.
 On Red Hat Enterprise Linux 8 and its derivatives, this Django version
 requires SQLite 3.31 or newer.
 
+## Other IT
+
 We upgraded numpy to version 2.4.6, SciPy to version 1.17.1, Numba to
 version 0.67.0, GDAL to version 3.13.1, GeoPandas to 1.1.4, and pyogrio
 to version 0.12.1, along with other libraries, to include the latest
@@ -403,9 +411,3 @@ If a large ZeroMQ packet is lost under high throughput, the calculation
 now fails with a clear error instead of hanging indefinitely.
 
 The repository now includes an AI contribution policy in `AI_POLICY.md`.
-
-## Other
-
-The Hazard Modeller's Toolkit (HMTK) is no longer bundled with the
-engine, since it has been moved into the OpenQuake Model
-Building Toolkit (OQ-MBTK).
