@@ -473,6 +473,22 @@ def _active_imts(shakemap, imts, correlated):
     return active
 
 
+def _imt_rows(active, N):
+    # Rows of the active IMTs in the arrays of shape (M * N, E): a slice if
+    # they are contiguous (the usual case), so that indexing gives views
+    # and not copies of the arrays
+    if active == list(range(active[0], active[-1] + 1)):
+        return slice(active[0] * N, (active[-1] + 1) * N)
+    return numpy.concatenate([
+        numpy.arange(i * N, (i + 1) * N) for i in active])
+
+
+def _independent_gmfs(mu, Z, total_std, scale, rows=slice(None)):
+    # GMFs of the given rows, with residuals independent in space and
+    # across IMTs, having the total conditional std of the ShakeMap
+    return mu[rows] * numpy.exp(Z[rows] * total_std[rows]) / scale[rows]
+
+
 @calculate_gmfs.add('Silva&Horspool')
 def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
                       cross_imt_model, cholesky_limit,
@@ -513,16 +529,23 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     total_std = numpy.array([
         shakemap['std'][str(im)] for im in imts]).reshape(-1, 1)
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
-    result = mu * numpy.exp(Z * total_std) / scale
     if (truncation_level <= 1E-9 or not correlated or
             spatial_model is None and cross_imt_model is None):
-        return result  # median-only or independent total-residual sampling
+        # median-only or independent total-residual sampling
+        return _independent_gmfs(mu, Z, total_std, scale)
     active = _active_imts(shakemap, imts, correlated)
     if not active:
-        return result
+        return _independent_gmfs(mu, Z, total_std, scale)
     corr_imts = [imts[i] for i in active]
-    rows = numpy.concatenate([
-        numpy.arange(i * N, (i + 1) * N) for i in active])
+    rows = _imt_rows(active, N)
+    # only the rows of the IMTs not correlated are sampled independently,
+    # the others are computed below
+    result = numpy.empty_like(mu)
+    independent = numpy.ones(len(mu), bool)
+    independent[rows] = False
+    if independent.any():
+        result[independent] = _independent_gmfs(
+            mu, Z, total_std, scale, independent)
     has_tau = _has_tau(shakemap, corr_imts, spatial_model)
     if (correlation_strategy == 'cholesky_decomposition' and
             not has_tau and not _is_joint_model(spatial_model)):
@@ -554,7 +577,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
         eps = _between_eps(corr_imts, Z.shape[1], truncation_level,
                            correlation_seed, between_event_model)
         residuals += (tau[:, :, None] * eps[:, None, :]).reshape(
-            len(rows), -1)
+            -1, Z.shape[1])
     result[rows] = mu[rows] * numpy.exp(residuals) / scale[rows]
     return result
 
