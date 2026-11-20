@@ -291,12 +291,11 @@ periodic field recovers the covariance specified by the model on the original
 grid; the embedding does not replace the model with a periodic approximation
 there.
 
-The engine uses this path automatically for sufficiently large compatible
-models and regular grids. Grid cells may be unoccupied, provided the enclosing
-rectangle is not excessively larger than the requested site collection. The
-periodic embedding is enlarged until its spectrum is positive semidefinite;
-the calculation stops with an explanatory error when that cannot be achieved
-within the supported enlargement.
+With ``correlation_strategy=circulant_embedding``, empty grid cells are
+allowed. The engine crops the grid to the affected rectangle while keeping
+its original projection, spacing and site mapping. Whether it can sample
+that rectangle depends on the memory needed for setup and field batches,
+including any enlargement required to obtain a valid periodic embedding.
 
 For station-conditioned fields, the OpenQuake engine combines circulant
 embedding with Matheron substitution. If :math:`U_T` and :math:`U_O` are

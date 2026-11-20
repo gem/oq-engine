@@ -92,6 +92,8 @@ SAMPLE_ASSETS = '.05'
 # loss of ESP contents from 48k to 52k, 83k, 226k and 433k. Any change of the
 # grid or of the sampling (for instance a change of projection) changes the
 # random field, so the expected files must be regenerated with OQ_OVERWRITE=1
+# Cropping impact2's CE grid also changes its seeded fields, while preserving
+# the covariance at the selected sites.
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_impact(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!

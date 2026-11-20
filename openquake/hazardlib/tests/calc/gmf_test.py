@@ -29,7 +29,7 @@ from openquake.hazardlib.calc.gmf import (
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.correlation_models.base import CorrelationContext
 from openquake.hazardlib.correlation_models.circulant_embedding import (
-    CirculantEmbeddingFactor)
+    CirculantEmbeddingFactor, RegularGridLayout)
 from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 \
     import BakerJayaram2008
 from openquake.hazardlib.correlation_models.spatial.heresi_miranda_2019 \
@@ -70,12 +70,12 @@ def build_computer(sites, factor=None, seed=7):
     return computer
 
 
-def regular_sites(shape):
+def regular_sites(shape, spacing=1):
     y, x = numpy.indices(shape)
     transformer = Transformer.from_crs(32610, 4326, always_xy=True)
     lons, lats = transformer.transform(
-        500_000 + x.ravel() * 1_000,
-        4_200_000 + y.ravel() * 1_000)
+        500_000 + x.ravel() * spacing * 1_000,
+        4_200_000 + y.ravel() * spacing * 1_000)
     return SiteCollection.from_points(lons, lats)
 
 
@@ -155,6 +155,32 @@ def test_ce_selection_with_off_grid_complete_sites():
     assert factor.grid_shape == (3, 4)
     assert factor.output_size == len(IMTS) * len(sites)
     numpy.testing.assert_array_equal(factor.site_indices, numpy.arange(11))
+
+
+def test_affected_grid_is_cropped():
+    complete = regular_sites((8, 9))
+    complete.array['sids'] = numpy.arange(len(complete)) * 3 + 100
+    original = complete.array.copy()
+    sites = complete.filtered([41, 22, 31])
+    computer = build_computer(sites)
+    factor = computer._get_ce_factor()
+    assert factor.grid_shape == (3, 2)
+    numpy.testing.assert_array_equal(factor.site_indices, [5, 0, 2])
+    numpy.testing.assert_array_equal(sites.sids, [223, 166, 193])
+    numpy.testing.assert_array_equal(complete.array, original)
+
+
+def test_sparse_grid_uses_memory_limit():
+    complete = regular_sites((12, 11), spacing=10)
+    layout = RegularGridLayout.from_sites(complete, crs='EPSG:32610')
+    complete.grid_crs = layout.crs
+    complete.grid_spacing = layout.spacing
+    complete.grid_origin = layout.projected_origin
+    sites = complete.filtered([131, 0, 10, 121])
+    computer = build_computer(sites)
+    factor = computer._get_ce_factor()
+    assert factor.grid_shape == (12, 11)
+    numpy.testing.assert_array_equal(factor.site_indices, [131, 0, 10, 121])
 
 
 def test_ce_batches():
