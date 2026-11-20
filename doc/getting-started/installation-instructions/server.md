@@ -163,13 +163,37 @@ On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunico
 ### gunicorn
 
 *gunicorn* is an optional dependency: install it with `pip install "openquake.engine[server]"` (it is not installed by default).
-Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
-```console
+Set the following directives in the `[Service]` section of
+`/etc/systemd/system/openquake-webui.service`:
+```ini
 WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
+ExecStartPre=/opt/openquake/venv/bin/python -m openquake.server.postinstall
 ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --timeout 1200 wsgi:application
 ```
 where `N` is the number of workers. 
 Refer to the official Gunicorn documentation for the optimal choice of this value based on your system's hardware specifications.
+
+Run `sudo systemctl daemon-reload` after editing the unit. On each service start
+or restart, the pre-start command checks the engine schema before running
+Django migrations and standalone app postinstall hooks. It runs once using
+the service's existing user and environment file. Gunicorn starts only after
+the pre-start command succeeds.
+
+If the engine schema is missing or outdated, the check stops startup before
+Django migrations run or Gunicorn launches. See `journalctl -u openquake-webui`
+for the error and instructions to run `oq engine --upgrade-db`.
+The server installer upgrades the engine schema before starting the WebUI
+service. If you need to create or upgrade the engine database manually, stop
+the WebUI, back up the database if it exists, run the upgrade as the database
+owner, and start the WebUI again:
+```console
+sudo systemctl stop openquake-webui
+if sudo test -f /opt/openquake/oqdata/db.sqlite3; then
+    sudo cp /opt/openquake/oqdata/db.sqlite3 /opt/openquake/oqdata/db.sqlite3.bak
+fi
+sudo -u openquake /opt/openquake/venv/bin/oq engine --upgrade-db
+sudo systemctl start openquake-webui
+```
 
 ### Two installations on the same machine
 
