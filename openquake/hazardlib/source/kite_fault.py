@@ -167,10 +167,15 @@ class KiteFaultSource(ParametricSeismicSource):
         step = kwargs.get('step', 1)
         only_rates = kwargs.get('rates')
         for mag, occ_rate, meshes in self._gen_meshes():
+            # the meshes cover a 2D grid of positions (along strike and
+            # dip), so the subsampling is quadratic in the step, as for
+            # the simple faults; this matters in preclassical, see
+            # ContextMaker.estimate_weight
+            sampled = meshes[::step ** 2]
             if only_rates:
-                yield np.full(len(meshes[::step]), occ_rate)
+                yield np.full(len(sampled), occ_rate)
                 continue
-            for msh in meshes[::step]:
+            for msh in sampled:
                 surf = KiteSurface(msh)
                 hypocenter = surf.get_center()
                 # Yield an instance of a ParametricProbabilisticRupture

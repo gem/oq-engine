@@ -327,7 +327,6 @@ def get_csm(oq, full_lt, dstore=None):
         filter_sourcecodes=oq.filter_sourcecodes,
         dip_spacing=oq.dip_spacing)
     full_lt.ses_seed = oq.ses_seed
-    logging.info('Reading the source model(s) in parallel')
 
     # NB: the source models file must be in the shared directory
     # NB: dstore is None in logictree_test.py
