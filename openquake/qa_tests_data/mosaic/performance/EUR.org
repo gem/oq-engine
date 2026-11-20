@@ -8,6 +8,7 @@ Cores used: 160
 | 3.24.1               | 13_444 s    | 388.2 GB   |
 | 3.25.1               | 10_605 s    | 411.2 GB   |
 | 3.26.2               | 9_924 s     | 312.6 GB   |
+| 3.27.0-git38dcb83546 | 7_147 s     | 256.9 GB   |
 
 * v3.23
 
@@ -284,6 +285,14 @@ the big array in save_rates instead of concatenating saves ~40 GB.
 |-------------+----------------+-----------+----------+----------------+---------------|
 | calc_19833  | concatenate    | 2h46      | 424.1 GB | 424.1 GB       | 263.1 GB      |
 | calc_20668  | preallocated   | 2h41      | 385.1 GB | 385.1 GB       | 270.0 GB      |
+| calc_25065  | preallocated   | 1h59      | 256.9 GB | 256.9 GB       | 252.9 GB      |
+
+calc_25065 ran with OQ_SAMPLE_SITES=.5 on EUR/in/job_vs30.ini (127_890
+sites, as before). The new calibration picks pointsource_distance=50
+(p99_err=0.0060 g, p99_norm=0.98) instead of 75; this explains most of
+the 25% reduction in the classical time. The preclassical is faster too
+(PreClassicalCalculator.run 113 s instead of 176 s, calibration 1_819 s
+instead of 5_057 s). split_time=10_706 s, so no classical task was split.
 
 ** calc_20668
 
@@ -332,3 +341,49 @@ the big array in save_rates instead of concatenating saves ~40 GB.
 | save_rates        | rmap=29.79 GB num_chunks=770 B h5=616 B              | 616 B     |
 | fast_mean         | pgetter=104.52 MB                                    | 177.61 MB |
 | make_hmap_png     | lons=13.66 MB hmap=6.83 MB                           | 16.41 MB  |
+
+** calc_25065
+
+# oq show performance
+| calc_25065, maxmem=256.9 GB | time_sec | memory_mb | counts      |
+|-----------------------------+----------+-----------+-------------|
+| total classical             | 940_264  | 809.8     | 857         |
+| get_poes                    | 621_428  | 0.0       | 239_867_294 |
+| computing mean_std          | 230_201  | 0.0       | 4_460_963   |
+| total fast_mean             | 48_574   | 803.7     | 160         |
+| total save_rates            | 17_747   | 22.1445   | 147         |
+| building contexts           | 13_919   | 0.0       | 18_364_542  |
+| ClassicalCalculator.run     | 7_147    | 24_056    | 1           |
+| iter_ruptures               | 4_062    | 0.0       | 618_193     |
+| total filter_weight         | 2_249    | 2.5781    | 434         |
+| total calibration           | 1_819    | 39.3984   | 300         |
+| storing rates               | 761.1    | 2_229     | 241         |
+| total calibrate_group       | 168.5332 | 53.7119   | 300         |
+| total preclassical          | 125.7354 | 50.2563   | 434         |
+| PreClassicalCalculator.run  | 112.6977 | 2_324     | 1           |
+
+# oq show task_info
+| operation-duration | counts | mean     | stddev | min     | max      | slowfac |
+|--------------------+--------+----------+--------+---------+----------+---------|
+| calibrate_group    | 50     | 3.3511   | 136%   | 0.2307  | 11.7640  | 3.5105  |
+| calibration        | 247    | 7.3295   | 55%    | 0.7204  | 17.1437  | 2.3390  |
+| classical          | 448    | 2_077    | 68%    | 199.5   | 4_164    | 2.0047  |
+| fast_mean          | 160    | 303.6    | 02%    | 297.9   | 312.1    | 1.0281  |
+| filter_weight      | 273    | 8.1635   | 119%   | 0.5188  | 29.8618  | 3.6579  |
+| make_hmap_png      | 14     | 2.6971   | 01%    | 2.6492  | 2.8032   | 1.0393  |
+| preclassical       | 59     | 2.1164   | 131%   | 0.1599  | 8.2352   | 3.8912  |
+| read_source_model  | 60     | 0.1120   | 125%   | 0.0064  | 0.4113   | 3.6734  |
+| save_rates         | 147    | 120.7303 | 24%    | 13.5235 | 157.7286 | 1.3065  |
+
+# oq show job_info
+| task              | sent                                                    | received  |
+|-------------------+---------------------------------------------------------+-----------|
+| read_source_model | converter=74.25 KB fname=11.52 KB branch=2.31 KB        | 23 MB     |
+| calibrate_group   | sg=16.06 MB cmaker=9.91 MB sites=1.47 MB                | 1.17 KB   |
+| calibration       | srcs=271.03 MB cmaker=37.29 MB sites=5.71 MB            | 48.18 MB  |
+| preclassical      | sf=31.5 MB sources=23.81 MB cmaker=11.46 MB             | 1.7 KB    |
+| filter_weight     | srcs=271.98 MB sf=157.14 MB cmaker=57.21 MB             | 342.52 MB |
+| classical         | cmaker=121.78 MB ts2gids=186.05 KB tilegetter=100.26 KB | 160.36 GB |
+| save_rates        | rmap=28.43 GB num_chunks=735 B h5=588 B                 | 588 B     |
+| fast_mean         | pgetter=104.48 MB                                       | 177.61 MB |
+| make_hmap_png     | lons=13.66 MB hmap=6.83 MB                              | 16.41 MB  |
