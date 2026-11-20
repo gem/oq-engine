@@ -1092,8 +1092,6 @@ class FullLogicTree(AbstractLogicTree):
         assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
-        R = self.get_num_paths()
-        logging.info('Building {:_d} realizations'.format(R))
         self.weights = ws = numpy.array(  # shape (R, 1) or (R, M+1)
             [rlz.weight for rlz in self.get_realizations()])
         numpy.testing.assert_allclose(ws.sum(axis=0), 1)

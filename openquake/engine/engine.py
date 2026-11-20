@@ -94,12 +94,10 @@ def set_concurrent_tasks_default(calc, mulfactor):
     concurrent_tasks = int(num_workers * mulfactor)
     parallel.Starmap.CT = concurrent_tasks
     OqParam.concurrent_tasks.default = concurrent_tasks
-    print
     if dist == 'no':
         logging.warning('Disabled distribution')
-    else:
-        logging.warning(f'Using {num_workers} {dist} workers, '
-                        f'{concurrent_tasks=}')
+    logging.info('Using engine version %s [%d cores]',
+                 general.engine_version(), 1 if dist == 'no' else num_workers)
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -451,7 +449,6 @@ def check_obsolete_version(calculation_mode='WebUI'):
         return
 
     version = general.engine_version()
-    logging.info('Using engine version %s', version)
     headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s;%s' %
                (version, calculation_mode, platform.platform(),
                 config.distribution.oq_distribute)}
