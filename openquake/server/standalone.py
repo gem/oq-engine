@@ -19,6 +19,10 @@ the postinstall commands run after their installation.
 import subprocess
 import sys
 
+from openquake.commonlib import dbapi
+from openquake.server.db import actions
+from openquake.server.db.upgrade_manager import VersioningNotInstalled
+
 # Keep this list in sync with the standalone installer install.py.
 # NOTE: install.py is outside openquake and can not be imported here
 STANDALONE_APP_INFO = [
@@ -63,6 +67,17 @@ def postinstall(pycmd, apps=STANDALONE_APP_INFO):
 
 
 if __name__ == '__main__':
+    # Check the engine schema before Django migrations or app hooks write.
+    try:
+        outdated = actions.check_outdated(dbapi.db)
+    except VersioningNotInstalled:
+        outdated = ('The database has not been created yet. '
+                    'Run oq engine --upgrade-db to create it.')
+    if outdated:
+        sys.exit(
+            f'{dbapi.db.path}: {outdated}\nRun the command as the database '
+            'owner (openquake in a server installation) before starting '
+            'the WebUI.')
     errors = postinstall(sys.executable)
     if errors:
         sys.exit('\n'.join(errors))

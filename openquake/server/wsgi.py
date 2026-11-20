@@ -26,36 +26,16 @@ except ImportError:
 
 from openquake.baselib import config, use_server
 from openquake.commonlib import dbapi
-from openquake.server.db import actions
-from openquake.server.db.upgrade_manager import VersioningNotInstalled
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "openquake.server.settings")
 setproctitle('oq-webui')
 assert not use_server(), \
     "The webui cannot call itself [can happen if a devel installation is identified as devel server]"
 
-# Check the database before the application starts serving requests.
-# The WebUI does not upgrade the database: every gunicorn worker imports this
-# module (unless gunicorn runs with --preload), so with N workers there would
-# be N upgrades of the same database at the same time. The database must be
-# upgraded with `oq engine --upgrade-db` before starting the WebUI: install.py
-# does it before starting the service, otherwise it is an explicit action of
-# the administrator (see doc/getting-started/installation-instructions/
-# server.md); here the WebUI refuses to start telling what to do.
-# NB: `oq webui start` upgrades the database by itself before starting the
-# server (a single process).
+# Gunicorn's service checks the engine schema and runs postinstall before
+# starting its workers. `oq webui start` prepares the database itself.
 logging.warning(f'Using {config.found[-1]}')
 logging.warning(f'Using {dbapi.db.path}')
-try:
-    outdated = actions.check_outdated(dbapi.db)
-except VersioningNotInstalled:  # the database has not been created yet
-    outdated = ('The database has not been created yet. You can create it '
-                'by running oq engine --upgrade-db')
-if outdated:
-    raise RuntimeError(
-        f'{dbapi.db.path}: {outdated}\nThe command must be run by the owner '
-        'of the database (the user openquake in a server installation) '
-        'before starting the WebUI.')
 
 from django.core.wsgi import get_wsgi_application  # noqa: E402
 

@@ -174,16 +174,23 @@ where `N` is the number of workers.
 Refer to the official Gunicorn documentation for the optimal choice of this value based on your system's hardware specifications.
 
 Run `sudo systemctl daemon-reload` after editing the unit. On each service start
-or restart, systemd runs the Django migrations and standalone app postinstall
-hooks once before launching Gunicorn. The pre-start command uses the service's
-existing user and environment file. If it fails, Gunicorn does not start.
+or restart, the pre-start command checks the engine schema before running
+Django migrations and standalone app postinstall hooks. It runs once using
+the service's existing user and environment file. Gunicorn starts only after
+the pre-start command succeeds.
 
-The WebUI run by gunicorn does not upgrade the engine database (`oq engine --upgrade-db`, not to be confused with `manage.py migrate`, which manages the tables of users and sessions): if the database is outdated, e.g. after installing a new version of the engine, the WebUI refuses to start (gunicorn stops with "Worker failed to boot" and systemd tries again every 30 seconds) and the error in `journalctl -u openquake-webui` tells which versions are missing.
-The installer (`install.py server` or `install.py devel_server`) upgrades the database by itself before starting the WebUI service, so this is needed only if the engine is upgraded in another way.
-In that case stop the WebUI, make a backup copy of the database, upgrade it as the user owning it and start the WebUI again:
+If the engine schema is missing or outdated, the check stops startup before
+Django migrations run or Gunicorn launches. See `journalctl -u openquake-webui`
+for the error and instructions to run `oq engine --upgrade-db`.
+The server installer upgrades the engine schema before starting the WebUI
+service. If you need to create or upgrade the engine database manually, stop
+the WebUI, back up the database if it exists, run the upgrade as the database
+owner, and start the WebUI again:
 ```console
 sudo systemctl stop openquake-webui
-sudo cp /opt/openquake/oqdata/db.sqlite3 /opt/openquake/oqdata/db.sqlite3.bak
+if sudo test -f /opt/openquake/oqdata/db.sqlite3; then
+    sudo cp /opt/openquake/oqdata/db.sqlite3 /opt/openquake/oqdata/db.sqlite3.bak
+fi
 sudo -u openquake /opt/openquake/venv/bin/oq engine --upgrade-db
 sudo systemctl start openquake-webui
 ```
