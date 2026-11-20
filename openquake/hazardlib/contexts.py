@@ -302,11 +302,13 @@ def _count_nogrid(src, cdist, magdist):
 # pointsource_distance (see autogrid) the contexts for several distances
 # are built at once, sharing the planars and the contexts
 def _sextets(cmaker, src, sitecol, psdists):
-    with cmaker.ir_mon:
-        # building planar geometries
-        planardict = src.get_planar(cmaker.shift_hypo)
-
-    magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
+    # NB: the planar geometries are built only for the sources with close
+    # sites; for the collapsed point sources they are built for all the
+    # underlying point sources, so they are expensive and they are needed
+    # only if some site is within the pointsource distance (in alaska
+    # building them upfront was taking 1/3 of the total runtime)
+    magdist = {mag: cmaker.maximum_distance(mag)
+               for mag, _rate in src.get_annual_occurrence_rates()}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range, and
     # it is 0 for all the magnitudes if the source has no magnitude inside
     # the range, which can happen since for the sources modified by the
@@ -333,6 +335,9 @@ def _sextets(cmaker, src, sitecol, psdists):
     ks = tuple(range(len(psdists)))
     # splitting by magnitude
     if src.count_nphc() == 1:
+        with cmaker.ir_mon:
+            # building planar geometries
+            planardict = src.get_planar(cmaker.shift_hypo)
         # one rupture per magnitude, the same for all distances
         if (getattr(cmaker, 'batch_point_sources', False) and
                 not cmaker.fewsites):
@@ -350,6 +355,7 @@ def _sextets(cmaker, src, sitecol, psdists):
                 yield ks, m, mag, magdist[mag], pla, sites
         return
     cd = cdist[mask]
+    planardict = None
     for m, rup in enumerate(src.iruptures()):
         mag = rup.mag
         if mag > maxmag or mag < minmag:
@@ -358,13 +364,18 @@ def _sextets(cmaker, src, sitecol, psdists):
         # far sites use the mean rupture from src.iruptures(),
         # close sites use all the nodal planes/hypocenters
         meanpla = [rup.surface.array.reshape(-1, 3)]
-        allpla = planardict[mag]
         # NB: having a good psdist is essential for performance!
         psdist = numpy.array([src.get_psdist(m, mag, psd, magdist, radii)
                               for psd in psdists])
         # a site of band i, i.e. psdist[i-1] < cd <= psdist[i], is far
         # for the distances before i and close for the others
         bands = numpy.searchsorted(psdist, cd)
+        if (bands < len(ks)).any():  # some site is close
+            if planardict is None:
+                with cmaker.ir_mon:
+                    # building planar geometries
+                    planardict = src.get_planar(cmaker.shift_hypo)
+            allpla = planardict[mag]
         if cmaker.fewsites:
             # all the sites are far for the distances without close sites
             nfar = bands.min()
