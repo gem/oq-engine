@@ -894,8 +894,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # [0] contexts after collapsing, [1] removed by collapse_precision,
         # [2] contexts before collapse_precision for the gridding baseline,
-        # [3] contexts saved by the variant sources optimization
-        self.cfactor = numpy.zeros(4)
+        # [3] contexts saved by the variant sources optimization,
+        # [4] estimated contexts of the gridded sources without gridding
+        self.cfactor = numpy.zeros(5)
         self.dparam_mb = 0
         self.source_mb = 0
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -919,7 +920,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         self.num_chunks = getters.get_num_chunks(self.datastore)
-        logging.info('Using num_chunks=%d', self.num_chunks)
+        logging.info('Using num_chunks=%d%s', self.num_chunks,
+                     ' and the fast_mean algorithm' if oq.fastmean else '')
 
         # create empty dataframes
         self.datastore.create_df(
@@ -960,8 +962,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 return {}
 
         self.init_poes()
-        if oq.fastmean:
-            logging.info('Will use the fast_mean algorithm')
         self.srcidx = {
             name: i for i, name in enumerate(self.csm.get_basenames())}
         rlzs = self.R == 1 or oq.individual_rlzs
@@ -1003,12 +1003,14 @@ class ClassicalCalculator(base.HazardCalculator):
         in the 'collapsed' field, the contexts of the gridded point sources
         before collapse_precision in the 'gridded' field and the contexts
         without the variant sources optimization in the 'separate' field,
-        see contexts.py. If collapse_precision or ps_grid_spacing is set and
-        there is no estimate in the 'exact' field, the 'exact' field is set
-        to the contexts before collapse_precision, counted for all source
-        types.
+        see contexts.py. The 'exact' field is set to the estimated contexts
+        of the gridded point sources without gridding, if any (see
+        contexts._count_nogrid); otherwise, if collapse_precision or
+        ps_grid_spacing is set and there is no estimate in the 'exact'
+        field, it is set to the contexts before collapse_precision,
+        counted for all source types.
         """
-        after, removed, gridded, saved = self.cfactor
+        after, removed, gridded, saved, nogrid = self.cfactor
         est = numpy.zeros(1, preclassical.CTX_EST)
         if 'nctxs' in self.datastore:
             # NB: the dataset can lack some fields, if it was stored by
@@ -1020,7 +1022,9 @@ class ClassicalCalculator(base.HazardCalculator):
         est['collapsed'] = int(after)
         est['separate'] = int(after + saved)
         oq = self.oqparam
-        if ((oq.collapse_precision or oq.ps_grid_spacing)
+        if nogrid:
+            est['exact'] = int(nogrid)
+        elif ((oq.collapse_precision or oq.ps_grid_spacing)
                 and est['exact'][0] == 0):
             est['exact'] = int(after + removed)
         self.datastore['nctxs'] = est
@@ -1032,7 +1036,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Warn when collapse_precision removes fewer than 10% of contexts.
         Log the reduction due to the variant sources optimization, if any.
         """
-        after, removed, gridded, saved = self.cfactor
+        after, removed, gridded, saved, _nogrid = self.cfactor
         before = after + removed
         collapse = before / after  # reduction by collapse_precision
         # NB: the estimates are zero when not computed, see CTX_EST

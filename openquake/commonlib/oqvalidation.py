@@ -1411,13 +1411,6 @@ class OqParam(valid.ParamSet):
         return retperiods(self.investigation_time, self.poes)
 
     @property
-    def no_pointsource_distance(self):
-        """
-        :returns: True if the pointsource_distance is 1000 km
-        """
-        return set(self.pointsource_distance.values()) == {1000}
-
-    @property
     def risk_files(self):
         try:
             return self._risk_files

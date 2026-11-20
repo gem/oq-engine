@@ -35,20 +35,26 @@ MINWEIGHT = 100
 
 
 @lru_cache(maxsize=256)
-def whole_fault_cells(edges_key, mesh_spacing):
+def whole_fault_mesh(edges_key, mesh_spacing, check=False):
     """
     :param edges_key: tuple of edges, each a tuple of (lon, lat, depth)
     :param mesh_spacing: the rupture mesh spacing in km
-    :returns: (cell_length, cell_area) arrays of the whole-fault mesh
+    :param check: if True, check the projected polygon (in preclassical)
+    :returns: the whole-fault mesh and its (cell_length, cell_area) arrays
 
-    Bounded LRU cache: sources sharing the same geometry (typically many
-    logic-tree branches) reuse the cell dimensions, avoiding the building
-    of the whole-fault mesh each time the ruptures are counted.
+    Bounded LRU cache: sources sharing the same geometry (the magnitude
+    splits of a source and the copies in many logic-tree branches) reuse
+    the mesh, which is expensive to build (0.5 s for int_1 in SAM, split
+    in 39 magnitudes); the cache is per process, so nothing is added to
+    the pickled sources.
     """
     edges = [Line([Point(*p) for p in edge]) for edge in edges_key]
-    mesh = ComplexFaultSurface.from_fault_data(edges, mesh_spacing).mesh
+    surface = ComplexFaultSurface.from_fault_data(edges, mesh_spacing)
+    if check:
+        surface.check_proj_polygon()
+    mesh = surface.mesh
     _center, cell_length, _width, cell_area = mesh.get_cell_dimensions()
-    return cell_length, cell_area
+    return mesh, cell_length, cell_area
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
@@ -218,21 +224,12 @@ class ComplexFaultSource(ParametricSeismicSource):
         eps_ar_upp = kwargs.get('eps_upp', None)
         num_bins = kwargs.get('num_bins', None)
 
-        if only_rates:  # counting: no need to build the whole mesh
-            edges_key = tuple(
-                tuple((p.longitude, p.latitude, p.depth)
-                      for p in edge.points)
-                for edge in self.edges)
-            cell_length, cell_area = whole_fault_cells(
-                edges_key, self.rupture_mesh_spacing)
-        else:
-            whole_fault_surface = ComplexFaultSurface.from_fault_data(
-                self.edges, self.rupture_mesh_spacing)
-            if step > 1:  # do the expensive check only in preclassical
-                whole_fault_surface.check_proj_polygon()
-            whole_fault_mesh = whole_fault_surface.mesh
-            _cell_center, cell_length, _cell_width, cell_area = (
-                whole_fault_mesh.get_cell_dimensions())
+        edges_key = tuple(
+            tuple((p.longitude, p.latitude, p.depth) for p in edge.points)
+            for edge in self.edges)
+        # do the expensive check of the polygon only in preclassical
+        wf_mesh, cell_length, cell_area = whole_fault_mesh(
+            edges_key, self.rupture_mesh_spacing, step > 1)
 
         # Get the magnitude scaling relationship
         msr = self.magnitude_scaling_relationship
@@ -266,13 +263,18 @@ class ComplexFaultSource(ParametricSeismicSource):
                 # Compute occurrence rate for each rupture
                 occurrence_rate = mag_occ_rate / len(rupture_slices) * wei
 
+                # the slices cover a 2D grid of positions (along strike and
+                # dip), so the subsampling is quadratic in the step, as for
+                # the simple faults; this matters in preclassical, see
+                # ContextMaker.estimate_weight
+                sampled = rupture_slices[::step ** 2]
                 if only_rates:
-                    rates.extend([occurrence_rate]* len(rupture_slices[::step]))
+                    rates.extend([occurrence_rate] * len(sampled))
                     continue
 
-                for rupture_slice in rupture_slices[::step]:
+                for rupture_slice in sampled:
                     # Create the surface of the rupture
-                    mesh = whole_fault_mesh[rupture_slice]
+                    mesh = wf_mesh[rupture_slice]
                     surface = ComplexFaultSurface(mesh)
 
                     # XXX: use surface centroid as rupture's hypocenter
