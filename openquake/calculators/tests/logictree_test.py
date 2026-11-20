@@ -532,19 +532,23 @@ hazard_uhs-std.csv
 
     def test_case_23(self):
         # arctic region (and IDL)
+        # few tasks, otherwise the 16 gsims are called on tiny contexts
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",  # slim.csv
-                               "hazard_map-mean-PGA.csv"], case_23.__file__)
+                               "hazard_map-mean-PGA.csv"], case_23.__file__,
+                              concurrent_tasks='2')
         nc = self.calc.datastore['source_info'][:]['num_ctxs'].sum()
 
         # running a calculation with more sites must give more contexts
-        self.run_calc(case_23.__file__, 'job.ini',
+        self.run_calc(case_23.__file__, 'job.ini', concurrent_tasks='2',
                       site_model_file='fat.csv slim.csv')
         nc2 = self.calc.datastore['source_info'][:]['num_ctxs'].sum()
         assert nc2 >= nc
 
     def test_case_23_bis(self):
         # correlated uncertainties
-        self.run_calc(case_23.__file__, 'correlated.ini')
+        # few tasks, otherwise the 16 gsims are called on tiny contexts
+        self.run_calc(case_23.__file__, 'correlated.ini',
+                      concurrent_tasks='2')
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-corr-PGA.csv', fname)
 
