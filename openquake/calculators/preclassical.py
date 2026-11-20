@@ -269,6 +269,21 @@ def count_psdist(srcs, sf, cmaker, monitor):
             'exact_ctxs': int(exact * sf.multiplier)}
 
 
+# split by magnitude the simple and complex faults with many ruptures, so
+# that their magnitudes are weighted in different filter_weight subtasks;
+# in CHN the weighting of HimalayanThrust (870_149 ruptures) took 383 s
+# in a single subtask, while the other subtasks took 30 s
+def _split_big_faults(srcs):
+    out = []
+    for src in srcs:
+        if (src.code in b'SC' and not src.bysrc_unc and
+                src.num_ruptures > MAX_NUM_RUPTURES):
+            out.extend(split_source(src))
+        else:
+            out.append(src)
+    return out
+
+
 def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
     """
     Split the sources if split_sources is true. If
@@ -293,6 +308,8 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
                 src.count_nogrid = True
     else:
         srcs = sources
+    if cmaker.split_sources:
+        srcs = _split_big_faults(srcs)
 
     Ns = cmaker.oq.concurrent_tasks // num_tasks + 2
     # produce subtasks of kind set_weight
