@@ -225,9 +225,9 @@ PLATFORM = {
     "win32": ("win64",),
 }
 
-# Keep this list in sync with openquake/server/standalone.py. The installer
+# Keep this list in sync with openquake/server/postinstall.py. The installer
 # must also work when downloaded on its own, before openquake is installed,
-# so it can not import the object from openquake/server/standalone.py
+# so it can not import the object from openquake/server/postinstall.py
 STANDALONE_APP_INFO = [
     # All engine Django app need oq-platform-standalone
     {"pkg": "oq-platform-standalone", "name": None, "ver": "~=2.19.1"},
@@ -663,6 +663,18 @@ def create_services(inst):
         os.chown(secret_file,
                  openquake_user.pw_uid,
                  openquake_user.pw_gid)
+        # create or upgrade the database before starting the WebUI: run by
+        # gunicorn with the documented unit, the ExecStartPre check
+        # (python -m openquake.server.postinstall) stops the service if the
+        # database is outdated, and run by `oq webui start` the WebUI would
+        # upgrade it at startup, at the same time as any `oq engine
+        # --upgrade-db` run after the installation; the upgrade is done as
+        # the user openquake, the owner of the database (runuser also sets
+        # USER and LOGNAME, so that the engine uses the database directly
+        # and not through the WebUI)
+        subprocess.check_call(
+            ["runuser", "-u", "openquake", "--",
+             oq_path(inst), "engine", "--upgrade-db"], cwd=inst.OQDATA)
         subprocess.check_call(["systemctl", "enable", "--now", service_name])
         subprocess.check_call(["systemctl", "start", service_name])
 
