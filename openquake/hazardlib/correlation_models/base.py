@@ -101,6 +101,9 @@ class CorrelationModel:
     """Common metadata and validation for all correlation models."""
 
     SUPPORTS_CIRCULANT_EMBEDDING = False
+    # Scalar work arrays per distance pair, in addition to covariance blocks.
+    # Models with smaller evaluators can give a tighter memory estimate.
+    COVARIANCE_EVALUATION_BUFFERS = 160
     DEFINED_FOR_RESIDUAL_COMPONENT = None
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
