@@ -900,11 +900,22 @@ def plot_assets_map(lons, lats, admin_boundaries, *,
     # as the number of locations grows, to limit overlaps, and the dark
     # edge is kept only while they are big enough not to hide the fill
     size = numpy.clip(120 / numpy.sqrt(len(lonlats)), 0.5, 12)
-    ax.scatter(lonlats[:, 0], lonlats[:, 1], marker='o', s=size,
-               color='#ff7f00', edgecolor='black',
-               linewidth=0.4 if size >= 4 else 0, alpha=0.9, zorder=5,
-               label='Asset locations')
+    points = ax.scatter(lonlats[:, 0], lonlats[:, 1], marker='o', s=size,
+                        color='#ff7f00', edgecolor='black',
+                        linewidth=0.4 if size >= 4 else 0, alpha=0.9,
+                        zorder=5, label='Asset locations')
     _add_map_decorations(fig, ax, elements, style, admin_boundaries.crs)
+    # once the viewport is set, keep only the visible locations (with a
+    # margin for the markers at the edges), since there can be hundreds
+    # of thousands of them; the marker size still depends on all of them
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    xpad, ypad = (xmax - xmin) * .02, (ymax - ymin) * .02
+    visible = ((lonlats[:, 0] >= xmin - xpad) &
+               (lonlats[:, 0] <= xmax + xpad) &
+               (lonlats[:, 1] >= ymin - ypad) &
+               (lonlats[:, 1] <= ymax + ypad))
+    points.set_offsets(lonlats[visible])
     # keep the marker in the legend readable, whatever the size in the map
     legend = ax.get_legend()
     for handle, text in zip(legend.legend_handles, legend.get_texts()):
