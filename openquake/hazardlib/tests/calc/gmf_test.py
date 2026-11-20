@@ -60,7 +60,6 @@ def build_computer(sites, factor=None, seed=7):
     computer.M = len(IMTS)
     computer.N = len(sites)
     computer.rng = numpy.random.default_rng(seed)
-    computer.within_dist = stats.truncnorm(-3, 3)
     computer.within_event_model = DuNing2021()
     computer.sites = sites
     computer.imts = IMTS
