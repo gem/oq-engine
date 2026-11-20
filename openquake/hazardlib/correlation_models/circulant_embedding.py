@@ -32,6 +32,7 @@ multidimensional Gaussian stochastic simulations. Water Resources Research,
 """
 
 from dataclasses import dataclass
+from math import prod
 
 import numpy
 from openquake.baselib.geolibs import pyproj
@@ -39,11 +40,15 @@ from scipy.fft import next_fast_len
 from scipy.spatial import cKDTree
 
 
+# Limit on enclosing grid cells per occupied site; inf disables the limit.
 MAX_GRID_CELL_RATIO = 4
+# Grid-fit and cell-snapping tolerance, as a fraction of grid spacing.
 GRID_TOLERANCE = 0.01
-
-
+# Maximum Fourier modes factored in one eigensolver chunk.
+_SPECTRAL_CHUNK_CELLS = 2**16
+# Relative tolerance for checking spectral Hermitian symmetry.
 EPS = 1E-10
+
 
 def _pair(value, name, cast):
     """Return a validated pair of grid parameters."""
@@ -339,36 +344,46 @@ def _covariance_lags(model, imts, shape, spacing, component, context):
         1, 0, 2).reshape(*shape, num_imts, num_imts)
 
 
+def _spectral_blocks(spectrum):
+    # Slice both spatial axes so even a very wide grid stays within the
+    # eigensolver's temporary-array limit. Each slice is a view.
+    rows = max(1, _SPECTRAL_CHUNK_CELLS // spectrum.shape[1])
+    for y in range(0, len(spectrum), rows):
+        for x in range(0, spectrum.shape[1], _SPECTRAL_CHUNK_CELLS):
+            yield spectrum[y:y + rows, x:x + _SPECTRAL_CHUNK_CELLS]
+
+
 def _spectral_root(covariance_lags):
-    """Return the Hermitian square root at every Fourier mode."""
+    # Reuse the spectrum for its square root. A full set of eigenvectors
+    # and matrix-product temporaries can otherwise exceed the factor's size.
     # A block-circulant covariance is diagonal in space after the FFT. What
     # remains at each frequency is only a small cross-IMT covariance matrix.
     spectrum = numpy.fft.rfft2(covariance_lags, axes=(0, 1))
-    transpose = spectrum.swapaxes(-1, -2).conj()
-    scale = max(1.0, float(numpy.abs(spectrum).max()))
+    scale = max(1.0, max(float(numpy.abs(block).max())
+                         for block in _spectral_blocks(spectrum)))
     tolerance = 100 * numpy.finfo(float).eps * scale
     # Check before averaging so a genuinely asymmetric model is not silently
     # hidden as numerical roundoff.
-    if not numpy.allclose(spectrum, transpose, rtol=EPS,
-                          atol=tolerance):
-        raise ValueError(
-            'The embedded spectral covariance is not Hermitian')
-    spectrum = (spectrum + transpose) / 2
-    eigenvalues, eigenvectors = numpy.linalg.eigh(spectrum)
-    minimum = float(eigenvalues.min())
     # FFT roundoff accumulates with the number of embedded cells. Only values
     # within that scale-aware tolerance may be clipped; a material negative
     # value requires a larger embedding.
-    tolerance *= numpy.prod(covariance_lags.shape[:2])
-    if minimum < -tolerance:
-        return minimum, None
-    eigenvalues = numpy.maximum(eigenvalues, 0)
+    eigen_tolerance = tolerance * prod(covariance_lags.shape[:2])
+    minimum = numpy.inf
     # Form V sqrt(Lambda) V* once so every realization needs only one small
     # matrix-vector multiplication at each frequency.
-    scaled_vectors = (
-        eigenvectors * numpy.sqrt(eigenvalues)[..., numpy.newaxis, :])
-    root = scaled_vectors @ eigenvectors.swapaxes(-1, -2).conj()
-    return minimum, root
+    for block in _spectral_blocks(spectrum):
+        transpose = block.swapaxes(-1, -2).conj()
+        if not numpy.allclose(block, transpose, rtol=EPS, atol=tolerance):
+            raise ValueError('The embedded spectral covariance is not '
+                             'Hermitian')
+        eigenvalues, eigenvectors = numpy.linalg.eigh((block + transpose) / 2)
+        minimum = min(minimum, float(eigenvalues.min()))
+        if minimum < -eigen_tolerance:
+            return minimum, None
+        scaled = eigenvectors * numpy.sqrt(
+            eigenvalues.clip(min=0))[..., numpy.newaxis, :]
+        block[:] = scaled @ eigenvectors.swapaxes(-1, -2).conj()
+    return minimum, spectrum
 
 
 @dataclass(frozen=True)
@@ -407,6 +422,7 @@ class CirculantEmbeddingFactor:
             covariance_lags = _covariance_lags(
                 model, imts, embedded_shape, spacing, component, context)
             minimum, root = _spectral_root(covariance_lags)
+            del covariance_lags
             if root is not None:
                 return cls(
                     root, grid_shape, embedded_shape, len(imts), indices,
