@@ -89,9 +89,63 @@ def build_raytrace_grid(cell_ids, mean_vals):
             for cell, value in zip(cell_ids, mean_vals)}
 
 
+def regional_magnitude_basis(magnitudes, knots):
+    """Continuous three-segment magnitude basis, constant outside support."""
+    lower, pivot_low, pivot_high, upper = knots
+    magnitudes = np.asarray(magnitudes, dtype=float)
+    if not np.all(np.isfinite(magnitudes)):
+        raise ValueError("Regional magnitude correction requires finite magnitudes")
+    return np.stack((
+        np.clip(magnitudes, lower, pivot_low) - pivot_low,
+        np.clip(magnitudes, pivot_low, pivot_high) - pivot_low,
+        np.clip(magnitudes, pivot_high, upper) - pivot_high), axis=-1)
+
+
+def _load_magnitude_adjustment(grp, term, location, cell_ids, mean_vals):
+    """Validate optional global regional magnitude metadata once on load."""
+    names = ("magnitude_knots", "magnitude_coefficients",
+             "magnitude_mean_covariance")
+    present = [name in grp for name in names]
+    has_model = "magnitude_model" in grp.attrs
+    if not any(present) and not has_model:
+        return None
+    if not all(present):
+        raise ValueError(
+            f"Magnitude metadata must provide all of {names} in '{grp.name}'")
+    if grp.attrs.get("magnitude_model") != "bounded_piecewise_linear":
+        raise ValueError(
+            "Magnitude metadata requires magnitude_model='bounded_piecewise_linear'")
+    if term != "regional_adj" or location != "hypo":
+        raise ValueError(
+            "Magnitude metadata is supported only for hypo-based regional_adj")
+    if (len(cell_ids) != len(h3.get_res0_cells())
+            or set(cell_ids) != set(h3.get_res0_cells())
+            or not np.all(np.isfinite(mean_vals))
+            or not np.all(mean_vals == mean_vals[0])):
+        raise ValueError(
+            "Magnitude metadata requires a uniform global resolution-0 regional mean")
+    knots, coefficients, covariance = (np.asarray(grp[name][:], dtype=float)
+                                        for name in names)
+    if (knots.shape != (4,) or coefficients.shape != (3,)
+            or covariance.shape != (4, 4)
+            or not all(np.all(np.isfinite(value))
+                       for value in (knots, coefficients, covariance))
+            or not np.all(np.diff(knots) > 0)):
+        raise ValueError(
+            f"Invalid regional magnitude metadata shapes or values in '{grp.name}'")
+    scale = max(1.0, float(np.max(np.abs(covariance))))
+    if not np.allclose(covariance, covariance.T, rtol=0, atol=scale * 1e-10):
+        raise ValueError("Regional magnitude covariance must be symmetric")
+    covariance = (covariance + covariance.T) * .5
+    if np.linalg.eigvalsh(covariance).min() < -scale * 1e-10:
+        raise ValueError("Regional magnitude covariance must be positive semidefinite")
+    return {"knots": knots, "coefficients": coefficients,
+            "covariance": covariance}
+
+
 def load_residual_grids(hdf5_path):
     """
-    Load the hdf5 residual grids into a dict with seven keys:
+    Load the hdf5 residual grids and optional regional magnitude metadata.
 
     * grids: nested dict of
       {imt_str: {term: {"mean":    {cell_id: float},
@@ -143,6 +197,10 @@ def load_residual_grids(hdf5_path):
       - sig_comp_modified (required when sig_adjustment is not "none"):
         which sigma component to modify - "tau", "phi", or "sig".
 
+    * magnitude_adjustments: optional per-IMT piecewise coefficients and joint
+      covariance for [regional intercept, three magnitude slopes]. These are
+      stored once, independently from the H3 cell lookup dictionaries.
+
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.
     """
@@ -150,6 +208,7 @@ def load_residual_grids(hdf5_path):
     raytrace_grids = {}
     raytrace_se_grids = {}
     sig_scalars = {}
+    magnitude_adjustments = {}
     resolutions = set()
     with h5py.File(hdf5_path, "r") as hf:
         res_terms = json.loads(hf.attrs["res_terms"])
@@ -172,6 +231,10 @@ def load_residual_grids(hdf5_path):
                 # Collect h3 resolutions for this term/IMT
                 cell_ids = grp["cell_id"][:].astype(str)
                 resolutions.update(h3.get_resolution(c) for c in cell_ids)
+                magnitude = _load_magnitude_adjustment(
+                    grp, term, location, cell_ids, mean_vals)
+                if magnitude is not None:
+                    magnitude_adjustments[imt_str] = magnitude
 
                 # If path-based build the raytrace lookup for this term/IMT
                 # (per-IMT grid in case the grid varies with IMT as well)
@@ -212,6 +275,7 @@ def load_residual_grids(hdf5_path):
             "raytrace_se_grids": raytrace_se_grids,
             "raytrace_masks": {}, # Filled on first use by _resolve_adjs
             "sig_scalars": sig_scalars,
+            "magnitude_adjustments": magnitude_adjustments,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
 
@@ -564,7 +628,18 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
         return {}
     lats, lons = ((ctx.hypo_lat, ctx.hypo_lon) if cfg["location"] == "hypo"
                   else (ctx.lat, ctx.lon))
-    return grid_lookup(entry, lats, lons, grid_data["h3_res"])
+    values = grid_lookup(entry, lats, lons, grid_data["h3_res"])
+    magnitude = grid_data.get("magnitude_adjustments", {}).get(imt)
+    if term == "regional_adj" and magnitude is not None:
+        basis = regional_magnitude_basis(ctx.mag, magnitude["knots"])
+        values["mean"] += basis @ magnitude["coefficients"]
+        design = np.column_stack((np.ones(len(lats)), basis))
+        variance = np.einsum("ni,ij,nj->n", design,
+                             magnitude["covariance"], design)
+        # Replace the scalar intercept SE with the joint mean uncertainty;
+        # adding both would count intercept uncertainty twice.
+        values["mean_se"] = np.sqrt(np.maximum(variance, 0.0))
+    return values
 
 
 class GridAdjustedGMPE(GMPE):
@@ -738,6 +813,9 @@ class GridAdjustedGMPE(GMPE):
         if locations & {"site", "path"}:
             self.REQUIRES_SITES_PARAMETERS = frozenset(
                 self.REQUIRES_SITES_PARAMETERS | {'lat', 'lon'})
+        if self.grid_data.get("magnitude_adjustments"):
+            self.REQUIRES_RUPTURE_PARAMETERS = frozenset(
+                self.REQUIRES_RUPTURE_PARAMETERS | {'mag'})
 
         # Ensure inter/intra-event std devs are computed by the base GSIM
         if any(cfg.get("sig_adjustment", "none") != "none"
