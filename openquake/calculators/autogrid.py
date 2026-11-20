@@ -68,7 +68,7 @@ MAX_PAIRS = 10_000_000  # target pairs per calibration source batch
 # minimum weight of a calibration subtask (see _grid_and_weight), a few
 # seconds (in AUS a subtask processes about 4E5 weight units per second);
 # without it a small calibration would be split in thousands of tiny
-# subtasks, since the number of blocks depends on the number of cores
+# subtasks, since the number of blocks depends on concurrent_tasks
 MIN_WEIGHT = 1_000_000
 NSITES = 300  # size of the sample of sites
 MAXDIST = 300.  # in km, maximum distance used in the calibration
@@ -202,7 +202,7 @@ def _grid_and_weight(points, sites, maxdist, psgs):
     return [(src, src.num_ruptures * (n + 1)) for src, n in zip(srcs, nsites)]
 
 
-def calibrate_group(sg, sites, cmaker, keys, nblocks, monitor):
+def calibrate_group(sg, sites, cmaker, keys, monitor):
     """
     Prepare the calibration points of a source group, sample them and
     grid them with each spacing in the keys, yielding a calibration
@@ -212,7 +212,6 @@ def calibrate_group(sg, sites, cmaker, keys, nblocks, monitor):
     :param sites: the sample of sites used in the calibration
     :param cmaker: the calibration ContextMaker of the group
     :param keys: pairs (ps_grid_spacing, pointsource_distance)
-    :param nblocks: number of blocks for each spacing (4x for the reference)
     :param monitor: a Monitor instance
     """
     maxdist = cmaker.maximum_distance.y[-1]
@@ -222,15 +221,17 @@ def calibrate_group(sg, sites, cmaker, keys, nblocks, monitor):
     # calibrate on a random third of the point sources
     # an empty sample is replaced by the first source
     points = random_filter(points, 1 / 3) or points[:1]
+    # each spacing is split in up to concurrent_tasks / 2 blocks with
+    # weight at least MIN_WEIGHT, so that the subtasks are small also
+    # when a few groups contain most of the points
+    nblocks = max(cmaker.oq.concurrent_tasks // 2, 1)
     for psgs in sorted({psgs for psgs, _psd in keys}):
         # the distances for the same spacing are computed in the same
         # subtask, sharing the contexts, so that trying all the distances
-        # costs little more than one; the reference is the most expensive
-        # part, so it is split in more blocks to avoid slow subtasks
+        # costs little more than one
         ks = sorted(key for key in keys if key[0] == psgs)
         pairs = _grid_and_weight(points, sites, maxdist, psgs)
-        n = nblocks * (4 if psgs == REFERENCE[0] else 1)
-        maxweight = max(sum(w for _, w in pairs) / n, MIN_WEIGHT)
+        maxweight = max(sum(w for _, w in pairs) / nblocks, MIN_WEIGHT)
         for blk in block_splitter(pairs, maxweight, lambda p: p[1]):
             yield calibration, WeightedSequence(blk), sites, cmaker, ks
 
@@ -303,21 +304,12 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
 def run_calibration(keys, sgs, sites, cmakers, h5):
     """
     Run the calibration for the given keys (ps_grid_spacing,
-    pointsource_distance), with a task per source group, the heaviest
-    first, generating the calibration subtasks (see calibrate_group).
+    pointsource_distance), with a task per source group generating the
+    calibration subtasks (see calibrate_group).
 
     :returns: a dictionary key -> AccumDict(rates, weight)
     """
-    # the number of blocks of a group is proportional to the number of
-    # ruptures of its point-like sources
-    nrups = {grp_id: sum(src.num_ruptures for src in sg)
-             for grp_id, sg in sgs.items()}
-    tot = sum(nrups.values())
-    num_tasks = parallel.num_cores * 2
-    args = [(sg, sites, cmakers[grp_id], keys,
-             max(1, round(num_tasks * nrups[grp_id] / tot)))
-            for grp_id, sg in sgs.items()]
-    args = parallel.heaviest_first(args, list(nrups.values()))
+    args = [(sg, sites, cmakers[grp_id], keys) for grp_id, sg in sgs.items()]
     return parallel.Starmap(calibrate_group, args, h5=h5).reduce()
 
 
