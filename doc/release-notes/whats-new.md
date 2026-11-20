@@ -288,6 +288,12 @@ name. The new or newly enabled models include:
 - Abrahamson et al. (2014) between-event and within-event cross-IMT
   correlation for PGA-SA-PGV.
 
+[Savvinos Aristeidou](https://github.com/Savvinos-Aristeidou) contributed
+the Aristeidou et al. (2025) cross-IMT correlation model for total
+residuals, based on artificial neural networks. It complements the
+Aristeidou et al. (2024) ground-motion model and supports SA, Sa_avg2,
+Sa_avg3, FIV3, PGA, PGV, RSD575 and RSD595.
+
 The conditioned GMF calculator now supports memory-efficient circulant
 embedding on large regular grids, local Kriging for off-grid stations,
 and scalable station-conditioned correlated GMF calculations.
