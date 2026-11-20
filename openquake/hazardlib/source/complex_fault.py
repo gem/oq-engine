@@ -266,11 +266,16 @@ class ComplexFaultSource(ParametricSeismicSource):
                 # Compute occurrence rate for each rupture
                 occurrence_rate = mag_occ_rate / len(rupture_slices) * wei
 
+                # the slices cover a 2D grid of positions (along strike and
+                # dip), so the subsampling is quadratic in the step, as for
+                # the simple faults; this matters in preclassical, see
+                # ContextMaker.estimate_weight
+                sampled = rupture_slices[::step ** 2]
                 if only_rates:
-                    rates.extend([occurrence_rate]* len(rupture_slices[::step]))
+                    rates.extend([occurrence_rate] * len(sampled))
                     continue
 
-                for rupture_slice in rupture_slices[::step]:
+                for rupture_slice in sampled:
                     # Create the surface of the rupture
                     mesh = whole_fault_mesh[rupture_slice]
                     surface = ComplexFaultSurface(mesh)
