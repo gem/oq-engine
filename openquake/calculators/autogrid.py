@@ -144,7 +144,7 @@ def _get_margin(sg, maxdist):
 # point sources of the composite source model are not modified; a source
 # with a single point is not split by split_source, so it is not gridded
 # by the engine and it is ignored, since it gives no gridding error
-def prepare_points(sg, sites, maxdist, monitor):
+def prepare_points(sg, sites, maxdist):
     """
     Return the calibration points of a source group, i.e. its point
     sources (including the ones obtained by splitting the area and
@@ -154,8 +154,7 @@ def prepare_points(sg, sites, maxdist, monitor):
     :param sg: a source group
     :param sites: the sample of sites used in the calibration
     :param maxdist: the maximum distance of the group, in km
-    :param monitor: a Monitor instance
-    :returns: a dictionary grp_id -> list of point sources
+    :returns: a list of point sources
     """
     dist = maxdist + _get_margin(sg, maxdist)
     points = []
@@ -173,51 +172,52 @@ def prepare_points(sg, sites, maxdist, monitor):
             [(p.location.x, p.location.y) for p in points], sort=False)
         close = sites.count_close(mesh, dist)
         points = [p for p, c in zip(points, close) if c]
-    return {sg.sources[0].grp_id: points}
+    return points
 
 
-def grid_and_weight(points, sites, maxdist, psgs, monitor):
-    """
-    Grid the point sources of a group and weight the gridded sources, to
-    balance the calibration tasks (see _get_blocks).
-
-    :param points: the point sources of a group, with the same grp_id
-    :param sites: the sample of sites used in the calibration
-    :param maxdist: the maximum distance of the group, in km
-    :param psgs: the ps_grid_spacing in km (0 means no gridding)
-    :param monitor: a Monitor instance
-    :returns: a dictionary grp_id -> list of pairs (source, weight), with
-        weight = number of ruptures * (number of sites within maxdist + 1)
-    """
-    grp_id = points[0].grp_id
+# grid the point sources of a group with the given spacing (0 means no
+# gridding) and weight the gridded sources, to balance the calibration
+# subtasks, with weight = number of ruptures * (number of sites within
+# the maximum distance from the location of the source + 1)
+def _grid_and_weight(points, sites, maxdist, psgs):
     srcs = grid_point_sources(points, psgs)
     mesh = Mesh.from_coords(
         [(src.location.x, src.location.y) for src in srcs], sort=False)
     nsites = sites.count_close(mesh, maxdist)
-    return {grp_id: [(src, src.num_ruptures * (n + 1))
-                     for src, n in zip(srcs, nsites)]}
+    return [(src, src.num_ruptures * (n + 1)) for src, n in zip(srcs, nsites)]
 
 
-# split the sources of the groups, gridded with the given spacing, in
-# WeightedSequences of sources; the blocks are balanced by number
-# of ruptures times number of sites within the maximum distance from the
-# location of the source
-def _get_blocks(groups, sites, cmakers, psgs, num_tasks, h5=None):
-    args = [(points, sites, cmakers[grp_id].maximum_distance.y[-1], psgs)
-            for grp_id, points in groups.items()]
-    if psgs:
-        bygroup = parallel.Starmap(grid_and_weight, args, h5=h5).reduce()
-    else:
-        # No gridding: only vectorized site counts are needed. Reuse the
-        # points instead of pickling and duplicating every source object.
-        bygroup = {}
-        for arg in args:
-            bygroup.update(grid_and_weight(*arg, monitor=None))
-    # Keep the original group order, independently of task completion.
-    pairs = [pair for grp_id in groups for pair in bygroup[grp_id]]
-    maxweight = sum(w for _, w in pairs) / num_tasks
-    return [WeightedSequence(blk) for blk in block_splitter(
-        pairs, maxweight, lambda p: p[1], lambda p: p[0].grp_id)]
+def calibrate_group(sg, sites, cmaker, keys, nblocks, monitor):
+    """
+    Prepare the calibration points of a source group, sample them and
+    grid them with each spacing in the keys, yielding a calibration
+    subtask for each block of gridded sources.
+
+    :param sg: a source group
+    :param sites: the sample of sites used in the calibration
+    :param cmaker: the calibration ContextMaker of the group
+    :param keys: pairs (ps_grid_spacing, pointsource_distance)
+    :param nblocks: number of blocks for each spacing (4x for the reference)
+    :param monitor: a Monitor instance
+    """
+    maxdist = cmaker.maximum_distance.y[-1]
+    points = prepare_points(sg, sites, maxdist)
+    if not points:
+        return
+    # calibrate on a random third of the point sources
+    # an empty sample is replaced by the first source
+    points = random_filter(points, 1 / 3) or points[:1]
+    for psgs in sorted({psgs for psgs, _psd in keys}):
+        # the distances for the same spacing are computed in the same
+        # subtask, sharing the contexts, so that trying all the distances
+        # costs little more than one; the reference is the most expensive
+        # part, so it is split in more blocks to avoid slow subtasks
+        ks = sorted(key for key in keys if key[0] == psgs)
+        pairs = _grid_and_weight(points, sites, maxdist, psgs)
+        n = nblocks * (4 if psgs == REFERENCE[0] else 1)
+        maxweight = sum(w for _, w in pairs) / n
+        for blk in block_splitter(pairs, maxweight, lambda p: p[1]):
+            yield calibration, WeightedSequence(blk), sites, cmaker, ks
 
 
 # the IMTs with the periods closest to PERIODS, or all the IMTs if there
@@ -273,55 +273,41 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     imts = _calib_imts(oq)
     cmakers = {grp_id: _calib_cmaker(cmakers[grp_id], imts)
                for grp_id in sgs}
-    maxdist = {grp_id: cmakers[grp_id].maximum_distance.y[-1]
-               for grp_id in sgs}
     # a complete SiteCollection, so that the tasks receive only the sample
     sites = SiteCollection.from_(sitecol.reduce(NSITES).array)
     sites.make_complete()
-    args = [(sg, sites, maxdist[grp_id]) for grp_id, sg in sgs.items()]
-    prepared = parallel.Starmap(prepare_points, args, h5=h5).reduce()
-    groups = {grp_id: prepared[grp_id] for grp_id in sgs if prepared[grp_id]}
-    # calibrate on a random third of the point sources
-    # an empty sample is replaced by the first source
-    groups = {g: random_filter(pts, 1 / 3) or pts[:1]
-              for g, pts in groups.items()}
-    if not groups:
-        return None
-    return select_candidate(
-        groups, cmakers, sites, oq, spacings, distances, h5)
+    return select_candidate(sgs, cmakers, sites, oq, spacings, distances, h5)
 
 
-def run_calibration(keys, groups, sites, cmakers, h5):
+def run_calibration(keys, sgs, sites, cmakers, h5):
     """
-    Run the calibration tasks for the given keys (ps_grid_spacing,
-    pointsource_distance), the heaviest first.
-
-    The distances for the same spacing are computed in the same task,
-    sharing the contexts, so that trying all the distances costs little
-    more than one; the reference is the most expensive part, so it is
-    split in more blocks to avoid slow tasks.
+    Run the calibration for the given keys (ps_grid_spacing,
+    pointsource_distance), with a task per source group, the heaviest
+    first, generating the calibration subtasks (see calibrate_group).
 
     :returns: a dictionary key -> AccumDict(rates, weight)
     """
+    # the number of blocks of a group is proportional to the number of
+    # ruptures of its point-like sources
+    nrups = {grp_id: sum(src.num_ruptures for src in sg if src.code in b'AMP')
+             for grp_id, sg in sgs.items()}
+    tot = sum(nrups.values())
     num_tasks = parallel.num_cores * 2
-    args = []
-    for psgs in sorted({psgs for psgs, _psd in keys}):
-        ks = sorted(key for key in keys if key[0] == psgs)
-        ntasks = num_tasks * (4 if psgs == REFERENCE[0] else 1)
-        for blk in _get_blocks(groups, sites, cmakers, psgs, ntasks, h5):
-            args.append((blk, sites, cmakers[blk[0].grp_id], ks))
-    weights = [blk.weight * len(ks) for blk, _, _, ks in args]
-    args = parallel.heaviest_first(args, weights)
-    return parallel.Starmap(calibration, args, h5=h5).reduce()
+    args = [(sg, sites, cmakers[grp_id], keys,
+             max(1, round(num_tasks * nrups[grp_id] / tot)))
+            for grp_id, sg in sgs.items()]
+    args = parallel.heaviest_first(args, list(nrups.values()))
+    return parallel.Starmap(calibrate_group, args, h5=h5).reduce()
 
 
-def select_candidate(groups, cmakers, sites, oq, spacings, distances, h5):
+def select_candidate(sgs, cmakers, sites, oq, spacings, distances, h5):
     """
     Compare the candidates on the prepared sample of sites and return the
     best parameters; the candidates are stored in the datastore as
     `calibration`, if h5 is given.
 
-    :returns: a pair (ps_grid_spacing, pointsource_distance)
+    :returns: a pair (ps_grid_spacing, pointsource_distance) or None if
+              there are no point sources close to the sample of sites
     """
     imtls = next(iter(cmakers.values())).imtls
     logging.info('Calibrating ps_grid_spacing among %s and '
@@ -337,8 +323,10 @@ def select_candidate(groups, cmakers, sites, oq, spacings, distances, h5):
     for i, psgs in enumerate(sorted(spacings, reverse=True)):
         # the reference is computed in the first round
         keys = [(psgs, psd) for psd in distances] + [REFERENCE] * (i == 0)
-        results = run_calibration(keys, groups, sites, cmakers, h5)
+        results = run_calibration(keys, sgs, sites, cmakers, h5)
         if i == 0:
+            if REFERENCE not in results:  # no subtasks were generated
+                return None
             ref = get_hmaps(results.pop(REFERENCE)['rates'], imtls, oq)
         rows.extend(_get_rows(results, ref, imtls, oq))
         if any(row.p99_norm <= 1. for row in rows):

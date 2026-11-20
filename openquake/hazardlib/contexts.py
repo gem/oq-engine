@@ -278,6 +278,23 @@ def simple_cmaker(gsims, imts, **params):
     return ContextMaker('*', gsims, dic)
 
 
+# estimate of the contexts that the point sources underlying a gridded
+# source would generate without gridding and without the pointsource
+# distance approximation: for each magnitude, nphc contexts for each site
+# within the magnitude distance, being nphc the number of nodal planes
+# times the number of hypocenters; the distances are approximated with the
+# distances `cdist` from the location of the gridded source
+def _count_nogrid(src, cdist, magdist):
+    cdist = numpy.sort(cdist)
+    nctxs = 0
+    for psrc in getattr(src, 'pointsources', [src]):
+        mdists = [magdist[mag] for mag, _rate in
+                  psrc.get_annual_occurrence_rates() if mag in magdist]
+        nctxs += psrc.count_nphc() * numpy.searchsorted(
+            cdist, mdists, 'right').sum()
+    return nctxs
+
+
 # generator of tuples (ks, rup_index, mag, magdist, planars, sites), being
 # ks the indices of the pointsource distances (sorted) for which the
 # planars must be used; called first in preclassical with a reduced sitecol
@@ -308,6 +325,8 @@ def _sextets(cmaker, src, sitecol, psdists):
     sites = sitecol.filter(mask)
     if sites is None:
         return
+    if getattr(src, 'count_nogrid', False):  # see classical.store_grid
+        cmaker.cfactor[4] += _count_nogrid(src, cdist[mask], valid)
 
     minmag = cmaker.maximum_distance.x[0]
     maxmag = cmaker.maximum_distance.x[-1]
@@ -881,8 +900,9 @@ class ContextMaker(object):
         # [2] contexts before collapse_precision for the gridding baseline,
         # [3] contexts saved by the variant sources optimization, i.e. the
         # extra contexts the variants would generate if computed separately
-        # (see rmap_maker.update_variants)
-        self.cfactor = numpy.zeros(4)
+        # (see rmap_maker.update_variants), [4] estimated contexts of the
+        # gridded point sources without gridding (see _count_nogrid)
+        self.cfactor = numpy.zeros(5)
 
     def copy(self, **kw):
         """

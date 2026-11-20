@@ -21,7 +21,7 @@ import logging
 import operator
 import psutil
 import numpy
-from openquake.baselib import general, parallel, hdf5, config
+from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo, valid
 from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.rmap_maker import get_cmakers, read_unc_ts_sets
@@ -47,13 +47,14 @@ TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
 # context estimates stored in the datastore as dataset 'nctxs'
-# NB: 'psd100' is the number of contexts without gridding with the
-# pointsource_distance of config.performance (or with the one of the user,
-# when not gridding, see count_psdist), 'gridded' is the number of contexts
-# of the gridded point sources before collapse_precision, 'collapsed' the
-# number of contexts after collapse_precision and 'separate' the number of
-# contexts without the variant sources optimization, i.e. if the variants
-# of the sources were computed separately
+# NB: 'exact' is the number of contexts with PSD_EXACT (when gridding,
+# of the point sources without gridding, see contexts._count_nogrid),
+# 'psd100' the number of contexts with the pointsource_distance of the
+# user, when not gridding (see count_psdist), 'gridded' is the number of
+# contexts of the gridded point sources before collapse_precision,
+# 'collapsed' the number of contexts after collapse_precision and
+# 'separate' the number of contexts without the variant sources
+# optimization, i.e. if the variants of the sources were computed separately
 CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
                        ('gridded', numpy.int64), ('collapsed', numpy.int64),
                        ('separate', numpy.int64)])
@@ -253,24 +254,6 @@ def _warn_ungridded(src_groups, ps_grid_spacing):
             (' ...' if len(ids) > 10 else ''))
 
 
-def count_nogrid(srcs, sf, cmaker, monitor):
-    """
-    Estimate the contexts that the point sources would generate without
-    gridding, with config.performance.pointsource_distance and with
-    PSD_EXACT, see contexts.estimate_nctxs
-
-    :returns: a dictionary with the estimates under the keys 'psdist_ctxs'
-              and 'exact_ctxs'
-    """
-    exact = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
-                           srcs, sf.sitecol)
-    psd = float(config.performance.pointsource_distance)
-    psdist = estimate_nctxs(cmaker.copy(pointsource_distance=psd),
-                            srcs, sf.sitecol)
-    return {'psdist_ctxs': int(psdist * sf.multiplier),
-            'exact_ctxs': int(exact * sf.multiplier)}
-
-
 def count_psdist(srcs, sf, cmaker, monitor):
     """
     Estimate the contexts that the point sources would generate with the
@@ -301,12 +284,10 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
                 srcs.extend(split_source(src))
             else:
                 srcs.append(src)
-        # estimate the contexts before gridding, to log the reduction
-        pts = [src for src in srcs if hasattr(src, 'location')]
-        if pts:
-            yield count_nogrid, pts, sf, cmaker
         srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
-        # Track the same point sources as the no-gridding estimate.
+        # the contexts of the gridded point sources are counted in
+        # classical, together with an estimate of the contexts without
+        # gridding, to log the reduction (see contexts._count_nogrid)
         for src in srcs:
             if hasattr(src, 'location'):
                 src.count_nogrid = True
