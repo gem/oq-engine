@@ -235,12 +235,24 @@ condition: the physical displacement associated with a row/column offset can
 vary with location. Using geographic pairwise distances instead would in
 general lose the repeated covariance structure required by this FFT method.
 
-The OpenQuake engine therefore uses one local transverse Mercator projection
-for the whole grid and evaluates covariance lags using Euclidean distances in
-that plane. New grids use a projection centred on their longitude extent.
-The selected projection is reused for station interpolation; geographic sites
-are not moved or resampled. An explicit CRS passed to
-``RegularGridLayout.from_sites`` is always respected.
+CE uses one projected coordinate system for the whole grid and measures
+covariance distances in that plane. New grids use a local transverse Mercator
+projection centred on their longitude extent. ``oq prepare_site_model`` saves
+this projection as ``grid_crs`` in the site-model CSV comment. Reading that
+file restores the projection so changes to the footprint do not make the
+engine choose a different one.
+
+Site collections keep the projection, spacing and origin through filtering,
+pickling and HDF5 storage. The engine records the full lattice before exposure
+association or site filtering removes the neighbours needed to infer its
+spacing. Station conditioning reuses this projection even after off-grid
+stations are added. Site coordinates and GMM parameters stay the same.
+
+For older files without grid metadata, the engine tries local transverse
+Mercator and nearby UTM zones, using the existing lattice-fit tolerance for
+each candidate. An explicit CRS passed to ``RegularGridLayout.from_sites``
+takes precedence over the recorded projection. Grid metadata is optional and
+does not require a new job parameter or datastore dataset.
 
 Other suitable planar projections can also be used for circulant embedding.
 A valid embedding reproduces the covariance model evaluated using distances

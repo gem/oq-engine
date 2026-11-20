@@ -368,3 +368,68 @@ class SitePickleTestCase(unittest.TestCase):
         site1 = Site(point, 760.0, 100.0, 5.0)
         site2 = pickle.loads(pickle.dumps(site1))
         self.assertEqual(site1, site2)
+
+
+class GridMetadataTestCase(unittest.TestCase):
+    """Keep lattice geometry when sites are filtered, stored or extended."""
+
+    def setUp(self):
+        self.sites = SiteCollection.from_points(
+            [-123., -122.99, -122.98, -122.97], [38., 38., 38.01, 38.01])
+        self.sites.grid_crs = 'EPSG:32610'
+        self.sites.grid_spacing = (1., 1.)
+        self.sites.grid_origin = (4_200_000., 500_000.)
+
+    def _assert_metadata(self, sites):
+        # HDF5 reads tuple attributes as arrays, so compare their values.
+        self.assertEqual(sites.grid_crs, self.sites.grid_crs)
+        assert_eq(sites.grid_spacing, self.sites.grid_spacing)
+        assert_eq(sites.grid_origin, self.sites.grid_origin)
+
+    def test_filtered_pickle(self):
+        original = self.sites.array.copy()
+        selected = self.sites.filtered([3, 0])
+        restored = pickle.loads(pickle.dumps(selected))
+        self._assert_metadata(selected)
+        self._assert_metadata(restored)
+        self._assert_metadata(restored.complete)
+        assert_eq(restored.array, original[[3, 0]])
+        assert_eq(restored.complete.array, original)
+        assert_eq(self.sites.array, original)
+
+    def test_hdf5_roundtrip(self):
+        selected = self.sites.filtered([3, 0])
+        with tempfile.TemporaryDirectory() as directory:
+            with hdf5.File(os.path.join(directory, 'sites.hdf5'), 'w') as f:
+                f['sitecol'] = selected
+                restored = f['sitecol']
+                self._assert_metadata(restored)
+                assert_eq(restored.array, selected.array)
+                # Grid information belongs in attributes, not site columns.
+                self.assertEqual(set(f.getitem('sitecol')),
+                                 set(selected.names))
+
+    def test_optional_hdf5_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with hdf5.File(os.path.join(directory, 'sites.hdf5'), 'w') as f:
+                self.sites.grid_origin = None
+                f['sitecol'] = self.sites
+                self.assertIsNone(f['sitecol'].grid_origin)
+                for name in ('grid_crs', 'grid_spacing'):
+                    del f.getitem('sitecol').attrs[name]
+                # This now has the same metadata as an older datastore.
+                restored = f['sitecol']
+                self.assertIsNone(restored.grid_crs)
+                self.assertIsNone(restored.grid_spacing)
+                self.assertIsNone(restored.grid_origin)
+                assert_eq(restored.array, self.sites.array)
+
+    def test_station_addition(self):
+        original = self.sites.array.copy()
+        selected = self.sites.filtered([3, 0])
+        selected.extend([-122.95], [38.02])
+        self._assert_metadata(selected)
+        self._assert_metadata(selected.complete)
+        assert_eq(self.sites.array[:4], original)
+        assert_eq(selected.sids, [3, 0])
+        assert_eq(selected.complete.sids, [0, 1, 2, 3, 4])

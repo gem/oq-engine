@@ -81,13 +81,41 @@ def _grid_spacing(x, y):
     return float(numpy.median(distances))
 
 
+def _metric_crs(crs):
+    # Grid spacing and covariance distances assume coordinates in metres.
+    try:
+        projection = pyproj.CRS.from_user_input(crs)
+    except pyproj.exceptions.CRSError as exc:
+        raise ValueError('Invalid correlation grid projection') from exc
+    if (not projection.is_projected or any(
+            not numpy.isclose(axis.unit_conversion_factor, 1)
+            for axis in projection.axis_info[:2])):
+        raise ValueError('Correlation grid projection must use metres')
+    return projection
+
+
+def _grid_hints(sites, crs):
+    # Spacing and origin belong to one projection. An explicit CRS may
+    # override the recorded one, in which case these hints no longer apply.
+    recorded = getattr(sites, 'grid_crs', None)
+    if not recorded:
+        return None
+    try:
+        if not _metric_crs(crs).equals(_metric_crs(recorded)):
+            return None
+    except ValueError:
+        return None
+    return (getattr(sites, 'grid_spacing', None),
+            getattr(sites, 'grid_origin', None))
+
+
 @dataclass(frozen=True)
 class RegularGridLayout:
     """Map geographic sites to the regular lattice used by CE.
 
-    ``from_sites`` projects all coordinates with one transverse Mercator
-    projection, centred on the middle of the longitude extent unless ``crs``
-    is given, then fits and validates an axis-aligned lattice.
+    ``from_sites`` uses an explicit CRS first, then any projection recorded
+    on the sites. For older files it tries local transverse Mercator and
+    nearby UTM zones, keeping the same lattice-fit tolerance for each.
     ``site_indices`` maps the original site order to flattened grid cells;
     holes remain unused cells in the enclosing rectangle.
 
@@ -120,33 +148,73 @@ class RegularGridLayout:
 
     @classmethod
     def from_sites(cls, sites, max_cell_ratio=MAX_GRID_CELL_RATIO, crs=None):
-        """Infer a square lattice, retaining holes as unused cells."""
+        """Fit a lattice in the recorded projection, or recover a legacy grid.
+
+        Use saved spacing and origin when they refer to the selected CRS.
+        Filtering can leave too few adjacent cells to infer those values
+        again. Without these hints, at least four sites are needed.
+        """
         lons = numpy.asarray(sites.lons, dtype=numpy.float64)
         lats = numpy.asarray(sites.lats, dtype=numpy.float64)
-        if len(lons) < 4 or len(lons) != len(lats):
-            raise ValueError(
-                'Circulant embedding requires at least four grid sites')
+        if not len(lons) or len(lons) != len(lats):
+            raise ValueError('Correlation grid requires matching coordinates')
         if not numpy.isfinite(lons).all() or not numpy.isfinite(lats).all():
             raise ValueError('Correlation grid coordinates must be finite')
+        recorded = getattr(sites, 'grid_crs', None)
+        if crs is not None or recorded:
+            crs = crs if crs is not None else recorded
+            return cls._projected(
+                lons, lats, crs, max_cell_ratio, _grid_hints(sites, crs))
+        # Older site models often contain UTM grids with no CRS metadata.
+        # Try the existing local-TM fit first to preserve successful fits.
+        candidates = [_local_crs(lons, lats)]
+        zone = min(60, int((numpy.median(lons) + 180) // 6) + 1)
+        base = 32600 if numpy.median(lats) >= 0 else 32700
+        candidates.extend(f'EPSG:{base + z}' for z in
+                          (zone, zone - 1, zone + 1) if 1 <= z <= 60)
+        failures = []
+        for candidate in candidates:
+            try:
+                return cls._projected(lons, lats, candidate, max_cell_ratio)
+            except ValueError as exc:
+                failures.append(exc)
+        raise failures[0]
 
-        if crs is None:
-            crs = _local_crs(lons, lats)
+    @classmethod
+    def _projected(cls, lons, lats, crs, max_cell_ratio, hints=None):
+        # Fit coordinates in one metric CRS. Hints preserve the original
+        # lattice when the sites have already been filtered or reordered.
         transformer = pyproj.Transformer.from_crs(
-            4326, crs, always_xy=True)
+            4326, _metric_crs(crs), always_xy=True)
         x, y = transformer.transform(lons, lats)
-        initial_spacing = _grid_spacing(x, y)
-
-        # Fit the lattice origin after assigning preliminary integer cells.
-        ix = numpy.rint(
-            (x - x.min()) / initial_spacing).astype(numpy.int64)
-        iy = numpy.rint(
-            (y - y.min()) / initial_spacing).astype(numpy.int64)
-        spacing_x, x0 = numpy.polyfit(ix, x, 1)
-        spacing_y, y0 = numpy.polyfit(iy, y, 1)
+        if not numpy.isfinite(x).all() or not numpy.isfinite(y).all():
+            raise ValueError('Correlation grid projection is not finite')
+        if hints and hints[0] is not None and hints[1] is not None:
+            spacing_y, spacing_x = numpy.asarray(hints[0]) * 1000
+            y0, x0 = hints[1]
+        else:
+            if len(lons) < 4:
+                raise ValueError('Circulant embedding requires at least '
+                                 'four grid sites')
+            initial = _grid_spacing(x, y)
+            ix = numpy.rint((x - x.min()) / initial).astype(numpy.int64)
+            iy = numpy.rint((y - y.min()) / initial).astype(numpy.int64)
+            if numpy.ptp(ix) == 0 or numpy.ptp(iy) == 0:
+                raise ValueError('Correlation grid requires two rows and '
+                                 'columns')
+            # Fit the origin after assigning preliminary integer cells.
+            spacing_x, x0 = numpy.polyfit(ix, x, 1)
+            spacing_y, y0 = numpy.polyfit(iy, y, 1)
+            ix = numpy.rint((x - x0) / spacing_x).astype(numpy.int64)
+            iy = numpy.rint((y - y0) / spacing_y).astype(numpy.int64)
+            spacing_x, x0 = numpy.polyfit(ix, x, 1)
+            spacing_y, y0 = numpy.polyfit(iy, y, 1)
+        if (not numpy.isfinite([spacing_x, spacing_y, x0, y0]).all() or
+                min(spacing_x, spacing_y) <= 0):
+            raise ValueError('Correlation grid requires finite origin and '
+                             'positive spacing')
         ix = numpy.rint((x - x0) / spacing_x).astype(numpy.int64)
         iy = numpy.rint((y - y0) / spacing_y).astype(numpy.int64)
-        spacing_x, x0 = numpy.polyfit(ix, x, 1)
-        spacing_y, y0 = numpy.polyfit(iy, y, 1)
         errors = numpy.hypot(
             x - (x0 + ix * spacing_x), y - (y0 + iy * spacing_y))
         tolerance = max(
@@ -160,12 +228,8 @@ class RegularGridLayout:
         minimum_y = iy.min()
         ix -= minimum_x
         iy -= minimum_y
-        nx = int(ix.max()) + 1
-        ny = int(iy.max()) + 1
-        if nx < 2 or ny < 2:
-            raise ValueError(
-                'Circulant embedding requires at least two grid rows and '
-                'columns')
+        nx = max(2, int(ix.max()) + 1)
+        ny = max(2, int(iy.max()) + 1)
         indices = iy * nx + ix
         if len(numpy.unique(indices)) != len(indices):
             raise ValueError('Multiple sites occupy one correlation grid cell')
@@ -176,7 +240,7 @@ class RegularGridLayout:
         return cls(
             (ny, nx),
             (float(spacing_y / 1000), float(spacing_x / 1000)),
-            indices, crs,
+            indices, str(crs),
             (float(y0 + minimum_y * spacing_y),
              float(x0 + minimum_x * spacing_x)),
             float(errors.max()))

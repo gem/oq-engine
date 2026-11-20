@@ -172,6 +172,68 @@ def test_irregular_layout():
         RegularGridLayout.from_sites(sites)
 
 
+@pytest.mark.parametrize('crs,easting,northing', [
+    ('EPSG:32616', 650_000, 1_200_000),
+    ('EPSG:32718', 650_000, 6_200_000),
+    ('EPSG:32610', 820_000, 4_200_000)])
+def test_legacy_utm_grid(crs, easting, northing):
+    # These grids are away from the UTM central meridian. A local-TM
+    # projection rotates their rows enough to fail the usual fit tolerance.
+    # The third also crosses into the neighbouring longitude-based zone.
+    rows, columns = numpy.indices((11, 13))
+    lons, lats = Transformer.from_crs(crs, 4326, always_xy=True).transform(
+        easting + columns.ravel() * 1000, northing + rows.ravel() * 1000)
+    sites = SimpleNamespace(lons=numpy.round(lons, 5),
+                            lats=numpy.round(lats, 5))
+    layout = RegularGridLayout.from_sites(sites)
+    assert layout.crs == crs
+    assert layout.grid_shape == (11, 13)
+    assert layout.maximum_error < 1
+    numpy.testing.assert_array_equal(layout.site_indices, numpy.arange(143))
+
+
+@pytest.mark.parametrize('recorded', ['EPSG:32611', 'invalid'])
+def test_explicit_crs_overrides_recorded_geometry(recorded):
+    sites, _ = geographic_grid((3, 4))
+    sites.grid_crs = recorded
+    sites.grid_spacing = (50., 50.)
+    sites.grid_origin = (0., 0.)
+    layout = RegularGridLayout.from_sites(sites, crs='EPSG:32610')
+    assert layout.crs == 'EPSG:32610'
+    numpy.testing.assert_allclose(layout.spacing, (1., 1.), atol=0.001)
+
+
+def test_lattice_geometry_survives_reduction(tmp_path):
+    from openquake.baselib import hdf5
+    from openquake.hazardlib.site import SiteCollection
+    sites, _ = geographic_grid((32, 34))
+    complete = SiteCollection.from_points(sites.lons, sites.lats)
+    original = RegularGridLayout.from_sites(complete, crs='EPSG:32610')
+    complete.grid_crs = original.crs
+    complete.grid_spacing = original.spacing
+    complete.grid_origin = original.projected_origin
+    selected = complete.filtered([0, 33, 1054, 1087])
+    with hdf5.File(str(tmp_path / 'sites.hdf5'), 'w') as f:
+        f['sitecol'] = selected
+        restored = f['sitecol']
+    # Check geometry separately from the configurable occupancy policy.
+    fitted = RegularGridLayout.from_sites(restored, max_cell_ratio=numpy.inf)
+    assert fitted.grid_shape == original.grid_shape
+    assert fitted.maximum_error < 1
+    numpy.testing.assert_array_equal(restored.sids, selected.sids)
+    expected = original.site_indices[[0, 33, 1054, 1087]]
+    numpy.testing.assert_array_equal(fitted.site_indices, expected)
+    with pytest.raises(ValueError, match='4 cells per occupied site'):
+        RegularGridLayout.from_sites(restored, max_cell_ratio=4)
+
+
+@pytest.mark.parametrize('crs', ['EPSG:4326', 'EPSG:2263', 'invalid'])
+def test_metric_crs(crs):
+    sites, _ = geographic_grid((3, 4))
+    with pytest.raises(ValueError, match='projection'):
+        RegularGridLayout.from_sites(sites, crs=crs)
+
+
 def test_padding():
     # This physical extent is too short for the model's long-range
     # components at the minimal embedding size.

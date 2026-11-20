@@ -464,11 +464,21 @@ def get_precomputed(rupture, cmaker, inp, compute_covs=True):
 
 
 def grid_crs(complete, station_sids):
+    """Use the target grid's projection when adding station observations.
+
+    Stations may lie off the lattice, so exclude them when recovering an
+    older grid's CRS. A recorded CRS remains valid after sites are filtered
+    or stations are added to the complete collection.
     """
-    :returns: the projection of the target grid, i.e. of the complete sites
-        without the stations, which the grid is regular in
-    """
+    if complete.grid_crs:
+        return complete.grid_crs
     grid = complete.filter(~numpy.isin(complete.sids, station_sids))
+    grid = complete if grid is None else grid
+    try:
+        return RegularGridLayout.from_sites(grid).crs
+    except ValueError:
+        # Preserve the local projection used by the non-grid workflow.
+        pass
     return _local_crs(grid.lons, grid.lats)
 
 
