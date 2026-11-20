@@ -727,7 +727,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(len(calib), 4)
         self.assertNotIn('source_info', self.calc.datastore)
 
-    @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 1)
+    # 18 calibration batches of 15-101 sources; with MAX_PAIRS=1 there
+    # was a batch per source (1042 batches) and the test was 2x slower
+    @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 100_000)
     # the full calibration, i.e. without the random sample, is checked here
     @mock.patch('openquake.calculators.autogrid.random_filter',
                 new=lambda objs, _factor: objs)
