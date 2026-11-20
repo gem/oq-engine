@@ -167,7 +167,7 @@ Set the following directives in the `[Service]` section of
 `/etc/systemd/system/openquake-webui.service`:
 ```ini
 WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
-ExecStartPre=/opt/openquake/venv/bin/python -m openquake.server.standalone
+ExecStartPre=/opt/openquake/venv/bin/python -m openquake.server.postinstall
 ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --timeout 1200 wsgi:application
 ```
 where `N` is the number of workers. 

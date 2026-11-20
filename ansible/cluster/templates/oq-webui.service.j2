@@ -8,6 +8,9 @@ Group=openquake
 Environment=
 WorkingDirectory={{ webuidir_services }}
 # Nginx (or another webserver) must serve the static files from STATIC_ROOT
+# check that the engine database is updated (the WebUI does not upgrade it)
+# and run the Django migrations and postinstall before starting the workers
+ExecStartPre=/opt/openquake/venv/bin/python -m openquake.server.postinstall
 ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
 Restart=always
 RestartSec=30

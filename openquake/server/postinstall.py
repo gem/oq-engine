@@ -15,6 +15,10 @@
 """
 Standalone OpenQuake Django applications distributed with the engine, and
 the postinstall commands run after their installation.
+
+Run as ``python -m openquake.server.postinstall`` (e.g. as ExecStartPre of
+the gunicorn systemd unit) it checks that the engine database is updated
+and then runs the postinstall commands, exiting with an error otherwise.
 """
 import subprocess
 import sys
