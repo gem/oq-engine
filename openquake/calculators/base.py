@@ -618,10 +618,9 @@ class HazardCalculator(BaseCalculator):
 
     def check_floating_spinning(self):
         f, s = self.csm.get_floating_spinning_factors()
-        if f != 1:
-            logging.info('Rupture floating factor = %s', f)
-        if s != 1:
-            logging.info('Rupture spinning factor = %s', s)
+        if f != 1 or s != 1:
+            logging.info('Rupture floating factor = %.2f, '
+                         'spinning factor = %.2f', f, s)
 
     def check_consequences(self):
         oq = self.oqparam

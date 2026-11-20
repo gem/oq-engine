@@ -920,7 +920,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         self.num_chunks = getters.get_num_chunks(self.datastore)
-        logging.info('Using num_chunks=%d', self.num_chunks)
+        logging.info('Using num_chunks=%d%s', self.num_chunks,
+                     ' and the fast_mean algorithm' if oq.fastmean else '')
 
         # create empty dataframes
         self.datastore.create_df(
@@ -961,8 +962,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 return {}
 
         self.init_poes()
-        if oq.fastmean:
-            logging.info('Will use the fast_mean algorithm')
         self.srcidx = {
             name: i for i, name in enumerate(self.csm.get_basenames())}
         rlzs = self.R == 1 or oq.individual_rlzs

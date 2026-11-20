@@ -534,8 +534,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         if normal_sources:
             sources_by_key = groupby(
                 normal_sources, operator.attrgetter('grp_id'))
-            logging.info('Starting preclassical with %d source groups',
-                         len(sources_by_key))
             if sys.platform != 'darwin':
                 # avoid a segfault in macOS
                 self.datastore.swmr_on()
