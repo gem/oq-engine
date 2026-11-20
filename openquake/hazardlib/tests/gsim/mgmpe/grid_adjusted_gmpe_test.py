@@ -433,8 +433,10 @@ class GridAdjustedGMPETest(unittest.TestCase):
                                  grid_hdf5_file=GRID_HDF5, epsilons=eps)
                 for eps in combos]
         cm = simple_cmaker([base] + adjs, IMTS)
-        with mock.patch.object(mod, "compute_central",
-                               side_effect=mod.compute_central) as central:
+        with mock.patch.object(GridAdjustedGMPE, "compute_central",
+                               autospec=True,
+                               side_effect=GridAdjustedGMPE.compute_central
+                               ) as central:
             shared = cm.get_mean_stds([self._make_ctx(cm)])
         # The central part is computed once for all 27 adj GSIMs
         self.assertEqual(central.call_count, 1)

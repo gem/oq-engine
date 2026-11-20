@@ -31,7 +31,6 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import IMC, StdDev, KNOWN_DISTANCES
-from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as gag
 from openquake.hazardlib import imc_conversion
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
@@ -1709,11 +1708,13 @@ class ContextMaker(object):
                 continue
             if key not in central:
                 central[key] = self._get_central(recarrays, gsim)
-            out[:, g] = self._add_epsilons(central[key], gsim)
+            out[:, g] = self._add_branch_shift(central[key], gsim)
         return out
 
-    # compute the part of a GridAdjustedGMPE independent from the
-    # epsilons, i.e. the backbone and the grid lookups (the expensive part)
+    # Compute the part of a GSIM that's shared across LT branches with the
+    # same central_key: the backbone and any spatial lookups. Dispatched via
+    # the GSIM's own compute_central() so different GSIM families (e.g.
+    # GridAdjustedGMPE, SungEtAl2022NonErgodic) can implement their own.
     def _get_central(self, ctxs, gsim):
         N = sum(len(ctx) for ctx in ctxs)
         out = numpy.zeros((4, len(self.imts), N))
@@ -1721,19 +1722,20 @@ class ContextMaker(object):
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
-            res = gag.compute_central(
-                gsim, ctx, self.imts, *out[:, :, slc], gra_mon=self.gra_mon)
+            res = gsim.compute_central(
+                ctx, self.imts, *out[:, :, slc], gra_mon=self.gra_mon)
             resolved.append((slc, res))
             start = slc.stop
         return out, resolved
 
-    # add the epsilon shifts of a GridAdjustedGMPE to the central part
-    def _add_epsilons(self, central, gsim):
+    # Add the branch-specific shift (epsilons, rlz pick, etc.) to the shared
+    # central part. Dispatched via the GSIM's own apply_branch_shift().
+    def _add_branch_shift(self, central, gsim):
         out, resolved = central
         out = out.copy()
         gsim.adj = []
         for slc, res in resolved:
-            gag.apply_epsilons(gsim, res, self.imts, out[0, :, slc])
+            gsim.apply_branch_shift(res, self.imts, out[0, :, slc])
         self._check_conv(out, gsim)
         return out
 
