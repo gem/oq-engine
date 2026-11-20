@@ -65,6 +65,7 @@ EOF
 # Start gunicorn with the CI settings and wait until the login page
 # answers 200 (at most 240 seconds). Sets GPID; returns 1 if not up.
 webui_start() {
+  "$VENV/bin/python" -m openquake.server.postinstall || return 1
   # settings.py writes the access log only when getpass.getuser() is
   # "openquake" (getpass reads LOGNAME/USER); the process still runs as
   # the invoking user

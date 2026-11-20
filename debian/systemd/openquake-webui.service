@@ -10,6 +10,9 @@ Group=openquake
 WorkingDirectory=/usr/share/openquake/engine
 #in ExecStart use the folder of venv
 # Nginx (or another webserver) must serve the static files from STATIC_ROOT
+# check that the engine database is updated (the WebUI does not upgrade it)
+# and run the Django migrations and postinstall before starting the workers
+ExecStartPre=/opt/openquake/bin/python3 -m openquake.server.postinstall
 ExecStart=/opt/openquake/bin/python3 -m gunicorn openquake.server.wsgi:application --bind 127.0.0.1:8800 --workers 1 --worker-class gthread --threads 16 --timeout 1200
 Type=exec
 Restart=always

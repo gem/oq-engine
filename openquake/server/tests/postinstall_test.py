@@ -23,7 +23,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
-from openquake.server import standalone
+from openquake.server import postinstall
 from openquake.server.management.commands import openquake_engine_postinstall
 
 
@@ -65,7 +65,7 @@ def test_installed_app_postinstall(fails):
 
 def test_postinstall_with_all_optional_apps_missing(tmp_path, monkeypatch,
                                                   capfd):
-    missing = tuple(app['name'] for app in standalone.STANDALONE_APP_INFO
+    missing = tuple(app['name'] for app in postinstall.STANDALONE_APP_INFO
                     if app['name'])
     dbfile = tmp_path / 'postinstall.sqlite3'
     cfgfile = tmp_path / 'openquake.cfg'
@@ -84,7 +84,7 @@ def test_postinstall_with_all_optional_apps_missing(tmp_path, monkeypatch,
     monkeypatch.setenv('PYTHONPATH', os.pathsep.join(
         (str(tmp_path), os.environ.get('PYTHONPATH', ''))))
 
-    errors = standalone.postinstall(sys.executable)
+    errors = postinstall.postinstall(sys.executable)
     output = capfd.readouterr().out
     assert errors == []
     assert dbfile.is_file()
