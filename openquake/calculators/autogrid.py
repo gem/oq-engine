@@ -31,6 +31,7 @@ ATOL + RTOL * |reference| (as in numpy.testing.assert_allclose), below 1
 is chosen or, if there is none, the cheapest candidate with an error close
 to the smallest one.
 """
+import copy
 import logging
 from collections import namedtuple
 import numpy
@@ -64,10 +65,11 @@ RTOL = .01  # relative tolerance on the hazard maps
 PERIODS = [.2, 1.]
 LEVEL_STEP = 2  # use one hazard level every LEVEL_STEP in the calibration
 MAX_PAIRS = 10_000_000  # target pairs per calibration source batch
-# minimum weight of a calibration subtask (see _grid_and_weight), about 2
-# seconds; without it a small calibration would be split in thousands of
-# tiny subtasks, since the number of blocks depends on the number of cores
-MIN_WEIGHT = 250_000
+# minimum weight of a calibration subtask (see _grid_and_weight), a few
+# seconds (in AUS a subtask processes about 4E5 weight units per second);
+# without it a small calibration would be split in thousands of tiny
+# subtasks, since the number of blocks depends on the number of cores
+MIN_WEIGHT = 1_000_000
 NSITES = 300  # size of the sample of sites
 MAXDIST = 300.  # in km, maximum distance used in the calibration
 # when no candidate is within the tolerance, the candidates with an error
@@ -141,8 +143,6 @@ def to_be_gridded(src):
 def _get_margin(sg, maxdist):
     radius = 0.
     for src in sg:
-        if not to_be_gridded(src):
-            continue
         if src.code in b'AM':
             points = [next(iter(src))] if src.code == b'A' else src
         elif src.code == b'P':
@@ -175,8 +175,6 @@ def prepare_points(sg, sites, maxdist):
     dist = maxdist + _get_margin(sg, maxdist)
     points = []
     for src in sg:
-        if not to_be_gridded(src):
-            continue
         if src.code in b'AM':
             mesh = (src.mesh if src.code == b'M' else
                     src.polygon.discretize(src.area_discretization))
@@ -281,8 +279,14 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     """
     # NB: with a fixed spacing the candidates are only the distances
     spacings = GRID_SPACINGS if oq.auto_grid else [oq.ps_grid_spacing]
-    sgs = {sg.sources[0].grp_id: sg for sg in csm.src_groups
-           if not sg.atomic and any(to_be_gridded(src) for src in sg)}
+    # only the sources to be gridded are sent to the calibration tasks,
+    # since the other sources (for instance the faults) can be large
+    sgs = {}
+    for sg in csm.src_groups:
+        srcs = [src for src in sg if to_be_gridded(src)]
+        if srcs and not sg.atomic:
+            sgs[sg.sources[0].grp_id] = grp = copy.copy(sg)
+            grp.sources = srcs
     if not sgs:
         return None
     distances = ([oq.pointsource_distance['default']] if oq.psd_given
@@ -306,8 +310,7 @@ def run_calibration(keys, sgs, sites, cmakers, h5):
     """
     # the number of blocks of a group is proportional to the number of
     # ruptures of its point-like sources
-    nrups = {grp_id: sum(src.num_ruptures for src in sg
-                         if to_be_gridded(src))
+    nrups = {grp_id: sum(src.num_ruptures for src in sg)
              for grp_id, sg in sgs.items()}
     tot = sum(nrups.values())
     num_tasks = parallel.num_cores * 2
