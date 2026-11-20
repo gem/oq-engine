@@ -17,6 +17,7 @@ Standalone OpenQuake Django applications distributed with the engine, and
 the postinstall commands run after their installation.
 """
 import subprocess
+import sys
 
 # Keep this list in sync with the standalone installer install.py.
 # NOTE: install.py is outside openquake and can not be imported here
@@ -59,3 +60,9 @@ def postinstall(pycmd, apps=STANDALONE_APP_INFO):
             errors.append(f"{exc}: error during {app['name']} postinstall "
                           "command execution")
     return errors
+
+
+if __name__ == '__main__':
+    errors = postinstall(sys.executable)
+    if errors:
+        sys.exit('\n'.join(errors))

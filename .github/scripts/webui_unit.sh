@@ -9,9 +9,12 @@ UNIT=/etc/systemd/system/openquake-webui.service
 # gunicorn is an optional dependency: install it in the venv, but not the
 # openquake.engine[server] extra, which would replace the engine under test
 /opt/openquake/venv/bin/pip install "gunicorn>=26.2"
+POSTINSTALL="ExecStartPre=/opt/openquake/venv/bin/python -m openquake.server.standalone"
 sed -i \
   -e "s|^WorkingDirectory=.*|WorkingDirectory=$1|" \
   -e "s|^Environment=$|Environment=MPLCONFIGDIR=/tmp|" \
+  -e "\|^${POSTINSTALL}$|d" \
+  -e "/^ExecStart=/i $POSTINSTALL" \
   -e "s|^ExecStart=.*|ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 2 --timeout 120 wsgi:application|" \
   "$UNIT"
 systemctl daemon-reload

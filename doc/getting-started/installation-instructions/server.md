@@ -163,13 +163,20 @@ On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunico
 ### gunicorn
 
 *gunicorn* is an optional dependency: install it with `pip install "openquake.engine[server]"` (it is not installed by default).
-Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
-```console
+Set the following directives in the `[Service]` section of
+`/etc/systemd/system/openquake-webui.service`:
+```ini
 WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
+ExecStartPre=/opt/openquake/venv/bin/python -m openquake.server.standalone
 ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --timeout 1200 wsgi:application
 ```
 where `N` is the number of workers. 
 Refer to the official Gunicorn documentation for the optimal choice of this value based on your system's hardware specifications.
+
+Run `sudo systemctl daemon-reload` after editing the unit. On each service start
+or restart, systemd runs the Django migrations and standalone app postinstall
+hooks once before launching Gunicorn. The pre-start command uses the service's
+existing user and environment file. If it fails, Gunicorn does not start.
 
 The WebUI run by gunicorn does not upgrade the engine database (`oq engine --upgrade-db`, not to be confused with `manage.py migrate`, which manages the tables of users and sessions): if the database is outdated, e.g. after installing a new version of the engine, the WebUI refuses to start (gunicorn stops with "Worker failed to boot" and systemd tries again every 30 seconds) and the error in `journalctl -u openquake-webui` tells which versions are missing.
 The installer (`install.py server` or `install.py devel_server`) upgrades the database by itself before starting the WebUI service, so this is needed only if the engine is upgraded in another way.
