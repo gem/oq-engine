@@ -629,7 +629,6 @@ def get_mesh_exp(oqparam, h5=None):
     # the site model has the precedence over the exposure, see the
     # discussion in https://github.com/gem/oq-engine/pull/5217
     elif 'site_model' in oqparam.inputs:
-        logging.info('Extracting the hazard sites from the site model')
         sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
     elif 'exposure' in oqparam.inputs:

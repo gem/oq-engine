@@ -110,6 +110,9 @@ def splitMF(sources, disagg_by_src, blocksize=1000):
                     hypocenter_distribution=src.hypocenter_distribution,
                     mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]))
                 _copy_uncertainty_attrs(src, segment)
+                # the uncertainties of the MultiMFD of src must be sliced
+                # like its MFD, see lt._multiMFD_absolute
+                segment.mfd_slice = slc
                 splits.append(segment)
         elif src.code == b'F' and not disagg_by_src:
             # use the colon convention only in absence of kendra-splitting
@@ -324,7 +327,6 @@ def get_csm(oq, full_lt, dstore=None):
         filter_sourcecodes=oq.filter_sourcecodes,
         dip_spacing=oq.dip_spacing)
     full_lt.ses_seed = oq.ses_seed
-    logging.info('Reading the source model(s) in parallel')
 
     # NB: the source models file must be in the shared directory
     # NB: dstore is None in logictree_test.py

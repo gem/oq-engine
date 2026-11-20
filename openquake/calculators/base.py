@@ -619,25 +619,10 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
-        oq = self.oqparam
         f, s = self.csm.get_floating_spinning_factors()
-        if f != 1:
-            logging.info('Rupture floating factor = %s', f)
-        if s != 1:
-            logging.info('Rupture spinning factor = %s', s)
-        if (f * s >= 1.5 and oq.no_pointsource_distance
-                and ('classical' in oq.calculation_mode or
-                     'disaggregation' in oq.calculation_mode)):
-            logging.info(
-                'You are not using the pointsource_distance approximation')
-        elif 'classical' in oq.calculation_mode:
-            if oq.ps_grid_spacing:
-                logging.info('Using pointsource_distance=%s and '
-                             'ps_grid_spacing=%s', oq.pointsource_distance,
-                             oq.ps_grid_spacing)
-            else:
-                logging.info('Using pointsource_distance=%s',
-                             oq.pointsource_distance)
+        if f != 1 or s != 1:
+            logging.info('Rupture floating factor = %.2f, '
+                         'spinning factor = %.2f', f, s)
 
     def check_consequences(self):
         oq = self.oqparam

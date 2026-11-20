@@ -21,8 +21,8 @@ import logging
 import operator
 import psutil
 import numpy
-from openquake.baselib import general, parallel, hdf5, config
-from openquake.hazardlib import pmf, geo
+from openquake.baselib import general, parallel, hdf5
+from openquake.hazardlib import pmf, geo, valid
 from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.rmap_maker import get_cmakers, read_unc_ts_sets
 from openquake.hazardlib.contexts import estimate_nctxs
@@ -47,13 +47,14 @@ TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
 # context estimates stored in the datastore as dataset 'nctxs'
-# NB: 'psd100' is the number of contexts without gridding with the
-# pointsource_distance of config.performance (or with the one of the user,
-# when not gridding, see count_psdist), 'gridded' is the number of contexts
-# of the gridded point sources before collapse_precision, 'collapsed' the
-# number of contexts after collapse_precision and 'separate' the number of
-# contexts without the variant sources optimization, i.e. if the variants
-# of the sources were computed separately
+# NB: 'exact' is the number of contexts with PSD_EXACT (when gridding,
+# of the point sources without gridding, see contexts._count_nogrid),
+# 'psd100' the number of contexts with the pointsource_distance of the
+# user, when not gridding (see count_psdist), 'gridded' is the number of
+# contexts of the gridded point sources before collapse_precision,
+# 'collapsed' the number of contexts after collapse_precision and
+# 'separate' the number of contexts without the variant sources
+# optimization, i.e. if the variants of the sources were computed separately
 CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
                        ('gridded', numpy.int64), ('collapsed', numpy.int64),
                        ('separate', numpy.int64)])
@@ -239,22 +240,18 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     return dic
 
 
-def count_nogrid(srcs, sf, cmaker, monitor):
-    """
-    Estimate the contexts that the point sources would generate without
-    gridding, with config.performance.pointsource_distance and with
-    PSD_EXACT, see contexts.estimate_nctxs
-
-    :returns: a dictionary with the estimates under the keys 'psdist_ctxs'
-              and 'exact_ctxs'
-    """
-    exact = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
-                           srcs, sf.sitecol)
-    psd = float(config.performance.pointsource_distance)
-    psdist = estimate_nctxs(cmaker.copy(pointsource_distance=psd),
-                            srcs, sf.sitecol)
-    return {'psdist_ctxs': int(psdist * sf.multiplier),
-            'exact_ctxs': int(exact * sf.multiplier)}
+def _warn_ungridded(src_groups, ps_grid_spacing):
+    # the area and multipoint sources modified by the uncertainties are
+    # split in the workers (see classical.groups_gkeys) and never gridded
+    if not ps_grid_spacing:
+        return
+    ids = sorted({valid.corename(src) for sg in src_groups for src in sg
+                  if src.code in b'AM' and src.bysrc_unc})
+    if ids:
+        logging.warning(
+            'ps_grid_spacing is not used for %d source(s) modified by the '
+            'uncertainties: %s', len(ids), ' '.join(ids[:10]) +
+            (' ...' if len(ids) > 10 else ''))
 
 
 def count_psdist(srcs, sf, cmaker, monitor):
@@ -272,6 +269,22 @@ def count_psdist(srcs, sf, cmaker, monitor):
             'exact_ctxs': int(exact * sf.multiplier)}
 
 
+# split by magnitude the simple, complex and kite faults with many
+# ruptures, so that their magnitudes are weighted in different
+# filter_weight subtasks; in CHN the weighting of HimalayanThrust
+# (870_149 ruptures) took 383 s in a single subtask, while the other
+# subtasks took 30 s
+def _split_big_faults(srcs):
+    out = []
+    for src in srcs:
+        if (src.code in b'SCK' and not src.bysrc_unc and
+                src.num_ruptures > MAX_NUM_RUPTURES):
+            out.extend(split_source(src))
+        else:
+            out.append(src)
+    return out
+
+
 def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
     """
     Split the sources if split_sources is true. If
@@ -287,17 +300,17 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
                 srcs.extend(split_source(src))
             else:
                 srcs.append(src)
-        # estimate the contexts before gridding, to log the reduction
-        pts = [src for src in srcs if hasattr(src, 'location')]
-        if pts:
-            yield count_nogrid, pts, sf, cmaker
         srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
-        # Track the same point sources as the no-gridding estimate.
+        # the contexts of the gridded point sources are counted in
+        # classical, together with an estimate of the contexts without
+        # gridding, to log the reduction (see contexts._count_nogrid)
         for src in srcs:
             if hasattr(src, 'location'):
                 src.count_nogrid = True
     else:
         srcs = sources
+    if cmaker.split_sources:
+        srcs = _split_big_faults(srcs)
 
     Ns = cmaker.oq.concurrent_tasks // num_tasks + 2
     # produce subtasks of kind set_weight
@@ -459,6 +472,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning(
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
+        _warn_ungridded(csm.src_groups, oq.ps_grid_spacing)
         multifaults = []
         cmakers = self.cmakers.to_array()
         for sg in csm.src_groups:
@@ -520,8 +534,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         if normal_sources:
             sources_by_key = groupby(
                 normal_sources, operator.attrgetter('grp_id'))
-            logging.info('Starting preclassical with %d source groups',
-                         len(sources_by_key))
             if sys.platform != 'darwin':
                 # avoid a segfault in macOS
                 self.datastore.swmr_on()
