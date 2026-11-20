@@ -64,6 +64,10 @@ RTOL = .01  # relative tolerance on the hazard maps
 PERIODS = [.2, 1.]
 LEVEL_STEP = 2  # use one hazard level every LEVEL_STEP in the calibration
 MAX_PAIRS = 10_000_000  # target pairs per calibration source batch
+# minimum weight of a calibration subtask (see _grid_and_weight), about 2
+# seconds; without it a small calibration would be split in thousands of
+# tiny subtasks, since the number of blocks depends on the number of cores
+MIN_WEIGHT = 250_000
 NSITES = 300  # size of the sample of sites
 MAXDIST = 300.  # in km, maximum distance used in the calibration
 # when no candidate is within the tolerance, the candidates with an error
@@ -116,6 +120,18 @@ def _calibrate_batch(srcs, sites, cmaker, keys):
     return out
 
 
+def to_be_gridded(src):
+    """
+    :param src: a source object
+    :returns: True for the sources gridded by the engine, i.e. the point
+        sources and the area and multipoint sources, except the ones
+        modified by the uncertainties (bysrc_unc), which are split in the
+        workers and never gridded (see preclassical.preclassical and
+        classical.groups_gkeys), so they are ignored by the calibration
+    """
+    return src.code == b'P' or (src.code in b'AM' and not src.bysrc_unc)
+
+
 # the points farther than the maximum distance plus the margin from all
 # the sample sites are ignored; the engine keeps a (collapsed) point
 # source if its location is within the maximum distance plus its
@@ -125,8 +141,8 @@ def _calibrate_batch(srcs, sites, cmaker, keys):
 def _get_margin(sg, maxdist):
     radius = 0.
     for src in sg:
-        # NB: the sources with bysrc_unc are included too, since their
-        # uncertainties do not change the geometry of the points
+        if not to_be_gridded(src):
+            continue
         if src.code in b'AM':
             points = [next(iter(src))] if src.code == b'A' else src
         elif src.code == b'P':
@@ -159,7 +175,8 @@ def prepare_points(sg, sites, maxdist):
     dist = maxdist + _get_margin(sg, maxdist)
     points = []
     for src in sg:
-        # NB: the sources with bysrc_unc are included too (see _get_margin)
+        if not to_be_gridded(src):
+            continue
         if src.code in b'AM':
             mesh = (src.mesh if src.code == b'M' else
                     src.polygon.discretize(src.area_discretization))
@@ -215,7 +232,7 @@ def calibrate_group(sg, sites, cmaker, keys, nblocks, monitor):
         ks = sorted(key for key in keys if key[0] == psgs)
         pairs = _grid_and_weight(points, sites, maxdist, psgs)
         n = nblocks * (4 if psgs == REFERENCE[0] else 1)
-        maxweight = sum(w for _, w in pairs) / n
+        maxweight = max(sum(w for _, w in pairs) / n, MIN_WEIGHT)
         for blk in block_splitter(pairs, maxweight, lambda p: p[1]):
             yield calibration, WeightedSequence(blk), sites, cmaker, ks
 
@@ -265,7 +282,7 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     # NB: with a fixed spacing the candidates are only the distances
     spacings = GRID_SPACINGS if oq.auto_grid else [oq.ps_grid_spacing]
     sgs = {sg.sources[0].grp_id: sg for sg in csm.src_groups
-           if not sg.atomic and any(src.code in b'AMP' for src in sg)}
+           if not sg.atomic and any(to_be_gridded(src) for src in sg)}
     if not sgs:
         return None
     distances = ([oq.pointsource_distance['default']] if oq.psd_given
@@ -289,7 +306,8 @@ def run_calibration(keys, sgs, sites, cmakers, h5):
     """
     # the number of blocks of a group is proportional to the number of
     # ruptures of its point-like sources
-    nrups = {grp_id: sum(src.num_ruptures for src in sg if src.code in b'AMP')
+    nrups = {grp_id: sum(src.num_ruptures for src in sg
+                         if to_be_gridded(src))
              for grp_id, sg in sgs.items()}
     tot = sum(nrups.values())
     num_tasks = parallel.num_cores * 2

@@ -1617,6 +1617,8 @@ class ContextReductionTestCase(unittest.TestCase):
         self.assertEqual(est['separate'], 1200)
 
 
+@unittest.skipIf(parallel.num_cores >= 64,
+                 'the thresholds are meant for machines with few cores')
 class SlowTasksTestCase(unittest.TestCase):
     """
     Check the detection of slow tasks in ClassicalCalculator.post_execute.
