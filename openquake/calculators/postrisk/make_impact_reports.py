@@ -17,12 +17,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import copy
 import pathlib
 import tempfile
 import logging
 import traceback
 import pandas as pd
 from openquake.baselib import config, hdf5, sap
+from openquake.baselib.general import gettemp
 from openquake.calculators.country_impact_report_builder import (
     CountryImpactReportBuilder)
 from openquake.calculators.extract import extract
@@ -173,12 +176,22 @@ def _get_shakemap_version(rupdic):
         return None
 
 
-def _get_rupture(oqparam):
+def _get_rupture(dstore, oqparam):
     # Return the rupture if a rupture model was given, otherwise None,
     # so that the epicenter will be displayed in the maps as a fallback
-    if 'rupture_model' not in oqparam.inputs:
+    fname = oqparam.inputs.get('rupture_model')
+    if fname is None:
         return None
+    # the rupture model file stored by the calculation is used, since the
+    # original file can be a temporary file removed in the meantime
+    ext = os.path.splitext(fname)[1]
+    key = 'input/rupture_model' + ext
     try:
+        if key in dstore:
+            oqparam = copy.copy(oqparam)
+            oqparam.inputs = dict(
+                oqparam.inputs, rupture_model=gettemp(
+                    dstore.get_file(key).read(), suffix=ext))
         return get_rupture(oqparam)
     except Exception:
         logging.warning('Could not read the rupture model; the maps will'
@@ -228,7 +241,8 @@ def _build_report_contexts(dstore, oqparam, calc_id, threshold_deg):
 
     event_ctx = EventContext(
         name=event_name, date=event_date, hypocenter=(lon, lat),
-        shakemap_version=shakemap_version, rupture=_get_rupture(oqparam))
+        shakemap_version=shakemap_version,
+        rupture=_get_rupture(dstore, oqparam))
     report_opts = ReportOptions(
         disclaimer_txt=DISCLAIMER_TXT,
         basemap_path=_get_basemap_path(), threshold_deg=threshold_deg,
