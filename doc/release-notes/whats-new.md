@@ -84,6 +84,9 @@ We now use a fixed global grid, avoiding a bug that caused distant sources
 to change results for nearby sources. `ps_grid_spacing` can also be used
 with `disagg_by_src`; previously, it could not.
 
+Default GSIM logic-tree weights are now applied to IMTs without an explicit
+IMT-specific weight. Thanks to Mathieu Primeau for reporting this issue.
+
 A new command, `oq engine --calibrate job.ini`, automatically determines
 the best combination of `ps_grid_spacing` and `pointsource_distance`.
 We also introduced an experimental `collapse_precision` approximation to
