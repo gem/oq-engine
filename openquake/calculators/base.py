@@ -422,13 +422,15 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                     else:
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
 
-                # remove temporary hdf5 file, if any
+                # Release cached multifault sections from this job and its
+                # parents. Their geometry is stored in the main datastore.
+                dstore = self.datastore
+                while dstore != ():
+                    multi_fault.SECTIONS.pop(dstore.filename, None)
+                    dstore = dstore.parent
                 if os.path.exists(self.datastore.tempname):
-                    multi_fault.SECTIONS.pop(self.datastore.tempname, None)
                     gc.collect()  # just in case
-                    if remove and oq.calculation_mode != 'preclassical':
-                        # removing in preclassical with multiFaultSources
-                        # would break --hc which is reading the temp file
+                    if remove:
                         os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
 

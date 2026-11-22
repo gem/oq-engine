@@ -16,8 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import gzip
+import shutil
 import unittest
 import pandas as pd
 import numpy
@@ -967,7 +969,19 @@ class ClassicalTestCase(CalculatorTestCase):
         # multiFaultSource with infer_occur_rates=true
         self.run_calc(case_65.__file__, 'job.ini',
                       calculation_mode='preclassical')
-        hc_id = str(self.calc.datastore.calc_id)
+        parent = self.calc.datastore
+        self.assertFalse(os.path.exists(parent.tempname))
+        self.assertEqual(set(parent['_multifault']),
+                         {'sections', 'secparams', 'rupture_idxs'})
+        # A copied datastore can resolve the geometry without the old path.
+        replica = general.gettemp(suffix='.hdf5')
+        shutil.copyfile(parent.filename, replica)
+        with hdf5.File(replica, 'r') as h5:
+            [src] = read_src_group(h5, '0')
+            self.assertEqual(src.hdf5path, replica)
+            self.assertEqual(len(src.rupture_idxs), len(src.mags))
+            self.assertTrue(src.get_sections(src.get_unique_idxs()))
+        hc_id = str(parent.calc_id)
         self.run_calc(case_65.__file__, 'job.ini', hazard_calculation_id=hc_id)
         rates = self.calc.datastore['rup/occurrence_rate'][:]
         aac(rates, [0.105361, 0.356675], atol=5e-7)
@@ -978,6 +992,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # reading/writing a multiFaultSource
         grp = read_src_group(self.calc.datastore, '0')
         [src] = grp  # there is a single group with a single source
+        self.assertEqual(src.hdf5path, parent.filename)
         tmpname = general.gettemp()
         src._rupture_idxs = [
             tuple(map(str, idxs)) for idxs in src.rupture_idxs]

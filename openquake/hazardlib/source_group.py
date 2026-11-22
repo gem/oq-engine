@@ -23,7 +23,7 @@ import operator
 import functools
 import collections
 import numpy
-from openquake.baselib import config, hdf5, performance
+from openquake.baselib import config, performance
 from openquake.baselib.general import zpik, zunpik
 from openquake.baselib.general import split_in_blocks, AccumDict
 from openquake.baselib.general import block_splitter, groupby, nokey
@@ -468,13 +468,10 @@ class CompositeSourceModel:
         """
         Set the `.msparams` attribute on multifault sources, if any
         """
-        for src in self.get_sources():
-            if src.code == b'F':
-                with hdf5.File(src.hdf5path, 'r') as h5:
-                    secparams = h5['secparams'][:]
-                break
-        for src in self.get_sources():
-            if src.code == b'F':
+        multifaults = [src for src in self.get_sources() if src.code == b'F']
+        if multifaults:
+            secparams = multifaults[0].get_secparams()
+            for src in multifaults:
                 src.set_msparams(secparams)
 
     def get_msr_by_grp(self):
@@ -610,11 +607,9 @@ class CompositeSourceModel:
         for i, sg in enumerate(self.src_groups):
             if blocks and blocks[i] and len(blocks[i]) > 1:
                 for b, block in enumerate(blocks[i]):
-                    grp = copy.copy(sg)
-                    grp.sources = block
-                    dstore[f'_csm/{sg.grp_id}-{b}'] = zpik(grp)
+                    dstore[f'_csm/{sg.grp_id}-{b}'] = _pack_group(sg, block)
             else:
-                dstore[f'_csm/{sg.grp_id}'] = zpik(sg)
+                dstore[f'_csm/{sg.grp_id}'] = _pack_group(sg, sg.sources)
 
     def __repr__(self):
         """
@@ -726,12 +721,31 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
 
 # ################## read/write utilities ##################### # 
 
+# Persist dataset keys. Workers still get the filename when sent a source.
+def _pack_group(sg, sources):
+    grp = copy.copy(sg)
+    grp.sources = []
+    for src in sources:
+        if src.code == b'F' and src.rupture_key:
+            src = copy.copy(src)
+            src.hdf5path = ''
+        grp.sources.append(src)
+    return zpik(grp)
+
+
 def read_src_group(hdf5, key, mon=performance.Monitor()):
     """
     Read the source group determined by the key.
     """
     with mon:
         grp = zunpik(hdf5[f"_csm/{key}"][:])
+        multifaults = [src for src in grp
+                       if src.code == b'F' and src.rupture_key]
+        if multifaults:
+            # A child can store its own _csm and inherit the geometry.
+            filename = hdf5['_multifault'].file.filename
+            for src in multifaults:
+                src.hdf5path = filename
     return grp
 
 

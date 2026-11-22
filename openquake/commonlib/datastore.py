@@ -219,11 +219,8 @@ class DataStore(collections.abc.MutableMapping):
         self.ppath = ppath
         self.parent = ()  # can be set later
         self.close_on_exit = False  # set by create_job_dstore
-        # NB: the _tmp.hdf5 file must not be deleted, not even after the
-        # calculation is complete: it holds the sections of the
-        # multiFaultSources, read by get_sections (used by oq plot, by
-        # the disagg postprocessing and by --hc child calculations), and
-        # the monitor inputs such as crmodel and assets
+        # The sidecar holds inputs shared by risk workers, such as
+        # crmodel and assets.
         self.tempname = self.filename[:-5] + '_tmp.hdf5'
         self.mode = mode or ('r+' if os.path.exists(self.filename) else 'w')
         if self.mode == 'r' and not os.path.exists(self.filename):

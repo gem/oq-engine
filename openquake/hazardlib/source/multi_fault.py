@@ -77,6 +77,8 @@ class MultiFaultSource(BaseSeismicSource):
     code = MULTI_FAULT
     MODIFICATIONS = {}
     hdf5path = ''
+    rupture_key = ''  # dataset path in a calculation datastore
+    rupture_slice = slice(None)
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
@@ -112,15 +114,21 @@ class MultiFaultSource(BaseSeismicSource):
     @property
     def rupture_idxs(self):
         """
-        Read a list of U16 arrays from hdf5path
+        Read the section indices for each rupture from hdf5path.
         """
         assert self.hdf5path
+        key = self.rupture_key or f'{self.source_id}/rupture_idxs'
         with hdf5.File(self.hdf5path, 'r') as h5:
-            key = f'{self.source_id}/rupture_idxs'
             try:
-                return h5[key][:]
+                return h5[key][self.rupture_slice]
             except KeyError:
                 raise KeyError(f'{key} not found in {self.hdf5path}')
+
+    def get_secparams(self):
+        """Read the precomputed parameters for all sections."""
+        key = '_multifault/secparams' if self.rupture_key else 'secparams'
+        with hdf5.File(self.hdf5path, 'r') as h5:
+            return h5[key][:]
 
     def set_sections(self, sections):
         """
@@ -163,12 +171,13 @@ class MultiFaultSource(BaseSeismicSource):
         :param idxs: indices of the surfaces to return (default all)
         :returns: the underlying sections as KiteSurfaces
         """
+        key = '_multifault/sections' if self.rupture_key else 'mf_sections'
         if idxs is None:  # in event_based use the cache
             try:
                 sections = SECTIONS[self.hdf5path]
             except KeyError:
                 with hdf5.File(self.hdf5path, 'r') as f:
-                    sections = [general.zunpik(arr) for arr in f['mf_sections']]
+                    sections = [general.zunpik(arr) for arr in f[key]]
                 SECTIONS[self.hdf5path] = sections
                 for idx, sec in enumerate(sections):
                     sec.idx = idx
@@ -176,7 +185,7 @@ class MultiFaultSource(BaseSeismicSource):
 
         # in classical read only the specified sections
         with hdf5.File(self.hdf5path, 'r') as f:
-            dset = f['mf_sections']
+            dset = f[key]
             sections = [general.zunpik(dset[idx]) for idx in idxs]
         for sec, idx in zip(sections, idxs):
             sec.idx = idx
@@ -244,6 +253,10 @@ class MultiFaultSource(BaseSeismicSource):
                 self.investigation_time,
                 self.infer_occur_rates)
             src.hdf5path = self.hdf5path
+            if self.rupture_key:
+                start = self.rupture_slice.start or 0
+                src.rupture_key = self.rupture_key
+                src.rupture_slice = slice(start + slc.start, start + slc.stop)
             yield src
 
     def count_ruptures(self):
@@ -347,55 +360,85 @@ def _prepare(mfsources, sectiondict, hdf5path, site1, del_rupture_idxs):
     return all_rids
 
 
+# Split the sources and save the data required to read each segment.
+def _save_segments(h5, mfsources, all_rids, split, geometry_only):
+    split_dic = general.AccumDict(accum=[])
+    segno = 0
+    for src, rids in zip(mfsources, all_rids):
+        if hasattr(src, 'rupids_by_tag'):
+            items = [(f'{src.source_id}@{tag}', idxs)
+                     for tag, idxs in src.rupids_by_tag.items()]
+        elif split:
+            items = [(tag, np.arange(slc.start, slc.stop))
+                     for tag, slc in src.gen_slices()]
+        else:
+            items = [(src.source_id, np.arange(src.count_ruptures()))]
+        for source_id, rupids in items:
+            segment = copy.copy(src)
+            segment.source_id = source_id
+            segment.probs_occur = src.probs_occur[rupids]
+            segment.mags = src.mags[rupids]
+            segment.rakes = src.rakes[rupids]
+            if geometry_only:
+                segment.rupture_key = f'_multifault/rupture_idxs/{segno}'
+                key = segment.rupture_key
+                segno += 1
+            else:
+                key = f'{source_id}/rupture_idxs'
+            h5.save_vlen(key, [rids[rupid] for rupid in rupids])
+            if not geometry_only:
+                _save_segment_data(h5, segment)
+            split_dic[src.source_id].append(segment)
+    return split_dic
+
+
+# Standalone files also carry the arrays and attributes that load() needs.
+def _save_segment_data(h5, segment):
+    path = segment.source_id
+    h5[f'{path}/probs_occur'] = segment.probs_occur
+    h5[f'{path}/mags'] = segment.mags
+    h5[f'{path}/rakes'] = segment.rakes
+    attrs = h5[path].attrs
+    attrs['name'] = segment.name
+    attrs['tectonic_region_type'] = segment.tectonic_region_type
+    attrs['investigation_time'] = segment.investigation_time
+    attrs['infer_occur_rates'] = segment.infer_occur_rates
+
+
 # NB: as side effect delete _rupture_idxs,
 # add .hdf5path and possibly .rupids_by_tag
 def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                    del_rupture_idxs=True, split=True):
     """
-    Serialize MultiFaultSources
+    Serialize multifault sources in a standalone file, or save their
+    geometry in an open calculation file. The calculation stores the
+    remaining source data in _csm.
 
     :returns: (split_dic, secparams)
     """
-    all_rids = _prepare(mfsources, sectiondict, hdf5path, site1,
+    embedded = isinstance(hdf5path, hdf5.File)
+    filename = hdf5path.filename if embedded else hdf5path
+    all_rids = _prepare(mfsources, sectiondict, filename, site1,
                         del_rupture_idxs)  # ultra-fast
-    split_dic = general.AccumDict(accum=[])
+    if embedded:
+        return _save_geometry(hdf5path, mfsources, sectiondict, all_rids,
+                              split, geometry_only=True)
     with hdf5.File(hdf5path, 'w') as h5:
         performance.init_performance(h5)
-        for src, rids in zip(mfsources, all_rids):
-            if hasattr(src, 'rupids_by_tag'):
-                items = [(f'{src.source_id}@{tag}', idxs)
-                         for tag, idxs in src.rupids_by_tag.items()]
-            elif split:
-                items = [(tag, np.arange(slc.start, slc.stop))
-                         for tag, slc in src.gen_slices()]
-            else:
-                items = [(src.source_id, np.arange(src.count_ruptures()))]
-            for source_id, rupids in items:
-                segment = copy.copy(src)
-                segment.source_id = source_id
-                segment.probs_occur = src.probs_occur[rupids]
-                segment.mags = src.mags[rupids]
-                segment.rakes = src.rakes[rupids]
-                h5.save_vlen(f'{source_id}/rupture_idxs',
-                             [rids[rupid] for rupid in rupids])
-                h5[f'{source_id}/probs_occur'] = segment.probs_occur
-                h5[f'{source_id}/mags'] = segment.mags
-                h5[f'{source_id}/rakes'] = segment.rakes
+        return _save_geometry(h5, mfsources, sectiondict, all_rids, split,
+                              geometry_only=False)
 
-                # save attributes
-                attrs = h5[f'{source_id}'].attrs
-                attrs['name'] = src.name
-                attrs['tectonic_region_type'] = src.tectonic_region_type
-                attrs['investigation_time'] = src.investigation_time
-                attrs['infer_occur_rates'] = src.infer_occur_rates
-                split_dic[src.source_id].append(segment)
-        h5.save_vlen('mf_sections', [
-            general.zpik(sec) for sec in sectiondict.values()])
-        spdict = parallel.Starmap.apply(
-            build_secparams, (sectiondict.items(),), h5=h5
-        ).reduce()
-        h5['secparams'] = secparams = np.array(
-            [spdict[k] for k in sectiondict])
+
+# Share the section geometry and its derived parameters across the sources.
+def _save_geometry(h5, mfsources, sectiondict, all_rids, split, geometry_only):
+    split_dic = _save_segments(h5, mfsources, all_rids, split, geometry_only)
+    key = '_multifault/sections' if geometry_only else 'mf_sections'
+    h5.save_vlen(key, [general.zpik(sec) for sec in sectiondict.values()])
+    spdict = parallel.Starmap.apply(
+        build_secparams, (sectiondict.items(),), h5=h5).reduce()
+    key = '_multifault/secparams' if geometry_only else 'secparams'
+    h5[key] = secparams = np.array([spdict[k] for k in sectiondict])
+    h5.flush()
     return split_dic, secparams
 
 
