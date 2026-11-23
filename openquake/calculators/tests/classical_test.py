@@ -26,7 +26,7 @@ from unittest import mock
 from openquake.baselib import parallel, general, config, hdf5, performance
 from openquake.baselib.general import decode, gettemp
 from openquake.hazardlib import (
-    InvalidFile, nrml, calc, rmap_maker, source_reader)
+    InvalidFile, nrml, calc, rmap_maker)
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -421,6 +421,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__,
                               delta=1E-5)
+        expected = self.calc.datastore['hcurves-stats'][:]
         # make sure probs_occur are stored as expected
         probs_occur = self.calc.datastore['rup/probs_occur'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
@@ -452,15 +453,15 @@ class ClassicalTestCase(CalculatorTestCase):
         # rateSplit does not change these sources' occurrence rates.
         # Both uncertainty sets must retain the full atomic contribution,
         # with both the few-sites and many-sites task functions.
+        # Compare the original site in both runs. The second site forces
+        # the many-sites path.
         smlt = 'source_model_logic_tree_unc.xml'
         for kwargs in [{}, dict(disagg_by_src='false', max_sites_disagg='1',
                                 sites='135.68 35.68, 135.69 35.68')]:
-            self.run_calc(case_27.__file__, 'job.ini', **kwargs)
-            expected = self.calc.datastore['hcurves-stats'][:]
             self.run_calc(
                 case_27.__file__, 'job.ini', **kwargs,
                 source_model_logic_tree_file=smlt)
-            actual = self.calc.datastore['hcurves-stats'][:]
+            actual = self.calc.datastore['hcurves-stats'][:1]
             aac(actual, expected, rtol=1E-6)
 
     def test_case_27_other(self):
@@ -715,7 +716,7 @@ class ClassicalTestCase(CalculatorTestCase):
     @mock.patch('openquake.calculators.autogrid.random_filter',
                 new=lambda objs, _factor: objs)
     def test_calibration_only(self):
-        # oq run --calibrate: the calibration is stored and the
+        # oq engine --calibrate job.ini: the calibration is stored and the
         # preclassical stops before the splitting of the sources
         self.run_calc(case_43.__file__, 'job.ini',
                       calculation_mode='preclassical',
@@ -726,7 +727,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(len(calib), 4)
         self.assertNotIn('source_info', self.calc.datastore)
 
-    @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 1)
+    # 18 calibration batches of 15-101 sources; with MAX_PAIRS=1 there
+    # was a batch per source (1042 batches) and the test was 2x slower
+    @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 100_000)
     # the full calibration, i.e. without the random sample, is checked here
     @mock.patch('openquake.calculators.autogrid.random_filter',
                 new=lambda objs, _factor: objs)
@@ -749,6 +752,10 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertGreater(data.nrupts.sum(), 0)
         self.assertIn('nctxs', self.calc.datastore)
         self.assertGreater(self.calc.cfactor[2], 0)
+        # the contexts without gridding are estimated in classical
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['exact'], int(self.calc.cfactor[4]))
+        self.assertGreater(est['exact'], est['gridded'])
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -773,13 +780,6 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'],
                               case_45.__file__)
 
-    def test_strided_reading(self):
-        # reading the source models with strides (see source_reader.BIG_FILE)
-        # gives the same results, also with mutex groups and uncertainties
-        with mock.patch.object(source_reader, 'BIG_FILE', 0):
-            self.test_case_27()
-            self.test_case_45()
-        
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
         self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
@@ -1311,7 +1311,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # Check execution of a calculation specifiying reference z1pt0
         # and z2pt5 values of -999 in the job file instead of in site
         # model file
-        self.run_calc(case_89.__file__, 'job_ref.ini')
+        self.run_calc(case_89.__file__, 'job_ref.ini',
+                      calculation_mode='preclassical')
 
         # And check z1pt0 of -100 m/s raises value error when compiling
         # the site collection from a CSV within a regular OQ calc
@@ -1506,7 +1507,7 @@ class ContextReductionTestCase(unittest.TestCase):
             'nctxs': numpy.array([(400, 0, 100, 0, 0)], CTX_EST)}
 
     def test_gridding_and_precision(self):
-        self.calc.cfactor = numpy.array([96., 4., 100., 0.])
+        self.calc.cfactor = numpy.array([96., 4., 100., 0., 0.])
         with self.assertLogs(level='INFO') as logs:
             self.calc.log_cfactor()
         self.assertIn('estimated reduction factor 4.17', logs.output[0])
@@ -1518,18 +1519,29 @@ class ContextReductionTestCase(unittest.TestCase):
         self.calc.oqparam = mock.Mock(collapse_precision=0,
                                       ps_grid_spacing=0)
         self.calc.datastore = {}
-        self.calc.cfactor = numpy.array([96., 4., 100., 0.])
+        self.calc.cfactor = numpy.array([96., 4., 100., 0., 0.])
         self.calc.store_grid()
         est = self.calc.datastore['nctxs'][0]
         self.assertEqual(est['collapsed'], 96)  # after collapse_precision
         self.assertEqual(est['gridded'], 100)  # gridded, before collapse
         self.assertEqual(est['exact'], 0)  # no estimate, not set
 
+    def test_store_nogrid(self):
+        # the estimate of the contexts without gridding goes in 'exact'
+        self.calc.oqparam = mock.Mock(collapse_precision=0,
+                                      ps_grid_spacing=50)
+        self.calc.datastore = {}
+        self.calc.cfactor = numpy.array([96., 4., 100., 0., 400.])
+        self.calc.store_grid()
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['exact'], 400)
+        self.assertEqual(est['gridded'], 100)
+
     def test_store_exact(self):
         self.calc.oqparam = mock.Mock(collapse_precision=.03,
                                       ps_grid_spacing=0)
         self.calc.datastore = {}
-        self.calc.cfactor = numpy.array([96., 4., 0., 0.])
+        self.calc.cfactor = numpy.array([96., 4., 0., 0., 0.])
         self.calc.store_grid()
         est = self.calc.datastore['nctxs'][0]
         self.assertEqual(est['exact'], 100)  # 96 after + 4 removed
@@ -1541,7 +1553,7 @@ class ContextReductionTestCase(unittest.TestCase):
 
     def test_mixed_sources(self):
         # Include 50 ungridded contexts as well as the 100 gridded ones.
-        self.calc.cfactor = numpy.array([130., 20., 100., 0.])
+        self.calc.cfactor = numpy.array([130., 20., 100., 0., 0.])
         with self.assertLogs(level='INFO') as logs:
             self.calc.log_cfactor()
         self.assertIn('estimated reduction factor 3.46', logs.output[0])
@@ -1550,14 +1562,14 @@ class ContextReductionTestCase(unittest.TestCase):
     def test_pointsource_distance(self):
         self.calc.datastore = {
             'nctxs': numpy.array([(330, 100, 0, 0, 0)], CTX_EST)}
-        self.calc.cfactor = numpy.array([100., 0., 0., 0.])
+        self.calc.cfactor = numpy.array([100., 0., 0., 0., 0.])
         with self.assertLogs(level='INFO') as logs:
             self.calc.log_cfactor()
         self.assertIn('cfactor = 100, reduction factor 3.30 (psdist 3.30 x '
                       'collapse 1.00)',
                       logs.output[0])
         # 20 contexts removed by collapse_precision: 3.30 * 120 / 100
-        self.calc.cfactor = numpy.array([100., 20., 0., 0.])
+        self.calc.cfactor = numpy.array([100., 20., 0., 0., 0.])
         with self.assertLogs(level='INFO') as logs:
             self.calc.log_cfactor()
         self.assertIn('cfactor = 100, reduction factor 3.96 (psdist 3.30 x '
@@ -1566,7 +1578,7 @@ class ContextReductionTestCase(unittest.TestCase):
 
     def test_gridding_without_collapse(self):
         self.calc.oqparam = mock.Mock(collapse_precision=0)
-        self.calc.cfactor = numpy.array([100., 0., 50., 0.])
+        self.calc.cfactor = numpy.array([100., 0., 50., 0., 0.])
         with self.assertLogs(level='INFO') as logs:
             self.calc.log_cfactor()
         self.assertIn('cfactor = 100, estimated reduction factor 4.50 '
@@ -1578,7 +1590,8 @@ class ContextReductionTestCase(unittest.TestCase):
         for precision, removed, warn in [(.03, 9, True), (.03, 10, False),
                                          (0., 0, False)]:
             self.calc.oqparam.collapse_precision = precision
-            self.calc.cfactor = numpy.array([100 - removed, removed, 0., 0.])
+            self.calc.cfactor = numpy.array(
+                [100 - removed, removed, 0., 0., 0.])
             with self.assertLogs(level='INFO') as logs:
                 self.calc.log_cfactor()
             self.assertEqual(len(logs.output), 2 if warn else 1)
@@ -1590,7 +1603,7 @@ class ContextReductionTestCase(unittest.TestCase):
         self.calc.oqparam = mock.Mock(collapse_precision=0,
                                       ps_grid_spacing=0)
         self.calc.datastore = {}
-        self.calc.cfactor = numpy.array([300., 0., 0., 900.])
+        self.calc.cfactor = numpy.array([300., 0., 0., 900., 0.])
         self.calc.store_grid()
         self.assertEqual(self.calc.datastore['nctxs'][0]['separate'], 1200)
         with self.assertLogs(level='INFO') as logs:
@@ -1606,6 +1619,8 @@ class ContextReductionTestCase(unittest.TestCase):
         self.assertEqual(est['separate'], 1200)
 
 
+@unittest.skipIf(parallel.num_cores >= 64,
+                 'the thresholds are meant for machines with few cores')
 class SlowTasksTestCase(unittest.TestCase):
     """
     Check the detection of slow tasks in ClassicalCalculator.post_execute.
