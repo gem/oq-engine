@@ -1279,9 +1279,9 @@ def check_gmf_sites(dstore, gmf_sids, complete):
     :param gmf_sids: the site IDs in gmf_data
     :param complete: the complete site collection
     """
-    msg = ('%s: the site IDs in %s are inconsistent with the stored site '
-           'collection; the calculation was performed with a previous '
-           'engine version, please run it again')
+    msg = ('%s: the site IDs in %s do not match the stored site '
+           'collection, so the GMFs cannot be associated to their sites; '
+           'please run the calculation again')
     if len(gmf_sids) and gmf_sids.max() >= len(complete):
         raise ValueError(msg % (dstore.filename, 'gmf_data'))
     if 'assetcol' in dstore:
