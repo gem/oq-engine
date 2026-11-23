@@ -19,7 +19,6 @@
 import os
 import time
 import pstats
-import pickle
 import signal
 import logging
 import getpass
@@ -34,7 +33,6 @@ from contextlib import contextmanager
 from decorator import decorator
 import psutil
 import numpy
-import pandas
 import numba
 
 from openquake.baselib.general import humansize
@@ -422,45 +420,6 @@ class Monitor(object):
                          counts=0, mem=0, duration=0)
         vars(new).update(kw)
         return new
-
-    def save(self, key, obj):
-        """
-        :param key: key in the _tmp.hdf5 file
-        :param obj: big object to store in pickle format
-        :returns: True is saved, False if not because the key was taken
-        """
-        tmp = self.filename[:-5] + '_tmp.hdf5'
-        f = hdf5.File(tmp, 'a') if os.path.exists(tmp) else hdf5.File(tmp, 'w')
-        with f:
-            if key in f:  # already saved
-                return False
-            if isinstance(obj, numpy.ndarray):
-                f[key] = obj
-            elif isinstance(obj, pandas.DataFrame):
-                f.create_df(key, obj)  # no gzip makes read('assets') faster
-            else:
-                f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
-        return True
-
-    def read(self, key, slc=slice(None)):
-        """
-        :param key: key in the _tmp.hdf5 file
-        :param slc: slice to read (default all)
-        :return: unpickled object
-        """
-        tmp = self.filename[:-5] + '_tmp.hdf5'
-        with hdf5.File(tmp, 'r') as f:
-            dset = f[key]
-            if '__pdcolumns__' in dset.attrs:
-                return f.read_df(key, slc=slc)
-            elif dset.shape:
-                return dset[slc]
-            return pickle.loads(dset[()])
-
-    def read_pdcolumns(self, key):
-        tmp = self.filename[:-5] + '_tmp.hdf5'
-        with hdf5.File(tmp, 'r') as f:
-            return f[key].attrs['__pdcolumns__']
 
     def iter(self, genobj, atstop=lambda: None):
         """

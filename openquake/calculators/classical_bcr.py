@@ -18,6 +18,7 @@
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib import stats
 from openquake.calculators import base, classical_risk
@@ -41,7 +42,8 @@ def classical_bcr(riskinputs, param, monitor):
     """
     R = riskinputs[0].hazard_getter.R
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
-    crmodel = monitor.read('crmodel')
+    with hdf5.File(monitor.filename, 'r') as h5:
+        crmodel = base.read_worker_model(h5)
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
         with mon:

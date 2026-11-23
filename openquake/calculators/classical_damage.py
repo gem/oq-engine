@@ -18,6 +18,7 @@
 
 import logging
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib import stats
 from openquake.calculators import base, classical_risk, views
@@ -38,7 +39,8 @@ def classical_damage(riskinputs, param, monitor):
     :yields:
         dictionaries asset_ordinal -> damage(R, L, D)
     """
-    crmodel = monitor.read('crmodel')
+    with hdf5.File(monitor.filename, 'r') as h5:
+        crmodel = base.read_worker_model(h5)
     L = crmodel.oqparam.L
     mon = monitor('getting hazard', measuremem=False)
     R = riskinputs[0].hazard_getter.R

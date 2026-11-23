@@ -716,10 +716,14 @@ def run(func, oq, rup0, calc):
             numpy.isin(events['rup_id'], filrups['id'])]
 
     allargs = get_allargs(oq, acc, filrups, calc)
+    prepare = getattr(calc, 'prepare_worker_data', None)
+    if prepare:
+        prepare()
     dstore.swmr_on()
-    smap = parallel.Starmap(func, h5=dstore.hdf5)
-    if hasattr(calc, 'save_tmp'):
-        calc.save_tmp(smap.monitor)
+    if prepare:
+        smap = parallel.Starmap(func, h5=dstore, perf='memory')
+    else:
+        smap = parallel.Starmap(func, h5=dstore.hdf5)
     task_no = os.environ.get('OQ_TASK_NO', '')
     if task_no:  # debug a single task
         smap.submit(allargs[int(task_no)])

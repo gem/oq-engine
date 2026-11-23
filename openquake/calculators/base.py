@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
 import os
+import pickle
 import sys
 import abc
 import json
@@ -1415,6 +1416,22 @@ class HazardCalculator(BaseCalculator):
                 func(self.datastore, **oq.postproc_args)
 
 
+def prepare_risk_worker_data(dstore, crmodel):
+    """Store the prepared risk model before workers open the calculation."""
+    if dstore.hdf5.swmr_mode:
+        dstore.close()
+        dstore.open('a')
+    if '_risk_worker' in dstore.hdf5:
+        del dstore['_risk_worker']
+    dstore['_risk_worker/crmodel'] = pickle.dumps(
+        crmodel, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def read_worker_model(h5):
+    """Read the prepared risk model, including runtime settings."""
+    return pickle.loads(h5['_risk_worker/crmodel'][()])
+
+
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
@@ -1475,10 +1492,10 @@ class RiskCalculator(HazardCalculator):
             return
         ct = self.oqparam.concurrent_tasks or 1
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
+        prepare_risk_worker_data(self.datastore, self.crmodel)
         self.datastore.swmr_on()
         smap = parallel.Starmap(
-            self.core_task.__func__, h5=self.datastore.hdf5)
-        smap.monitor.save('crmodel', self.crmodel)
+            self.core_task.__func__, h5=self.datastore, perf='memory')
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
             smap.submit((block, self.oqparam))
