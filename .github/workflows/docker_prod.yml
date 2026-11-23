@@ -99,8 +99,8 @@ jobs:
           echo "▶ Single-shot calc"
           time docker run "$IMG" \
             oq engine --run \
-            /opt/openquake/venv/demos/risk/ScenarioDamage/job_hazard.ini \
-            /opt/openquake/venv/demos/risk/ScenarioDamage/job_risk.ini
+            /home/openquake/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
+            /home/openquake/openquake/demos/risk/ScenarioDamage/job_risk.ini
 
           echo "▶ Starting WebUI"
           cat > ./.env << EOF
@@ -108,12 +108,12 @@ jobs:
           OQ_ADMIN_USERNAME=user
           OQ_ADMIN_PASSWORD=login
           OQ_ADMIN_EMAIL=user@login.input
-          EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+          EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
           EMAIL_HOST=smtp.gmail.com
           EMAIL_PORT=587
           EMAIL_USE_TLS=True
-          EMAIL_HOST_USER=admin@reply.com
-          EMAIL_HOST_PASSWORD=polhjuih@
+          EMAIL_USER=admin@reply.com
+          EMAIL_PASS=polhjuih@
           EMAIL_SUPPORT=noreply@reply.com
           DJANGO_SETTINGS_MODULE=openquake.server.settings
           EOF
@@ -144,20 +144,20 @@ jobs:
           sleep 3
           time docker exec -t openquake \
             oq engine --run \
-            /opt/openquake/venv/demos/hazard/AreaSourceClassicalPSHA/job.ini
+            /home/openquake/openquake/demos/hazard/AreaSourceClassicalPSHA/job.ini
 
           echo "▶ Exec – risk"
           time docker exec -t openquake \
             oq engine --run \
-            /opt/openquake/venv/demos/risk/ScenarioDamage/job_hazard.ini \
-            /opt/openquake/venv/demos/risk/ScenarioDamage/job_risk.ini
+            /home/openquake/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
+            /home/openquake/openquake/demos/risk/ScenarioDamage/job_risk.ini
 
           echo "▶ Fresh container"
           sleep 2
           time docker run "$IMG" \
             oq engine --run \
-            /opt/openquake/venv/demos/risk/ScenarioDamage/job_hazard.ini \
-            /opt/openquake/venv/demos/risk/ScenarioDamage/job_risk.ini
+            /home/openquake/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
+            /home/openquake/openquake/demos/risk/ScenarioDamage/job_risk.ini
 
           docker stop openquake 2>/dev/null || true
           docker rm   openquake 2>/dev/null || true
