@@ -491,8 +491,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 normal_sources.extend(sg)
         if multifaults:
-            with hdf5.File(multifaults[0].hdf5path, 'r') as h5:
-                secparams = h5['secparams'][:]
+            secparams = multifaults[0].get_secparams()
             logging.warning(
                 'There are %d multiFaultSources (secparams=%s)',
                 len(multifaults), general.humansize(secparams.nbytes))
@@ -534,8 +533,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         if normal_sources:
             sources_by_key = groupby(
                 normal_sources, operator.attrgetter('grp_id'))
-            if sys.platform != 'darwin':
-                # avoid a segfault in macOS
+            if sys.platform != 'darwin' or len(secparams):
+                # Multifault workers read the datastore. Otherwise skip
+                # SWMR on macOS to avoid a segfault.
                 self.datastore.swmr_on()
             smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
             cmakers = self.cmakers.to_array()

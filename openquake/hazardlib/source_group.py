@@ -23,7 +23,7 @@ import operator
 import functools
 import collections
 import numpy
-from openquake.baselib import config, hdf5, performance
+from openquake.baselib import config, performance
 from openquake.baselib.general import zpik, zunpik
 from openquake.baselib.general import split_in_blocks, AccumDict
 from openquake.baselib.general import block_splitter, groupby, nokey
@@ -468,13 +468,10 @@ class CompositeSourceModel:
         """
         Set the `.msparams` attribute on multifault sources, if any
         """
-        for src in self.get_sources():
-            if src.code == b'F':
-                with hdf5.File(src.hdf5path, 'r') as h5:
-                    secparams = h5['secparams'][:]
-                break
-        for src in self.get_sources():
-            if src.code == b'F':
+        multifaults = [src for src in self.get_sources() if src.code == b'F']
+        if multifaults:
+            secparams = multifaults[0].get_secparams()
+            for src in multifaults:
                 src.set_msparams(secparams)
 
     def get_msr_by_grp(self):
@@ -732,6 +729,12 @@ def read_src_group(hdf5, key, mon=performance.Monitor()):
     """
     with mon:
         grp = zunpik(hdf5[f"_csm/{key}"][:])
+        multifaults = [src for src in grp if src.code == b'F']
+        if multifaults:
+            # A child can store its own _csm and inherit the geometry.
+            filename = hdf5['_multifault'].file.filename
+            for src in multifaults:
+                src.hdf5path = filename
     return grp
 
 

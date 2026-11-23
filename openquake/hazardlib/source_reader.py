@@ -765,8 +765,7 @@ def build_csm(oq, full_lt, smdict, dstore):
 
 def store_data(oq, smdict, csm, dstore):
     """
-    Create src_mutex, grp_probability in calc_XXX.hdf5 and sources
-    and mf_sections in calc_XXX_tmp.hdf5
+    Store source mutex metadata and multifault geometry in the datastore.
     """
     out = []
     probs = []
@@ -802,7 +801,7 @@ def store_data(oq, smdict, csm, dstore):
     # must be called *after* add_semicolons
     t0 = time.time()
     secparams = fix_geometry_sections(
-        smdict, csm.src_groups, dstore.tempname if dstore else '',
+        smdict, csm.src_groups, dstore.hdf5 if dstore else '',
         sitecol if oq.disagg_by_src and oq.use_rates else None,
         split=not oq.calculation_mode.startswith('event_based'))
     if secparams is not None and len(secparams):
@@ -1073,7 +1072,7 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None,
     check_unique(sec_ids, 'section ID in files ' + ' '.join(gfiles))
 
     if sections:
-        # save in the temporary file sources and sections
+        # save the shared sections and each segment's rupture indices
         assert hdf5path, ('You forgot to pass the dstore to '
                           'get_composite_source_model')
         mfsources = []

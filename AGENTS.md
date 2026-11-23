@@ -13,7 +13,7 @@ for a circular dependency or an optional dependency.
 # development
 
 In order to run Python code you must make sure that the venv
-(~/openquake or .pixi/envs/default) is activated; also make sure ruff,
+(~/openquake) is activated; also make sure ruff,
 pytest-xdist and pytest-django are installed. It is also useful to
 install pyqt5, qtawesome, PyOpenGL and silx to view HDF5 files.
 
