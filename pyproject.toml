@@ -32,8 +32,7 @@ dependencies = [
     "django~=5.2.0",
     "psutil",
     "requests",
-    "pyzmq~=26.0.3; python_version <= '3.11'",
-    "pyzmq~=26.2.0; python_version >  '3.11'",
+    "pyzmq~=27.3.0",
     "h3>=4.4",
 
     # unplanned deps
