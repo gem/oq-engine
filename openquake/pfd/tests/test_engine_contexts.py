@@ -51,7 +51,8 @@ class EngineContextsTestCase(unittest.TestCase):
         self.assertEqual(gsim.REQUIRES_DISTANCES,
                          frozenset({'rtor', 'x_l', 'rx'}))
         self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS,
-                         frozenset({'mag', 'dip', 'rake', 'length', 'ztor'}))
+                         frozenset(
+                             {'mag', 'dip', 'rake', 'length', 'ztor', 'zbot'}))
 
     def test_full_lt(self):
         oq = get_oqparam(os.path.join(DATADIR, 'job.ini'))

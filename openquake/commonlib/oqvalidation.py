@@ -872,9 +872,11 @@ near_far_threshold_km:
   Default: 0.2
 
 surface_rupture_depth_tolerance_km:
-  PFD only: a rupture contributes surface-displacement hazard only if
-  its top edge reaches within this depth (km); deeper (buried) ruptures
-  are skipped.
+  PFD only: a rupture is at the surface if its top edge reaches within
+  this depth (km). For the floating sources (simple, complex and kite
+  faults) the positions at the surface carry the rate of all the
+  down-dip positions of their magnitude; for the other sources the
+  deeper (buried) ruptures are skipped.
   Example: *surface_rupture_depth_tolerance_km = 0.01*.
   Default: 0.01
 

@@ -68,6 +68,21 @@ def effective_displacement_definition(model):
     return getattr(model, 'DISPLACEMENT_DEFINITION', None)
 
 
+#: branch parameters of the primary surface-rupture models that describe
+#: the geometry of the fault. When a branch pins one of them, the same value
+#: is used for every source the branch applies to, instead of the dip and
+#: the seismogenic depth of each source.
+SOURCE_GEOMETRY_PARAMS = ('dip_mu', 'Zs_mu', 'seismothickness')
+
+
+def _field(ctx, name):
+    """The field ``name`` of a context, or None if the context lacks it."""
+    names = getattr(getattr(ctx, 'dtype', None), 'names', None)
+    if names is not None:  # engine context array
+        return ctx[name] if name in names else None
+    return getattr(ctx, name, None)
+
+
 def style_from_rake(rake):
     """Return the faulting style for a rake angle in degrees.
 
@@ -120,6 +135,21 @@ class PFDModelAdapter:
         else:
             self.model_type = 'unknown'
             logger.warning("Could not determine model type for: %s", class_name)
+
+    def pinned_geometry_params(self) -> Dict[str, Any]:
+        """
+        The fault-geometry parameters that the branch pins for a primary
+        surface-rupture model which would otherwise take them from each
+        source (``SOURCE_GEOMETRY_PARAMS``), as a dictionary name -> value;
+        empty for the models that do not depend on the geometry.
+        """
+        if self.model_type != 'primary_sr':
+            return {}
+        accepted = self._get_method_params('get_prob')
+        return {name: self.model_params[name]
+                for name in SOURCE_GEOMETRY_PARAMS
+                if name in accepted
+                and self.model_params.get(name) is not None}
 
     def _resolve_style(self, ctx: 'Any', ini_section: str) -> str:
         """Resolve the faulting style for a model call.
@@ -273,11 +303,21 @@ class PFDModelAdapter:
             'mag': float(ctx.mag[0]),
             'dip': float(ctx.dip[0]),
             'dip_mu': float(ctx.dip[0]),
-            'seismothickness': self.model_params.get('seismothickness', 15.0),
             'vs30': _vs30_0 if np.isfinite(_vs30_0) else None,
             'style': style,
-            **{k: v for k, v in self.model_params.items() if k != 'style'},
         }
+        # Geometry-based models (Mammarella et al. 2024) are evaluated with
+        # the dip and the seismogenic depth of the fault that hosts the
+        # rupture: ctx.dip and ctx.zbot, which the calculator sets to the
+        # bottom of the source for the floating ruptures. There is no
+        # default depth: a context without zbot leaves the model to ask for
+        # it. Values pinned in the logic-tree branch still win (see
+        # SOURCE_GEOMETRY_PARAMS and pinned_geometry_params).
+        zbot = _field(ctx, 'zbot')
+        if zbot is not None:
+            kwargs['seismothickness'] = float(zbot[0])
+        kwargs.update(
+            {k: v for k, v in self.model_params.items() if k != 'style'})
 
         def _reduced_scalar(res):
             res_red = _reduce_mc(
