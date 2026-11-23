@@ -145,7 +145,7 @@ window.initAeloForm = function() {
                 }
             }
             var err_msg = resp.error_msg;
-            diaerror.show(false, "Error", err_msg);
+            diaerror.show_text(false, "Error", err_msg);
         }).always(function () {
             $('#submit_aelo_calc').prop('disabled', false);
             $('.submit_aelo_calc_waiting').hide();
