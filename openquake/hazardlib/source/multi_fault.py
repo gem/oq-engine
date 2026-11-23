@@ -126,9 +126,8 @@ class MultiFaultSource(BaseSeismicSource):
 
     def get_secparams(self):
         """Read the precomputed parameters for all sections."""
-        key = '_multifault/secparams' if self.rupture_key else 'secparams'
         with hdf5.File(self.hdf5path, 'r') as h5:
-            return h5[key][:]
+            return h5['_multifault/secparams'][:]
 
     def set_sections(self, sections):
         """
@@ -171,7 +170,7 @@ class MultiFaultSource(BaseSeismicSource):
         :param idxs: indices of the surfaces to return (default all)
         :returns: the underlying sections as KiteSurfaces
         """
-        key = '_multifault/sections' if self.rupture_key else 'mf_sections'
+        key = '_multifault/sections'
         if idxs is None:  # in event_based use the cache
             try:
                 sections = SECTIONS[self.hdf5path]
@@ -432,12 +431,12 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
 # Share the section geometry and its derived parameters across the sources.
 def _save_geometry(h5, mfsources, sectiondict, all_rids, split, geometry_only):
     split_dic = _save_segments(h5, mfsources, all_rids, split, geometry_only)
-    key = '_multifault/sections' if geometry_only else 'mf_sections'
-    h5.save_vlen(key, [general.zpik(sec) for sec in sectiondict.values()])
+    h5.save_vlen('_multifault/sections',
+                 [general.zpik(sec) for sec in sectiondict.values()])
     spdict = parallel.Starmap.apply(
         build_secparams, (sectiondict.items(),), h5=h5).reduce()
-    key = '_multifault/secparams' if geometry_only else 'secparams'
-    h5[key] = secparams = np.array([spdict[k] for k in sectiondict])
+    secparams = np.array([spdict[k] for k in sectiondict])
+    h5['_multifault/secparams'] = secparams
     h5.flush()
     return split_dic, secparams
 
@@ -448,7 +447,9 @@ def load(hdf5path):
     """
     srcs = []
     with hdf5.File(hdf5path, 'r') as h5:
-        for key in list(h5):
+        for key in h5:
+            if key == '_multifault':
+                continue
             data = h5[key]
             if isinstance(data, h5py.Group):
                 name = data.attrs['name']

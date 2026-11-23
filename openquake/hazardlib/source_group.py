@@ -739,8 +739,7 @@ def read_src_group(hdf5, key, mon=performance.Monitor()):
     """
     with mon:
         grp = zunpik(hdf5[f"_csm/{key}"][:])
-        multifaults = [src for src in grp
-                       if src.code == b'F' and src.rupture_key]
+        multifaults = [src for src in grp if src.code == b'F']
         if multifaults:
             # A child can store its own _csm and inherit the geometry.
             filename = hdf5['_multifault'].file.filename
