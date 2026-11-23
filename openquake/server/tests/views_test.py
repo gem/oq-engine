@@ -115,7 +115,11 @@ def stop_webui(proc, _thread):
     except psutil.NoSuchProcess:
         children = []
     for child in children:
-        child.kill()
+        try:
+            child.kill()
+        except psutil.NoSuchProcess:
+            # A child can exit after children() returns.
+            pass
     proc.terminate()
     proc.wait(timeout=10)
     psutil.wait_procs(children, timeout=10)
