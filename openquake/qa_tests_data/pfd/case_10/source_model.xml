@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel name="Two floating faults, 24 km long, with different dip and seismogenic depth">
+    <sourceGroup name="faults" tectonicRegion="Active Shallow Crust">
+      <simpleFaultSource id="A" name="Fault A" tectonicRegion="Active Shallow Crust">
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>
+              10.0 45.0
+              10.0 45.2158372
+            </gml:posList>
+          </gml:LineString>
+          <dip>60.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+        <magScaleRel>WC1994</magScaleRel>
+        <ruptAspectRatio>10.0</ruptAspectRatio>
+        <incrementalMFD binWidth="0.1" minMag="6.0">
+          <occurRates>1.0E-3</occurRates>
+        </incrementalMFD>
+        <rake>-90.0</rake>
+      </simpleFaultSource>
+      <simpleFaultSource id="B" name="Fault B" tectonicRegion="Active Shallow Crust">
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>
+              11.0 45.0
+              11.0 45.2158372
+            </gml:posList>
+          </gml:LineString>
+          <dip>35.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>20.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+        <magScaleRel>WC1994</magScaleRel>
+        <ruptAspectRatio>10.0</ruptAspectRatio>
+        <incrementalMFD binWidth="0.1" minMag="6.5">
+          <occurRates>5.0E-4</occurRates>
+        </incrementalMFD>
+        <rake>-90.0</rake>
+      </simpleFaultSource>
+    </sourceGroup>
+  </sourceModel>
+</nrml>

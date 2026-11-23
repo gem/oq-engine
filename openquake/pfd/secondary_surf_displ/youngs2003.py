@@ -133,11 +133,19 @@ class Youngs2003SecondaryFD(BaseSecondarySurfDispl):
         # Initialize output array
         prob_exceeding_d = np.zeros((n_sites, d.shape[0]))  # Shape (n_sites, n_displacements)
 
+        # Trapezoid weights of the MD distribution: half weight at the two
+        # ends of the truncation range, renormalised to unit sum. Full end
+        # weights over-weight the upper edge, which controls the tail
+        # (+3 % at P ~ 1e-3, +18 % at P ~ 1e-5).
+        weights = np.array([self.get_prob_max_displacement(v, mag)
+                            for v in logspace_vals])
+        weights[[0, -1]] *= 0.5
+        weights /= weights.sum()
+
         # Calculate probabilities for each max displacement
-        for max_disp in logspace_vals:
+        for max_disp, prob_max_disp in zip(logspace_vals, weights):
             D_MD = d / max_disp  # Shape (n_displacements,)
             prob_D_MD = self.get_prob_D_MD(D_MD, rx, r, percentile)  # Shape (n_sites, n_displacements)
-            prob_max_disp = self.get_prob_max_displacement(max_disp, mag)  # Scalar
             prob_exceeding_d += prob_D_MD * prob_max_disp
 
         return prob_exceeding_d

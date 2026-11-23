@@ -944,8 +944,15 @@ class SourceConverter(RuptureConverter):
                 # averages the apparent mesh-cell dips and drifts on a
                 # wiggly trace, but PFD models take dip as input
                 char.surface.original_dip = float(~surface_node.dip)
+                # and the declared lower seismogenic depth: the bottom of
+                # the mesh is off by up to half the mesh spacing
+                char.surface.original_zbot = float(
+                    ~surface_node.lowerSeismoDepth)
             elif surface_node.tag.endswith('complexFaultGeometry'):
-                [trace] = self.geo_lines(surface_node)[:1]
+                edges = self.geo_lines(surface_node)
+                trace = edges[0]
+                char.surface.original_zbot = float(
+                    max(point.depth for point in edges[-1]))
             else:
                 trace = None
         if trace is not None:
