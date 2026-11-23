@@ -32,24 +32,13 @@ from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.cross_imt.baker_bradley_2017 import (
     BakerBradley2017, _SA_PERIODS)
 from openquake.hazardlib.imt import (
-    IA, PGA, PGV, RSD2080, RSD575, RSD595, SA)
+    IA, PGA, PGV, RSD2080, RSD575, RSD595, SA, from_string)
 
 
 DATA = Path(__file__).with_name('data') / 'BAKER_BRADLEY_2017'
 
 
 EPS = 1E-10
-
-def _imt(name, period):
-    non_sa = {
-        'PGA': PGA,
-        'PGV': PGV,
-        'RSD575': RSD575,
-        'RSD595': RSD595,
-    }
-    if name in non_sa:
-        return non_sa[name]()
-    return SA(period)
 
 
 def test_corrected_author_reference_values():
@@ -58,8 +47,7 @@ def test_corrected_author_reference_values():
         dtype=None, encoding='ascii')
     model = BakerBradley2017()
     actual = [model.rho(
-        _imt(row['imt1'], row['period1']),
-        _imt(row['imt2'], row['period2']))
+        from_string(row['imt1']), from_string(row['imt2']))
         for row in reference]
     numpy.testing.assert_allclose(
         actual, reference['correlation'], rtol=0, atol=0)
