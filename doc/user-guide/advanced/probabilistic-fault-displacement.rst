@@ -257,10 +257,14 @@ measure levels:
   the number of contexts, ruptures and the computation time per
   source
 
-The rates are annual rates of exceedence: with
-``investigation_time = 1.0`` they can be used directly; with a
-different investigation time the engine divides by it, as in the
-classical calculator.
+As in the classical calculator, the hazard curves are probabilities of
+exceedence in the investigation time, :math:`1 - \exp(-\lambda\,T)`
+with :math:`\lambda` the annual rate and :math:`T` the
+``investigation_time``, and the hazard maps refer to the ``poes`` in
+that time (or to the ``return_periods``). With
+``investigation_time = 1.0`` the curves are close to the annual rates
+where these are small. ``mean_rates_by_src`` always contains annual
+rates.
 
 Caveats
 --------
