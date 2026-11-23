@@ -1685,3 +1685,4 @@ class SlowTasksTestCase(unittest.TestCase):
                         self.check(rows)
                 else:
                     self.check(rows)  # must not raise
+                    
