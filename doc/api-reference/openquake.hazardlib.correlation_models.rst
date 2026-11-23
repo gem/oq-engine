@@ -124,6 +124,12 @@ Cross-IMT models
     :members:
     :show-inheritance:
 
+.. currentmodule:: openquake.hazardlib.correlation_models.cross_imt.aristeidou_et_al_2025
+
+.. autoclass:: AristeidouEtAl2025
+    :members:
+    :show-inheritance:
+
 .. currentmodule:: openquake.hazardlib.correlation_models.cross_imt.baker_bradley_2017
 
 .. autoclass:: BakerBradley2017

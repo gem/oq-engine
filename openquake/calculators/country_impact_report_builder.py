@@ -18,6 +18,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import functools
 import sys
 from io import BytesIO
 from pathlib import Path
@@ -57,6 +58,45 @@ def _humanize_summary_value(value):
         for part in parts)
 
 
+# the fonts are registered globally in reportlab, so it is enough to
+# register them once per process instead of once per country report
+@functools.lru_cache()
+def _register_fonts(fonts_dir):
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.pdfbase.pdfmetrics import registerFontFamily
+
+    # family_name -> font file prefix
+    font_families = {
+        "NotoSans":      "NotoSans",            # Latin, Cyrillic, Greek
+        "NotoSans-SC":   "NotoSansSC",          # Simplified Chinese
+        "NotoSans-TC":   "NotoSansTC",          # Traditional Chinese
+        "NotoSans-JP":   "NotoSansJP",          # Japanese
+        "NotoSans-KR":   "NotoSansKR",          # Korean
+        "NotoSans-AR":   "NotoSansArabic",      # Arabic
+        "NotoSans-Deva": "NotoSansDevanagari",  # Hindi, Nepali, etc.
+        "NotoSans-Beng": "NotoSansBengali",     # Bengali
+        "NotoSans-Thai": "NotoSansThai",        # Thai
+    }
+    for family, name in font_families.items():
+        regular = fonts_dir / f"{name}-Regular.ttf"
+        bold = fonts_dir / f"{name}-Bold.ttf"
+        if not regular.exists():
+            logging.warning(f"Font not found: {regular}, skipping")
+            continue
+        bold_path = str(bold) if bold.exists() else str(regular)
+        pdfmetrics.registerFont(TTFont(family,             str(regular)))
+        pdfmetrics.registerFont(TTFont(f"{family}-Bold",   bold_path))
+        pdfmetrics.registerFont(TTFont(f"{family}-Italic", str(regular)))
+        registerFontFamily(
+            family,
+            normal=family,
+            bold=f"{family}-Bold",
+            italic=f"{family}-Italic",
+            boldItalic=f"{family}-Bold",
+        )
+
+
 class CountryImpactReportBuilder:
     """
     Builds and stores a single-country impact report.
@@ -77,7 +117,7 @@ class CountryImpactReportBuilder:
             points_gdf=None):
         try:
             import reportlab
-            from reportlab import platypus
+            from reportlab import platypus, rl_config
         except ImportError as exc:
             raise RuntimeError(
                 "In order to create an impact report,"
@@ -91,6 +131,10 @@ class CountryImpactReportBuilder:
                 " 'PyMuPDF' should be installed"
                 ) from exc
 
+        # without the compiled _rl_accel the (unneeded) ASCII85 encoding is
+        # slow, being done in pure Python, and makes the PDF larger; the
+        # setting is global, but the same for all the reports
+        rl_config.useA85 = 0
         self.fitz = fitz
         self.reportlab = reportlab
         self.SimpleDocTemplate = platypus.SimpleDocTemplate
@@ -149,41 +193,7 @@ class CountryImpactReportBuilder:
         self.styles["Heading1"].fontName = "NotoSans-Bold"
 
     def _register_unicode_font(self):
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        from reportlab.pdfbase.pdfmetrics import registerFontFamily
-
-        fonts_dir = get_configured_path('fonts_dir', directory=True)
-
-        # family_name -> font file prefix
-        font_families = {
-            "NotoSans":      "NotoSans",            # Latin, Cyrillic, Greek
-            "NotoSans-SC":   "NotoSansSC",          # Simplified Chinese
-            "NotoSans-TC":   "NotoSansTC",          # Traditional Chinese
-            "NotoSans-JP":   "NotoSansJP",          # Japanese
-            "NotoSans-KR":   "NotoSansKR",          # Korean
-            "NotoSans-AR":   "NotoSansArabic",      # Arabic
-            "NotoSans-Deva": "NotoSansDevanagari",  # Hindi, Nepali, etc.
-            "NotoSans-Beng": "NotoSansBengali",     # Bengali
-            "NotoSans-Thai": "NotoSansThai",        # Thai
-        }
-        for family, name in font_families.items():
-            regular = fonts_dir / f"{name}-Regular.ttf"
-            bold = fonts_dir / f"{name}-Bold.ttf"
-            if not regular.exists():
-                logging.warning(f"Font not found: {regular}, skipping")
-                continue
-            bold_path = str(bold) if bold.exists() else str(regular)
-            pdfmetrics.registerFont(TTFont(family,             str(regular)))
-            pdfmetrics.registerFont(TTFont(f"{family}-Bold",   bold_path))
-            pdfmetrics.registerFont(TTFont(f"{family}-Italic", str(regular)))
-            registerFontFamily(
-                family,
-                normal=family,
-                bold=f"{family}-Bold",
-                italic=f"{family}-Italic",
-                boldItalic=f"{family}-Bold",
-            )
+        _register_fonts(get_configured_path('fonts_dir', directory=True))
 
     def _select_font(self, text):
         """Pick the right font family based on Unicode block detection."""
@@ -444,8 +454,9 @@ class CountryImpactReportBuilder:
     def _generate_assets_plot(self):
         # map of the asset locations, with the same viewport and
         # decorations of the maps in the first page (to be called after
-        # them)
-        assets = self.dstore['assetcol'].array
+        # them); the coordinates are the ones of losses_df, already in
+        # memory, since reading the asset collection for each country is
+        # slow for many assets
         elements = MapDataElements(
             cities=self.cities,
             x_limits=self.x_limits,
@@ -456,7 +467,8 @@ class CountryImpactReportBuilder:
             scale_bar=True
         )
         fig, _ax = plot_assets_map(
-            assets['lon'], assets['lat'], self.admin_boundaries,
+            self.losses_df['lon'].to_numpy(),
+            self.losses_df['lat'].to_numpy(), self.admin_boundaries,
             elements=elements)
         return _fig_to_png(fig)
 

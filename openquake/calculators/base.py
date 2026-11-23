@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
-import gc
 import os
 import sys
 import abc
@@ -321,6 +320,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             return
         copy_model_provenance(exposure_path, self.datastore)
 
+    def _store_rupture_model(self):
+        # store the temporary rupture model file, so that the impact reports
+        # can be regenerated after its removal
+        fname = self.oqparam.inputs.get('rupture_model')
+        if fname and os.path.exists(fname):
+            ext = os.path.splitext(fname)[1]
+            self.datastore.store_files([fname], 'input/rupture_model' + ext)
+
     def save_params(self, **kw):
         """
         Update the current calculation parameters and save engine_version
@@ -354,14 +361,13 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, remove=False,
+    def run(self, pre_execute=True, concurrent_tasks=None,
             shutdown=False, **kw):
         """
         Run the calculation and return the exported outputs.
 
         :param pre_execute: set it to False to avoid running pre_execute
         :param concurrent_tasks: set it to 0 to disable parallelization
-        :param remove: set it to False to remove the hdf5cache file (if any)
         :param shutdown: set it to True to shutdown the ProcessPool
         """
         oq = self.oqparam
@@ -393,6 +399,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             try:
                 if oq.impact:
                     self._copy_model_provenance()
+                    self._store_rupture_model()
                 if os.environ.get('OQ_CHECK_INPUT'):
                     # do not execute the calculation; risk jobs have a
                     # fake parent, so only read the inputs (including
@@ -424,14 +431,12 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                     else:
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
 
-                # remove temporary hdf5 file, if any
-                if os.path.exists(self.datastore.tempname):
-                    multi_fault.SECTIONS.pop(self.datastore.tempname, None)
-                    gc.collect()  # just in case
-                    if remove and oq.calculation_mode != 'preclassical':
-                        # removing in preclassical with multiFaultSources
-                        # would break --hc which is reading the temp file
-                        os.remove(self.datastore.tempname)
+                # Release cached multifault sections from this job and its
+                # parents. Their geometry is stored in the main datastore.
+                dstore = self.datastore
+                while dstore:
+                    multi_fault.SECTIONS.pop(dstore.filename, None)
+                    dstore = dstore.parent
         return getattr(self, 'exported', {})
 
     def core_task(*args):
@@ -787,7 +792,7 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.from_engine = self.from_engine
-            calc.run(remove=False)
+            calc.run()
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_gb '

@@ -17,15 +17,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import copy
 import pathlib
 import tempfile
 import logging
 import traceback
+import numpy
 import pandas as pd
 from openquake.baselib import config, hdf5, sap
+from openquake.baselib.general import gettemp
 from openquake.calculators.country_impact_report_builder import (
     CountryImpactReportBuilder)
-from openquake.calculators.extract import extract
+from openquake.calculators.extract import extract, _get_data
 from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA, get_configured_path,
     get_fatalities_loss_type, points_to_gdf)
@@ -44,9 +48,10 @@ DISCLAIMER_TXT = '''
     subject to changes as more information becomes available.'''
 
 
-def _get_impact_summary_data(dstore, iso3, no_uncertainty, occ_lt):
-    # occ_lt is the loss type of the fatalities for the selected time event
-    aggrisk_tags = extract(dstore, 'aggrisk_tags')
+def _get_impact_summary_data(aggrisk_tags, iso3, no_uncertainty, occ_lt):
+    # aggrisk_tags is extract(dstore, 'aggrisk_tags'), the same for all the
+    # countries; occ_lt is the loss type of the fatalities for the selected
+    # time event
     mapping = {
         meta["label"]: occ_lt if loss_type == 'occupants' else loss_type
         for loss_type, meta in LOSS_METADATA.items()
@@ -138,25 +143,41 @@ def _is_no_uncertainty(oqparam):
             and abs(oqparam.truncation_level) < 1e-8)
 
 
-def _get_losses_df(avg_losses):
+def _get_losses_df(dstore, oqparam):
     """
     Use the median (quantile-0.5) as the representative point estimate for
     the spatial loss maps, consistent with how _get_impact_summary_data
     displays the central value. Fall back to the mean only if the median is
     unavailable (e.g. a calculation run without quantile outputs).
+
+    :returns: a DataFrame with the asset coordinates and losses, and the
+        name of the statistic
     """
-    if (hasattr(avg_losses, 'quantile-0.5')
-            and avg_losses['quantile-0.5'] is not None):
-        return pd.DataFrame(avg_losses['quantile-0.5']), 'Median'
-    elif hasattr(avg_losses, 'mean') and avg_losses.mean is not None:
+    # the statistics and the coordinates are read directly, as in
+    # extract_avg_losses but without the tags of the assets, which are not
+    # needed and would be slow and memory consuming for many assets
+    _name, values, stats = _get_data(
+        dstore, 'avg_losses-stats', oqparam.ext_loss_types,
+        oqparam.hazard_stats())
+    if 'quantile-0.5' in stats:
+        stat, metric = 'quantile-0.5', 'Median'
+    elif 'mean' in stats:
         logging.warning(
             "Median losses not available; falling back to mean for "
             "loss maps.")
-        return pd.DataFrame(avg_losses.mean), 'Mean'
+        stat, metric = 'mean', 'Mean'
     else:
         raise RuntimeError(
             "avg_losses has neither 'quantile' nor 'mean' attribute; "
             "cannot build losses DataFrame.")
+    assets = dstore['assetcol/array']
+    # rounded as in util.get_assets
+    dic = {coord: numpy.round(assets[coord], 5).astype(numpy.float32)
+           for coord in ('lon', 'lat')}
+    s = stats.index(stat)
+    for li, lt in enumerate(oqparam.ext_loss_types):
+        dic[lt] = values[:, s, li].astype(numpy.float32)
+    return pd.DataFrame(dic), metric
 
 
 def _get_event_name(rupdic):
@@ -173,12 +194,22 @@ def _get_shakemap_version(rupdic):
         return None
 
 
-def _get_rupture(oqparam):
+def _get_rupture(dstore, oqparam):
     # Return the rupture if a rupture model was given, otherwise None,
     # so that the epicenter will be displayed in the maps as a fallback
-    if 'rupture_model' not in oqparam.inputs:
+    fname = oqparam.inputs.get('rupture_model')
+    if fname is None:
         return None
+    # the rupture model file stored by the calculation is used, since the
+    # original file can be a temporary file removed in the meantime
+    ext = os.path.splitext(fname)[1]
+    key = 'input/rupture_model' + ext
     try:
+        if key in dstore:
+            oqparam = copy.copy(oqparam)
+            oqparam.inputs = dict(
+                oqparam.inputs, rupture_model=gettemp(
+                    dstore.get_file(key).read(), suffix=ext))
         return get_rupture(oqparam)
     except Exception:
         logging.warning('Could not read the rupture model; the maps will'
@@ -205,8 +236,7 @@ def _build_report_contexts(dstore, oqparam, calc_id, threshold_deg):
     lat = oqparam.rupture_dict['lat']
     no_uncertainty = _is_no_uncertainty(oqparam)
 
-    avg_losses = extract(dstore, 'avg_losses?kind=stats')
-    losses_df, loss_metric = _get_losses_df(avg_losses)
+    losses_df, loss_metric = _get_losses_df(dstore, oqparam)
     # the maps display the fatalities for the selected time event
     losses_df = losses_df.rename(
         columns={get_fatalities_loss_type(oqparam): 'occupants'})
@@ -228,7 +258,8 @@ def _build_report_contexts(dstore, oqparam, calc_id, threshold_deg):
 
     event_ctx = EventContext(
         name=event_name, date=event_date, hypocenter=(lon, lat),
-        shakemap_version=shakemap_version, rupture=_get_rupture(oqparam))
+        shakemap_version=shakemap_version,
+        rupture=_get_rupture(dstore, oqparam))
     report_opts = ReportOptions(
         disclaimer_txt=DISCLAIMER_TXT,
         basemap_path=_get_basemap_path(), threshold_deg=threshold_deg,
@@ -280,13 +311,15 @@ def _generate_reports(dstore, adm_level, threshold_deg, calc_id):
             "See the job log for details.")
         return
 
-    points_gdf = None
+    points_gdf = aggrisk_tags = None
     failed_countries = []
     occ_lt = get_fatalities_loss_type(oqparam)
     for iso3 in iso3_codes:
         try:
+            if aggrisk_tags is None:  # the same for all the countries
+                aggrisk_tags = extract(dstore, 'aggrisk_tags')
             summary_data = _get_impact_summary_data(
-                dstore, iso3, report_opts.no_uncertainty, occ_lt)
+                aggrisk_tags, iso3, report_opts.no_uncertainty, occ_lt)
             if summary_data is not None:
                 if points_gdf is None:
                     points_gdf = points_to_gdf(
