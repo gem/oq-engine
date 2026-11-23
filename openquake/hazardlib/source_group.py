@@ -607,9 +607,11 @@ class CompositeSourceModel:
         for i, sg in enumerate(self.src_groups):
             if blocks and blocks[i] and len(blocks[i]) > 1:
                 for b, block in enumerate(blocks[i]):
-                    dstore[f'_csm/{sg.grp_id}-{b}'] = _pack_group(sg, block)
+                    grp = copy.copy(sg)
+                    grp.sources = block
+                    dstore[f'_csm/{sg.grp_id}-{b}'] = zpik(grp)
             else:
-                dstore[f'_csm/{sg.grp_id}'] = _pack_group(sg, sg.sources)
+                dstore[f'_csm/{sg.grp_id}'] = zpik(sg)
 
     def __repr__(self):
         """
@@ -720,18 +722,6 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
 
 
 # ################## read/write utilities ##################### # 
-
-# Persist dataset keys. Workers still get the filename when sent a source.
-def _pack_group(sg, sources):
-    grp = copy.copy(sg)
-    grp.sources = []
-    for src in sources:
-        if src.code == b'F' and src.rupture_key:
-            src = copy.copy(src)
-            src.hdf5path = ''
-        grp.sources.append(src)
-    return zpik(grp)
-
 
 def read_src_group(hdf5, key, mon=performance.Monitor()):
     """

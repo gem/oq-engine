@@ -77,7 +77,9 @@ class MultiFaultSource(BaseSeismicSource):
     code = MULTI_FAULT
     MODIFICATIONS = {}
     hdf5path = ''
-    rupture_key = ''  # dataset path in a calculation datastore
+    # Calculation files set this to _multifault/rupture_idxs/<segment>.
+    # Standalone files leave it empty and use <source_id>/rupture_idxs.
+    rupture_key = ''
     rupture_slice = slice(None)
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
@@ -423,7 +425,6 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
         return _save_geometry(hdf5path, mfsources, sectiondict, all_rids,
                               split, geometry_only=True)
     with hdf5.File(hdf5path, 'w') as h5:
-        performance.init_performance(h5)
         return _save_geometry(h5, mfsources, sectiondict, all_rids, split,
                               geometry_only=False)
 
@@ -434,7 +435,8 @@ def _save_geometry(h5, mfsources, sectiondict, all_rids, split, geometry_only):
     h5.save_vlen('_multifault/sections',
                  [general.zpik(sec) for sec in sectiondict.values()])
     spdict = parallel.Starmap.apply(
-        build_secparams, (sectiondict.items(),), h5=h5).reduce()
+        build_secparams, (sectiondict.items(),),
+        h5=h5 if geometry_only else None).reduce()
     secparams = np.array([spdict[k] for k in sectiondict])
     h5['_multifault/secparams'] = secparams
     h5.flush()

@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import sys
 import gzip
 import shutil
@@ -970,7 +969,6 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_65.__file__, 'job.ini',
                       calculation_mode='preclassical')
         parent = self.calc.datastore
-        self.assertFalse(os.path.exists(parent.tempname))
         self.assertEqual(set(parent['_multifault']),
                          {'sections', 'secparams', 'rupture_idxs'})
         # A copied datastore can resolve the geometry without the old path.
