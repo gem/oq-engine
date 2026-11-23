@@ -74,6 +74,7 @@ EXPECTED_CONTRACT = {
     # secondary slot
     "Youngs2003SecondaryFD": ("distributed", "vertical"),
     "Takao2013SecondaryFD": ("distributed", "net"),
+    "Takao2016SecondaryFD": ("distributed", "net"),
     "Petersen2011SecondaryFD": ("distributed", "lateral"),
     "Visini2025SecondaryFD": ("distributed", "vertical"),
     "Moss2022SecondaryFD": ("distributed", "vertical"),
