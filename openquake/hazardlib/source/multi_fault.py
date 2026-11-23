@@ -131,9 +131,7 @@ class MultiFaultSource(BaseSeismicSource):
             return h5['_multifault/secparams'][:]
 
     def set_sections(self, sections):
-        """
-        Used in the UCERF converter, not in the engine
-        """
+        """Attach the sections and save this source to a standalone file."""
         self.sections = sections
         dic = {i: sec for i, sec in enumerate(sections)}
         save_and_split([self], dic, f'{self.source_id}.hdf5',
