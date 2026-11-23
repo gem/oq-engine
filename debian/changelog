@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed default GSIM logic-tree weights not being applied to IMTs without
+    explicit IMT-specific weights. Thanks to Mathieu Primeau for the report.
+
   [Savvinos Aristeidou]
   * Added the Aristeidou et al. (2025) cross-IMT correlation model
     AristeidouEtAl2025 for SA, Sa_avg2, Sa_avg3, FIV3, PGA, PGV, RSD575
