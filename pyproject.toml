@@ -7,7 +7,7 @@ name = "openquake.engine"
 readme = "README.md"
 dynamic = ["version"]
 description = "OpenQuake Engine: A software for Seismic Hazard and Risk Analysis"
-requires-python = ">=3.11"
+requires-python = ">3.12, <3.15"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [
