@@ -32,7 +32,8 @@ from openquake.baselib.general import decode
 from openquake.commonlib import calc, util, datastore
 from openquake.calculators import base
 from openquake.calculators.views import view, text_table
-from openquake.calculators.extract import extract, get_sites, get_info
+from openquake.calculators.extract import (
+    extract, get_sites, get_info, check_gmf_sites)
 from openquake.calculators.export import export
 
 F32 = numpy.float32
@@ -493,6 +494,9 @@ def export_gmf_data_csv(ekey, dstore):
         complete = dstore['complete']
     else:
         complete = dstore['sitecol']
+    # check the consistency before writing anything
+    df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
+    check_gmf_sites(dstore, df.sid.to_numpy(), complete)
     names = complete.array.dtype.names
     arr = complete[['lon', 'lat']]
     if 'custom_site_id' in names:
@@ -503,7 +507,6 @@ def export_gmf_data_csv(ekey, dstore):
     writers.write_csv(f, sites, comment=dstore.metadata)
 
     # exporting gmfs
-    df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
     if 'custom_site_id' in names:
         df['csi'] = decode(complete.custom_site_id[df.sid])
         ren = {'csi': 'custom_site_id', 'eid': 'event_id'}
@@ -555,9 +558,15 @@ def export_site_model_csv(ekey, dstore):
 
 @export.add(('gmf_data', 'hdf5'))
 def export_gmf_data_hdf5(ekey, dstore):
+    # check the consistency before writing anything; NB: a sitecol read
+    # from the datastore has .complete == itself, so the complete sitecol
+    # must be read from the 'complete' dataset, if any
+    sitecol = dstore['sitecol']
+    complete = dstore['complete'] if 'complete' in dstore else sitecol
+    check_gmf_sites(dstore, dstore['gmf_data/sid'][:], complete)
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
     with hdf5.File(fname, 'w') as f:
-        f['sitecol'] = dstore['sitecol'].complete
+        f['sitecol'] = sitecol.complete
         gd = dstore['gmf_data']
         grp = f.create_group('gmf_data')
         grp.attrs.update(gd.attrs)
