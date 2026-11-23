@@ -41,7 +41,7 @@ REPO = os.path.dirname(
 MAX_FUN_LEN = 79
 LF = ord('\n')
 CR = ord('\r')
-SKIP_DIRS = ['.pixi']  # third-party code installed inside the repo
+SKIP_DIRS = []
 
 
 # like os.walk, but skipping the directories in SKIP_DIRS

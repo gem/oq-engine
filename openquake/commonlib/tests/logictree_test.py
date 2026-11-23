@@ -1838,6 +1838,28 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             ordinals = numpy.concatenate(list(rlzs_by_gsim.values()))
             self.assertEqual(sorted(ordinals), list(range(12)))
 
+    def test_default_imt_weights(self):
+        xml = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                branchSetID="bs1"
+                                applyToTectonicRegionType="Shield">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.6</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.6</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>ToroEtAl2002</uncertaintyModel>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTree>""")
+        rlzs = self.parse_valid(xml).get_realizations()
+        numpy.testing.assert_allclose(rlzs[0].weight, [0.6, 0.6, 0.6])
+        numpy.testing.assert_allclose(rlzs[1].weight, [0.4, 0.4, 0.4])
+
     def test_not_xml(self):
         self.parse_invalid('xxx', ExpatError)
         self.parse_invalid('<?xml foo bar baz', ExpatError)
