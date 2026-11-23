@@ -99,8 +99,8 @@ jobs:
           echo "▶ Single-shot calc"
           time docker run "$IMG" \
             oq engine --run \
-            /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
-            /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+            /opt/openquake/venv/demos/risk/ScenarioDamage/job_hazard.ini \
+            /opt/openquake/venv/demos/risk/ScenarioDamage/job_risk.ini
 
           echo "▶ Starting WebUI"
           cat > ./.env << EOF
@@ -144,20 +144,20 @@ jobs:
           sleep 3
           time docker exec -t openquake \
             oq engine --run \
-            /opt/openquake/demos/hazard/AreaSourceClassicalPSHA/job.ini
+            /opt/openquake/venv/demos/hazard/AreaSourceClassicalPSHA/job.ini
 
           echo "▶ Exec – risk"
           time docker exec -t openquake \
             oq engine --run \
-            /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
-            /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+            /opt/openquake/venv/demos/risk/ScenarioDamage/job_hazard.ini \
+            /opt/openquake/venv/demos/risk/ScenarioDamage/job_risk.ini
 
           echo "▶ Fresh container"
           sleep 2
           time docker run "$IMG" \
             oq engine --run \
-            /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
-            /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+            /opt/openquake/venv/demos/risk/ScenarioDamage/job_hazard.ini \
+            /opt/openquake/venv/demos/risk/ScenarioDamage/job_risk.ini
 
           docker stop openquake 2>/dev/null || true
           docker rm   openquake 2>/dev/null || true
