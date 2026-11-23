@@ -38,7 +38,7 @@ else if (window.application_mode === 'IMPACT') {
                                   /* None is returned in case of an error,
                                       but we don't care about errors here */
                                   if(data && data != 'None') {
-                                      $('#new-release-box').html(data).show()
+                                      $('#new-release-box').text(data).show()
                                   }
                               });
             }

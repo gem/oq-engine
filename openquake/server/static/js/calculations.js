@@ -129,12 +129,12 @@ var CalculationTable = Backbone.View.extend({
                             type: "POST",
                             error: function (jqXHR, textStatus, errorThrown) {
                                 if (jqXHR.status == 403) {
-                                    diaerror.show(false, "Error", JSON.parse(jqXHR.responseText).error);
+                                    diaerror.show_text(false, "Error", JSON.parse(jqXHR.responseText).error);
                                 }
                             },
                             success: function (data, textStatus, jqXHR) {
                                 if(data.error) {
-                                    diaerror.show(false, "Error", data.error);
+                                    diaerror.show_text(false, "Error", data.error);
                                 } else {
                                     diaerror.show(false, "Calculation " + action_ed, 'Calculation ' + _.escape(calc_id) + ' "' + _.escape(calc_desc) + '" has been ' + action_ed);
                                     if (action == 'abort') {
