@@ -114,10 +114,7 @@ class KiteFaultSource(ParametricSeismicSource):
         self.floating_y_step = floating_y_step
 
     @classmethod
-    def as_simple_fault(cls, source_id, name, tectonic_region_type,
-                        mfd, rupture_mesh_spacing,
-                        magnitude_scaling_relationship, rupture_aspect_ratio,
-                        temporal_occurrence_model,
+    def as_simple_fault(cls, param,
                         # simple fault specific parameters
                         upper_seismogenic_depth, lower_seismogenic_depth,
                         fault_trace, dip, rake, floating_x_step,
@@ -126,13 +123,11 @@ class KiteFaultSource(ParametricSeismicSource):
         # Get profiles
         profiles = get_profiles_from_simple_fault_data(
             fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
-            dip, rupture_mesh_spacing)
+            dip, param.rms)
 
         # Creating Kite Source
-        return cls(source_id, name, tectonic_region_type, mfd,
-                   rupture_mesh_spacing, magnitude_scaling_relationship,
-                   rupture_aspect_ratio, temporal_occurrence_model,
-                   profiles, rake, floating_x_step, floating_y_step)
+        return cls.from_param(
+            param, profiles, rake, floating_x_step, floating_y_step)
 
     @general.cached_property
     def surface(self) -> KiteSurface:
