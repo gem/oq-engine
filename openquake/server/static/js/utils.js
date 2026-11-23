@@ -108,12 +108,21 @@ var diaerror = (function () {
             return errorDiv;
         },
 
-        show: function (is_large, title, msg) {
+        show_text: function (is_large, title, msg) {
+            this.show(is_large, title, msg, true);
+        },
+
+        show: function (is_large, title, msg, text_only = false) {
             if (title != null) {
-                $('.modal-title', errorDiv).html(title);
+                $('.modal-title', errorDiv).text(title);
             }
             if (msg != null) {
-                $('.modal-body-pre', errorDiv).html(msg);
+                const body = $('.modal-body-pre', errorDiv);
+                if (text_only) {
+                    body.text(msg);
+                } else {
+                    body.html(msg);
+                }
             }
             if (is_large) {
                 errorDiv.addClass("errorDialogLarge");
@@ -126,7 +135,7 @@ var diaerror = (function () {
 
         append: function (title, msg) {
             if (title != null) {
-                $('.modal-title', errorDiv).html(title);
+                $('.modal-title', errorDiv).text(title);
             }
             $( msg ).appendTo( $('.modal-body-pre', errorDiv) );
         },
