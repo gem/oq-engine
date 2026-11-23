@@ -36,12 +36,12 @@ secondary rupture and displacement models contributed by
 Both types of logic trees are new and should currently be considered
 experimental.
 
-Two new source logic-tree uncertainties have been added:
+Two new source logic-tree uncertainties have been added to regular logic trees:
 
 - `minMagGRAbsolute` replaces the minimum magnitude of a truncated Gutenberg–Richter MFD
 - `multiMFDAbsolute` replaces the MFDs of all points in a multi-point source.
 
-There are also three new uncertainties specific to the BCHydro project:
+There are also three new uncertainties specific to a project for BCHydro:
 
 - `recurSet` selects the recurrence model and maximum magnitude
 - `recurRow` selects recurrence parameters, such as b-value, reference magnitude, and rate
@@ -55,22 +55,22 @@ speedup.
 
 We also removed a limitation of the previous implementation that made it
 impossible to run calculations with variant sources and too many
-realizations (approximately more than 60,000).
+realizations (approximately more than 60,000 realizations).
 
 The internals of the classical calculator and the logic tree
-management are now documented in [Management of the uncertainties]
-(https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/advanced/classical-internals.html#management-of-the-uncertainties).
+management are now documented in [Management of the uncertainties](
+https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/advanced/classical-internals.html#management-of-the-uncertainties).
 
 The engine is able to detect models where variant sources are
 treated inefficiently and issue a warning. The warning suggests running
 `oq check_input job.ini --optimize`, which rewrites the source models and
-logic tree so the variant-source optimization can be applied. This makes
+logic tree files so the variant-source optimization can be applied. This makes
 little difference for the GEM Mosaic models, but it can have a large
 effect elsewhere. For example, the optimization speeds up a French model
 used by EDF by a factor of 32.
 
-As a consequence of the changes to event-based calculations with variant
-sources, the sampled events may differ from previous versions even with
+As a consequence of the changes, for event-based calculations with variant
+sources the sampled events may differ from previous versions, even with
 the same `random_seed`, while remaining statistically consistent.
 
 ## Classical PSHA: performance improvements
@@ -83,9 +83,6 @@ now below 1%.
 We now use a fixed global grid, avoiding a bug that caused distant sources
 to change results for nearby sources. `ps_grid_spacing` can also be used
 with `disagg_by_src`; previously, it could not.
-
-Default GSIM logic-tree weights are now applied to IMTs without an explicit
-IMT-specific weight. Thanks to Mathieu Primeau for reporting this issue.
 
 A new command, `oq engine --calibrate job.ini`, automatically determines
 the best combination of `ps_grid_spacing` and `pointsource_distance`.
@@ -112,7 +109,7 @@ despite the additional calibration phase.
 The context arrays are now passed to the GMPEs in chunks of at most 10,000
 rows. This keeps the arrays in the processor's L2 cache and can make a
 significant difference. For instance, in the Tonga model, the
-"computing mean_std" operation became five times faster.
+*computing mean_std* operation became five times faster.
 
 The engine now records the number of contexts in the `nctxs` dataset and
 provides the `oq show context_reduction` view, which displays the
@@ -221,9 +218,13 @@ explaining which arguments have to be swapped.
 
 ## Bug fixes
 
-IMT-dependent logic-tree weights are now used correctly when computing
-hazard-curve statistics, fixing a regression in Canada's national hazard
-model. We also preserve precision for small rates.
+Default GSIM logic-tree weights are now applied to IMTs without an explicit
+IMT-specific weight, fixing a long standing regression in Canada's national hazard
+model. Thanks to Mathieu Primeau for reporting the issue.
+Moreover, IMT-dependent logic-tree weights are now used correctly when computing
+hazard-curve statistics.
+
+We improved the precision for small rates when computing the mean curves.
 
 Atomic groups are computed for every site label, and disaggregation
 retains ruptures from all groups. Those bugs affected the USA and
@@ -291,12 +292,6 @@ name. The new or newly enabled models include:
 - Abrahamson et al. (2014) between-event and within-event cross-IMT
   correlation for PGA-SA-PGV.
 
-[Savvinos Aristeidou](https://github.com/Savvinos-Aristeidou) contributed
-the Aristeidou et al. (2025) cross-IMT correlation model for total
-residuals, based on artificial neural networks. It complements the
-Aristeidou et al. (2024) ground-motion model and supports SA, Sa_avg2,
-Sa_avg3, FIV3, PGA, PGV, RSD575 and RSD595.
-
 The conditioned GMF calculator now supports memory-efficient circulant
 embedding on large regular grids, local Kriging for off-grid stations,
 and scalable station-conditioned correlated GMF calculations.
@@ -313,6 +308,12 @@ The `cross_correlation` parameter has been replaced by
 `between_event_correlation_model` or, for the conditional spectrum,
 `total_residual_correlation_model`. The old names are still accepted for
 compatibility, but new job files should use the new names.
+
+Finally, [Savvinos Aristeidou](https://github.com/Savvinos-Aristeidou) contributed
+the Aristeidou et al. (2025) cross-IMT correlation model for total
+residuals, based on artificial neural networks. It complements the
+Aristeidou et al. (2024) ground-motion model and supports SA, Sa_avg2,
+Sa_avg3, FIV3, PGA, PGV, RSD575 and RSD595.
 
 # Risk: new features
 
@@ -347,8 +348,8 @@ parameter. The impact form defaults to a `region_grid_spacing` of 1 km.
 # Risk: new optimizations and fixes
 
 One change doubled the speed of Global Risk Model calculations:
-vectorizing random-number generation for unique events (`rng.beta`). This
-operation had been the main performance bottleneck.
+vectorizing random-number generation for unique events (the `rng.beta` function).
+This operation had been the main performance bottleneck.
 
 Scenario aggregate risk quantiles are now correctly computed from the
 total portfolio losses per event.
@@ -374,16 +375,14 @@ conversion before generating ground-motion fields.
 
 ## OQ commands
 
-- `oq -v` returns the Git hash in development installations
+- `oq -v` now returns the Git hash in development installations
 - `oq engine --param` now accepts space-separated `name=value`
   pairs, matching `oq run --param`, instead of comma-separated pairs
 - `oq engine --make-report` now generates a Markdown report instead of an
   HTML report
 - `oq show rlz` now pairs branches with their uncertainty types
 - `oq info logic_trees` lists the available logic tree classes
-- `oq show usignatures` displays the uncertainty signatures of a
-  calculation, and `oq show context_reduction` displays the reduction of
-  the contexts
+- `oq show usignatures` displays the uncertainty signatures of a calculation
 - `oq check_input` command prints uncertainty signatures and
   logic tree core size without running the calculation
 - `oq extract agg_losses` works when calculations are aggregated by ID
@@ -423,3 +422,6 @@ If a large ZeroMQ packet is lost under high throughput, the calculation
 now fails with a clear error instead of hanging indefinitely.
 
 The repository now includes an AI contribution policy in `AI_POLICY.md`.
+This is the first release of the engine to make heavy usage of AI tools
+for discovering bugs, refactoring and optimizing existing code and
+implementing new features.
