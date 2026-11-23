@@ -90,7 +90,9 @@ def build_raytrace_grid(cell_ids, mean_vals):
 
 
 def regional_magnitude_basis(magnitudes, knots):
-    """Continuous three-segment magnitude basis, constant outside support."""
+    """
+    Continuous three-segment magnitude basis, constant outside support.
+    """
     lower, pivot_low, pivot_high, upper = knots
     magnitudes = np.asarray(magnitudes, dtype=float)
     if not np.all(np.isfinite(magnitudes)):
@@ -102,7 +104,9 @@ def regional_magnitude_basis(magnitudes, knots):
 
 
 def _load_magnitude_adjustment(grp, term, location, cell_ids, mean_vals):
-    """Validate optional global regional magnitude metadata once on load."""
+    """
+    Validate optional global regional magnitude metadata once on load.
+    """
     names = ("magnitude_knots", "magnitude_coefficients",
              "magnitude_mean_covariance")
     present = [name in grp for name in names]
