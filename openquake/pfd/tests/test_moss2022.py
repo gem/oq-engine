@@ -100,7 +100,9 @@ class TestMoss2022PrimaryFDProduction:
         self.model = Moss2022PrimaryFD()
 
     def test_md_regression_reference_values(self):
-        """Regression anchor for P(D > d | M, x/L), MD/regression branch."""
+        """Regression anchor for P(D > d | M, x/L), MD/regression branch.
+        Re-frozen when the D/MD truncation changed to the clipping of the
+        report's Appendix C code."""
         p = np.asarray(self.model.get_prob(
             d=[0.01, 0.1, 1.0],
             X_L_ratio=[0.0, 0.25, 0.5],
@@ -111,9 +113,9 @@ class TestMoss2022PrimaryFDProduction:
             sigma_type="recommended",
         ))
         expected = np.array([
-            [0.99943149, 0.99985097, 0.99995734],
-            [0.96597570, 0.98071276, 0.98820701],
-            [0.35814380, 0.39659952, 0.41930456],
+            [0.99944996, 0.99985588, 0.99995858],
+            [0.96708126, 0.98134827, 0.98854999],
+            [0.37830182, 0.41577370, 0.43556828],
         ])
         assert p.shape == (3, 3)
         assert np.allclose(p, expected, rtol=1e-7, atol=1e-10)

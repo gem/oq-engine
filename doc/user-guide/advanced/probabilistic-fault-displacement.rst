@@ -19,9 +19,8 @@ How it works
 -------------
 
 The engine reads a standard fault source model (simple, complex or
-multi-fault sources). For each rupture whose top edge reaches within
-``surface_rupture_depth_tolerance_km`` of the surface, and for each
-hazard site, it computes annual exceedance rates of displacement:
+multi-fault sources). For each rupture and for each hazard site it
+computes annual exceedance rates of displacement:
 
 - the *principal* rate, for displacement on the fault trace itself,
   ``lambda_p = rate * P(SR) * P(D > d | SR) * W_p(r)``;
@@ -32,7 +31,26 @@ hazard site, it computes annual exceedance rates of displacement:
 conditional probability of exceeding the displacement level ``d``,
 ``W_p(r)`` a rupture-location weight that accounts for the uncertainty
 on the actual surface trace, and ``G(r)`` the distributed-rupture
-weight. The faulting style (normal, reverse or strike-slip) of each
+weight.
+
+``P(SR)`` is the only probability that a rupture of magnitude ``m``
+breaks the surface, and it comes from the primary surface-rupture model
+of the logic-tree branch. Simple, complex and kite fault sources float
+their ruptures along strike and down dip, giving each position the same
+share of the rate of the magnitude; the fraction of positions that
+touch the surface depends on the mesh spacing and is not a probability.
+So the engine sums the rate of each magnitude over the down-dip
+positions and assigns it to the positions whose top edge is within
+``surface_rupture_depth_tolerance_km`` of the surface, which provide the
+geometry (trace, length, position along strike): for these sources
+``lambda(m) * P(SR | m)`` is the rate of surface rupture, for any mesh.
+The ruptures of characteristic, multi-fault and non-parametric sources
+are given one by one: one with a buried top edge is a blind rupture and
+is skipped. A floating source with no position at the surface for a
+magnitude (i.e. an upper seismogenic depth below the tolerance) is blind
+as well: the engine logs a warning with the discarded rate.
+
+The faulting style (normal, reverse or strike-slip) of each
 rupture is derived from its rake: normal for -150 <= rake <= -30,
 reverse for 30 <= rake <= 150, strike-slip otherwise, and it is used
 to select the models that apply to the source.
@@ -72,9 +90,11 @@ The PFD-specific parameters are:
 - ``near_far_threshold_km``: distance (km) below which a site is in
   the Visini et al. (2025) distributed-faulting 'near' regime.
   Default: 0.2.
-- ``surface_rupture_depth_tolerance_km``: a rupture contributes to
-  the hazard only if its top edge reaches within this depth (km);
-  deeper (buried) ruptures are skipped. Default: 0.01.
+- ``surface_rupture_depth_tolerance_km``: a rupture is at the surface
+  if its top edge reaches within this depth (km). The floating sources
+  use it to select the positions that carry the hazard (see above), not
+  to reduce the rate; the buried ruptures of the other sources are
+  skipped. Default: 0.01.
 
 The standard statistics parameters work as in the classical
 calculator: ``mean``, ``std``, ``max``, ``quantile_hazard_curves``,
@@ -245,10 +265,14 @@ classical calculator.
 Caveats
 --------
 
-- only ruptures that break (almost) the surface contribute to the
-  hazard: ruptures with a top edge deeper than
-  ``surface_rupture_depth_tolerance_km`` are ignored, so the
-  calculator is meant for active, shallow faulting sources
+- only sources that reach (almost) the surface contribute to the
+  hazard: a source with no rupture having the top edge within
+  ``surface_rupture_depth_tolerance_km`` is blind and is ignored, so
+  the calculator is meant for active, shallow faulting sources
+- the probability of surface rupture is the business of the primary
+  surface-rupture model alone: do not correct the magnitude-frequency
+  distribution of a floating source for the buried float positions,
+  the engine already assigns their rate to the positions at the surface
 - the displacement models are empirical regressions calibrated on
   specific datasets and faulting styles (see the tables below); a
   model should be applied only to sources with a compatible
@@ -324,7 +348,10 @@ Models of the probability of principal surface rupture P(SR | M).
    * - ``Mammarella2024PrimarySR``
      - Mammarella et al. (2024)
      - all (from the rake)
-     - uses the seismogenic thickness and a magnitude-scaling relation
+     - evaluated with the dip and the lower seismogenic depth of each
+       source, and a magnitude-scaling relation; ``dip_mu``,
+       ``seismothickness`` or ``Zs_mu`` in the branch override the
+       sources (with a warning)
    * - ``MammarellaEtAl2024PrimarySR``
      - Mammarella et al. (2024)
      - all
@@ -470,6 +497,10 @@ threshold P(D > d | M, r).
      - Takao et al. (2013), JJAEE 9(2)
      - reverse, strike-slip
      - 
+   * - ``Takao2016SecondaryFD``
+     - Takao et al. (2016), JJAEE 16(2)
+     - reverse, strike-slip
+     - parameter ``case`` (1 or 2, Table 1)
    * - ``Moss2022SecondaryFD``
      - Moss et al. (2022)
      - reverse

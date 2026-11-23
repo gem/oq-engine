@@ -150,18 +150,30 @@ class Takao2013PrimaryFD(BasePrimarySurfDispl):
         n_sites = len(X_L_ratio)
         prob_exceeding_d = np.zeros((n_displacements, n_sites))
 
+        # Trapezoid-rule weights: half weight at the two ends of the
+        # truncation range, renormalised. Full end weights over-weight the
+        # upper truncation edge, which controls the far tail (+2.0 % at
+        # P ~ 1e-5 for D/MD with n_sigma = 3).
+        if norm_disp_type == "AD":
+            weights = self.get_prob_avg_displacement(logspace_vals, mag)
+        else:
+            weights = self.get_prob_max_displacement(logspace_vals, mag)
+        weights = np.array(weights, dtype=float)
+        weights[[0, -1]] *= 0.5
+        weights /= weights.sum()
+
         # Vectorized integration over displacement values
-        for disp in logspace_vals:
+        for disp, weight in zip(logspace_vals, weights):
             D_NormD = d / disp  # Shape (n_displacements,)
             # Reshape for broadcasting: (n_displacements, 1) and (1, n_sites)
             D_NormD_reshaped = D_NormD[:, np.newaxis]  # Shape (n_displacements, 1)
             X_L_reshaped = X_L_ratio[np.newaxis, :]  # Shape (1, n_sites)
 
             if norm_disp_type == "AD":
-                p3 = self.get_prob_D_AD(D_NormD_reshaped, X_L_reshaped, srl) * self.get_prob_avg_displacement(disp, mag)
+                p3 = self.get_prob_D_AD(D_NormD_reshaped, X_L_reshaped, srl) * weight
                 prob_exceeding_d += p3
             elif norm_disp_type == "MD":
-                p3 = self.get_prob_D_MD(D_NormD_reshaped, X_L_reshaped, srl) * self.get_prob_max_displacement(disp, mag)
+                p3 = self.get_prob_D_MD(D_NormD_reshaped, X_L_reshaped, srl) * weight
                 prob_exceeding_d += p3
 
         return prob_exceeding_d

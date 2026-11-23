@@ -45,7 +45,8 @@ from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import humansize, block_splitter
 from openquake.hazardlib import valid, source_reader
 from openquake.hazardlib.calc.displacement import (
-    calc_rates, DEFAULT_RED_CFG)
+    calc_rates, get_lower_depth, DEFAULT_RED_CFG, FLOATING_CODES,
+    SurfaceRuptures)
 from openquake.hazardlib.map_array import (
     MapArray, compute_hazard_maps, rates_dt)
 from openquake.hazardlib.pfd_lt import (
@@ -110,7 +111,10 @@ def get_adapters(selections, r_sigma, near_far_threshold_km=0.2):
         adapters['secondary_combined'] = VisiniSecondaryCalculator(
             sr.model, fd.model, case_label=case,
             pixel_size=sr.model_params.get('pixel_size', 100),
-            near_far_threshold_km=near_far_threshold_km)
+            near_far_threshold_km=near_far_threshold_km,
+            # the branch's own Rank-2 sampling (e.g. "legacy" for the
+            # published Fig. 13 example), not the pipeline default
+            segment_sampling=sr.model.segment_sampling or 'truncated')
     return adapters, r_sigma
 
 
@@ -142,6 +146,34 @@ def pfd_methods(pfd_lt):
     return methods
 
 
+def pinned_geometry(pfd_lt):
+    """
+    :param pfd_lt: a :class:`~openquake.hazardlib.pfd_lt.PFDLogicTree`
+    :returns: a list of triples ``(branch_id, class_name, params)`` for the
+        primary surface-rupture branches that pin a parameter describing
+        the geometry of the fault (the dip or the seismogenic depth of
+        Mammarella et al. 2024), which otherwise comes from each source
+    """
+    out = []
+    available = get_available('primary_surf_rup')
+    for branchset in pfd_lt.branchsets:
+        slot = PFD_SLOTS_BY_UTYPE.get(branchset.uncertainty_type)
+        if slot != 'primary_surf_rup':
+            continue
+        for branch in branchset.branches:
+            if not isinstance(branch.value, tuple):
+                continue  # dummy/pseudo branch
+            class_name, params = branch.value
+            cls = available.get(class_name)
+            if cls is None:
+                continue
+            pinned = PFDModelAdapter(
+                cls(**params), params).pinned_geometry_params()
+            if pinned:
+                out.append((branch.branch_id, class_name, pinned))
+    return out
+
+
 def set_pfd_methods(cmakers, methods):
     """
     Attach the multi-fault reference-line union to the cmakers and add the
@@ -159,13 +191,29 @@ def set_pfd_methods(cmakers, methods):
             cmaker.defaultdict[name] = F64(0.)
 
 
-def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, monitor):
+def _mags(mags):
+    # compact magnitude list for the log, i.e. "5.05, 5.15, ... (12 values)"
+    mags = sorted(mags)
+    if len(mags) > 4:
+        return '%s, %s, ..., %s (%d values)' % (
+            mags[0], mags[1], mags[-1], len(mags))
+    return ', '.join(map(str, mags))
+
+
+def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs_by_ts, bset_values,
+                 monitor):
     """
     Compute the displacement rates of a block of sources for the active
     realizations of the source group.
 
-    :param rlzs: the :class:`~openquake.hazardlib.logictree.LtRealization`
-        objects active for the group
+    :param srcs: a block of sources of the same group, built *without*
+        the uncertainties of the source model logic tree
+    :param rlzs_by_ts: a dictionary trt_smrs -> list of
+        :class:`~openquake.hazardlib.logictree.LtRealization` objects, one
+        entry per set of realizations with the same uncertainties
+    :param bset_values: the uncertainties to apply to the sources, as
+        returned by :func:`~openquake.hazardlib.source_reader.
+        prepare_bset_values`
     :returns: ``(rmap, src_rates)`` where ``rmap`` is a rates
         :class:`~openquake.hazardlib.map_array.MapArray` with ``gids`` set
         to the realization ordinals, and ``src_rates`` maps source
@@ -178,7 +226,9 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, monitor):
     imls = [cmaker.imtls[imt] for imt in imts]
     M, L1 = len(imts), cmaker.imtls.size // len(imts)
     L = M * L1
-    gids = U32([rlz.ordinal for rlz in rlzs])
+    gids = U32(sorted({rlz.ordinal for rlzs in rlzs_by_ts.values()
+                       for rlz in rlzs}))
+    col = {gid: k for k, gid in enumerate(gids)}
     rmap = MapArray(sitecol.sids, L, len(gids), rates=True).fill(0.)
     rmap.gids = gids
     src_rates = {}
@@ -186,20 +236,56 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, monitor):
         'src_id', 'grp_id', 'nctxs', 'nrupts', 'weight', 'ctimes', 'taskno')}
     task_no = getattr(monitor, 'task_no', 0)
     tolerance = oq.surface_rupture_depth_tolerance_km
-    for src in srcs:
+    # the uncertainties of the source model logic tree (MFD, geometry...)
+    # are applied here, one set of realizations at a time
+    modified = [(rlzs_by_ts[trt_smrs], src)
+                for trt_smrs, grp in source_reader.modified_groups(
+                    srcs, bset_values)
+                for src in grp]
+    for rlzs, src in modified:
         t0 = time.time()
         basename = valid.basename(src)
+        # the ID as written in the source model, without the "!<branch>"
+        # suffix added to a source repeated in several source-model files:
+        # applyToSources and mean_rates_by_src refer to it
+        srcid = valid.basename(src, ';:.').split('!')[0]
         style = style_from_rake(getattr(src, 'rake', 0.0))
-        # a rupture contributes only if its top edge reaches the surface
-        # (surface_rupture_depth_tolerance_km), like oq-pfdha
-        ctxs = [ctx for ctx in cmaker.get_ctxs(src, sitecol)
-                if float(numpy.asarray(ctx.ztor).flat[0]) <= tolerance]
+        if src.code in FLOATING_CODES:
+            # the down-dip float gives the geometry, not a probability:
+            # the surface positions carry the whole rate of their magnitude
+            # and P(SR | m) comes from the primary surface-rupture model only
+            surf = SurfaceRuptures(src, tolerance)
+            ctxs = list(cmaker.get_ctxs(surf, sitecol))
+            # a collapsed rupture stands for all the down-dip positions,
+            # so its bottom is the bottom of the source
+            lower_depth = surf.lower_depth
+            if surf.blind:
+                logging.warning(
+                    'Source %s: no rupture of magnitude %s has the top edge '
+                    'within surface_rupture_depth_tolerance_km=%s of the '
+                    'surface; they are treated as blind and give no '
+                    'displacement hazard (annual rate %.3e discarded)',
+                    src.source_id, _mags(surf.blind), tolerance,
+                    sum(surf.blind.values()))
+        else:
+            # the ruptures are given one by one (no float): a rupture with
+            # a buried top edge is a blind rupture by construction
+            ctxs = [ctx for ctx in cmaker.get_ctxs(src, sitecol)
+                    if float(numpy.asarray(ctx.ztor).flat[0]) <= tolerance]
+            # the declared depth of a characteristic fault, if any
+            lower_depth = get_lower_depth(src)
+        if lower_depth is not None:
+            # the seismogenic depth seen by the surface-rupture models is
+            # the declared one, not the bottom of the rupture mesh
+            for ctx in ctxs:
+                ctx.zbot[:] = lower_depth
         if ctxs:
             src_rate = src_rates.setdefault(
-                basename, numpy.zeros((N, M, L1), F64))
-            for k, rlz in enumerate(rlzs):
+                srcid, numpy.zeros((N, M, L1), F64))
+            for rlz in rlzs:
+                k = col[rlz.ordinal]
                 selections = pfd_lt.selections_for(
-                    rlz.extra_rlz.lt_path, basename, style)
+                    rlz.extra_rlz.lt_path, srcid, style)
                 adapters, r_sigma = get_adapters(
                     selections, oq.r_sigma_km, oq.near_far_threshold_km)
                 for m, levels in enumerate(imls):
@@ -253,22 +339,40 @@ class DisplacementCalculator(base.HazardCalculator):
         cmakers = self.csm.get_cmakers()
         # only the reference-line methods the PFD models actually declare
         set_pfd_methods(cmakers, pfd_methods(pfd_lt))
+        for branch_id, class_name, pinned in pinned_geometry(pfd_lt):
+            logging.warning(
+                'PFD branch %s: %s is evaluated with %s for every source, '
+                'instead of the dip and lower seismogenic depth of each '
+                'source; remove the parameter(s) from the branch to use '
+                'the geometry of the sources', branch_id, class_name,
+                ', '.join('%s=%s' % kv for kv in pinned.items()))
         # the sparse table from which the curves are recomputed
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
         self.datastore.create_dset('_rates/slice_by_idx', slice_dt)
         allargs = []
-        for grp_id, src_group in enumerate(self.csm.src_groups):
-            cmaker = cmakers[grp_id]
-            active = next(iter(cmaker.gsims.values()))
-            grp_rlzs = [rlzs[r] for r in active]
+        # cmakers holds one ContextMaker per *unique* trt_smrs: map each
+        # group through cmakers.inverse, as ContextMakerSequence.enumerate
+        # does, not by position
+        for (grp_id, cmaker), src_group in zip(
+                cmakers.enumerate(), self.csm.src_groups):
             sources = list(src_group)
             maxw = sum(s.weight for s in sources) / (
                 oq.concurrent_tasks or 1)
             for block in block_splitter(
                     sources, maxw, get_weight, sort=True):
+                # one entry per set of realizations sharing the same
+                # uncertainties, with the realizations of the set
+                rlzs_by_ts = {}
+                for src in block:
+                    for trt_smrs in src.get_ts_sets():
+                        if trt_smrs not in rlzs_by_ts:
+                            [active] = self.full_lt.get_rlzs_by_gsim(
+                                trt_smrs).values()
+                            rlzs_by_ts[trt_smrs] = [rlzs[r] for r in active]
                 allargs.append((
-                    block, cmaker, self.sitecol, pfd_lt, grp_rlzs))
+                    block, cmaker, self.sitecol, pfd_lt, rlzs_by_ts,
+                    source_reader.prepare_bset_values(self.full_lt, block)))
         logging.info('Sending {:_d} tasks'.format(len(allargs)))
         # Multifault workers read sections while the parent writes _rates.
         self.datastore.swmr_on()

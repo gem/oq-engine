@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel name="The characteristic twins of the two floating faults">
+    <sourceGroup name="faults" tectonicRegion="Active Shallow Crust">
+      <characteristicFaultSource id="A" name="Fault A" tectonicRegion="Active Shallow Crust">
+        <incrementalMFD binWidth="0.1" minMag="6.0">
+          <occurRates>1.0E-3</occurRates>
+        </incrementalMFD>
+        <rake>-90.0</rake>
+        <surface>
+          <simpleFaultGeometry>
+            <gml:LineString>
+              <gml:posList>
+                10.0 45.0
+                10.0 45.2158372
+              </gml:posList>
+            </gml:LineString>
+            <dip>60.0</dip>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>12.0</lowerSeismoDepth>
+          </simpleFaultGeometry>
+        </surface>
+      </characteristicFaultSource>
+      <characteristicFaultSource id="B" name="Fault B" tectonicRegion="Active Shallow Crust">
+        <incrementalMFD binWidth="0.1" minMag="6.5">
+          <occurRates>5.0E-4</occurRates>
+        </incrementalMFD>
+        <rake>-90.0</rake>
+        <surface>
+          <simpleFaultGeometry>
+            <gml:LineString>
+              <gml:posList>
+                11.0 45.0
+                11.0 45.2158372
+              </gml:posList>
+            </gml:LineString>
+            <dip>35.0</dip>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>20.0</lowerSeismoDepth>
+          </simpleFaultGeometry>
+        </surface>
+      </characteristicFaultSource>
+    </sourceGroup>
+  </sourceModel>
+</nrml>
