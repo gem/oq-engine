@@ -1621,6 +1621,9 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('Missing pfd_logic_tree_file')
             path = os.path.join(self.base_path, fname)
             PFDLogicTree(path)  # validate the logic tree
+            if not self.investigation_time:
+                # the curves are probabilities in the investigation time
+                self.raise_invalid('missing investigation_time')
             # the kernel works per source and yields annual rates
             if 'use_rates' in given and not self.use_rates:
                 logging.warning(
