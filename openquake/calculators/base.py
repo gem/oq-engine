@@ -319,6 +319,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             return
         copy_model_provenance(exposure_path, self.datastore)
 
+    def _store_rupture_model(self):
+        # store the temporary rupture model file, so that the impact reports
+        # can be regenerated after its removal
+        fname = self.oqparam.inputs.get('rupture_model')
+        if fname and os.path.exists(fname):
+            ext = os.path.splitext(fname)[1]
+            self.datastore.store_files([fname], 'input/rupture_model' + ext)
+
     def save_params(self, **kw):
         """
         Update the current calculation parameters and save engine_version
@@ -391,6 +399,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             try:
                 if oq.impact:
                     self._copy_model_provenance()
+                    self._store_rupture_model()
                 if os.environ.get('OQ_CHECK_INPUT'):
                     # do not execute the calculation; risk jobs have a
                     # fake parent, so only read the inputs (including
