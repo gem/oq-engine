@@ -219,9 +219,6 @@ class DataStore(collections.abc.MutableMapping):
         self.ppath = ppath
         self.parent = ()  # can be set later
         self.close_on_exit = False  # set by create_job_dstore
-        # The sidecar holds inputs shared by risk workers, such as
-        # crmodel and assets.
-        self.tempname = self.filename[:-5] + '_tmp.hdf5'
         self.mode = mode or ('r+' if os.path.exists(self.filename) else 'w')
         if self.mode == 'r' and not os.path.exists(self.filename):
             raise IOError('File not found: %s' % self.filename)

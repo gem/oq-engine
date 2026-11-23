@@ -970,7 +970,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='preclassical')
         parent = self.calc.datastore
         self.assertEqual(set(parent['_multifault']),
-                         {'sections', 'secparams', 'rupture_idxs'})
+                         {'sections', 'secparams', 'segments'})
         # A copied datastore can resolve the geometry without the old path.
         replica = general.gettemp(suffix='.hdf5')
         shutil.copyfile(parent.filename, replica)
