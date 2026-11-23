@@ -43,7 +43,7 @@ https://wheelhouse.openquake.org/unified/django_pam-3.0.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/flake8-6.1.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/flatbuffers-25.12.19-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/fonttools-4.60.2-py3-none-any.whl
-https://wheelhouse.openquake.org/unified/geopandas-1.1.4-py3-none-any.whl
+https://wheelhouse.openquake.org/unified.test/geopandas-1.2.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/humanfriendly-10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/importlib_metadata-7.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/iniconfig-2.3.0-py3-none-any.whl
