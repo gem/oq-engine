@@ -20,6 +20,8 @@ import os
 
 import numpy
 
+from openquake.hazardlib import InvalidFile
+from openquake.commonlib import readinput
 from openquake.calculators.export import export
 from openquake.calculators.getters import MapGetter
 from openquake.calculators.tests import CalculatorTestCase
@@ -68,6 +70,41 @@ class DisplacementTestCase(CalculatorTestCase):
         with open(fname2) as f:
             f.readline()  # metadata
             self.assertEqual(f.readline().split(',')[0], 'source_id')
+
+    def test_case_1_investigation_time(self):
+        # as in the classical calculator the curves are probabilities of
+        # exceedance in the investigation time and the maps refer to the
+        # poes in that time, while mean_rates_by_src stays annual: the
+        # 5000-year displacement is the same with 1 and 50 years
+        self.run_calc(case_1.__file__, 'job.ini',
+                      poes=str(-numpy.expm1(-1 / 5000)))
+        dstore = self.calc.datastore
+        curve1 = dstore['hcurves-stats'][0, 0, 0].astype(float)
+        hmap1 = dstore['hmaps-stats'][0, 0, 0]
+        bysrc1 = dstore['mean_rates_by_src'][:]
+        self.assertTrue(0.1 < hmap1[0] < 1.0)  # between two levels
+        self.run_calc(case_1.__file__, 'job.ini', investigation_time='50',
+                      poes=str(-numpy.expm1(-50 / 5000)))
+        dstore = self.calc.datastore
+        annual = -numpy.log1p(-curve1)
+        numpy.testing.assert_allclose(
+            dstore['hcurves-stats'][0, 0, 0], -numpy.expm1(-50 * annual),
+            rtol=1e-5)
+        # the maps interpolate log(poe) between the levels and the poe in
+        # 50 years, 1 - exp(-50 rate), is not proportional to the rate:
+        # 0.2% here, as in the classical calculator (before, 0 m)
+        numpy.testing.assert_allclose(
+            dstore['hmaps-stats'][0, 0, 0], hmap1, rtol=5e-3)
+        numpy.testing.assert_allclose(
+            dstore['mean_rates_by_src'][:], bysrc1, rtol=1e-6)
+
+    def test_missing_investigation_time(self):
+        params = readinput.get_params(
+            os.path.join(os.path.dirname(case_1.__file__), 'job.ini'))
+        del params['investigation_time']
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_oqparam(params)
+        self.assertIn('missing investigation_time', str(ctx.exception))
 
     def test_case_2(self):
         # map mode: a region grid with a return period

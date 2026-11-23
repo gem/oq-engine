@@ -27,9 +27,12 @@ rates come from the FDHA kernel
 tree is the ``extra_lt`` of the full logic tree, so the realizations are
 ``R = sm_rlzs * 1 * pfd_paths``.
 
-As in the classical calculator the rates are stored sparsely in the
-``_rates`` table (``sid, lid, gid, rate``) and the hazard curves are
-recomputed from them with
+As in the classical calculator the rates over the investigation time
+(annual rate times ``investigation_time``) are stored sparsely in the
+``_rates`` table (``sid, lid, gid, rate``), so that the hazard curves are
+probabilities of exceedance in the investigation time and the hazard maps
+refer to the ``poes`` in that time; ``mean_rates_by_src`` keeps the annual
+rates.  The hazard curves are recomputed from the table with
 :class:`openquake.calculators.getters.MapGetter`; here the ``gid`` is the
 full realization ordinal (``trt_rlzs = [[r] for r in range(R)]``), since
 the varying dimension is the extra (PFD) realization, not a GSIM one.
@@ -221,6 +224,7 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs_by_ts, bset_values,
     """
     cmaker.init_monitoring(monitor)
     oq = cmaker.oq
+    itime = oq.investigation_time
     N = len(sitecol)
     imts = list(cmaker.imtls)
     imls = [cmaker.imtls[imt] for imt in imts]
@@ -292,7 +296,11 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs_by_ts, bset_values,
                     rate, _principal, _distributed = calc_rates(
                         ctxs, N, adapters, levels, oq.r_threshold_km,
                         r_sigma, DEFAULT_RED_CFG)
-                    rmap.array[:, m*L1:(m+1)*L1, k] += rate
+                    # as in the classical calculator the _rates table
+                    # holds the rates over the investigation time, so
+                    # that the curves are probabilities of exceedance
+                    # in that time; mean_rates_by_src stays annual
+                    rmap.array[:, m*L1:(m+1)*L1, k] += rate * itime
                     src_rate[:, m, :] += rlz.weight[-1] * rate
         source_data['src_id'].append(basename)
         source_data['grp_id'].append(src.grp_id)
