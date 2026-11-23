@@ -302,6 +302,73 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         self.c.login(username=self.user1.username, password=self.password1)
         self.remove_calc(job.calc_id)
 
+    def test_other_users_job_is_forbidden(self):
+        # user2 has level 2 but is not a superuser and is in no group, so it
+        # must not see the jobs of user1 unless they are shared
+        self.user2.is_superuser = False
+        self.user2.save()
+        self.user1.groups.clear()
+        self.user2.groups.clear()
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_other_users_job_is_forbidden')
+        [job] = create_jobs([job_dic], user_name=self.user1.username)
+        calc_id = job.calc_id
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, calc_id)
+        log_paths = [f'{calc_id}/log/0:', f'{calc_id}/log/size',
+                     f'{calc_id}/traceback']
+
+        self.c.login(username=self.user2.username, password=self.password2)
+        for path in log_paths + [f'{calc_id}/job_zip']:
+            self.assertEqual(self.get(path).status_code, 403, path)
+        ret = self.c.get(f'/engine/{calc_id}/outputs')
+        self.assertEqual(ret.status_code, 403)
+        # a risk calculation cannot reuse the hazard of another user
+        ret = self.post('run', dict(hazard_job_id=calc_id))
+        self.assertEqual(ret.status_code, 403)
+        ret = self.post('run_ini', dict(job_ini='job.ini',
+                                        hazard_job_id=calc_id))
+        self.assertEqual(ret.status_code, 403)
+        ret = self.post('run', dict(hazard_job_id='not-an-id'))
+        self.assertEqual(ret.status_code, 400)
+        self.assertEqual(self.get('999999999/log/size').status_code, 404)
+
+        # once shared, the job becomes visible to the other users
+        db("UPDATE job SET ?D WHERE id=?x", {'status': 'shared'}, calc_id)
+        for path in log_paths:
+            self.assertEqual(self.get(path).status_code, 200, path)
+
+        # a superuser can see the job even if not shared and even with a
+        # level below 2; the job.zip request gets past the level and the
+        # ownership checks and fails only because there is no datastore
+        db("UPDATE job SET ?D WHERE id=?x", {'status': 'complete'}, calc_id)
+        self.user2.is_superuser = True
+        self.user2.save()
+        self.user2.profile.level = 1
+        self.user2.profile.save()
+        for path in log_paths:
+            self.assertEqual(self.get(path).status_code, 200, path)
+        self.assertEqual(self.get(f'{calc_id}/job_zip').status_code, 404)
+        ret = self.get(f'{calc_id}/model_provenance')
+        self.assertEqual(ret.status_code, 200)
+        # the level 2 restriction on tags does not apply to superusers
+        tag = 'test_superuser_tag'
+        for path in [f'create_tag/{tag}', f'{calc_id}/add_tag/{tag}',
+                     f'{calc_id}/set_preferred_job_for_tag/{tag}',
+                     f'unset_preferred_job_for_tag/{tag}',
+                     f'{calc_id}/remove_tag/{tag}', f'delete_tag/{tag}']:
+            self.assertEqual(self.get(path).status_code, 200, path)
+        self.user2.is_superuser = False
+        self.user2.save()
+        self.user2.profile.level = 2
+        self.user2.profile.save()
+
+        # the owner can always see it
+        self.c.login(username=self.user1.username, password=self.password1)
+        for path in log_paths:
+            self.assertEqual(self.get(path).status_code, 200, path)
+        self.remove_calc(calc_id)
+
     # TEST TAGGING
     def test_tagging_job(self):
         job_dic0 = dict(calculation_mode='event_based',

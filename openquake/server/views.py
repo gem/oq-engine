@@ -691,6 +691,12 @@ def check_db_response(resp):
                             status=500)
 
 
+def _get_tag_user_level(request):
+    # managing tags requires level 2, but superusers can manage them
+    # whatever their level
+    return 2 if utils.is_superuser(request) else get_user_level(request)
+
+
 def create_tag(user_level, tag_name):
     if user_level < 2:
         return HttpResponseForbidden()
@@ -799,6 +805,11 @@ def calc_log(request, calc_id, start, stop):
     """
     Get a slice of the calculation log as a JSON list of rows.
     """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
     return internal_api.run(
         services.calc_log, int(calc_id), int(start or 0),
         int(stop or 0))
@@ -810,6 +821,11 @@ def calc_log_size(request, calc_id):
     """
     Get the current number of lines in the log.
     """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
     return internal_api.run(services.calc_log_size, int(calc_id))
 
 
@@ -826,6 +842,25 @@ def check_callback(request):
     job_complete_callback_state['data'].update(payload)
     job_complete_callback_state['event'].set()
     return JsonResponse(payload)
+
+
+def _check_hazard_job(request, hazard_job_id):
+    # a calculation can reuse the results of a hazard calculation only if
+    # the user is allowed to see it; return an error response otherwise
+    if not hazard_job_id:
+        return None
+    try:
+        hc_id = int(hazard_job_id)
+    except ValueError:
+        hc_id = 0
+    if hc_id <= 0:
+        return HttpResponseBadRequest('Invalid hazard_job_id')
+    job = logs.dbcmd('get_job', hc_id)
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    return None
 
 
 @csrf_exempt
@@ -859,6 +894,9 @@ def calc_run(request):
     """
     job_ini = request.POST.get('job_ini')
     hazard_job_id = request.POST.get('hazard_job_id')
+    error = _check_hazard_job(request, hazard_job_id)
+    if error:
+        return error
     if hazard_job_id:  # "continue" button, tested in the QGIS plugin
         ini = job_ini if job_ini else "risk.ini"
     else:
@@ -902,6 +940,9 @@ def calc_run_ini(request):
     """
     ini = request.POST['job_ini']
     hazard_job_id = request.POST.get('hazard_job_id')
+    error = _check_hazard_job(request, hazard_job_id)
+    if error:
+        return error
     username = utils.get_username(request)
     if utils.is_superuser(request):
         username = request.POST.get('job_owner') or username
@@ -1480,6 +1521,11 @@ def calc_traceback(request, calc_id):
     """
     Get the traceback as a list of lines for a given ``calc_id``.
     """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
     return internal_api.run(services.calc_traceback, int(calc_id))
 
 
@@ -1684,7 +1730,7 @@ def extract(request, calc_id, what):
 @require_http_methods(['GET', 'HEAD'])
 def model_provenance(request, calc_id):
     """Authenticate and return the model provenance."""
-    if get_user_level(request) < 2:
+    if get_user_level(request) < 2 and not utils.is_superuser(request):
         return HttpResponseForbidden()
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
@@ -1710,14 +1756,17 @@ def calc_datastore(request, job_id):
         of the requested artifact, if present, else throws a 404
     """
     user_level = get_user_level(request)
-    if user_level < 2 and not settings.ALLOW_DATASTORE_DOWNLOAD:
+    if (user_level < 2 and not utils.is_superuser(request) and
+            not settings.ALLOW_DATASTORE_DOWNLOAD):
         err_msg = f'{user_level=}, {settings.ALLOW_DATASTORE_DOWNLOAD=}'
         return HttpResponseForbidden(err_msg)
     job = logs.dbcmd('get_job', int(job_id))
-    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
+    if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
+    if not os.path.exists(job.ds_calc_dir + '.hdf5'):
+        return HttpResponseNotFound()
 
     fname = job.ds_calc_dir + '.hdf5'
     response = FileResponse(
@@ -1756,10 +1805,14 @@ def calc_zip(request, job_id):
         A `django.http.HttpResponse` containing the content
         of the requested artifact, if present, else throws a 404
     """
-    if get_user_level(request) < 2:
+    if get_user_level(request) < 2 and not utils.is_superuser(request):
         return HttpResponseForbidden()
     job = logs.dbcmd('get_job', int(job_id))
-    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    if not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -1813,6 +1866,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     kwargs = dict(calc_id=calc_id, size_mb=size_mb)
     pngs = dict(hmaps=False)
@@ -1947,6 +2002,10 @@ def get_aelo_notes_and_warnings(ds):
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     asce07 = asce41 = None
     asce07_with_units = {}
@@ -2151,6 +2210,8 @@ def web_engine_get_outputs_impact(request, calc_id):
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
     description = job.description
     job_start_time = job.start_time
     job_start_time_str = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
@@ -2470,7 +2531,7 @@ def calc_create_tag(request, tag_name):
     """
     Create a tag named `tag_name`
     """
-    user_level = get_user_level(request)
+    user_level = _get_tag_user_level(request)
     return create_tag(user_level, tag_name)
 
 
@@ -2481,7 +2542,7 @@ def calc_delete_tag(request, tag_name):
     """
     Delete a tag named `tag_name`
     """
-    user_level = get_user_level(request)
+    user_level = _get_tag_user_level(request)
     return delete_tag(user_level, tag_name)
 
 
@@ -2492,7 +2553,7 @@ def calc_add_tag(request, calc_id, tag_name):
     """
     Assign to the calculation of given `calc_id` a tag named `tag_name`
     """
-    user_level = get_user_level(request)
+    user_level = _get_tag_user_level(request)
     return add_tag_to_job(user_level, calc_id, tag_name)
 
 
@@ -2503,7 +2564,7 @@ def calc_remove_tag(request, calc_id, tag_name):
     """
     Remove the tag named `tag_name` from the calculation of given `calc_id`
     """
-    user_level = get_user_level(request)
+    user_level = _get_tag_user_level(request)
     return remove_tag_from_job(user_level, calc_id, tag_name)
 
 
@@ -2515,7 +2576,7 @@ def calc_set_preferred_job_for_tag(request, calc_id, tag_name):
     Set the calculation of given `calc_id` as the preferred one for tag
     `tag_name`
     """
-    user_level = get_user_level(request)
+    user_level = _get_tag_user_level(request)
     return set_preferred_job_for_tag(user_level, calc_id, tag_name)
 
 
@@ -2526,7 +2587,7 @@ def calc_unset_preferred_job_for_tag(request, tag_name):
     """
     Unset the preferred job for tag `tag_name`
     """
-    user_level = get_user_level(request)
+    user_level = _get_tag_user_level(request)
     return unset_preferred_job_for_tag(user_level, tag_name)
 
 

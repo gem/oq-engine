@@ -486,6 +486,16 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='',
                        expected_status_code=403)
 
+        # ...unless they are superusers, who can download them and see the
+        # model provenance whatever their level
+        self.user.is_superuser = True
+        self.user.save()
+        ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='')
+        ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='')
+        ret = self.get(f'{job_id}/model_provenance')
+        self.user.is_superuser = False
+        self.user.save()
+
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError(
