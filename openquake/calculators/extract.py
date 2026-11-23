@@ -1268,6 +1268,36 @@ def extract_exposure_by_location(dstore, what):
     return pandas.DataFrame(dic)
 
 
+def check_gmf_sites(dstore, gmf_sids, complete):
+    """
+    Raise a ValueError if the site IDs in gmf_data or in the assetcol are
+    inconsistent with the stored site collection, which would associate
+    the GMFs to the wrong sites. This happened for the impact calculations
+    from a ShakeMap before the fix of the stored sitecol.
+
+    :param dstore: a DataStore instance
+    :param gmf_sids: the site IDs in gmf_data
+    :param complete: the complete site collection
+    """
+    msg = ('%s: the site IDs in %s are inconsistent with the stored site '
+           'collection; the calculation was performed with a previous '
+           'engine version, please run it again')
+    if len(gmf_sids) and gmf_sids.max() >= len(complete):
+        raise ValueError(msg % (dstore.filename, 'gmf_data'))
+    if 'assetcol' in dstore:
+        asset_sids = dstore['assetcol/array']['site_id']
+        sids = dstore['sitecol/sids'][:]
+        if len(asset_sids) == 0 or len(sids) == 0:
+            return
+        # check that the asset site IDs are a subset of the sitecol site
+        # IDs with a boolean mask, which is O(A) and much faster than
+        # numpy.unique + numpy.isin for millions of assets
+        mask = numpy.zeros(max(asset_sids.max(), sids.max()) + 1, bool)
+        mask[sids] = True
+        if not mask[asset_sids].all():
+            raise ValueError(msg % (dstore.filename, 'assetcol'))
+
+
 def _gmf(df, num_sites, imts, sec_imts):
     # convert data into the composite array expected by QGIS
     gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts + sec_imts])
@@ -1292,9 +1322,11 @@ def extract_gmf_scenario(dstore, what):
     gmvs = dstore[f'gmf_data/{imt}'][ok]
     sids = dstore['gmf_data/sid'][ok]
     try:
-        N = len(dstore['complete'])
+        complete = dstore['complete']
     except KeyError:
-        N = len(dstore['sitecol'])
+        complete = dstore['sitecol']
+    check_gmf_sites(dstore, sids, complete)
+    N = len(complete)
     E = len(rlzs) // info['num_rlzs']
     arr = numpy.zeros((E, N))
     for e, eid in enumerate(numpy.unique(eids)):
@@ -1325,6 +1357,7 @@ def extract_gmf_npz(dstore, what):
         # zero GMF
         yield 'rlz-%03d' % rlzi, []
     else:
+        check_gmf_sites(dstore, df.sid.to_numpy(), complete)
         prim_imts = list(oq.get_primary_imtls())
         gmfa = _gmf(df[df.index == eid], n, prim_imts, oq.sec_imts)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
