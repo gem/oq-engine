@@ -139,7 +139,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.13"]
+        python-version: ["3.13", "3.14"]
 
     steps:
       # This Checkout use git-ref keyword from dispatch
@@ -185,7 +185,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.13"]
+        python-version: ["3.13", "3.14"]
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
@@ -234,7 +234,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.13"]
+        python-version: ["3.13", "3.14"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
@@ -292,7 +292,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.13"]
+        python-version: ["3.13", "3.14"]
     env:
       OQ_APPLICATION_MODE: READ_ONLY
     steps:
@@ -338,7 +338,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.13"]
+        python-version: ["3.13", "3.14"]
     env:
       # We do not set OQ_APPLICATION_MODE: AELO here, but only after install.py
       OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
@@ -396,7 +396,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.13"]
+        python-version: ["3.13", "3.14"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
