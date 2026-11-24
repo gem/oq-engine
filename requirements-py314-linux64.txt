@@ -6,6 +6,7 @@ https://wheelhouse.openquake.org/unified.test/pyproj-3.8.0-cp314-cp314-manylinux
 https://wheelhouse.openquake.org/unified.test/rasterio-1.5.2-cp314-cp314-manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/unified.test/fiona-1.10.1-cp314-cp314-manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/unified.test/pyogrio-0.13.0-cp314-cp314-manylinux_2_28_x86_64.whl
+https://wheelhouse.openquake.org/unified.test/pyzmq-27.3.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl
 #pp
 https://wheelhouse.openquake.org/unified/alpha_shapes-1.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/asgiref-3.11.1-py3-none-any.whl
