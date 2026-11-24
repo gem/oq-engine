@@ -49,9 +49,8 @@ dependencies = [
     # geopackages
     "gdal~=3.11.4; sys_platform == 'win32'",
     "gdal~=3.13.1; sys_platform != 'win32'",
-    "pyproj~=3.7.2",
-    "geopandas~=1.1.3; sys_platform == 'win32'",
-    "geopandas~=1.1.4; sys_platform != 'win32'",
+    "pyproj~=3.8.0",
+    "geopandas~=1.2.0",
     "fiona~=1.10.1",
 ]
 
