@@ -146,10 +146,10 @@ def store(request_files, ini, calc_id):
     return store_in(request_files, 'archive', ini, parallel.calc_dir(calc_id))
 
 
-def store_in(request_files, field, ini, calc_dir):
+def store_in(request_files, field, ini, dirname):
     """
     Store the files uploaded in the given field (unzipping the .zip archive,
-    if any) in calc_dir and select the job file by looking at the extension.
+    if any) in dirname and select the job file by looking at the extension.
 
     :returns: full path of the ini file
     """
@@ -162,18 +162,18 @@ def store_in(request_files, field, ini, calc_dir):
         (input_file for input_file, name in named_files
          if name.endswith('.zip')), None)
     if zip_file is None:
-        # move each file to calc_dir using the upload file names
+        # move each file to dirname using the upload file names
         inifiles = []
         for input_file, name in named_files:
             # input_file is a Django UploadedFile, whose .file is a file object
-            new_path = os.path.join(calc_dir, name)
+            new_path = os.path.join(dirname, name)
             with open(new_path, 'wb') as target:
                 shutil.copyfileobj(input_file.file, target)
             if name.endswith(ini):
                 inifiles.append(new_path)
-    else:  # extract the files from the archive into calc_dir
+    else:  # extract the files from the archive into dirname
         source = getattr(zip_file, 'file', zip_file)
-        inifiles = readinput.extract_from_zip(source, ini, calc_dir)
+        inifiles = readinput.extract_from_zip(source, ini, dirname)
     if not inifiles:
         raise NotFound('There are no %s files in the archive' % ini)
     return inifiles[0]

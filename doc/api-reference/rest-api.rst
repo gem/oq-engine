@@ -1066,6 +1066,9 @@ POST /v1/calc/run
 *****************
 
 Run a new calculation with uploaded files (or a single ``job.zip``).
+All the input files of an uploaded job, including those referenced by other
+input files, must be among the uploaded files: paths leading outside of them
+are refused.
 
 Parameters::
 
@@ -1172,7 +1175,8 @@ User level 0 is forbidden.
 POST /v1/calc/validate_ini
 **************************
 
-Check if a given job.ini is valid.
+Check if a given job.ini is valid. When the job.ini is uploaded, the files
+it references must be among the uploaded files, as for ``/v1/calc/run``.
 
 Parameters::
 
@@ -1184,7 +1188,8 @@ Response: a JSON object containing ``valid`` and ``error_msg``.
 POST /v1/calc/validate_zip
 **************************
 
-Check if a given job.zip archive is valid.
+Check if a given job.zip archive is valid. The input files must be in the
+archive, as for ``/v1/calc/run``.
 
 Parameters::
 
