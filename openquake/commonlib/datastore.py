@@ -27,6 +27,7 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5, performance, general
+from openquake.hazardlib import site
 from openquake.commonlib import dbapi, logs
 from openquake.commonlib import get_datadir
 
@@ -594,6 +595,35 @@ class DataStore(collections.abc.MutableMapping):
             else:
                 raise KeyError('No %r found in %s' % (key, self))
         return val
+
+    def read_sitecol(self, key='sitecol'):
+        """
+        Read the site collection for the datastore that owns `key`.
+
+        Read the optional complete collection from the same file as the
+        active one. Older child files can have sparse IDs and rely on the
+        parent for the complete collection.
+        """
+        if key not in self.hdf5 or 'sitecol' not in self.hdf5:
+            if self.parent != ():
+                self.parent.open('r')
+                return self.parent.read_sitecol(
+                    key if key not in self.hdf5 else 'sitecol')
+            raise KeyError(key)
+        sitecol = site.read_sitecol(self.hdf5)
+        if (sitecol is sitecol.complete and self.parent != () and
+                not numpy.array_equal(sitecol.sids,
+                                      numpy.arange(len(sitecol)))):
+            self.parent.open('r')
+            sitecol.complete = self.parent.read_sitecol().complete
+            sitecol.check()
+        return sitecol
+
+    def store_sitecol(self, sitecol):
+        """
+        Store the active and complete site collections as a pair.
+        """
+        site.store_sitecol(self.hdf5, sitecol)
 
     def __setitem__(self, key, val):
         if key in self.hdf5:

@@ -836,7 +836,7 @@ def read_ctx_by_grp(dstore):
     are stored once, with the ratios of the occurrence rates of each
     variant, and they are rebuilt here, as if stored separately
     """
-    sitecol = dstore['sitecol'].complete.array
+    sitecol = dstore.read_sitecol('rup').complete.array
     # NB: the gid of each context, i.e. of the index of rate attribution
     # it was computed for, is a column of the rup dataframe; the gids are
     # the gsim_idx, see gmf.py

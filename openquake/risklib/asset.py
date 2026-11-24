@@ -767,26 +767,28 @@ class AssetCollection(object):
         new.array['ordinal'] = numpy.arange(len(new.array))
         return new
 
-    def reduce_also(self, sitecol):
+    def remap_sites(self, sitecol):
         """
-        Reduced self on the given sitecol.
-        NB: also the SiteCollection is reduced
-        and turned into a complete site collection.
+        Keep assets on the selected sites and use their new row positions
+        as site IDs. The caller creates the corresponding site collection.
         """
-        uniq, inv = numpy.unique(self['site_id'], return_inverse=True)
-        if len(uniq) == len(sitecol) and (uniq == sitecol.sids).all():
-            # do not reduce the assetcol, just fix the site IDs
-            self.array['site_id'] = numpy.arange(len(uniq))[inv]
-        else:  # the sitecol is shorter, like in case_shakemap
-            arrays = []
-            for idx, sid in enumerate(sitecol.sids):
-                arr = self[self['site_id'] == sid]
-                arr['site_id'] = idx
-                arrays.append(arr)
-            self.array = numpy.concatenate(arrays, dtype=arr.dtype)
+        size = max(self.tot_sites, len(sitecol.complete))
+        lookup = numpy.full(size, -1, dtype=I64)
+        lookup[sitecol.sids] = numpy.arange(len(sitecol))
+        ids = lookup[self['site_id']]
+        keep = ids >= 0
+        if not keep.all():  # ShakeMap can discard some of the sites
+            retained = numpy.flatnonzero(keep)
+            retained = retained[numpy.argsort(ids[retained], kind='stable')]
+            self.array = self.array[retained]
+            ids = ids[retained]
             self.array['ordinal'] = numpy.arange(len(self.array))
-            self.tot_sites = len(sitecol)
-        sitecol.make_complete()
+            if 'id' in self.tagcol.tagnames:
+                self.tagcol.id[1:] = self['id']
+        self.array['site_id'] = ids
+        self.tot_sites = len(sitecol)
+        if 'site_id' in self.tagcol.tagnames:
+            self.tagcol.site_id[1:] = range(self.tot_sites)
 
     def to_dframe(self, indexfield='ordinal'):
         """

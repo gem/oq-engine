@@ -78,7 +78,8 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
         print(f'Got {sitecol}')
         if len(disc):
             print(f'{len(disc)} sites discarded')
-        calc.datastore['sitecol'] = sitecol
+        sitecol = sitecol.reindexed()
+        calc.datastore.store_sitecol(sitecol)
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         gmfdic = {'kind': 'Silva&Horspool',
                   'spatial_model':

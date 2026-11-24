@@ -1034,8 +1034,11 @@ def export_job_zip(ekey, dstore):
     if 'sitecol' in dstore:
         writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
         inputs['site_model'] = dstore.export_path('sites.csv')
-        sitecol = dstore['sitecol']
-        sitecol.make_complete()  # needed for test_impact[1]
+        if 'gmfs' in inputs:
+            sitecol = dstore.read_sitecol('gmf_data').complete
+        else:
+            # A fresh run from the exported sites gets its own IDs.
+            sitecol = dstore.read_sitecol().reindexed()
         writer.save(sitecol.array, inputs['site_model'])
         # the exported sites are the hazard sites of the calculation: the
         # grid must not be recomputed when rerunning the exported job, since

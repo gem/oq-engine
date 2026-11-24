@@ -43,12 +43,10 @@ def collect(job_ids, dstore):
     sids = numpy.arange(nsites)
     allsids = [sids[sids % ntiles == t] for t in range(ntiles)]
     last = datastore.read(job_ids[-1])
-    sitecol = object.__new__(SiteCollection)
     array = numpy.concatenate(sitecols)
     array['sids'] = numpy.concatenate(allsids)
     idxs = array.argsort(order='sids')
-    sitecol.array = array[idxs]
-    dstore['sitecol'] = sitecol
+    dstore.store_sitecol(SiteCollection.from_(array[idxs]))
     dstore['oqparam'] = last['oqparam']
     if 'source_info' in last:
         dstore['source_info'] = last['source_info'][:]

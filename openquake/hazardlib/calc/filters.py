@@ -475,9 +475,7 @@ class SourceFilter(object):
         Reduce the SourceFilter to a subset of sites
         """
         idxs = numpy.arange(0, len(self.sitecol), multiplier)
-        sc = object.__new__(site.SiteCollection)
-        sc.array = self.sitecol[idxs]
-        sc.complete = self.sitecol.complete
+        sc = self.sitecol.filtered(idxs)
         new = self.__class__(sc, self.integration_distance)
         new.multiplier = multiplier
         return new
@@ -586,9 +584,9 @@ class SourceFilter(object):
                 yield src, None
             return
         for src in sources:
-            sids = self.close_sids(src)
-            if len(sids):
-                yield src, self.sitecol.filtered(sids)
+            sites = self.get_close_sites(src)
+            if sites is not None:
+                yield src, sites
 
     def get_close(self, secparams):
         """

@@ -278,7 +278,7 @@ def main(
                 else:
                     # Compute from an NGAWest2 Vs30 to z2pt5 (CB14)
                     haz_sitecol.calculate_z2pt5()
-            hdf5['sitecol'] = haz_sitecol
+            site.store_sitecol(hdf5, haz_sitecol)
             if output:
                 writers.write_csv(output, haz_sitecol.array[fields])
                 if regular_grid:

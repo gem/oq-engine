@@ -20,11 +20,43 @@ import re
 import os
 import unittest
 import tempfile
+from contextlib import closing
 import numpy
 from openquake.baselib import hdf5
 from openquake.commonlib import datastore, logs
+from openquake.hazardlib.site import SiteCollection
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
+
+
+def test_read_sitecol_with_parent(tmp_path):
+    grid = SiteCollection.from_points([1, 2, 3], [0, 0, 0])
+    subset = grid.filtered([1, 2])
+    parent = datastore.DataStore(str(tmp_path / 'parent.hdf5'), mode='w')
+    child = datastore.DataStore(str(tmp_path / 'child.hdf5'), mode='w')
+    with closing(parent), closing(child):
+        child.parent = parent
+        parent.store_sitecol(subset)
+        parent['gmf_data/sid'] = subset.sids
+        numpy.testing.assert_equal(child.read_sitecol().array, subset.array)
+
+        # Older children sometimes stored only the active rows.
+        child['sitecol'] = subset
+        numpy.testing.assert_equal(child.read_sitecol().complete.array,
+                                   grid.array)
+
+        # Replacing a local filtered collection clears its companion.
+        child.store_sitecol(subset)
+        new_grid = SiteCollection.from_points([8, 9], [0, 0])
+        child.store_sitecol(new_grid)
+        assert 'complete' not in child.hdf5
+        active = child.read_sitecol()
+        assert active.complete is active
+        numpy.testing.assert_equal(active.array, new_grid.array)
+
+        # Inherited GMFs still use the parent's grid.
+        inherited = child.read_sitecol('gmf_data')
+        numpy.testing.assert_equal(inherited.complete.array, grid.array)
 
 
 class DataStoreTestCase(unittest.TestCase):

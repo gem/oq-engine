@@ -19,13 +19,16 @@
 import os
 import shutil
 import tempfile
+from contextlib import closing
 
 import numpy
 import pandas
 from openquake.baselib.general import gettemp
+from openquake.commonlib.datastore import DataStore
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.gsim_lt import InvalidLogicTree
 from openquake.risklib import scientific
+from openquake.calculators import base
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -250,6 +253,29 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
+
+    def test_gmf_hdf5_roundtrip(self):
+        self.run_calc(case_8.__file__, 'job.ini')
+        dstore = self.calc.datastore
+        sitecol = dstore.read_sitecol()
+        grid = sitecol.complete
+        assert len(grid) > len(sitecol)
+        expected = dstore.read_df('gmf_data')
+        oq = dstore['oqparam']
+        [fname] = export(('gmf_data', 'hdf5'), dstore)
+        oq.inputs['gmfs'] = [fname]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, 'imported.hdf5')
+            with closing(DataStore(path, mode='w')) as imported:
+                base.import_gmfs_hdf5(imported, oq, sitecol)
+                sites = imported.read_sitecol()
+                numpy.testing.assert_array_equal(sites.sids, sitecol.sids)
+                sid = expected.sid.to_numpy()
+                actual_grid = sites.complete.array
+                numpy.testing.assert_array_equal(actual_grid[sid],
+                                                 grid.array[sid])
+                pandas.testing.assert_frame_equal(
+                    imported.read_df('gmf_data'), expected)
 
     def test_case_9(self):
         # scenario_risk from GMFs with intensity_measure_types

@@ -27,7 +27,7 @@ from io import BytesIO
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib import (
-    InvalidFile, site_amplification, gsim_lt, source_reader)
+    InvalidFile, site, site_amplification, gsim_lt, source_reader)
 from openquake.hazardlib.lt import LogicTreeError
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.hazardlib.source.rupture import BaseRupture
@@ -44,6 +44,32 @@ from openquake.qa_tests_data.event_based_risk import (
 
 
 TMP = tempfile.gettempdir()
+
+
+def test_remap_assets_to_selected_sites():
+    grid = site.SiteCollection.from_points([0, 1, 2, 3], [0, 0, 0, 0])
+    assets = numpy.array([(b'a', 0, 1), (b'b', 1, 2), (b'c', 2, 3)],
+                         [('id', 'S1'), ('ordinal', 'u4'), ('site_id', 'u4')])
+    for selected, kept, new_ids in [
+            ([1, 2, 3], [b'a', b'b', b'c'], [0, 1, 2]),
+            ([3, 1], [b'c', b'a'], [0, 1])]:
+        exposure = SimpleNamespace(
+            assets=assets.copy(), tagcol=asset.TagCollection(['taxonomy']),
+            occupancy_periods=[])
+        subset = grid.filtered(selected)
+        assetcol = asset.AssetCollection(
+            exposure, subset, None, [['id'], ['site_id']])
+        assetcol.remap_sites(subset)
+        complete = subset.reindexed()
+        numpy.testing.assert_equal(subset.sids, selected)
+        numpy.testing.assert_equal(complete.sids, numpy.arange(len(selected)))
+        numpy.testing.assert_equal(assetcol['id'], kept)
+        numpy.testing.assert_equal(assetcol['site_id'], new_ids)
+        numpy.testing.assert_equal(
+            assetcol['ordinal'], numpy.arange(len(kept)))
+        assert assetcol.tot_sites == len(subset)
+        assert assetcol.tagcol.site_id == ['?', *range(len(subset))]
+        assert assetcol.tagcol.id == ['?', *kept]
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 aac = numpy.testing.assert_allclose
 
@@ -767,6 +793,22 @@ class LogicTreeTestCase(unittest.TestCase):
 
 
 class ReadRiskTestCase(unittest.TestCase):
+    def test_debug_site_with_stations(self):
+        oq = readinput.get_oqparam(os.path.join(DATADIR, 'job.ini'))
+        sites = readinput.get_site_collection(oq)
+        sites.ensure_custom_site_id(8)
+        sid = sites.sids[0]
+        custom_id = sites.custom_site_id[0].decode()
+        initial_size = len(sites)
+        with mock.patch.dict(os.environ, {'OQ_DEBUG_SITE': custom_id}):
+            selected = readinput.debug_site(oq, sites)
+        station_data, _ = readinput.get_station_data(
+            oq, sites, duplicates_strategy='avg')
+        assert len(selected.complete) > initial_size
+        numpy.testing.assert_equal(
+            selected.sids, numpy.union1d([sid], station_data.site_id))
+        selected.check()
+
     def test_read_station_data(self):
         oq = readinput.get_oqparam(os.path.join(DATADIR, 'job.ini'))
         sitecol = readinput.get_site_collection(oq)

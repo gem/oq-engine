@@ -183,7 +183,7 @@ def read_groups_sitecol(dstore, grp_keys):
     """
     with dstore:
         grp = [read_src_group(dstore, grp_id) for grp_id in grp_keys]
-        sitecol = dstore['sitecol'].complete  # super-fast
+        sitecol = dstore.read_sitecol()
     return grp, sitecol
 
 
@@ -201,7 +201,7 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros, gids, dstore=None,
         cmaker.init_monitoring(monitor)
     if dstore:
         with dstore:
-            sites = tgetter(dstore['sitecol'], cmaker.ilabel)
+            sites = tgetter(dstore.read_sitecol(), cmaker.ilabel)
     else:
         sites = tgetter
     result = hazard_curve.classical(grp, sites, cmaker)

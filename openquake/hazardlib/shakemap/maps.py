@@ -164,4 +164,4 @@ def apply_bounding_box(sitecol, bbox):
     if len(indices) == 0:
         raise RuntimeError('There are no sites within '
                            'the bounding box %s' % str(bbox))
-    return sitecol.filtered(indices)
+    return sitecol.complete.filtered(indices)

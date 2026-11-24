@@ -753,7 +753,7 @@ class HazardCalculator(BaseCalculator):
                 if oq.inputs['gmfs'][0].endswith('.csv'):
                     eids = import_gmfs_csv(self.datastore, oq, self.sitecol)
                 elif oq.inputs['gmfs'][0].endswith('.hdf5'):
-                    eids = import_gmfs_hdf5(self.datastore, oq)
+                    eids = import_gmfs_hdf5(self.datastore, oq, self.sitecol)
                 else:
                     raise NotImplementedError(
                         'Importer for %s' % oq.inputs['gmfs'])
@@ -908,7 +908,7 @@ class HazardCalculator(BaseCalculator):
                 oq, haz_sitecol, inp_types, self.datastore)
 
         # this is overriding the sitecol in test_case_miriam
-        self.datastore['sitecol'] = self.sitecol
+        self.datastore.store_sitecol(self.sitecol)
         if len(discarded):
             self.datastore['discarded'] = discarded
             if 'scenario' in oq.calculation_mode:
@@ -1025,7 +1025,8 @@ class HazardCalculator(BaseCalculator):
             # this is called by mosaic_for_ses/job_sites.csv
             if 'site_model' not in oq.inputs:
                 child.assoc(haz_sitecol.array, assoc_dist, 'warn')
-            self.datastore['sitecol'] = self.sitecol = child
+            self.sitecol = child
+            self.datastore.store_sitecol(child)
         else:  # base case
             self.sitecol = haz_sitecol
         if self.sitecol and oq.imtls:
@@ -1191,6 +1192,29 @@ class HazardCalculator(BaseCalculator):
                         f'in the target exposure model'
                     )
                 
+    # Prepare the hazard grid once and rebuild the selected rows from it.
+    def _associate_site_model(self, station_sids):
+        oq = self.oqparam
+        sitecol = self.sitecol
+        complete = sitecol.complete
+        sm = readinput.get_site_model(oq, self.datastore.hdf5)
+        if oq.impact:
+            # The grid sites have no parameters yet.
+            params = set(sm.dtype.names) | set(oq.req_site_params)
+            for name in sorted(params):
+                if name in site.site_param_dt:
+                    complete.add_col(name, site.site_param_dt[name])
+        if oq.prefer_global_site_params and not numpy.isnan(
+                oq.reference_vs30_value):
+            complete.set_global_params(oq, oq.req_site_params)
+        else:
+            dist = (oq.region_grid_spacing * 1.414
+                    if oq.region_grid_spacing else ASSOC_DIST)
+            # AELO may also associate distant parameters.
+            mode = 'warn' if oq.region_grid_spacing or oq.siteid else 'strict'
+            complete.assoc(sm, dist, mode, station_sids=station_sids)
+        self.sitecol = complete.filtered(sitecol.sids)
+
     def _read_risk3(self):
         oq = self.oqparam
         station_sids = set()
@@ -1209,40 +1233,7 @@ class HazardCalculator(BaseCalculator):
 
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs or oq.impact:
-                assoc_dist = (oq.region_grid_spacing * 1.414
-                              if oq.region_grid_spacing else ASSOC_DIST)
-                sm = readinput.get_site_model(oq, self.datastore.hdf5)
-                if oq.impact:
-                    # the grid sites have no parameters: add the site model
-                    # ones and the required ones, both to the sitecol and to
-                    # the complete sitecol
-                    params = set(sm.dtype.names) | set(oq.req_site_params)
-                    for name in sorted(params):
-                        if name in site.site_param_dt:
-                            dt = site.site_param_dt[name]
-                            self.sitecol.add_col(name, dt)
-                            self.sitecol.complete.add_col(name, dt)
-                if oq.prefer_global_site_params and not numpy.isnan(
-                        oq.reference_vs30_value):
-                    self.sitecol.set_global_params(oq, oq.req_site_params)
-                else:
-                    # associate the site model parameters
-                    # NB: in AELO mode (i.e. with siteid) associate even
-                    # far away parameters since normally they are not used
-                    # (only the vs30 counts)
-                    mode = ('warn' if oq.region_grid_spacing
-                            or oq.siteid else 'strict')
-                    self.sitecol.assoc(sm, assoc_dist, mode,
-                                       station_sids=station_sids)
-                    # the complete sitecol is required and must have the
-                    # same parameters of the sitecol, i.e. the same site
-                    # model must be associated to both (also when the
-                    # calculation is rerun from the exported job.zip, where
-                    # oq.impact is not set)
-                    if ('station_data' in oq.inputs or oq.impact or
-                            self.sitecol is not self.sitecol.complete):
-                        self.sitecol.complete.assoc(sm, assoc_dist, mode,
-                                                    station_sids=station_sids)
+                self._associate_site_model(station_sids)
 
             if oq.override_vs30:
                 # override vs30, z1pt0 and z2pt5
@@ -1265,12 +1256,7 @@ class HazardCalculator(BaseCalculator):
             gsims = readinput.get_gsim_lt(oq).values.values()
             check_sites(sum(gsims, []), self.sitecol)
 
-            self.datastore['sitecol'] = self.sitecol
-            if self.sitecol is not self.sitecol.complete:
-                self.datastore['complete'] = self.sitecol.complete
-            elif 'complete' in self.datastore.parent:
-                # fix: the sitecol is not complete
-                self.sitecol.complete = self.datastore.parent['complete']
+            self.datastore.store_sitecol(self.sitecol)
 
     def _set_amplifier(self):
         """
@@ -1330,11 +1316,14 @@ class HazardCalculator(BaseCalculator):
 
     def add_sec_perils(self, oq):
         self.sec_perils = oq.get_sec_perils()
+        sites = self.sitecol if self.sec_perils else None
+        complete = sites.complete if sites is not None else None
         added = 0
         for sp in self.sec_perils:
-            added += sp.prepare(self.sitecol) or 0  # add columns as needed
+            added += sp.prepare(complete) or 0  # add columns as needed
         if added:
-            self.datastore['sitecol'] = self.sitecol
+            self.sitecol = complete.filtered(sites.sids)
+            self.datastore.store_sitecol(self.sitecol)
 
     def store_rlz_info(self, rel_ruptures):
         """
@@ -1576,7 +1565,6 @@ def _getset_attrs(oq):
     # read effective_time, num_events and imts from oq.inputs['gmfs']
     # if the format of the file is old (v3.11) also sets the attributes
     # investigation_time and ses_per_logic_tree_path on `oq`
-    num_sites = []
     num_events = []
     for fname in oq.inputs['gmfs']:
         with hdf5.File(fname, 'r') as f:
@@ -1586,24 +1574,23 @@ def _getset_attrs(oq):
             except KeyError:
                 attrs = {}
                 num_events.append(len(f['events']))
-            num_sites.append(len(f['sitecol']))
     return dict(effective_time=attrs.get('effective_time'),
-                num_events=num_events, num_sites=num_sites,
-                imts=list(oq.imtls))
+                num_events=num_events, imts=list(oq.imtls))
 
 
-def import_sites_hdf5(dstore, fnames):
+def import_sites_hdf5(dstore, fnames, check_gmfs=False, sitecol=None):
     """
-    Import site collections by merging them.
-
-    :returns: a list of dictionaries local_sid->global_sid for each sitecol
+    Store the sites from one file or a merged grid from several files.
+    Return the site ID mappings used when merging GMFs.
     """
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
-            dstore['sitecol'] = f['sitecol']
+            sites = site.read_sitecol(f)
         convs = []
-    else:  # merge the sites
-        dstore['sitecol'], convs = site.merge_sitecols(fnames)
+    else:
+        sites, convs = site.merge_sitecols(fnames, check_gmfs=check_gmfs)
+    h5 = getattr(dstore, 'hdf5', dstore)
+    site.store_sitecol(h5, sites if sitecol is None else sitecol)
     return convs
 
 
@@ -1669,12 +1656,13 @@ def import_ruptures_hdf5(h5, fnames):
         assert rup_id == rup['id'], (rup_id, rup['id'])
 
 
-def import_gmfs_hdf5(dstore, oq):
+def import_gmfs_hdf5(dstore, oq, sitecol=None):
     """
     Import in the datastore a ground motion field HDF5 file.
 
     :param dstore: the datastore
     :param oq: an OqParam instance
+    :param sitecol: the sites already selected from the imported GMF grid
     :returns: event_ids
     """
     # NB: we tried to use ExternalLinks to avoid copying the GMFs,
@@ -1694,14 +1682,14 @@ def import_gmfs_hdf5(dstore, oq):
                     len(fnames), general.humansize(size))
     attrs = _getset_attrs(oq)
     E = sum(attrs['num_events'])
-    rups = []
+    h5 = getattr(dstore, 'hdf5', dstore)
+    convs = import_sites_hdf5(dstore, fnames, check_gmfs=True, sitecol=sitecol)
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
-            dstore['sitecol'] = f['sitecol']  # complete by construction
             if 'gmv_0' in f['gmf_data']:  # old format <= v3.23
                 imts = f['gmf_data'].attrs['imts']
                 imtlist = imts.split()
-                grp = dstore.hdf5.create_group('gmf_data')
+                grp = h5.create_group('gmf_data')
                 for nam, val in f['gmf_data'].attrs.items():
                     if nam == '__pdcolumns__':
                         grp.attrs['__pdcolumns__'] = 'eid sid ' + imts
@@ -1714,27 +1702,22 @@ def import_gmfs_hdf5(dstore, oq):
                         name = col
                     f.copy(f'gmf_data/{col}', grp, name)
             else:
-                f.copy('gmf_data', dstore.hdf5)
+                f.copy('gmf_data', h5)
     else:  # merge the sites and the gmfs, tested in scenario/case_33
-        convs = import_sites_hdf5(dstore, fnames)
         create_gmf_data(dstore, oq.all_imts(), E=E,
                         R=oq.number_of_logic_tree_samples)
-        num_ev_rup_site = []
-        fileno = 0
         nE = 0
         for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
-                fileno += 1
                 imtlist = f['gmf_data'].attrs['imts'].split()
                 size = len(f['gmf_data/sid'])
                 logging.info('Reading {:_d} rows from {}'.format(size, fname))
                 sids = numpy.array(list(conv))
                 for slc in general.gen_slices(0, size, 10_000_000):
                     df = f.read_df('gmf_data', slc=slc)
-                    df = df[numpy.isin(df.sid, sids)]
-                    for sid, idx in conv.items():
-                        df.loc[df.sid == sid, 'sid'] = idx
+                    df = df.loc[numpy.isin(df.sid, sids)].copy()
+                    df['sid'] = df.sid.map(conv).astype(U32)
                     df['eid'] += nE  # add an offset to the event IDs
                     for col in df.columns:
                         if col.startswith('gmv_'):  # before v3.24
@@ -1743,7 +1726,6 @@ def import_gmfs_hdf5(dstore, oq):
                             name = col
                         hdf5.extend(dstore[f'gmf_data/{name}'], df[col])
             nE += ne
-            num_ev_rup_site.append((nE, len(rups), len(conv)))
         oq.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     return _store_events(E, oq.number_of_logic_tree_samples, dstore)
@@ -1927,17 +1909,12 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     with calc.monitor('getting/reducing shakemap'):
         sitecol, shakemap = readinput.assoc_to_shakemap(
             oq, haz_sitecol, assetcol)  # also reducing assetcol
-        # NB: the reduced sitecol has been made complete, i.e. its sids
-        # are 0..N-1, consistently with the asset site_ids and the gmf
-        # sids; the previously stored sitecol and complete sitecol (if
-        # any, for instance a region grid) must be replaced, otherwise
-        # the exporters would associate the GMFs to the wrong sites
+        # The reduced sitecol and remapped assets replace the input grid
+        # before we store GMFs in the new site ID space.
         calc.sitecol = sitecol
         calc.assetcol = assetcol
-        calc.datastore['sitecol'] = sitecol
+        calc.datastore.store_sitecol(sitecol)
         calc.datastore['assetcol'] = assetcol
-        if 'complete' in calc.datastore.hdf5:
-            del calc.datastore['complete']
     # assemble dictionary to decide on the calculation method for the gmfs
     if 'MMI' in oq.imtls:
         # calculations with MMI should be executed
@@ -1973,7 +1950,6 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
     store_gmfs(calc, sitecol, shakemap, gmf_dict)
-    return sitecol, assetcol
 
 
 def check_site_ids(dstore):
@@ -1981,26 +1957,32 @@ def check_site_ids(dstore):
     Check the consistency of the site IDs in the datastore, including
     the datasets inherited from the parent, if any: the complete site
     collection must have site IDs 0..N-1, the site collection must be a
-    subset of it and the site IDs in gmf_data and station_data must
-    refer to it, while the site IDs in the assetcol must refer to the
-    site collection. Raise a ValueError listing the inconsistencies.
+    subset of it. GMF and station IDs refer to the complete collection
+    of the file that stores them. Asset IDs refer to the active site
+    collection. Raise a ValueError listing the inconsistencies.
     """
-    sitecol = dstore.get('sitecol', None)
-    if sitecol is None or len(sitecol) == 0:
+    try:
+        sitecol = dstore.read_sitecol()
+    except KeyError:
         return
-    complete = dstore.get('complete', None)
-    if complete is not None:
-        sitecol.complete = complete
+    if not len(sitecol):
+        return
     errors = []
     try:
         sitecol.check()
     except ValueError as exc:
         errors.append(str(exc))
-    N = len(sitecol.complete)
-    for key in ('gmf_data/sid', 'station_data/site_id'):
+    for group, field in [('gmf_data', 'sid'), ('station_data', 'site_id')]:
+        key = '%s/%s' % (group, field)
         sids = dstore.get(key, None)
-        if sids is not None and len(sids) and sids[:].max() >= N:
-            errors.append('%s outside the complete site collection' % key)
+        if sids is not None and len(sids):
+            complete = (sitecol if group in dstore.hdf5 else
+                        dstore.read_sitecol(group)).complete
+            for slc in general.gen_slices(0, len(sids), 1_000_000):
+                if sids[slc].max() >= len(complete):
+                    errors.append(
+                        '%s outside the complete site collection' % key)
+                    break
     assetcol = dstore.get('assetcol/array', None)
     if assetcol is not None and len(assetcol):
         errors.extend(_asset_errors(dstore['oqparam'], assetcol[()], sitecol))
@@ -2013,15 +1995,21 @@ def check_site_ids(dstore):
 # IDs can produce valid but wrong site IDs, like in the bug fixed by #12168
 def _asset_errors(oq, assets, sitecol):
     asset_sids = assets['site_id']
-    size = max(asset_sids.max(), sitecol.sids.max()) + 1
-    lons = numpy.full(size, numpy.nan)
-    lats = numpy.full(size, numpy.nan)
-    lons[sitecol.sids] = sitecol.lons
-    lats[sitecol.sids] = sitecol.lats
-    if numpy.isnan(lons[asset_sids]).any():
-        return ['assetcol site_id outside the site collection']
+    complete = sitecol.complete
+    invalid = ['assetcol site_id outside the site collection']
+    if max(asset_sids.max(), sitecol.sids.max()) >= len(complete):
+        return invalid
+    if sitecol is not complete:
+        present = numpy.zeros(len(complete), dtype=bool)
+        present[sitecol.sids] = True
+        if not present[asset_sids].all():
+            return invalid
+    lons = complete.lons[asset_sids]
+    lats = complete.lats[asset_sids]
+    if numpy.isnan(lons).any():
+        return invalid
     dists = geodetic_distance(assets['lon'], assets['lat'],
-                              lons[asset_sids], lats[asset_sids])
+                              lons, lats)
     maxdist = max(oq.get_haz_distance(),
                   max(oq.asset_hazard_distance.values())) + 1  # km
     far = dists > maxdist
@@ -2039,12 +2027,14 @@ def read_parent_sitecol(oq, dstore):
         return readinput.get_site_collection(oq, dstore.hdf5)
     with datastore.read(oq.hazard_calculation_id) as parent:
         if 'sitecol' in parent:
-            haz_sitecol = parent['sitecol'].complete
+            haz_sitecol = parent.read_sitecol()
         else:
             haz_sitecol = readinput.get_site_collection(oq, dstore.hdf5)
         if (oq.has_amplification and
                 'ampcode' not in haz_sitecol.array.dtype.names):
-            haz_sitecol.add_col('ampcode', site.ampcode_dt)
+            complete = haz_sitecol.complete
+            complete.add_col('ampcode', site.ampcode_dt)
+            haz_sitecol = complete.filtered(haz_sitecol.sids)
     return haz_sitecol
 
 

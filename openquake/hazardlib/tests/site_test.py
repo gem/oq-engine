@@ -217,6 +217,17 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         filtered = col.filter(numpy.zeros(len(self.SITES), bool))
         self.assertIs(filtered, None)
 
+    def test_reorder_and_reindex(self):
+        subset = self.SITES.filtered([1, 3])
+        reordered = subset.filtered([1, 0])
+        assert_eq(reordered.sids, [3, 1])
+        assert_eq(reordered.lons, [1, 11])
+        assert reordered.complete is self.SITES
+        reindexed = reordered.reindexed()
+        assert reindexed.complete is reindexed
+        assert_eq(reindexed.sids, [0, 1])
+        assert_eq(reordered.sids, [3, 1])
+
     def test_filter_all_in(self):
         col = self.SITES
         filtered = col.filter(numpy.ones(len(self.SITES), bool))

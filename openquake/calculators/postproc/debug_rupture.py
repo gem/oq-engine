@@ -43,7 +43,7 @@ def main(calc_id: int, rup_id: str):
     rups = frups[numpy.isin(frups['id'], rup_ids)]
     logging.info('model = %s', rups[0]['model'].decode('ascii'))
 
-    sites = parent['sitecol']
+    sites = parent.read_sitecol()
     job, dstore = datastore.create_job_dstore(f'GMFs for {rup_id=}', parent)
     
     prim_imts = oq.get_primary_imtls()
@@ -63,7 +63,7 @@ def main(calc_id: int, rup_id: str):
         # Serial GMF tasks borrow the open datastore while the job runs.
         with patch.object(dstore, 'close_on_exit', False):
             run(event_based, oq, rups[0], calc)
-        dstore['sitecol'] = sites
+        dstore.store_sitecol(sites)
         save_version_checksum(oq, dstore)
         logging.info(f'Created {dstore.filename}')
     return dstore

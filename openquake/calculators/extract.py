@@ -370,14 +370,13 @@ def extract_asset_tags(dstore, tagname):
         yield tagname, barray(tagcol.gen_tags(tagname))
 
 
-def get_sites(sitecol, complete=True):
+def get_sites(sitecol):
     """
     :returns:
         a lon-lat or lon-lat-depth array depending if the site collection
         is at sea level or not; if there is a custom_site_id, prepend it
     """
-    sc = sitecol.complete if complete else sitecol
-    if sc.at_sea_level():
+    if sitecol.at_sea_level():
         fields = ['lon', 'lat']
     else:
         fields = ['lon', 'lat', 'depth']
@@ -466,7 +465,7 @@ def extract_hcurves(dstore, what):
     info = get_info(dstore)
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
-        sites = get_sites(sitecol, complete=False)
+        sites = get_sites(sitecol)
         dic = _get_dict(dstore, 'hcurves-stats', info['imtls'], info['stats'])
         yield from hazard_items(
             dic, sites, investigation_time=info['investigation_time'])
@@ -482,7 +481,7 @@ def extract_hmaps(dstore, what):
     info = get_info(dstore)
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
-        sites = get_sites(sitecol, complete=False)
+        sites = get_sites(sitecol)
         dic = _get_dict(dstore, 'hmaps-stats',
                         {imt: info['poes'] for imt in info['imtls']},
                         info['stats'])
@@ -501,7 +500,7 @@ def extract_uhs(dstore, what):
     info = get_info(dstore)
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
-        sites = get_sites(sitecol, complete=False)
+        sites = get_sites(sitecol)
         dic = {}
         for stat, s in info['stats'].items():
             hmap = dstore['hmaps-stats'][:, s]  # shape (N, M, P)
@@ -1282,7 +1281,8 @@ def check_gmf_sites(dstore, gmf_sids, complete):
     msg = ('%s: the site IDs in %s do not match the stored site '
            'collection, so the GMFs cannot be associated to their sites; '
            'please run the calculation again')
-    if len(gmf_sids) and gmf_sids.max() >= len(complete):
+    if (not numpy.array_equal(complete.sids, numpy.arange(len(complete))) or
+            len(gmf_sids) and gmf_sids.max() >= len(complete)):
         raise ValueError(msg % (dstore.filename, 'gmf_data'))
     if 'assetcol' in dstore:
         asset_sids = dstore['assetcol/array']['site_id']
@@ -1321,10 +1321,7 @@ def extract_gmf_scenario(dstore, what):
     eids = eids[ok]
     gmvs = dstore[f'gmf_data/{imt}'][ok]
     sids = dstore['gmf_data/sid'][ok]
-    try:
-        complete = dstore['complete']
-    except KeyError:
-        complete = dstore['sitecol']
+    complete = dstore.read_sitecol('gmf_data').complete
     check_gmf_sites(dstore, sids, complete)
     N = len(complete)
     E = len(rlzs) // info['num_rlzs']
@@ -1342,10 +1339,7 @@ def extract_gmf_npz(dstore, what):
     qdict = parse(what)
     [eid] = qdict.get('event_id', [0])  # there must be a single event
     rlzi = dstore['events'][eid]['rlz_id']
-    try:
-        complete = dstore['complete']
-    except KeyError:
-        complete = dstore['sitecol']
+    complete = dstore.read_sitecol('gmf_data').complete
     sites = get_sites(complete)
     n = len(sites)
     imt_list = dstore['gmf_data'].attrs['imts'].split()

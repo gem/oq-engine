@@ -478,19 +478,9 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     data = dstore['gmf_data']
     gmvs_per_task = len(data['sid']) // ct
     logging.info('gmvs_per_task =~ {:_d}'.format(gmvs_per_task))
-    if 'gmf_data' in dstore.parent:
-        ds = dstore.parent
-    else:
-        ds = dstore
     nbytes = sum(data[k].nbytes for k in data)
     logging.info('There are %.1f GB of GMFs', nbytes / 1024 ** 3)
-    try:
-        N = len(ds['complete'])
-    except KeyError:
-        sitecol = ds['sitecol']
-        # in ScenarioDamageTestCase.test_case_3 it is important to
-        # consider sitecol.sids.max() + 1
-        N = max(len(sitecol), sitecol.sids.max() + 1)
+    N = len(dstore.read_sitecol('gmf_data').complete)
     with mon('computing event impact', measuremem=True):
         num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
         try:

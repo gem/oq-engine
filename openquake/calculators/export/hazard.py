@@ -490,10 +490,7 @@ def export_gmf_data_csv(ekey, dstore):
 
     # exporting sitemesh
     f = dstore.build_fname('sitemesh', '', 'csv')
-    if 'complete' in dstore:
-        complete = dstore['complete']
-    else:
-        complete = dstore['sitecol']
+    complete = dstore.read_sitecol('gmf_data').complete
     # check the consistency before writing anything
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
     check_gmf_sites(dstore, df.sid.to_numpy(), complete)
@@ -558,15 +555,12 @@ def export_site_model_csv(ekey, dstore):
 
 @export.add(('gmf_data', 'hdf5'))
 def export_gmf_data_hdf5(ekey, dstore):
-    # check the consistency before writing anything; NB: a sitecol read
-    # from the datastore has .complete == itself, so the complete sitecol
-    # must be read from the 'complete' dataset, if any
-    sitecol = dstore['sitecol']
-    complete = dstore['complete'] if 'complete' in dstore else sitecol
+    # check the consistency before writing anything
+    complete = dstore.read_sitecol('gmf_data').complete
     check_gmf_sites(dstore, dstore['gmf_data/sid'][:], complete)
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
     with hdf5.File(fname, 'w') as f:
-        f['sitecol'] = sitecol.complete
+        f['sitecol'] = complete
         gd = dstore['gmf_data']
         grp = f.create_group('gmf_data')
         grp.attrs.update(gd.attrs)
@@ -592,10 +586,7 @@ def export_relevant_gmfs(ekey, dstore):
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
     thr = os.environ.get('OQ_THRESHOLD', '1.')
     with hdf5.File(fname, 'w') as f:
-        if dstore.parent:
-            f['sitecol'] = dstore.parent['sitecol']
-        else:
-            f['sitecol'] = dstore['sitecol']
+        f['sitecol'] = dstore.read_sitecol('gmf_data').complete
         df = extract(dstore, 'relevant_gmfs?threshold=' + thr)
         f.create_df('gmf_data', df, effective_time=attrs['effective_time'],
                     investigation_time=attrs['investigation_time'],

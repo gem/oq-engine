@@ -1578,13 +1578,14 @@ def view_mean_perils(token, dstore):
     pdcols = dstore.get_attr('gmf_data', '__pdcolumns__').split()
     # FIXME
     perils = [col for col in pdcols[2:] if not col.startswith('gmv_')]
-    N = len(dstore['sitecol/sids'])
+    N = len(dstore.read_sitecol('gmf_data').complete)
     sid = dstore['gmf_data/sid'][:]
     out = numpy.zeros(N, [(per, float) for per in perils])
     if oq.number_of_logic_tree_samples:
         E = len(dstore['events'])
         for peril in perils:
-            out[peril] = fast_agg(sid, dstore['gmf_data/' + peril][:]) / E
+            data = dstore['gmf_data/' + peril][:]
+            out[peril] = fast_agg(sid, data, M=N) / E
     else:
         rlz_weights = dstore['weights'][:]
         ev_weights = rlz_weights[dstore['events']['rlz_id']]
@@ -1592,7 +1593,7 @@ def view_mean_perils(token, dstore):
         for peril in perils:
             data = dstore['gmf_data/' + peril][:]
             weights = ev_weights[dstore['gmf_data/eid'][:]]
-            out[peril] = fast_agg(sid, data * weights) / totw
+            out[peril] = fast_agg(sid, data * weights, M=N) / totw
     return out
 
 

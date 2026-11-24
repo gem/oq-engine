@@ -95,9 +95,7 @@ def build_hcurves(dstore):
     # compute and save statistics; this is done in process and can
     # be very slow if there are thousands of realizations
     weights = base.get_weights(oq, dstore)
-    sitecol = dstore['sitecol']
-    if dstore.parent:
-        sitecol.complete = dstore.parent['sitecol']
+    sitecol = dstore.read_sitecol()
     # NB: in the future we may want to save to individual hazard
     # curves if oq.individual_rlzs is set; for the moment we
     # save the statistical curves only
@@ -110,6 +108,8 @@ def build_hcurves(dstore):
     L1 = oq.imtls.size // M
     gmf_df = dstore.read_df('gmf_data', 'eid').join(
         dstore.read_df('events', 'id')[['rlz_id']])
+    if sitecol is not sitecol.complete:
+        gmf_df = gmf_df[gmf_df.sid.isin(sitecol.sids)]
     imtls = {imt: imls for imt, imls in oq.imtls.items()}
     for sec_imt in oq.sec_imts:
         min_ = gmf_df[sec_imt].min() + 1E-10  # to ensure min_ > 0
@@ -299,11 +299,8 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     with smon:
-        with dstore as f:
-            try:
-                complete = f['complete']  # the current dstore
-            except KeyError:
-                complete = f['sitecol']
+        with dstore:
+            complete = dstore.read_sitecol().complete
         sites = complete.filtered(sids)
     kdt = KDTree(sites.xyz)  # instantiated once per task
     for rups, cmaker in zip(allrups, cmakers):
@@ -989,7 +986,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_rlz_info(eff_ruptures)
         imp = RuptureImporter(self.datastore)
         if self.sitecol:
-            self.datastore['sitecol'] = self.sitecol
+            self.datastore.store_sitecol(self.sitecol)
         with self.monitor('saving ruptures and events'):
             imp.import_rups_events(self.datastore.getitem('ruptures')[()])
 

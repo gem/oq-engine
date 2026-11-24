@@ -139,7 +139,7 @@ def rnd5(lons):
 
 class TileGetter:
     """
-    An extractor complete->tile
+    Select one tile while keeping the original site IDs.
     """
     def __init__(self, tileno, ntiles):
         self.tileno = tileno
@@ -151,17 +151,13 @@ class TileGetter:
         """
         return int(numpy.ceil(len(complete) / self.ntiles))
 
-    def __call__(self, complete, ilabel=None):
+    def __call__(self, sites, ilabel=None):
         if self.ntiles == 1 and ilabel is None:
-            return complete
-        sc = SiteCollection.__new__(SiteCollection)
-        array = complete.array[complete.sids % self.ntiles == self.tileno]
+            return sites
+        mask = sites.sids % self.ntiles == self.tileno
         if ilabel is not None:
-            sc.array = array[array['ilabel'] == ilabel]
-        else:
-            sc.array = array
-        sc.complete = complete
-        return sc
+            mask &= sites['ilabel'] == ilabel
+        return sites.filtered(numpy.flatnonzero(mask))
 
     def __repr__(self):
         return  '<%s %d of %d>' % (self.__class__.__name__,
@@ -368,6 +364,12 @@ class SiteCollection(object):
 
 %s
 
+    In a complete collection, each site ID is its row position. A
+    filtered collection keeps those IDs and a reference to the complete
+    collection, which can also contain sites without assets and stations.
+    Use `filtered` to select rows and `reindexed` to start a new set of
+    IDs. Any data keyed by the old IDs must be remapped when reindexing.
+
     .. note::
 
         If a :class:`SiteCollection` is created from sites containing only
@@ -543,16 +545,29 @@ class SiteCollection(object):
     def filtered(self, indices):
         """
         :param indices:
-           a subset of indices in the range [0 .. tot_sites - 1]
+           row positions in this collection
         :returns:
-           a filtered SiteCollection instance if `indices` is a proper subset
-           of the available indices, otherwise returns the full SiteCollection
+           a SiteCollection with the requested rows in the given order
         """
-        if indices is None or len(indices) == len(self):
+        if indices is None:
             return self
+        if len(indices) == len(self):
+            idx = numpy.asarray(indices)
+            if idx.dtype.kind in 'iu' and numpy.array_equal(
+                    idx, numpy.arange(len(self))):
+                return self
         new = object.__new__(self.__class__)
         new.array = self.array[indices]
         new.complete = self.complete
+        return new
+
+    def reindexed(self):
+        """
+        Return a complete copy with IDs assigned in the current row order.
+        """
+        new = self.from_(self.array.copy())
+        new.req_site_params = self.req_site_params
+        new.make_complete()
         return new
 
     # tested in classical/case_38
@@ -641,7 +656,7 @@ class SiteCollection(object):
         if n <= 1:
             return self
         idx = numpy.sort(numpy.argsort(self.geohash(8))[::n])
-        return self.filtered(self.sids[idx])
+        return self.filtered(idx)
 
     def add_col(self, colname, dtype, values=None):
         """
@@ -739,7 +754,7 @@ class SiteCollection(object):
             idx = self.array['vs30'].argmin()
         else:
             idx = 0
-        return self.filtered([self.sids[idx]])
+        return self.filtered([idx])
 
     # used in preclassical
     def get_cdist(self, rec_or_loc):
@@ -1008,7 +1023,7 @@ class SiteCollection(object):
         lons, lats = zip(*sorted(new))
         N1 = len(complete)
         N2 = len(new)
-        array = numpy.zeros(N1 + N2, self.array.dtype)
+        array = numpy.zeros(N1 + N2, complete.array.dtype)
         array[:N1] = complete.array
         array[N1:]['sids'] = numpy.arange(N1, N1+N2)
         array[N1:]['lon'] = lons
@@ -1178,6 +1193,29 @@ def merge_without_dupl(array1, array2, uniquefield):
     return array, dupl
 
 
+def read_sitecol(h5):
+    """
+    Read the active and complete site collections from one HDF5 file.
+    """
+    sitecol = h5['sitecol']
+    if 'complete' in h5:
+        sitecol.complete = h5['complete']
+    return sitecol
+
+
+def store_sitecol(h5, sitecol):
+    """
+    Replace the active and optional complete site collection in one file.
+    """
+    sitecol.check()
+    for key in ('sitecol', 'complete'):
+        if key in h5:
+            del h5[key]
+    h5['sitecol'] = sitecol
+    if sitecol is not sitecol.complete:
+        h5['complete'] = sitecol.complete
+
+
 def merge_sitecols(hdf5fnames, mosaic_model='', check_gmfs=False):
     """
     Read a number of site collections from the given filenames
@@ -1191,8 +1229,8 @@ def merge_sitecols(hdf5fnames, mosaic_model='', check_gmfs=False):
     attrs = []
     for fname in hdf5fnames:
         with hdf5.File(fname, 'r') as f:
-            sitecol = f['sitecol']
-            sitecols.append(sitecol)
+            sitecol = read_sitecol(f)
+            sitecols.append(sitecol.complete if check_gmfs else sitecol)
             if check_gmfs:
                 attrs.append(dict(f['gmf_data'].attrs))
     sitecol = sitecols[0]
@@ -1205,15 +1243,12 @@ def merge_sitecols(hdf5fnames, mosaic_model='', check_gmfs=False):
                         'investigation_time')
 
     assert 'custom_site_id' in sitecol.array.dtype.names
-    new = object.__new__(sitecol.__class__)
-    new.array = sitecol.array
-    offset = len(sitecol)
+    array = sitecol.array
     for sc in sitecols[1:]:
-        new.array, dupl = merge_without_dupl(
-            new.array, sc.array, 'custom_site_id')
+        offset = len(array)
+        array, dupl = merge_without_dupl(array, sc.array, 'custom_site_id')
         conv = {sid: offset + i for i, sid in enumerate(sc.sids[~dupl])}
         converters.append(conv)
-        offset += dupl.sum()
-    new.array['sids'] = numpy.arange(len(new.array))
-    new.complete = new
+    new = sitecol.from_(array)
+    new.make_complete()
     return new, converters

@@ -74,13 +74,7 @@ def main(calc_id: int = -1, site_model=False,
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
                       label='discarded', s=markersize_discarded)
     if 'station_data' in dstore:
-        try:
-            complete = dstore['complete']
-        except KeyError:
-            if dstore.parent:
-                complete = dstore.parent['sitecol'].complete
-            else:
-                complete = dstore['sitecol'].complete
+        complete = dstore.read_sitecol('station_data').complete
         station_ids = dstore['station_data/site_id'][:]
         station_sites = numpy.isin(complete.sids, station_ids)
         stations = complete[station_sites]

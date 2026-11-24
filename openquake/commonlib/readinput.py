@@ -830,18 +830,19 @@ def debug_site(oqparam, haz_sitecol):
     OQ_DEBUG_SITE. For conditioned GMFs, keep the stations.
     """
     siteid = os.environ.get('OQ_DEBUG_SITE')
-    if siteid:
-        complete = copy.copy(haz_sitecol.complete)
-        ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
-        if not ok.any():
-            raise ValueError('There is no custom_site_id=%s', siteid)
-        if 'station_data' in oqparam.inputs:
-            # keep the stations while restricting to the specified site
-            sdata, _imts = get_station_data(oqparam, haz_sitecol)
-            ok |= numpy.isin(haz_sitecol.sids, sdata.site_id.to_numpy())
-        haz_sitecol.array = haz_sitecol[ok]
-        haz_sitecol.complete = complete
-        oqparam.concurrent_tasks = 0
+    if not siteid:
+        return haz_sitecol
+    ok = haz_sitecol['custom_site_id'] == siteid.encode('ascii')
+    if not ok.any():
+        raise ValueError('There is no custom_site_id=%s', siteid)
+    sids = haz_sitecol.sids[ok]
+    if 'station_data' in oqparam.inputs:
+        # keep the stations while restricting to the specified site
+        sdata, _imts = get_station_data(
+            oqparam, haz_sitecol, duplicates_strategy='avg')
+        sids = numpy.union1d(sids, sdata.site_id.to_numpy())
+    oqparam.concurrent_tasks = 0
+    return haz_sitecol.complete.filtered(sids)
 
 
 def _vs30(dic):
@@ -860,7 +861,8 @@ def get_site_collection(oqparam, h5=None):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if h5 and 'sitecol' in h5:
-        return h5['sitecol']
+        return (h5.read_sitecol() if hasattr(h5, 'read_sitecol')
+                else site.read_sitecol(h5))
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         if (oqparam.hazard_calculation_id is None and
@@ -928,16 +930,13 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
 
     sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
     sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
-    sitecol.exposure = exp
 
     # add custom_site_id in risk calculations (or GMF calculations)
     # or AELO calculations
     if any(x in oqparam.calculation_mode
            for x in ('scenario', 'event_based', 'risk', 'damage')):
-        sitecol.ensure_custom_site_id(size=8)
-        if sitecol is not sitecol.complete:
-            # tested in scenario_risk/test_case_8
-            sitecol.complete.add_custom_site_id(size=8)
+        sitecol.complete.ensure_custom_site_id(size=8)
+        sitecol = sitecol.complete.filtered(sitecol.sids)
     elif oqparam.postproc_func == 'compute_rtgm.main':
         # add custom_site_id if missing
         if 'custom_site_id' not in sitecol.array.dtype.names:
@@ -946,9 +945,13 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
                     f"{oqparam.inputs['job_ini']}: missing siteid")
             sitecol.add_col('custom_site_id', 'S8', oqparam.siteid)
 
-    debug_site(oqparam, sitecol)
+    sitecol = debug_site(oqparam, sitecol)
+    sitecol.exposure = exp
     if h5:
-        h5['sitecol'] = sitecol
+        if hasattr(h5, 'store_sitecol'):
+            h5.store_sitecol(sitecol)
+        else:
+            site.store_sitecol(h5, sitecol)
     return sitecol
 
 
@@ -1248,10 +1251,7 @@ def _check_csm(csm, oqparam, h5):
             % oqparam.filter_sourcecodes)
     check_min_mag(srcs, oqparam.minimum_magnitude)
 
-    if h5 and 'sitecol' in h5:
-        csm.sitecol = h5['sitecol']
-    else:
-        csm.sitecol = get_site_collection(oqparam, h5)
+    csm.sitecol = get_site_collection(oqparam, h5)
     if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
 
@@ -1594,9 +1594,9 @@ def assoc_to_shakemap(oq, haz_sitecol, assetcol):
     sitecol, shakemap, discarded, *_ = get_sitecol_shakemap(
         uridict, oq.risk_imtls, haz_sitecol,
         oq.asset_hazard_distance['default'])
-    assetcol.reduce_also(sitecol)
+    assetcol.remap_sites(sitecol)
     logging.info('Extracted %d assets', len(assetcol))
-    return sitecol, shakemap
+    return sitecol.reindexed(), shakemap
 
 
 def assoc_exposure(exp, haz_sitecol, oqparam, h5):
@@ -1662,7 +1662,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
         # for predefined hazard you cannot reduce the site collection; instead
         # you can in other cases, typically with a grid which is mostly empty
         # (i.e. there are many hazard sites with no assets)
-        assetcol.reduce_also(sitecol)
+        assetcol.remap_sites(sitecol)
+        sitecol = sitecol.reindexed()
     return sitecol, assetcol, discarded, exp
 
 

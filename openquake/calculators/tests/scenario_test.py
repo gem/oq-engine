@@ -28,7 +28,9 @@ from openquake.qa_tests_data.scenario import (
     case_34, case_35, case_36, case_37)
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
+from openquake.commonlib import readinput
 from openquake.hazardlib import InvalidFile, nrml
+from openquake.hazardlib.site import SiteCollection
 from openquake.calculators import base, getters
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -48,6 +50,33 @@ def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
     return sum((lower_bound <= v1 <= upper_bound) and
                (lower_bound <= v2 <= upper_bound)
                for v1, v2 in zip(gmvs_site_one, gmvs_site_two))
+
+
+def test_merge_gmf_site_ids(tmp_path):
+    paths = []
+    for i, lons in enumerate(([0, 1], [0, 2, 3, 4], [5, 1, 6])):
+        sites = SiteCollection.from_points(lons, numpy.zeros(len(lons)))
+        sites.ensure_custom_site_id(8)
+        path = str(tmp_path / f'sites-{i}.hdf5')
+        paths.append(path)
+        with hdf5.File(path, 'w') as h5:
+            h5['sitecol'] = sites
+            h5.create_df(
+                'gmf_data',
+                [('sid', sites.sids), ('eid', numpy.zeros(len(sites), 'u4')),
+                 ('PGA', sites.lons / 100)],
+                num_events=1, imts='PGA', effective_time=0,
+                investigation_time=0)
+
+    job_ini = os.path.join(os.path.dirname(case_33.__file__), 'job1.ini')
+    oq = readinput.get_oqparam(job_ini)
+    oq.inputs['gmfs'] = paths
+    with hdf5.File(str(tmp_path / 'merged.hdf5'), 'w') as merged:
+        base.import_gmfs_hdf5(merged, oq)
+        df = merged.read_df('gmf_data')
+        numpy.testing.assert_array_equal(df.sid, numpy.arange(7))
+        numpy.testing.assert_array_equal(df.eid, [0, 0, 1, 1, 1, 2, 2])
+        aae(merged['sitecol'].lons[df.sid] / 100, df.PGA)
 
 
 class ScenarioTestCase(CalculatorTestCase):

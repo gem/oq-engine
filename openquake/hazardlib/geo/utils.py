@@ -290,8 +290,8 @@ class _GeographicObjects(object):
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
         sids = sorted(dic)
-        return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
-                discarded)
+        return (sitecol.complete.filtered(sids),
+                numpy.array([dic[s] for s in sids]), discarded)
 
     def assoc2(self, exp, assoc_dist, region, mode):
         """
@@ -352,7 +352,7 @@ class _GeographicObjects(object):
         exp.mesh = mesh
         exp.assets = numpy.array(assets, ass.dtype)
         exp.assets['ordinal'] = numpy.arange(len(exp.assets))
-        return self.objects.filtered(sids), discarded
+        return self.objects.complete.filtered(sids), discarded
 
 
 def assoc(objects, sitecol, assoc_dist, mode):
@@ -416,7 +416,7 @@ def assoc_to_polygons(polygons, data, sitecol, mode):
     sorted_sids = sorted(sites)
     discarded = numpy.array(discarded, dtype=[('lon', F32), ('lat', F32)])
 
-    return (sitecol.filtered(sorted_sids),
+    return (sitecol.complete.filtered(sorted_sids),
             numpy.array([sites[s] for s in sorted_sids]), discarded)
 
 
