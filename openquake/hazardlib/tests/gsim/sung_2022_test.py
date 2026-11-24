@@ -195,7 +195,7 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
         self.assertIsNot(a.dat, b.dat)
         del a.dat[key]
         self.assertIn(key, b.dat)
-        c = SungEtAl2022NonErgodic(adjustment_file=HDF5, rlz_id=99)
+        c = SungEtAl2022NonErgodic(adjustment_file=HDF5, rlz_id=9)
         self.assertIn(key, c.dat)
 
     def test_adj_name_pattern_enforced(self):
@@ -222,7 +222,9 @@ class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
         cls.erg = SungEtAl2022()
         cls.ne_mean = SungEtAl2022NonErgodic(adjustment_file=HDF5, rlz_id="mean")
         cls.ne_0 = SungEtAl2022NonErgodic(adjustment_file=HDF5, rlz_id=0)
-        cls.ne_99 = SungEtAl2022NonErgodic(adjustment_file=HDF5, rlz_id=99)
+        # Test fixture carries 10 subsampled rlz columns from Marco's original
+        # SIGMA 2 files; last is index 9.
+        cls.ne_last = SungEtAl2022NonErgodic(adjustment_file=HDF5, rlz_id=9)
 
     def _grid(self, site, freq):
         return self.ne_mean.dat[(site, freq)]
@@ -270,11 +272,13 @@ class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
     def test_rlz_id_dispatch(self):
         # Switching rlz_id picks a different column of dat['rlz'] and
         # shifts the mean by exactly that column's value at the rupture
-        # cell. Check for rlz_id = 0 and 99 against the 'mean' reference.
+        # cell. Check rlz_id = 0 and 9 against the 'mean' reference
+        # (test fixture has 10 subsampled rlz columns from Marco's
+        # SIGMA 2 files).
         ctx = self._ctx()
         m_mean, *_ = self._compute(self.ne_mean, ctx, "EAS(5.0)")
         m_0, *_ = self._compute(self.ne_0, ctx, "EAS(5.0)")
-        m_99, *_ = self._compute(self.ne_99, ctx, "EAS(5.0)")
+        m_last, *_ = self._compute(self.ne_last, ctx, "EAS(5.0)")
         idx = self._nearest_idx("site1", 5.0, CLON, CLAT)
         g = self._grid("site1", 5.0)
         self.assertAlmostEqual(
@@ -282,8 +286,8 @@ class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
             float(g['rlz'][idx, 0] - g['mean'][idx]),
             places=5)
         self.assertAlmostEqual(
-            m_99 - m_mean,
-            float(g['rlz'][idx, 99] - g['mean'][idx]),
+            m_last - m_mean,
+            float(g['rlz'][idx, 9] - g['mean'][idx]),
             places=5)
 
     def test_lattice_vs_argmin(self):
