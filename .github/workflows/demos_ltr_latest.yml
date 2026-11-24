@@ -45,16 +45,16 @@ jobs:
           if ${{ github.event_name == 'pull_request' }}
           then
               echo "It is a pull request; use the corresponding branch: ${GITHUB_HD_REF}"
-              python install.py devel --version ${GITHUB_HD_REF}
+              python install.py devel
           elif ${{ github.event_name == 'push' }}
           then
               # split something like refs/heads/BRANCHNAME getting only BRANCHNAME
               BRANCH=${GITHUB_REF##*\/}
               echo "It is a push; use the corresponding branch: ${BRANCH}"
-              python install.py devel --version ${BRANCH}
+              python install.py devel
           else
               echo "It was triggered manually; use the selected Git Ref: $GITHUB_INPUT_REF "
-              python install.py devel --version ${GITHUB_INPUT_REF}
+              python install.py devel
           fi
       - name: Run demos and upload to ci.openquake.org
         # uncomment the line below to avoid running this part when triggering the action manually

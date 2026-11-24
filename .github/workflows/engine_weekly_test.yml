@@ -47,9 +47,9 @@ jobs:
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
           then
-            python install.py devel --version ${BRANCH}
+            python install.py devel
           else
-            python install.py devel --version master
+            python install.py devel
           fi
       - name: Actualize 'default' templates for email notifications
         run: |
@@ -165,9 +165,9 @@ jobs:
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
           then
-            python install.py devel --version ${BRANCH}
+            python install.py devel
           else
-            python install.py devel --version master
+            python install.py devel
           fi
       - name: Calculators hazard tests
         run: |
@@ -209,9 +209,9 @@ jobs:
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
           then
-            python install.py devel --version ${BRANCH}
+            python install.py devel
           else
-            python install.py devel --version master
+            python install.py devel
           fi
       - name: Hazardlib tests
         run: |
@@ -261,9 +261,9 @@ jobs:
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
           then
-            python install.py devel --version ${BRANCH}
+            python install.py devel
           else
-            python install.py devel --version master
+            python install.py devel
           fi
       - name: Server 'PUBLIC' mode tests
         run: |
@@ -316,9 +316,9 @@ jobs:
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
           then
-            python install.py devel --version ${BRANCH}
+            python install.py devel
           else
-            python install.py devel --version master
+            python install.py devel
           fi
       - name: Server 'READ_ONLY' mode tests
         run: |
@@ -362,9 +362,9 @@ jobs:
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
           then
-            python install.py devel --version ${BRANCH}
+            python install.py devel
           else
-            python install.py devel --version master
+            python install.py devel
           fi
       - name: Actualize 'aelo' templates for email notifications
         run: |
@@ -420,9 +420,9 @@ jobs:
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
           then
-            python install.py devel --version ${BRANCH}
+            python install.py devel
           else
-            python install.py devel --version master
+            python install.py devel
           fi
           source ~/openquake/bin/activate
           PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
