@@ -26,7 +26,6 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tests import assert_pickleable
 from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
-from openquake.hazardlib.source.base import SourceParam
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
 from openquake.hazardlib.mfd import TruncatedGRMFD
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
@@ -158,13 +157,14 @@ class FromSimpleFaultDataTestCase(unittest.TestCase):
         floating_x_step = 0.5
         floating_y_step = 0.5
         dip = 90.0
-        param = SourceParam(
-            source_id, name, trt, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio, tom)
         src = KiteFaultSource.as_simple_fault(
-            param, upper_seismogenic_depth,
-            lower_seismogenic_depth, fault_trace, dip, rake,
-            floating_x_step, floating_y_step)
+            source_id, name, trt, mfd, rupture_mesh_spacing,
+            magnitude_scaling_relationship, rupture_aspect_ratio, tom,
+            upper_seismogenic_depth=upper_seismogenic_depth,
+            lower_seismogenic_depth=lower_seismogenic_depth,
+            fault_trace=fault_trace, dip=dip, rake=rake,
+            floating_x_step=floating_x_step,
+            floating_y_step=floating_y_step)
 
         sfs = SimpleFaultSurface.from_fault_data(fault_trace,
                                                  upper_seismogenic_depth,
