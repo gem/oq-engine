@@ -119,13 +119,16 @@ def test_impact(n):
                 # [job.ini, exposure.xml, rupture.csv, ...]
                 fnames = check_export_job_zip(calc.datastore)
 
-                # repeat the calculation starting from job.zip unzipped
-                calc2, log2 = check(fnames[0])
+                # repeat the calculation starting from job.zip unzipped;
+                # the exported assets are already sampled, so OQ_SAMPLE_ASSETS
+                # must not be applied again
+                with patch.dict(os.environ):
+                    os.environ.pop('OQ_SAMPLE_ASSETS', None)
+                    calc2, log2 = check(fnames[0])
                 with log2:
                     expose_outputs(calc.datastore)
                     expose_outputs(calc2.datastore)
-                    # TODO: restore the check
-                    #  compare(calc.datastore, calc2.datastore)
+                    compare(calc.datastore, calc2.datastore)
 
 
 def test_impact5():
