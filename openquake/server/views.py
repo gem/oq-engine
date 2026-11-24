@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import ast
 import csv
 import shutil
 import json
@@ -51,7 +49,8 @@ from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
-    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES, MAX_DISTANCE_LEVEL1)
+    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES, MAX_DISTANCE_LEVEL1,
+    IMPACT_CORRELATION_MODELS)
 from openquake.hazardlib.shakemap.parsers import (
     get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info,
     format_event_time)
@@ -67,7 +66,7 @@ from openquake.risklib.scientific import TIME_EVENTS, TIME_LOSSES
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
-from openquake.engine import engine, impact
+from openquake.engine import engine
 from openquake.engine.aelo import (
     PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.server import internal_api, services, utils
@@ -1043,54 +1042,6 @@ def impact_get_nodal_planes_and_info(request):
     return JsonResponse(response_data)
 
 
-def create_impact_job(request, params, email_file_path):
-    # NOTE: params['rupture_dict'] is a string representation of a
-    # dictionary, not a JSON string, so we can't use json.loads
-    rupdic = ast.literal_eval(params['rupture_dict'])
-    if rupdic['approach'] == 'use_shakemap_from_usgs':
-        params['secondary_perils'] = (
-            'AllstadtEtAl2022Landslides, AllstadtEtAl2022Liquefaction')
-        params['intensity_measure_types'] = (
-            'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)')
-    [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level,
-        user_name=utils.get_username(request))
-
-    job_owner_email = request.user.email
-    response_data = dict()
-
-    job_id = jobctx.calc_id
-    outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs_impact', args=[job_id]))
-    outputs_uri_api = request.build_absolute_uri(
-        reverse('results', args=[job_id]))
-    log_uri = request.build_absolute_uri(
-        reverse('log', args=[job_id, '0', '']))
-    traceback_uri = request.build_absolute_uri(
-        reverse('traceback', args=[job_id]))
-    response_data[job_id] = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        log_uri=log_uri, traceback_uri=traceback_uri)
-    if not job_owner_email:
-        response_data[job_id]['WARNING'] = (
-            'No email address is specified for your user account,'
-            ' therefore email notifications will be disabled. As soon as'
-            ' the job completes, you can access its outputs at the'
-            ' following link: %s. If the job fails, the error traceback'
-            ' will be accessible at the following link: %s'
-            % (outputs_uri_api, traceback_uri))
-
-    args = ([params], [jobctx], job_owner_email, outputs_uri_web,
-            services.impact_callback, email_file_path)
-
-    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
-        impact.main_web(*args)
-    else:
-        # spawn the Impact main process
-        mp.Process(target=impact.main_web, args=args).start()
-    return response_data
-
-
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -1794,6 +1745,15 @@ def web_engine(request, **kwargs):
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
         params['impact_approaches'] = IMPACT_APPROACHES
+        # one dropdown per correlation field, as (field, label, options),
+        # each option being (model, scope) with scope shakemap or rupture
+        options = {}
+        for (field, scope), models in IMPACT_CORRELATION_MODELS.items():
+            options.setdefault(field, []).extend(
+                (model, scope) for model in models)
+        params['impact_correlation_options'] = [
+            (field, IMPACT_FORM_LABELS[field], opts)
+            for field, opts in options.items()]
         params['impact_max_distance_level1'] = MAX_DISTANCE_LEVEL1
 
         # this is usually ''; can be set in the local settings for debugging
@@ -2063,7 +2023,7 @@ def get_impact_warnings(ds):
     return warnings
 
 
-def format_oqparam(oqparam):
+def format_oqparam(oqparam, model_used=None):
     ret_dict = {}
     rupdic = oqparam.rupture_dict
     approach = rupdic['approach']
@@ -2091,6 +2051,19 @@ def format_oqparam(oqparam):
         oqparam.asset_hazard_distance['default']
 
     ret_dict[IMPACT_FORM_LABELS['ses_seed']] = oqparam.ses_seed
+
+    # the correlation models really used by the calculation, if any
+    within = oqparam.within_event_correlation_model
+    within_params = oqparam.within_event_correlation_params
+    if model_used:  # stored by the ShakeMap jobs
+        within = model_used
+    elif within and within_params:
+        within += f' {within_params}'
+    ret_dict[IMPACT_FORM_LABELS['within_event_correlation_model']] = (
+        within or 'None')
+    ret_dict[IMPACT_FORM_LABELS['between_event_correlation_model']] = (
+        oqparam.between_event_correlation_model or 'None')
+
     if approach != 'use_shakemap_from_usgs':
         ret_dict[IMPACT_FORM_LABELS['mosaic_model']] = oqparam.mosaic_model
         ret_dict[IMPACT_FORM_LABELS['trt']] = oqparam.tectonic_region_type
@@ -2161,7 +2134,10 @@ def web_engine_get_outputs_impact(request, calc_id):
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         losses, losses_header, weights_precision = _get_impact_losses(ds)
         oqparam = ds['oqparam']
-        input_params = format_oqparam(oqparam)
+        model_used = None  # stored by the ShakeMap jobs with a correlation
+        if 'correlation_model_used' in ds:
+            model_used = ds['correlation_model_used'][0].decode()
+        input_params = format_oqparam(oqparam, model_used)
         usgs_id = None
         if hasattr(oqparam.rupture_dict, 'usgs_id'):
             usgs_id = oqparam.rupture_dict['usgs_id']

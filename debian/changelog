@@ -1,3 +1,9 @@
+  [Marco Pagani, Christopher Brooks]
+  * Add an experimental implementation of the Sung et al. (2022) non-ergodic
+    GMM for France. Experimental status will be removed once implementation
+    can be validated against independent test results provided by the model
+    authors (for now unit tests are circular). QA test added to classical/case_21.
+  
   [Michele Simionato]
   * Fixed scenario calculations with a `rupture_dict`, a region grid, a site
     model and an exposure: the complete site collection was not associated

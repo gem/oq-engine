@@ -31,7 +31,6 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import IMC, StdDev, KNOWN_DISTANCES
-from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as gag
 from openquake.hazardlib import imc_conversion
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
@@ -1695,7 +1694,7 @@ class ContextMaker(object):
                 recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         out = numpy.empty((4, G, M, N))
-        central = {}  # central part shared by sibling GridAdjustedGMPEs
+        groups = {}
         for g, gsim in enumerate(self.gsims):
             if gsim.conditional and not gsim.from_mgmpe:
                 url = ('https://docs.openquake.org/oq-engine/master/manual/'
@@ -1703,39 +1702,37 @@ class ContextMaker(object):
                 raise NotImplementedError(
                     f'{gsim} was not instantiated with a '
                     f'ModifiableGMPE, please read {url}')
-            key = getattr(gsim, 'central_key', None)
-            if key is None:
+            # GSIMs opt in with two module-level functions and a key that
+            # identifies the inputs to their shared computation.
+            functions = getattr(gsim, 'central_functions', None)
+            if functions is None:
                 out[:, g] = self.get_4MN(recarrays, gsim)
-                continue
-            if key not in central:
-                central[key] = self._get_central(recarrays, gsim)
-            out[:, g] = self._add_epsilons(central[key], gsim)
+            else:
+                key = (functions, gsim.central_key)
+                groups.setdefault(key, []).append((g, gsim))
+        for (functions, _), branches in groups.items():
+            self._compute_group(recarrays, functions, branches, out)
         return out
 
-    # compute the part of a GridAdjustedGMPE independent from the
-    # epsilons, i.e. the backbone and the grid lookups (the expensive part)
-    def _get_central(self, ctxs, gsim):
-        N = sum(len(ctx) for ctx in ctxs)
-        out = numpy.zeros((4, len(self.imts), N))
-        resolved = []
+    # Share the backbone and spatial lookups for one context slice at a time.
+    def _compute_group(self, ctxs, functions, branches, out):
+        compute_central, apply_shift = functions
+        backbone = branches[0][1]
+        for _, gsim in branches:
+            gsim.adj = []
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
-            res = gag.compute_central(
-                gsim, ctx, self.imts, *out[:, :, slc], gra_mon=self.gra_mon)
-            resolved.append((slc, res))
+            central = numpy.zeros((4, len(self.imts), len(ctx)))
+            resolved = compute_central(
+                backbone, ctx, self.imts, *central, gra_mon=self.gra_mon)
+            for g, gsim in branches:
+                branch = out[:, g, :, slc]
+                branch[:] = central
+                apply_shift(gsim, resolved, self.imts, branch[0])
             start = slc.stop
-        return out, resolved
-
-    # add the epsilon shifts of a GridAdjustedGMPE to the central part
-    def _add_epsilons(self, central, gsim):
-        out, resolved = central
-        out = out.copy()
-        gsim.adj = []
-        for slc, res in resolved:
-            gag.apply_epsilons(gsim, res, self.imts, out[0, :, slc])
-        self._check_conv(out, gsim)
-        return out
+        for g, gsim in branches:
+            self._check_conv(out[:, g], gsim)
 
     def get_4MN(self, ctxs, gsim):
         """

@@ -42,7 +42,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
-from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 # The final value is the upper interpolation sentinel used by the authors.
@@ -163,10 +163,13 @@ def _correlation_period(imt):
     """Return the SA period used to obtain correlation coefficients.
 
     PGA is represented by SA(0.01), following the operational ShakeMap
-    convention. This mapping affects only correlation coefficients; PGA
-    medians and standard deviations remain those supplied by the GSIM.
+    convention, and PGV by SA(1.0), as in the Jayaram and Baker model.
+    This mapping affects only correlation coefficients; PGA medians and
+    standard deviations remain those supplied by the GSIM.
     """
-    return 0.01 if imt.name == 'PGA' else imt.period
+    if imt.name == 'PGA':
+        return 0.01
+    return 1.0 if imt.name == 'PGV' else imt.period
 
 
 @register_model(
@@ -174,15 +177,15 @@ def _correlation_period(imt):
 class LothBaker2013(SpatialCrossIMTCorrelationModel):
     """Within-event spatial cross-IMT model by Loth and Baker (2013).
 
-    The model was calibrated for 5%-damped SA from 0.01 to 10 s. PGA is
-    supported through the conventional SA(0.01) correlation proxy.
+    The model was calibrated for 5%-damped SA from 0.01 to 10 s. PGA and
+    PGV are supported through the SA(0.01) and SA(1.0) correlation proxies.
     """
 
     SUPPORTS_CIRCULANT_EMBEDDING = True
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
-    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
+    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01), PGV: SA(1.0)}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
     DEFINED_FOR_DAMPING = 5.0
     DEFINED_FOR_PERIOD_RANGE = (0.01, 10.0)
