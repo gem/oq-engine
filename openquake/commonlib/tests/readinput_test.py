@@ -1043,7 +1043,10 @@ class AllowedDirTestCase(unittest.TestCase):
                     'https://earthquake.usgs.gov.example.com/grid.xml',
                     'https://earthquake.usgs.gov@example.com/grid.xml',
                     'http://earthquake.usgs.gov/grid.xml',
-                    'file:' + grid, 'ftp://earthquake.usgs.gov/grid.xml']:
+                    # forward slashes, so that the job.ini can be parsed
+                    # also on Windows (backslashes are escape characters)
+                    'file:' + grid.replace('\\', '/'),
+                    'ftp://earthquake.usgs.gov/grid.xml']:
             err = self.check_shakemap_uri(
                 '{"kind": "usgs_xml", "grid_url": "%s"}' % url)
             self.assertIn('must be among the uploaded files or come from',
