@@ -292,6 +292,46 @@ def test_lattice_geometry_survives_reduction(tmp_path):
         RegularGridLayout.from_sites(restored, max_cell_ratio=4)
 
 
+def test_crop_preserves_distances_and_cell_order():
+    sites, _ = geographic_grid((6, 7))
+    layout = RegularGridLayout.from_sites(sites)
+    indices = numpy.array([24, 9, 16])
+    cropped = layout.cropped(indices)
+    assert cropped.grid_shape == (3, 2)
+    assert cropped.crs == layout.crs
+    assert cropped.spacing == layout.spacing
+    numpy.testing.assert_array_equal(cropped.site_indices, [5, 0, 2])
+    old = numpy.column_stack(numpy.divmod(indices, 7)) * layout.spacing
+    new = numpy.column_stack(numpy.divmod(cropped.site_indices, 2))
+    new = new * cropped.spacing
+    numpy.testing.assert_allclose(old[:, None] - old[None, :],
+                                  new[:, None] - new[None, :])
+    numpy.testing.assert_allclose(
+        cropped.projected_origin,
+        numpy.array(layout.projected_origin) +
+        numpy.array([1, 2]) * layout.spacing * 1000)
+
+
+@pytest.mark.parametrize('model', [JayaramBaker2009(False), DuNing2021()])
+def test_cropped_covariance(model):
+    # Cropping changes the seeded FFT draws, but must preserve the model's
+    # covariance at each requested site, including reordered sparse cells.
+    layout = RegularGridLayout(
+        (6, 7), (10., 10.), numpy.arange(42), 'EPSG:32610',
+        (4_200_000., 500_000.), 0.)
+    indices = numpy.array([24, 9, 16])
+    cropped = layout.cropped(indices)
+    factor = CirculantEmbeddingFactor.build(
+        model, IMTS, cropped.grid_shape, cropped.spacing,
+        site_indices=cropped.site_indices)
+    applied = factor.apply(numpy.eye(factor.input_size))
+    full = dense_covariance(model, IMTS, layout.grid_shape, layout.spacing)
+    selected = (numpy.arange(len(IMTS))[:, None] * numpy.prod(
+        layout.grid_shape) + indices).ravel()
+    numpy.testing.assert_allclose(
+        applied @ applied.T, full[numpy.ix_(selected, selected)], atol=EPS)
+
+
 @pytest.mark.parametrize('crs', ['EPSG:4326', 'EPSG:2263', 'invalid'])
 def test_metric_crs(crs):
     sites, _ = geographic_grid((3, 4))
