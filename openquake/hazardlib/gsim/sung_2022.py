@@ -40,8 +40,6 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.bayless_abrahamson_2018 import (
     _path_scaling, _ztor_scaling, _linear_site_response)
 
-ADJ_DIR = os.path.join(os.path.dirname(__file__), 'sung_2022')
-
 
 def _magnitude_scaling(C, ctx):
     """
@@ -159,7 +157,7 @@ _LOADED_ADJUSTMENT_CACHE = {}
 
 def _load_adjustments_cached(path):
     """
-    Shared across GSIM instances with the same adjustment_hdf5. An N-branch
+    Shared across GSIM instances with the same adjustment_file. An N-branch
     non-ergodic LT otherwise re-reads the same file N times at construction.
     """
     hit = _LOADED_ADJUSTMENT_CACHE.get(path)
@@ -224,40 +222,50 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     cell. The adjustment is conditional on the target site, so each
     row is routed to the group matching its `custom_site_id`.
 
-    :param adjustment_hdf5:
-        Bare filename (default "adj_RE_france.hdf5") inside the
-        gsim/sung_2022/ data folder, or an absolute path. The file has
-        a /<site_name>/adj_<N>hz group structure; `custom_site_id`
-        values in the job's sites.csv must match one of the site groups
-        in the hdf5. Each dataset is a structured array of 5551 grid
-        nodes with fields (lon, lat, mean, std, rlz[N]) covering the
-        France 0.2x0.2 degree grid. All sites share the same grid;
-        dat['mean'] and dat['rlz'] differ per site because the posterior
-        is conditional on the receiver.
+    :param adjustment_file:
+        Path to the adjustment hdf5. Give either the full path or just
+        the filename. If just the filename, put the hdf5 next to the
+        job.ini - OQ looks there for any kwarg ending in ``_file``.
+
+        File layout: one group per target site, one dataset per frequency
+        inside that group, named ``adj_<N>hz`` (e.g. ``adj_5hz``)::
+
+            adj_RE_france.hdf5
+            |-- site1/adj_1hz   structured array over a regular dense
+            |-- site1/adj_5hz   lon/lat lattice; fields:
+            |-- site2/adj_1hz     (lon, lat, mean, std, rlz[N])
+            +-- site2/adj_5hz
+
+        At compute time each row of the ctx is routed to the group named
+        by its ``custom_site_id``; the sites.csv column values must match
+        the group names in the hdf5. All sites share the same grid;
+        ``mean`` and ``rlz`` differ per site because the posterior is
+        conditional on the receiver.
+        
     :param rlz_id:
-        Selects which posterior draw of the adjustment field to use.
-        "mean" (default) uses the posterior mean field `mean`; an integer
-        0..N-1 selects one of the sampled realization maps in `rlz[rlz_id]`.
-        The same rlz_id applies across all sites in the hdf5; each LT
-        branch corresponds to one posterior draw.
+        Which posterior draw of the adjustment field to use. ``"mean"``
+        (default) reads the posterior-mean column; an integer 0..N-1
+        picks one of the sampled realization columns in ``rlz[rlz_id]``.
+        One ``rlz_id`` applies to every site in the hdf5; each LT branch
+        wires in a different ``rlz_id``.
     """
     REQUIRES_SITES_PARAMETERS = {'vs30', 'custom_site_id'}
     REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
 
     experimental = True # For now
 
-    def __init__(self, adjustment_hdf5="adj_RE_france.hdf5", rlz_id="mean"):
-        self.adjustment_hdf5 = os.path.join(ADJ_DIR, adjustment_hdf5)
+    def __init__(self, adjustment_file, rlz_id="mean"):
+        self.adjustment_file = adjustment_file
         self.rlz_id = rlz_id
-        assert os.path.exists(self.adjustment_hdf5), \
-            'Adjustment hdf5 not found: %s' % self.adjustment_hdf5
+        assert os.path.exists(self.adjustment_file), \
+            'Adjustment hdf5 not found: %s' % self.adjustment_file
 
         # Load every (site, freq) dataset, verify they share the same grid,
         # cache the lattice parameters for O(1) nearest-node indexing.
         # The hdf5 read + grid verification + lattice derivation are
-        # amortised across all GSIM instances sharing this adjustment_hdf5
+        # amortised across all GSIM instances sharing this adjustment_file
         # (100-branch non-ergodic LTs instantiate 100 copies).
-        self.dat, p = _load_adjustments_cached(self.adjustment_hdf5)
+        self.dat, p = _load_adjustments_cached(self.adjustment_file)
         self.sites = sorted({s for s, _ in self.dat})
         self.freqs = sorted({f for _, f in self.dat})
         self._lon0 = p['lon0']
@@ -277,7 +285,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         per batch and reuses the result across every branch returning the
         same key (see contexts.py:get_mean_stds).
         """
-        return (self.adjustment_hdf5,)
+        return (self.adjustment_file,)
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         """
@@ -305,7 +313,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
             raise ValueError(
                 '%s: no adjustment dataset for frequency %s Hz '
                 '(available: %s Hz)' % (
-                    os.path.basename(self.adjustment_hdf5),
+                    os.path.basename(self.adjustment_file),
                     ', '.join('%g' % f for f in missing),
                     ', '.join('%g' % f for f in self.freqs)))
 
@@ -319,7 +327,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
             raise ValueError(
                 '%s: custom_site_id(s) not present in the adjustment hdf5: '
                 '%s. Known sites: %s'
-                % (os.path.basename(self.adjustment_hdf5),
+                % (os.path.basename(self.adjustment_file),
                    unknown, self.sites))
         # Every (site, freq) pair touched by this batch must exist
         for site in set(csids):
@@ -327,7 +335,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
                 if (site, imt.frequency) not in self.dat:
                     raise ValueError(
                         '%s: no adjustment for site=%s at frequency=%g Hz'
-                        % (os.path.basename(self.adjustment_hdf5),
+                        % (os.path.basename(self.adjustment_file),
                            site, imt.frequency))
 
         grid = self.dat[(self.sites[0], self.freqs[0])]
