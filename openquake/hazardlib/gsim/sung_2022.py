@@ -65,10 +65,10 @@ ADJ_NAME_RE = re.compile(r'^adj_(?P<freq>\d+(?:\.\d+)?)hz$')
 
 def _load_adjustments(path):
     """
-    Read every /<site>/adj_<N>hz dataset out of the h5 at `path` and return
-    a dict keyed by (site_name, freq_hz). Any dataset starting with ``adj_``
-    whose name doesn't match the ``adj_<N>hz`` pattern raises ValueError so
-    typos don't silently drop frequencies.
+    Read every /<site>/adj_<N>hz dataset out of the hdf5 at `path` and
+    return a dict keyed by (site_name, freq_hz). Any dataset starting with
+    ``adj_`` whose name doesn't match the ``adj_<N>hz`` pattern raises
+    ValueError so typos don't silently drop frequencies.
     """
     dat = {}
     with h5py.File(path, 'r') as f:
@@ -159,7 +159,7 @@ _LOADED_ADJUSTMENT_CACHE = {}
 
 def _load_adjustments_cached(path):
     """
-    Shared across GSIM instances with the same adjustment_h5. An N-branch
+    Shared across GSIM instances with the same adjustment_hdf5. An N-branch
     non-ergodic LT otherwise re-reads the same file N times at construction.
     """
     hit = _LOADED_ADJUSTMENT_CACHE.get(path)
@@ -220,25 +220,25 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     Non-ergodic variant of Sung et al. (2022).
 
     At compute time the ergodic mean is shifted by a scalar Delta-mu
-    looked up from the adjustment h5 at the rupture's nearest grid
+    looked up from the adjustment hdf5 at the rupture's nearest grid
     cell. The adjustment is conditional on the target site, so each
     row is routed to the group matching its `custom_site_id`.
 
-    :param adjustment_h5:
-        Bare filename (default "adj_RE_france.h5") inside the
+    :param adjustment_hdf5:
+        Bare filename (default "adj_RE_france.hdf5") inside the
         gsim/sung_2022/ data folder, or an absolute path. The file has
         a /<site_name>/adj_<N>hz group structure; `custom_site_id`
         values in the job's sites.csv must match one of the site groups
-        in the h5. Each dataset is a structured array of 5551 grid nodes
-        with fields (lon, lat, mean, std, rlz[N]) covering the France
-        0.2x0.2 degree grid. All sites share the same grid; dat['mean']
-        and dat['rlz'] differ per site because the posterior is
-        conditional on the receiver.
+        in the hdf5. Each dataset is a structured array of 5551 grid
+        nodes with fields (lon, lat, mean, std, rlz[N]) covering the
+        France 0.2x0.2 degree grid. All sites share the same grid;
+        dat['mean'] and dat['rlz'] differ per site because the posterior
+        is conditional on the receiver.
     :param rlz_id:
         Selects which posterior draw of the adjustment field to use.
         "mean" (default) uses the posterior mean field `mean`; an integer
         0..N-1 selects one of the sampled realization maps in `rlz[rlz_id]`.
-        The same rlz_id applies across all sites in the h5; each LT
+        The same rlz_id applies across all sites in the hdf5; each LT
         branch corresponds to one posterior draw.
     """
     REQUIRES_SITES_PARAMETERS = {'vs30', 'custom_site_id'}
@@ -246,18 +246,18 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
 
     experimental = True # For now
 
-    def __init__(self, adjustment_h5="adj_RE_france.h5", rlz_id="mean"):
-        self.adjustment_h5 = os.path.join(ADJ_DIR, adjustment_h5)
+    def __init__(self, adjustment_hdf5="adj_RE_france.hdf5", rlz_id="mean"):
+        self.adjustment_hdf5 = os.path.join(ADJ_DIR, adjustment_hdf5)
         self.rlz_id = rlz_id
-        assert os.path.exists(self.adjustment_h5), \
-            'Adjustment h5 not found: %s' % self.adjustment_h5
+        assert os.path.exists(self.adjustment_hdf5), \
+            'Adjustment hdf5 not found: %s' % self.adjustment_hdf5
 
         # Load every (site, freq) dataset, verify they share the same grid,
         # cache the lattice parameters for O(1) nearest-node indexing.
-        # The h5 read + grid verification + lattice derivation are
-        # amortised across all GSIM instances sharing this adjustment_h5
+        # The hdf5 read + grid verification + lattice derivation are
+        # amortised across all GSIM instances sharing this adjustment_hdf5
         # (100-branch non-ergodic LTs instantiate 100 copies).
-        self.dat, p = _load_adjustments_cached(self.adjustment_h5)
+        self.dat, p = _load_adjustments_cached(self.adjustment_hdf5)
         self.sites = sorted({s for s, _ in self.dat})
         self.freqs = sorted({f for _, f in self.dat})
         self._lon0 = p['lon0']
@@ -272,12 +272,12 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     @property
     def central_key(self):
         """
-        Branches with the same adjustment h5 share the same backbone and
+        Branches with the same adjustment hdf5 share the same backbone and
         the same nearest-neighbour lookup. ContextMaker computes those once
         per batch and reuses the result across every branch returning the
         same key (see contexts.py:get_mean_stds).
         """
-        return (self.adjustment_h5,)
+        return (self.adjustment_hdf5,)
 
     # Generic func name so method accepted in get_mean_stds for speedup
     def compute_central(self, ctx, imts, mean, sigma, tau, phi, **_kw):
@@ -295,7 +295,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
             raise ValueError(
                 '%s: no adjustment dataset for frequency %s Hz '
                 '(available: %s Hz)' % (
-                    os.path.basename(self.adjustment_h5),
+                    os.path.basename(self.adjustment_hdf5),
                     ', '.join('%g' % f for f in missing),
                     ', '.join('%g' % f for f in self.freqs)))
 
@@ -307,9 +307,9 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         unknown = sorted(set(csids) - set(self.sites))
         if unknown:
             raise ValueError(
-                '%s: custom_site_id(s) not present in the adjustment h5: '
+                '%s: custom_site_id(s) not present in the adjustment hdf5: '
                 '%s. Known sites: %s'
-                % (os.path.basename(self.adjustment_h5),
+                % (os.path.basename(self.adjustment_hdf5),
                    unknown, self.sites))
         # Every (site, freq) pair touched by this batch must exist
         for site in set(csids):
@@ -317,7 +317,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
                 if (site, imt.frequency) not in self.dat:
                     raise ValueError(
                         '%s: no adjustment for site=%s at frequency=%g Hz'
-                        % (os.path.basename(self.adjustment_h5),
+                        % (os.path.basename(self.adjustment_hdf5),
                            site, imt.frequency))
 
         grid = self.dat[(self.sites[0], self.freqs[0])]

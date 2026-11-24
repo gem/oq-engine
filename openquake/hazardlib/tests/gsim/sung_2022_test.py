@@ -33,7 +33,7 @@ from openquake.hazardlib.gsim.sung_2022 import (
     _LOADED_ADJUSTMENT_CACHE)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-H5 = "adj_RE_france.h5"
+HDF5 = "adj_RE_france.hdf5"
 # Cadarache site, within the France 0.2 deg grid
 CLON, CLAT = 5.7664, 43.6748
 
@@ -66,7 +66,7 @@ class SungEtAl2022NonErgodicTestCase(BaseGSIMTestCase):
         # Run the non-ergodic GSIM (posterior-mean adjustment) on 10 scenarios
         # split between site1 and site2 to exercise per-site routing. Also
         # checks EAS(1.0) path for both sites.
-        gsim = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id="mean")
+        gsim = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id="mean")
         self.GSIM = gsim
         self.check("SUNG22/SUNG22_NON_ERG.csv",
                    max_discrep_percentage=0.1,
@@ -79,12 +79,12 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
     """
     @classmethod
     def setUpClass(cls):
-        cls.gsim = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id="mean")
+        cls.gsim = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id="mean")
 
     def test_off_grid_tol(self):
         # The off-grid rejection distance is derived from the grid step,
         # not hard-coded. For France's 0.2 deg grid that's half a cell
-        # (~0.1 deg), tolerating a little float32 jitter from the h5.
+        # (~0.1 deg), tolerating a little float32 jitter from the hdf5.
         self.assertAlmostEqual(self.gsim.off_grid_tol, 0.1, places=2)
 
     def test_lattice_params(self):
@@ -100,7 +100,7 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
         self.assertTrue(g._lon_fast)
 
     def test_sites_loaded(self):
-        # The consolidated h5 bundles the available target sites; the GSIM
+        # The consolidated hdf5 bundles the available target sites; the GSIM
         # must see them all at init time.
         self.assertEqual(self.gsim.sites, ["site1", "site2"])
 
@@ -124,7 +124,7 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
             self.gsim.apply_branch_shift(res, imts, mean)
 
     def test_missing_frequency_raises(self):
-        # Asking for a frequency the h5 doesn't ship (here EAS(2.0); only
+        # Asking for a frequency the hdf5 doesn't ship (here EAS(2.0); only
         # 1 Hz and 5 Hz are stored) must raise, not silently fall back.
         ctx = _empty_ctx(1)
         ctx.mag[:] = 5.0
@@ -140,7 +140,7 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
             self.gsim.compute_central(ctx, imts, mean, sigma, tau, phi)
 
     def test_unknown_site_raises(self):
-        # A ctx row carrying a custom_site_id not present in the h5 must
+        # A ctx row carrying a custom_site_id not present in the hdf5 must
         # raise, not silently fall back to another site's adjustment.
         ctx = _empty_ctx(1)
         ctx.mag[:] = 5.0
@@ -156,10 +156,10 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
             self.gsim.compute_central(ctx, imts, mean, sigma, tau, phi)
 
     def test_site_missing_frequency_raises(self):
-        # When a (site, freq) pair isn't in the h5 the GSIM must raise
+        # When a (site, freq) pair isn't in the hdf5 the GSIM must raise
         # rather than silently skip. Patch self.dat to simulate a site
-        # that only ships 1 Hz (shipped h5 has both freqs for all sites).
-        gsim = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id="mean")
+        # that only ships 1 Hz (shipped hdf5 has both freqs for all sites).
+        gsim = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id="mean")
         del gsim.dat[("site1", 5.0)]
         ctx = _empty_ctx(1)
         ctx.mag[:] = 5.0
@@ -175,20 +175,20 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
             gsim.compute_central(ctx, imts, mean, sigma, tau, phi)
 
     def test_loaded_adjustment_cache_shared(self):
-        # Instances sharing an adjustment_h5 must hit the module-level
+        # Instances sharing an adjustment_hdf5 must hit the module-level
         # cache: one entry per path, ndarray values shared by reference,
         # but each instance holds its own dict wrapper so a `del` on one
         # does not corrupt the cache or other instances.
         _LOADED_ADJUSTMENT_CACHE.clear()
-        a = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id="mean")
-        b = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id=0)
+        a = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id="mean")
+        b = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id=0)
         self.assertEqual(len(_LOADED_ADJUSTMENT_CACHE), 1)
         key = ("site1", 5.0)
         self.assertIs(a.dat[key], b.dat[key])
         self.assertIsNot(a.dat, b.dat)
         del a.dat[key]
         self.assertIn(key, b.dat)
-        c = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id=99)
+        c = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id=99)
         self.assertIn(key, c.dat)
 
     def test_adj_name_pattern_enforced(self):
@@ -199,7 +199,7 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
         payload = np.zeros(1, dtype=rec_dtype)
         for bad_name in ('adj_1Hz', 'adj_5', 'adj_5hzz', 'adj_hz'):
             with tempfile.TemporaryDirectory() as tmp:
-                path = os.path.join(tmp, 'bad.h5')
+                path = os.path.join(tmp, 'bad.hdf5')
                 with h5py.File(path, 'w') as f:
                     f.create_dataset('site1/' + bad_name, data=payload)
                 with self.assertRaises(ValueError, msg=bad_name):
@@ -213,9 +213,9 @@ class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.erg = SungEtAl2022()
-        cls.ne_mean = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id="mean")
-        cls.ne_0 = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id=0)
-        cls.ne_99 = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id=99)
+        cls.ne_mean = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id="mean")
+        cls.ne_0 = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id=0)
+        cls.ne_99 = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id=99)
 
     def _grid(self, site, freq):
         return self.ne_mean.dat[(site, freq)]
@@ -248,7 +248,7 @@ class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
         return mean[0, 0], sigma[0, 0], tau[0, 0], phi[0, 0]
 
     def test_delta_mu_additivity(self):
-        # The non-ergodic model = ergodic + Delta-mu read from the h5 at
+        # The non-ergodic model = ergodic + Delta-mu read from the hdf5 at
         # the rupture's grid cell. Check that identity directly at three
         # positions around Site1.
         for clon, clat in [(CLON, CLAT), (4.5, 44.7), (7.0, 43.5)]:
@@ -324,11 +324,11 @@ class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
 
     def test_central_key_stability(self):
         # ContextMaker amortises the shared backbone across LT branches
-        # by central_key. Instances with the same h5 must share a key
-        # (any rlz_id), different h5 files must get different keys.
-        a = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id="mean")
-        b = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id=5)
+        # by central_key. Instances with the same hdf5 must share a key
+        # (any rlz_id), different hdf5 files must get different keys.
+        a = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id="mean")
+        b = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id=5)
         self.assertEqual(a.central_key, b.central_key)
-        c = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id="mean")
-        c.adjustment_h5 = c.adjustment_h5 + ".other"
+        c = SungEtAl2022NonErgodic(adjustment_hdf5=HDF5, rlz_id="mean")
+        c.adjustment_hdf5 = c.adjustment_hdf5 + ".other"
         self.assertNotEqual(a.central_key, c.central_key)
