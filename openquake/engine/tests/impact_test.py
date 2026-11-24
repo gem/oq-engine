@@ -175,12 +175,14 @@ def test_impact_shakemap():
             os.remove(fname)
 
     # emulate a datastore produced before the fix, with the sitecol
-    # referring to a larger grid: the GMF export must be refused
+    # referring to a larger grid: the GMF export must be refused. The
+    # legacy state is written directly in the HDF5 file, since storing it
+    # through the datastore is refused by the consistency check of the
+    # site collection (SiteCollection.check)
     calc_id = dstore.calc_id
     dstore.close()
     with datastore.read(calc_id, mode='r+') as ds:
-        sitecol.array['sids'] += 1000
-        ds['sitecol'] = sitecol
+        ds.hdf5['sitecol/sids'][:] += 1000
         with pytest.raises(ValueError, match='do not match the stored site'):
             export(('gmf_data', 'csv'), ds)
 

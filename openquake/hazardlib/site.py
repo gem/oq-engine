@@ -678,6 +678,59 @@ class SiteCollection(object):
         self.array['sids'] = numpy.arange(len(self), dtype=numpy.uint32)
         self.complete = self
 
+    def check(self):
+        """
+        Check the invariants of the site collection, raising a ValueError
+        listing the violated ones:
+
+        1. the complete site collection has site IDs 0..N-1, so that a
+           site ID is a position in the complete site collection;
+        2. a filtered site collection is a subset of the complete one,
+           i.e. its array is equal to complete.array[sids].
+        """
+        complete = self.complete
+        N = len(complete)
+        errors = []
+        if (complete.sids != numpy.arange(N)).any():
+            errors.append('rule 1: the complete site collection has site '
+                          'IDs not in the form 0..N-1')
+        if self is not complete:
+            errors.extend(self._subset_errors(complete))
+        if errors:
+            raise ValueError('SiteCollection invariant: %s, %s' % (
+                self, '; '.join(errors)))
+
+    # errors found when comparing a filtered site collection with the
+    # complete site collection, used by .check
+    def _subset_errors(self, complete):
+        sids = self.sids
+        if len(numpy.unique(sids)) < len(sids):
+            return ['rule 2: duplicated site IDs']
+        if len(sids) and sids.max() >= len(complete):
+            return ['rule 2: site IDs outside the complete site collection']
+        errors = []
+        names = self.array.dtype.names
+        cnames = complete.array.dtype.names
+        missing = [n for n in names if n not in cnames]
+        if missing:
+            errors.append('rule 2: missing %s in the complete site '
+                          'collection' % missing)
+        carray = complete.array[sids]
+        if not (numpy.array_equal(self.lons, carray['lon']) and
+                numpy.array_equal(self.lats, carray['lat'])):
+            errors.append('rule 2: different lon, lat')
+        different = []
+        for name in names:
+            if name in ('sids', 'lon', 'lat') or name not in cnames:
+                continue
+            arr, carr = self.array[name], carray[name]
+            nan = arr.dtype.kind == 'f'
+            if not numpy.array_equal(arr, carr, equal_nan=nan):
+                different.append(name)
+        if different:
+            errors.append('rule 2: different %s' % different)
+        return errors
+
     def one(self):
         """
         :returns: a SiteCollection with a site of the minimal vs30
@@ -730,6 +783,7 @@ class SiteCollection(object):
         return not_equal(self.array, other.array)
 
     def __toh5__(self):
+        self.check()  # every stored site collection must be consistent
         names = self.array.dtype.names
         cols = ' '.join(names)
         return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}

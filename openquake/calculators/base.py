@@ -53,6 +53,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
+from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
@@ -415,6 +416,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 # FIXME: this part can be called multiple times, i.e. by
                 # EventBasedCalculator,EventBasedRiskCalculator
                 self.post_process()
+                check_site_ids(self.datastore)
                 if checksum:
                     # if there are no errors the checksum of this job is good
                     logs.dbcmd("update_job_checksum", calc_id, checksum)
@@ -1232,8 +1234,13 @@ class HazardCalculator(BaseCalculator):
                             or oq.siteid else 'strict')
                     self.sitecol.assoc(sm, assoc_dist, mode,
                                        station_sids=station_sids)
-                    if 'station_data' in oq.inputs or oq.impact:
-                        # the complete sitecol is required
+                    # the complete sitecol is required and must have the
+                    # same parameters of the sitecol, i.e. the same site
+                    # model must be associated to both (also when the
+                    # calculation is rerun from the exported job.zip, where
+                    # oq.impact is not set)
+                    if ('station_data' in oq.inputs or oq.impact or
+                            self.sitecol is not self.sitecol.complete):
                         self.sitecol.complete.assoc(sm, assoc_dist, mode,
                                                     station_sids=station_sids)
 
@@ -1967,6 +1974,61 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
             gmf_dict = {'kind': 'basic'}
     store_gmfs(calc, sitecol, shakemap, gmf_dict)
     return sitecol, assetcol
+
+
+def check_site_ids(dstore):
+    """
+    Check the consistency of the site IDs in the datastore, including
+    the datasets inherited from the parent, if any: the complete site
+    collection must have site IDs 0..N-1, the site collection must be a
+    subset of it and the site IDs in gmf_data and station_data must
+    refer to it, while the site IDs in the assetcol must refer to the
+    site collection. Raise a ValueError listing the inconsistencies.
+    """
+    sitecol = dstore.get('sitecol', None)
+    if sitecol is None or len(sitecol) == 0:
+        return
+    complete = dstore.get('complete', None)
+    if complete is not None:
+        sitecol.complete = complete
+    errors = []
+    try:
+        sitecol.check()
+    except ValueError as exc:
+        errors.append(str(exc))
+    N = len(sitecol.complete)
+    for key in ('gmf_data/sid', 'station_data/site_id'):
+        sids = dstore.get(key, None)
+        if sids is not None and len(sids) and sids[:].max() >= N:
+            errors.append('%s outside the complete site collection' % key)
+    assetcol = dstore.get('assetcol/array', None)
+    if assetcol is not None and len(assetcol):
+        errors.extend(_asset_errors(dstore['oqparam'], assetcol[()], sitecol))
+    if errors:
+        raise ValueError('%s: %s' % (dstore.filename, ' | '.join(errors)))
+
+
+# the site IDs of the assets must be in the site collection and the
+# assets must be close to their sites: a wrong renumbering of the site
+# IDs can produce valid but wrong site IDs, like in the bug fixed by #12168
+def _asset_errors(oq, assets, sitecol):
+    asset_sids = assets['site_id']
+    size = max(asset_sids.max(), sitecol.sids.max()) + 1
+    lons = numpy.full(size, numpy.nan)
+    lats = numpy.full(size, numpy.nan)
+    lons[sitecol.sids] = sitecol.lons
+    lats[sitecol.sids] = sitecol.lats
+    if numpy.isnan(lons[asset_sids]).any():
+        return ['assetcol site_id outside the site collection']
+    dists = geodetic_distance(assets['lon'], assets['lat'],
+                              lons[asset_sids], lats[asset_sids])
+    maxdist = max(oq.get_haz_distance(),
+                  max(oq.asset_hazard_distance.values())) + 1  # km
+    far = dists > maxdist
+    if far.any():
+        return ['%d assets farther than %d km from their site, up to '
+                '%d km' % (far.sum(), maxdist, dists.max())]
+    return []
 
 
 def read_parent_sitecol(oq, dstore):
