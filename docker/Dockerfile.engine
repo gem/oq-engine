@@ -29,13 +29,14 @@ USER openquake
 ENV HOME=/home/openquake
 WORKDIR ${HOME}
 RUN cd /usr/src/oq-engine && \
-    python3 install.py devel --novenv && \
-    python3 -m pip install --force-reinstall --no-deps /usr/src/oq-engine
+    python3 install.py devel --novenv
 #
 FROM python:3.12.6-slim AS build-image
 RUN useradd -m -u 1000 -U -s /bin/bash openquake
 COPY --from=compile-image --chown=openquake:openquake \
     /opt/openquake/ /opt/openquake/
+COPY --from=compile-image --chown=openquake:openquake \
+    /usr/src/oq-engine/ /usr/src/oq-engine/
 ENV LANG=en_US.UTF-8
 USER openquake
 ENV HOME=/home/openquake
