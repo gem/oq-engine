@@ -38,7 +38,7 @@ else if (window.application_mode === 'IMPACT') {
                                   /* None is returned in case of an error,
                                       but we don't care about errors here */
                                   if(data && data != 'None') {
-                                      $('#new-release-box').html(data).show()
+                                      $('#new-release-box').text(data).show()
                                   }
                               });
             }
@@ -67,13 +67,19 @@ else if (window.application_mode === 'IMPACT') {
                                     },
                                     error: function (xhr) {
                                         dialog.hide();
-                                        var s, out, data = $.parseJSON(xhr.responseText);
-                                        var out = "";
+                                        var s, data = $.parseJSON(xhr.responseText);
+                                        var out = $('<div>');
                                         var ct = 0;
                                         for (s in data) {
                                             if (data[s] == "")
                                                 continue;
-                                            out += '<p ' + (ct % 2 == 1 ? 'style="background-color: #ffffff;"' : '') + '>' + data[s] + '</p>';
+                                            const line = $('<p>').text(data[s]);
+                                            if (ct % 2 == 1) {
+                                                line.css(
+                                                    'background-color',
+                                                    '#ffffff');
+                                            }
+                                            out.append(line);
                                             ct++;
                                         }
                                         diaerror.show(false, "Calculation not accepted: traceback", out);

@@ -1037,6 +1037,11 @@ def export_job_zip(ekey, dstore):
         sitecol = dstore['sitecol']
         sitecol.make_complete()  # needed for test_impact[1]
         writer.save(sitecol.array, inputs['site_model'])
+        # the exported sites are the hazard sites of the calculation: the
+        # grid must not be recomputed when rerunning the exported job, since
+        # it would be inferred from the exported exposure and would be
+        # different, like in test_impact[1]
+        vars(oq).pop('region_grid_spacing', None)
 
     with open(job_ini, 'w', encoding='utf8') as out:
         if 'gmfs' in inputs:

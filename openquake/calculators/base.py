@@ -1075,10 +1075,8 @@ class HazardCalculator(BaseCalculator):
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
             if oq.shakemap_id or 'shakemap' in oq.inputs or oq.shakemap_uri:
-                self.sitecol, self.assetcol = store_gmfs_from_shakemap(
-                    self, haz_sitecol, assetcol)
-                self.datastore['sitecol'] = self.sitecol
-                self.datastore['assetcol'] = self.assetcol
+                # this also sets and stores self.sitecol and self.assetcol
+                store_gmfs_from_shakemap(self, haz_sitecol, assetcol)
             elif hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
@@ -1234,8 +1232,13 @@ class HazardCalculator(BaseCalculator):
                             or oq.siteid else 'strict')
                     self.sitecol.assoc(sm, assoc_dist, mode,
                                        station_sids=station_sids)
-                    if 'station_data' in oq.inputs or oq.impact:
-                        # the complete sitecol is required
+                    # the complete sitecol is required and must have the
+                    # same parameters of the sitecol, i.e. the same site
+                    # model must be associated to both (also when the
+                    # calculation is rerun from the exported job.zip, where
+                    # oq.impact is not set)
+                    if ('station_data' in oq.inputs or oq.impact or
+                            self.sitecol is not self.sitecol.complete):
                         self.sitecol.complete.assoc(sm, assoc_dist, mode,
                                                     station_sids=station_sids)
 
@@ -1922,7 +1925,17 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     with calc.monitor('getting/reducing shakemap'):
         sitecol, shakemap = readinput.assoc_to_shakemap(
             oq, haz_sitecol, assetcol)  # also reducing assetcol
+        # NB: the reduced sitecol has been made complete, i.e. its sids
+        # are 0..N-1, consistently with the asset site_ids and the gmf
+        # sids; the previously stored sitecol and complete sitecol (if
+        # any, for instance a region grid) must be replaced, otherwise
+        # the exporters would associate the GMFs to the wrong sites
+        calc.sitecol = sitecol
+        calc.assetcol = assetcol
+        calc.datastore['sitecol'] = sitecol
         calc.datastore['assetcol'] = assetcol
+        if 'complete' in calc.datastore.hdf5:
+            del calc.datastore['complete']
     # assemble dictionary to decide on the calculation method for the gmfs
     if 'MMI' in oq.imtls:
         # calculations with MMI should be executed

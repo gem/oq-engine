@@ -22,7 +22,9 @@ import unittest
 from unittest.mock import patch
 import pytest
 import numpy
+import pandas
 from openquake.qa_tests_data.scenario_risk import case_shakemap
+from openquake.commonlib import datastore
 from openquake.calculators.base import run_calc, expose_outputs
 from openquake.calculators.views import text_table
 from openquake.calculators.checkers import check, assert_close
@@ -117,13 +119,16 @@ def test_impact(n):
                 # [job.ini, exposure.xml, rupture.csv, ...]
                 fnames = check_export_job_zip(calc.datastore)
 
-                # repeat the calculation starting from job.zip unzipped
-                calc2, log2 = check(fnames[0])
+                # repeat the calculation starting from job.zip unzipped;
+                # the exported assets are already sampled, so OQ_SAMPLE_ASSETS
+                # must not be applied again
+                with patch.dict(os.environ):
+                    os.environ.pop('OQ_SAMPLE_ASSETS', None)
+                    calc2, log2 = check(fnames[0])
                 with log2:
                     expose_outputs(calc.datastore)
                     expose_outputs(calc2.datastore)
-                    # TODO: restore the check
-                    #  compare(calc.datastore, calc2.datastore)
+                    compare(calc.datastore, calc2.datastore)
 
 
 def test_impact5():
@@ -140,6 +145,47 @@ def test_impact5():
                                       inp['mmi'], inp['exposure'][0])
     tt = text_table(df, ext='org')
     assert_close(tt, cd / 'impact5/exposure_by_mmi.org')
+
+
+def test_impact_shakemap():
+    # GMFs from a ShakeMap on a region grid: the stored sitecol must be
+    # the reduced one, consistent with the gmf and asset site IDs; before
+    # the fix the region grid was stored as complete sitecol and the
+    # exported GMFs were associated to the first sites of the grid
+    if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
+        raise unittest.SkipTest(f'Missing {expo}')
+    with patch.dict(os.environ, {'OQ_SAMPLE_ASSETS': SAMPLE_ASSETS}):
+        calc = run_calc(cd / 'impact6/job.ini')
+    dstore = calc.datastore
+    sitecol = dstore['sitecol']
+    assert 'complete' not in dstore.hdf5
+    aac(sitecol.sids, numpy.arange(len(sitecol)))
+    aac(numpy.unique(dstore['gmf_data/sid'][:]), sitecol.sids)
+    aac(numpy.unique(dstore['assetcol/array']['site_id']), sitecol.sids)
+
+    # the exported GMFs are on the sites of the exported sitemesh
+    fnames = export(('gmf_data', 'csv'), dstore)
+    try:
+        [gmf_csv] = [f for f in fnames if 'gmf-data' in f]
+        [mesh_csv] = [f for f in fnames if 'sitemesh' in f]
+        gmf = pandas.read_csv(gmf_csv, comment='#')
+        mesh = pandas.read_csv(mesh_csv, comment='#')
+        assert len(mesh) == len(sitecol)
+        col = 'custom_site_id' if 'custom_site_id' in mesh else 'site_id'
+        assert set(gmf[col]) == set(mesh[col])
+    finally:
+        for fname in fnames:
+            os.remove(fname)
+
+    # emulate a datastore produced before the fix, with the sitecol
+    # referring to a larger grid: the GMF export must be refused
+    calc_id = dstore.calc_id
+    dstore.close()
+    with datastore.read(calc_id, mode='r+') as ds:
+        sitecol.array['sids'] += 1000
+        ds['sitecol'] = sitecol
+        with pytest.raises(ValueError, match='do not match the stored site'):
+            export(('gmf_data', 'csv'), ds)
 
 
 # NB: there is another test of export_job_zip in scenario_damage/case_22

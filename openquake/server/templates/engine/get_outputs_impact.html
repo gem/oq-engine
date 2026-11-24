@@ -187,12 +187,12 @@
         <% }%>
         {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
         <tr class="">
-          <td><%= output.get('id') || 'New' %></td>
+          <td><%- output.get('id') || 'New' %></td>
           <td>
-            <%= output.get('name') %>
+            <%- output.get('name') %>
             <p style="clear:both;"></p>
           </td>
-          <td <% if (output.get('size_mb')) { %>title="Size: <%= Math.max((Math.round(output.get('size_mb') * 100) / 100), 0.01).toFixed(2) %>MB"<% } %>><%= output.get('type') %></td>
+          <td <% if (output.get('size_mb')) { %>title="Size: <%- Math.max((Math.round(output.get('size_mb') * 100) / 100), 0.01).toFixed(2) %>MB"<% } %>><%- output.get('type') %></td>
           <td>
             <table class="table table-disable-hover table-condensed">
             <% _.each(output.get('outtypes'), function(outtype) { %>
@@ -200,7 +200,7 @@
               <%   return; // works like continue in underscore.js %>
               <% }%>
               <tr>
-                <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm output-action-btn">Download <%= outtype %></a></td>
+                <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%- output.get('id') %>?export_type=<%- outtype %>" class="btn btn-sm output-action-btn">Download <%- outtype %></a></td>
               </tr>
             <% }); %>
             </table>
