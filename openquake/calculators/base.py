@@ -1881,22 +1881,21 @@ def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
         [model], dtype=hdf5.vstr)
 
 
-def store_gmfs(calc, sitecol, shakemap, gmf_dict, haz_sites=None):
+def store_gmfs(calc, sitecol, shakemap, gmf_dict, assetcol=None):
     """
     Store a ShakeMap array as a gmf_data dataset.
 
-    :param haz_sites: the sites of sitecol in the hazard site collection,
-        whose complete grid is used by the circulant embedding (by default
-        sitecol)
+    :param sitecol: selected hazard sites in ShakeMap row order, with the
+        complete grid for circulant embedding
+    :param assetcol: optional assets to remap to the stored site IDs
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
     if gmf_dict['kind'] == 'Silva&Horspool':
         rupture_dict = oq.rupture_dict or {}
         strategy = oq.correlation_strategy
-        haz_sites = sitecol if haz_sites is None else haz_sites
         if (strategy == 'circulant_embedding' and
-                not circulant_embedding_feasible(haz_sites)):
+                not circulant_embedding_feasible(sitecol)):
             # sparse sites, e.g. a ShakeMap with gaps: use Cholesky instead
             logging.warning(
                 'Circulant embedding is not applicable to these sites, '
@@ -1905,7 +1904,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict, haz_sites=None):
         _save_correlation_info(calc, shakemap, gmf_dict, strategy)
         gmf_dict.update(
             correlation_strategy=strategy,
-            sites=haz_sites,
+            sites=sitecol,
             context=CorrelationContext(
                 mag=rupture_dict.get('mag'),
                 rake=rupture_dict.get('rake'),
@@ -1917,6 +1916,16 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict, haz_sites=None):
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
+        # GMF rows already follow sitecol order. Assign the IDs used for
+        # storage now that correlation has used the original grid.
+        if assetcol is not None:
+            assetcol.remap_sites(sitecol)
+            logging.info('Extracted %d assets', len(assetcol))
+        calc.sitecol = sitecol = sitecol.reindexed()
+        calc.datastore.store_sitecol(sitecol)
+        if assetcol is not None:
+            calc.assetcol = assetcol
+            calc.datastore['assetcol'] = assetcol
         N, E, M = gmfs.shape
         events = store_events(calc.datastore, E)
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
@@ -1964,14 +1973,7 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     """
     oq = calc.oqparam
     with calc.monitor('getting/reducing shakemap'):
-        sitecol, shakemap, haz_sites = readinput.assoc_to_shakemap(
-            oq, haz_sitecol, assetcol)  # also reducing assetcol
-        # The reduced sitecol and remapped assets replace the input grid
-        # before we store GMFs in the new site ID space.
-        calc.sitecol = sitecol
-        calc.assetcol = assetcol
-        calc.datastore.store_sitecol(sitecol)
-        calc.datastore['assetcol'] = assetcol
+        sitecol, shakemap = readinput.assoc_to_shakemap(oq, haz_sitecol)
     # assemble dictionary to decide on the calculation method for the gmfs
     if 'MMI' in oq.imtls:
         # calculations with MMI should be executed
@@ -2006,8 +2008,8 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
         else:
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
-    store_gmfs(calc, sitecol, shakemap, gmf_dict, haz_sites)
-    return sitecol, assetcol
+    store_gmfs(calc, sitecol, shakemap, gmf_dict, assetcol)
+    return calc.sitecol, assetcol
 
 
 def check_site_ids(dstore):

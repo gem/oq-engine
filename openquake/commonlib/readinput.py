@@ -1574,11 +1574,10 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     return station_data, imts
 
 
-def assoc_to_shakemap(oq, haz_sitecol, assetcol):
+def assoc_to_shakemap(oq, haz_sitecol):
     """
-    Download and associate the ShakeMap and remap the assets to the selected
-    sites. Return the reindexed sites, the ShakeMap and the selected hazard
-    sites with their original IDs and complete grid for circulant embedding.
+    Return the selected sites and their associated ShakeMap values. The
+    selected sites retain the complete hazard grid for circulant embedding.
     """
     oq.risk_imtls = {imt: list(imls) for imt, imls in oq.imtls.items()}
     logging.info('Getting/reducing shakemap, sitecol, assetcol')
@@ -1593,12 +1592,10 @@ def assoc_to_shakemap(oq, haz_sitecol, assetcol):
         uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
     else:
         uridict = oq.shakemap_uri
-    haz_sites, shakemap, discarded, *_ = get_sitecol_shakemap(
+    sitecol, shakemap, *_ = get_sitecol_shakemap(
         uridict, oq.risk_imtls, haz_sitecol,
         oq.asset_hazard_distance['default'])
-    assetcol.remap_sites(haz_sites)
-    logging.info('Extracted %d assets', len(assetcol))
-    return haz_sites.reindexed(), shakemap, haz_sites
+    return sitecol, shakemap
 
 
 def assoc_exposure(exp, haz_sitecol, oqparam, h5):

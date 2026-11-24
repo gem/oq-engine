@@ -99,14 +99,8 @@ def test_real_product_preserves_the_marginals(strategy):
             atol=.025)
 
 
-class _Assets(list):
-    def remap_sites(self, sitecol):
-        self.original_sids = sitecol.sids.copy()
-
-
 def test_assoc_to_shakemap_keeps_the_grid():
-    # Keep the original grid for circulant embedding when the reduced site
-    # collection is reindexed for storage.
+    # Association preserves the original grid for circulant embedding.
     uri = {'kind': 'shake_result_hdf', 'fname': REAL}
     _, points, *_ = get_sitecol_shakemap(uri, ['PGA'])
     grid = regular_grid(Mesh(points['lon'], points['lat']), 1, padding=0)
@@ -115,16 +109,11 @@ def test_assoc_to_shakemap_keeps_the_grid():
     oq = SimpleNamespace(imtls={'PGA': [.1]}, shakemap_id=None, inputs={},
                          shakemap_uri=uri,
                          asset_hazard_distance={'default': 1})
-    assetcol = _Assets()
-    sitecol, _, haz_sites = assoc_to_shakemap(oq, haz_sitecol, assetcol)
-    assert sitecol.complete is sitecol
-    assert list(sitecol.sids) == [0, 1, 2, 3, 4]
-    assert haz_sites.complete is complete
-    assert list(haz_sites.sids) == [3, 11, 40, 41, 77]
-    numpy.testing.assert_array_equal(assetcol.original_sids, haz_sites.sids)
-    numpy.testing.assert_array_equal(haz_sites.lons, sitecol.lons)
-    assert circulant_embedding_feasible(haz_sites)
-    assert not circulant_embedding_feasible(sitecol)
+    sitecol, _ = assoc_to_shakemap(oq, haz_sitecol)
+    assert sitecol.complete is complete
+    assert list(sitecol.sids) == [3, 11, 40, 41, 77]
+    assert circulant_embedding_feasible(sitecol)
+    assert not circulant_embedding_feasible(sitecol.reindexed())
 
 
 def test_unused_imt_without_tau(tmp_path, caplog):

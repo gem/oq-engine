@@ -19,7 +19,6 @@ import os
 import numpy
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.commonlib import logs
-from openquake.hazardlib import logictree
 from openquake.commonlib.readinput import get_site_collection
 from openquake.calculators.base import calculators, store_gmfs
 
@@ -78,9 +77,6 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
         print(f'Got {sitecol}')
         if len(disc):
             print(f'{len(disc)} sites discarded')
-        sitecol = sitecol.reindexed()
-        calc.datastore.store_sitecol(sitecol)
-        calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         gmfdic = {'kind': 'Silva&Horspool',
                   'spatial_model':
                   oq.get_within_event_correlation_model(),
