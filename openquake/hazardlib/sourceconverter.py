@@ -31,6 +31,8 @@ from openquake.hazardlib.aspect_ratio import (
     MagDepAspectRatio, get_aspect_ratio)
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
 from openquake.hazardlib.source.base import get_code2cls
+from openquake.hazardlib.geo.surface.kite_fault import (
+    get_profiles_from_simple_fault_data)
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -870,24 +872,18 @@ class SourceConverter(RuptureConverter):
         ystep = self.floating_y_step
 
         with context(self.fname, node):
-            if as_kite:
-                param = source.base.SourceParam(
-                    node['id'], node['name'], node.attrib.get('tectonicRegion'),
-                    mfd, self.rupture_mesh_spacing, msr, rar,
-                    self.get_tom(node))
-                outsrc = source.KiteFaultSource.from_param(
-                    param, profiles, ~node.rake, xstep, ystep)
-            else:
-                param = source.base.SourceParam(
-                    node['id'], node['name'], node.attrib.get('tectonicRegion'),
-                    mfd, self.rupture_mesh_spacing, msr, rar,
-                    self.get_tom(node))
-                outsrc = source.KiteFaultSource.as_simple_fault(
-                    param,
-                    upper_seismogenic_depth=~geom.upperSeismoDepth,
-                    lower_seismogenic_depth=~geom.lowerSeismoDepth,
-                    fault_trace=fault_trace, dip=~geom.dip, rake=~node.rake,
-                    floating_x_step=xstep, floating_y_step=ystep)
+            param = source.base.SourceParam(
+                node['id'], node['name'], node.attrib.get('tectonicRegion'),
+                mfd, self.rupture_mesh_spacing, msr, rar,
+                self.get_tom(node))
+            if not as_kite:
+                # simple fault geometry: build the profiles from the trace
+                profiles = get_profiles_from_simple_fault_data(
+                    fault_trace, ~geom.upperSeismoDepth,
+                    ~geom.lowerSeismoDepth, ~geom.dip,
+                    self.rupture_mesh_spacing)
+            outsrc = source.KiteFaultSource.from_param(
+                param, profiles, ~node.rake, xstep, ystep)
         return outsrc
 
     def convert_complexFaultSource(self, node):

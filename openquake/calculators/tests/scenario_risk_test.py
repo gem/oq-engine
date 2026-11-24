@@ -324,6 +324,20 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk-stats-ID1.csv', fnames[0])
         self.assertEqualFiles('expected/aggrisk-stats-OCCUPANCY.csv', fnames[1])
 
+    def test_case_12_grid(self):
+        # rupture_dict with a grid and a site model: the complete site
+        # collection must be associated to the site model too, otherwise
+        # the GMFs are computed with the default site parameters
+        self.run_calc(case_12.__file__, 'job_grid.ini')
+        sitecol = self.calc.datastore['sitecol']
+        complete = self.calc.datastore['complete'].array[sitecol.sids]
+        for name in sitecol.array.dtype.names:
+            arr = sitecol.array[name]
+            nan = arr.dtype.kind == 'f'
+            assert numpy.array_equal(arr, complete[name], equal_nan=nan), name
+        [fname] = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_losses_grid.csv', fname)
+
     def test_case_13(self):
         # testing Youd gsim, with primary IMT LSD
         out = self.run_calc(case_13.__file__,  'job.ini', exports='csv')
