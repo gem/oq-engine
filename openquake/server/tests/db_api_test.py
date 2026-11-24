@@ -1,8 +1,9 @@
+import tempfile
 import pytest
 
 from openquake.baselib import config
 import uuid
-from openquake.commonlib import logs
+from openquake.commonlib import logs, dbapi
 from openquake.commonlib.auth import API_KEY
 from openquake.server.tests.views_test import start_webui, stop_webui
 
@@ -74,3 +75,64 @@ def test_dbcmd_uses_explicit_write_transaction(api_client, monkeypatch):
         config.webapi.server = old_server
     assert 'success' in created
     assert 'success' in deleted
+
+
+# the column names passed with ?S, ?D, ?A and ?O are inserted in the SQL
+# text, so anything that is not a plain name must be rejected
+INJECTION = ("description=(SELECT group_concat(username||':'||password) "
+             "FROM auth_user), status")
+
+
+def test_match_accepts_plain_column_names():
+    assert dbapi.match('UPDATE job SET ?D WHERE id=?x',
+                       {'status': 'complete', 'is_running': 0}, 1) == (
+        'UPDATE job SET is_running=?, status=? WHERE id=?',
+        (0, 'complete', 1))
+    assert dbapi.match('SELECT * FROM job AS j WHERE ?A',
+                       {'j.is_running': 1, 'j.user_name': None}) == (
+        'SELECT * FROM job AS j WHERE j.is_running=? AND '
+        'j.user_name IS NULL', (1,))
+    assert dbapi.match('INSERT INTO job (?S) VALUES (?X)',
+                       ['id', 'status'], [1, 'created']) == (
+        'INSERT INTO job (id, status) VALUES (?, ?)', (1, 'created'))
+
+
+def test_match_rejects_unsafe_column_names():
+    for name in [INJECTION, 'id; DROP TABLE job', 'status--', '1=1 OR id',
+                 'a.b.c', 'id)', '{0}', '']:
+        for templ in ['UPDATE job SET ?D WHERE id=?x',
+                      'SELECT * FROM job WHERE ?A',
+                      'SELECT * FROM job WHERE ?O']:
+            args = ({name: 'x'}, 1) if '?x' in templ else ({name: 'x'},)
+            with pytest.raises(dbapi.InvalidName):
+                dbapi.match(templ, *args)
+        with pytest.raises(dbapi.InvalidName):
+            dbapi.match('INSERT INTO job (?S) VALUES (?X)', [name], ['x'])
+
+
+def test_database_api_rejects_sql_injection(api_client):
+    # reproduce the attack found in the security review: a crafted column
+    # name in update_job used to copy the password hashes into the job
+    # description
+    headers = {'X-API-Key': API_KEY}
+
+    def call(action, *args):
+        return api_client.session.post(
+            f'{api_client.base_url}/v0/db/{action}',
+            json={'args': list(args)}, headers=headers)
+
+    def get_description():
+        job = dbapi.from_json(call('get_job', job_id).json())
+        return job.description
+
+    job_id = call('create_job', tempfile.gettempdir()).json()
+    try:
+        ret = call('update_job', job_id, {INJECTION: 'x'})
+        assert ret.status_code == 400, ret.text
+        assert get_description() == 'just created'
+        # plain column names still work
+        ret = call('update_job', job_id, {'description': 'updated'})
+        assert ret.status_code == 200, ret.text
+        assert get_description() == 'updated'
+    finally:
+        call('update_job', job_id, {'status': 'deleted'})
