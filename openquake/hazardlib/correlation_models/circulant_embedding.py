@@ -386,6 +386,22 @@ def _spectral_root(covariance_lags):
     return minimum, spectrum
 
 
+def covariance_bytes_per_pair(num_imts1, num_imts2=None, copies=6, model=None):
+    """Conservative workspace per site pair when assembling covariance.
+
+    Include both the cross-IMT matrices and scalar-site work arrays. The
+    latter matter for PCA models, especially with just one requested IMT.
+    Models can declare the scalar work arrays used by their evaluator. The
+    conservative fallback covers the current 22-component PCA model. This
+    estimate excludes retained factors.
+    """
+    if num_imts2 is None:
+        num_imts2 = num_imts1
+    pairs = num_imts1 * num_imts2
+    buffers = getattr(model, 'COVARIANCE_EVALUATION_BUFFERS', 160)
+    return 8 * max(copies * pairs, pairs + buffers)
+
+
 @dataclass(frozen=True)
 class CirculantEmbeddingFactor:
     """FFT factorization of an IMT-major regular-grid covariance.

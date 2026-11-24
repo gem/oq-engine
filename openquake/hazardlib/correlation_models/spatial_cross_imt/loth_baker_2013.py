@@ -182,6 +182,7 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
     """
 
     SUPPORTS_CIRCULANT_EMBEDDING = True
+    COVARIANCE_EVALUATION_BUFFERS = 8  # Two decay arrays and site-pair terms.
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
