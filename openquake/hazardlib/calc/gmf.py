@@ -658,12 +658,14 @@ class GmfComputer(object):
             self._ce_factor = CirculantEmbeddingFactor.build(
                 model, self.imts, layout.grid_shape, layout.spacing,
                 ResidualComponent.WITHIN_EVENT,
-                self.correlation_context, site_indices)
+                self.correlation_context, site_indices,
+                memory_budget=_correlation_budget())
         except ValueError as exc:
             if dense_bytes > _correlation_budget():
                 raise ValueError(
                     f'Cannot sample {model.__class__.__name__} within the '
-                    f'correlation memory budget: {exc}') from exc
+                    f'correlation memory budget: {exc}; dense sampling '
+                    f'requires about {humansize(dense_bytes)}') from exc
             logging.warning(
                 'Falling back to dense %s correlation: %s',
                 model.__class__.__name__, exc)
@@ -675,15 +677,17 @@ class GmfComputer(object):
             'occupancy=%.1f%%, embedding=%sx%s, factor=%s',
             model.__class__.__name__, *layout.grid_shape,
             100 * layout.occupancy, *factor.embedded_shape,
-            humansize(factor.spectral_root.nbytes))
+            humansize(factor.nbytes))
         return factor
 
     def _draw_ce_eps(self, factor, num_events, rng=None):
         """Draw correlated residual fields in bounded FFT batches."""
         if rng is None:
             rng = self.rng
+        output_bytes = 4 * factor.output_size * num_events
         batch_size = min(
-            num_events, factor.batch_size(_correlation_budget()))
+            num_events,
+            factor.batch_size(_correlation_budget() - output_bytes))
         correlated = np.empty(
             (factor.output_size, num_events), dtype=F32)
         for start in range(0, num_events, batch_size):
