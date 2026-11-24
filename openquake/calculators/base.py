@@ -1234,8 +1234,13 @@ class HazardCalculator(BaseCalculator):
                             or oq.siteid else 'strict')
                     self.sitecol.assoc(sm, assoc_dist, mode,
                                        station_sids=station_sids)
-                    if 'station_data' in oq.inputs or oq.impact:
-                        # the complete sitecol is required
+                    # the complete sitecol is required and must have the
+                    # same parameters of the sitecol, i.e. the same site
+                    # model must be associated to both (also when the
+                    # calculation is rerun from the exported job.zip, where
+                    # oq.impact is not set)
+                    if ('station_data' in oq.inputs or oq.impact or
+                            self.sitecol is not self.sitecol.complete):
                         self.sitecol.complete.assoc(sm, assoc_dist, mode,
                                                     station_sids=station_sids)
 
