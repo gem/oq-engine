@@ -17,6 +17,7 @@
 |case\_12|Two TRTs, 1 rlz|
 |case\_13|Test specification of a reference z1pt4 in the job file|
 |case\_18|3 GMPETables|
+|case\_21|Test non-ergodic Sung et al. (2022) GMM in a small test calc|
 |case\_22|Test tiling and International Date Line|
 |case\_23|Filtering away a TRT|
 |case\_24|Test collapsing rjb-independent GMPE|
