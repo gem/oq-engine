@@ -358,7 +358,9 @@ class KiteFaultSource(ParametricSeismicSource):
         For each magnitude of the MFD, computes the rupture dimensions from
         the magnitude scaling relationship and the aspect ratio, converts
         them into a number of nodes and floats the rupture over the fault
-        mesh. Magnitudes for which no rupture fits the surface are skipped.
+        mesh. Magnitudes whose ruptures are too small to be represented with
+        the sampling distances, or for which no rupture fits the surface,
+        are skipped.
 
         :yields:
             Triples (magnitude, occurrence rate of each rupture, list of
@@ -374,6 +376,11 @@ class KiteFaultSource(ParametricSeismicSource):
             lng, wdt = get_discrete_dimensions(
                 area, self.rupture_mesh_spacing,
                 self.rupture_aspect_ratio, self.profiles_sampling)
+
+            # The rupture is too small to be represented with the sampling
+            # distances adopted: skip this magnitude
+            if lng is None or wdt is None:
+                continue
 
             # Get the number of nodes along the strike and dip. Note that
             # len and wdt should be both multiples of the sampling distances
