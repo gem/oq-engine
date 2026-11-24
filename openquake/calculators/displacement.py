@@ -270,6 +270,8 @@ class DisplacementCalculator(base.HazardCalculator):
                 allargs.append((
                     block, cmaker, self.sitecol, pfd_lt, grp_rlzs))
         logging.info('Sending {:_d} tasks'.format(len(allargs)))
+        # Multifault workers read sections while the parent writes _rates.
+        self.datastore.swmr_on()
         smap = parallel.Starmap(displacement, allargs, h5=self.datastore)
         acc = smap.reduce(self.agg, {'src_rates': {}, 'source_data': {}})
         self.store_source_info(acc['source_data'])
