@@ -98,7 +98,22 @@ DATABASE = {
 }
 DATABASES = {'default': DATABASE}
 
-ALLOWED_HOSTS = ['*']
+
+
+def hosts_from_env(name='OQ_ALLOWED_HOSTS'):
+    """
+    :returns: the host names in the given comma-separated environment variable
+    """
+    return [host.strip() for host in os.environ.get(name, '').split(',')
+            if host.strip()]
+
+
+# The host names of the server, which can also be given with the
+# OQ_ALLOWED_HOSTS environment variable (comma-separated) or in
+# local_settings.py, which has the precedence. When authentication is
+# enabled '*' is refused at startup (see apps.py), since the links sent by
+# email (e.g. to reset a password) are built from the Host of the request.
+ALLOWED_HOSTS = hosts_from_env() or ['*']
 
 AUTHENTICATION_BACKENDS = ()
 
@@ -343,6 +358,10 @@ APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
 if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'IMPACT'):
     LOCKDOWN = True
+
+if LOCKDOWN and TEST and '*' in ALLOWED_HOSTS:
+    # the tests reach the WebUI on the local host
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'testserver']
 
 STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
 

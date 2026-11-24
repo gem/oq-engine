@@ -21,6 +21,8 @@ Then, copy the contents of `openquake/server/local_settings.py.server` into `ope
 The above settings override the variables specified in the Django settings.py file, to make the WebUI behave properly in the context of a multi-user server installation.
 For instance, `APPLICATION_MODE = 'RESTRICTED'` enables the authentication backend to restrict the use of the web interface to authorized users.
 
+When authentication is enabled, `ALLOWED_HOSTS` must list the host names used to reach the server (e.g. `ALLOWED_HOSTS = ['example.org', 'localhost', '127.0.0.1']`): the WebUI refuses to start with the default `'*'`, since the links sent by email, e.g. to reset a password, are built from the host of the request. The host names can also be given with the `OQ_ALLOWED_HOSTS` environment variable (comma-separated); a value in `local_settings.py` takes precedence.
+
 #### Configure the STATIC_ROOT folder
 
 STATIC_ROOT is the full, absolute path to your static files folder.
