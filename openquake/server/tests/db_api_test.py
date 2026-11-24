@@ -37,6 +37,33 @@ def test_database_api_rejects_unknown_action(api_client):
     assert response.status_code == 404
 
 
+def test_set_preferred_job_for_missing_job_keeps_db_writable(
+        api_client, tmp_path):
+    # setting as preferred a job that does not exist used to leave a
+    # transaction open: the following writes on the same connection were
+    # never committed and the next BEGIN failed with "cannot start a
+    # transaction within a transaction"
+    headers = {'X-API-Key': API_KEY}
+
+    def call(action, *args):
+        return api_client.session.post(
+            f'{api_client.base_url}/v0/db/{action}',
+            json={'args': list(args)}, headers=headers).json()
+
+    tag_name = uuid.uuid4().hex[:16]
+    ret = call('set_preferred_job_for_tag', 999999999, tag_name)
+    assert 'error' in ret, ret
+    job_id = call('create_job', str(tmp_path))
+    try:
+        ret = call('set_preferred_job_for_tag', job_id, tag_name)
+        assert 'success' in ret, ret
+        ret = call('get_preferred_job_for_tag', tag_name)
+        assert ret.get('job_id') == job_id, ret
+    finally:
+        call('delete_tag', tag_name)
+        call('update_job', job_id, {'status': 'deleted'})
+
+
 def test_worker_api_rejects_invalid_configuration(api_client):
     # the configuration is used to build the ssh commands starting the
     # workerpools, so it is validated before doing anything

@@ -789,23 +789,31 @@ WHERE job_id = ?x AND tag_id = ?x
 
 
 def set_preferred_job_for_tag(db, job_id, tag_name):
+    if not db('SELECT id FROM job WHERE id=?x', job_id):
+        return {'error': f'Job {job_id} does not exist'}
     try:
         tag_id = _get_or_create_tag_id(db, tag_name)
 
         db("BEGIN")
-
-        db("""
+        # the connection is in autocommit mode, so if a statement fails the
+        # transaction must be rolled back explicitly, otherwise it stays open
+        # and every following write on the same connection fails
+        try:
+            db("""
 UPDATE job_tag
 SET is_preferred = 0
 WHERE tag_id = ?x AND is_preferred = 1
-        """, tag_id)
+            """, tag_id)
 
-        db("""
+            db("""
 INSERT INTO job_tag (job_id, tag_id, is_preferred)
 VALUES (?x, ?x, 1)
 ON CONFLICT(job_id, tag_id) DO UPDATE
 SET is_preferred = 1
-        """, job_id, tag_id)
+            """, job_id, tag_id)
+        except Exception:
+            db("ROLLBACK")
+            raise
 
         db("COMMIT")
 
