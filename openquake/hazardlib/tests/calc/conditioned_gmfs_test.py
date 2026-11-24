@@ -46,7 +46,7 @@ from openquake.hazardlib.calc.conditioned_gmfs import (
     compute_distance_matrix, conditionable_imts, conditioned,
     conditioned_ce, ConditionedGmfComputer,
     conditioned_mean_in_chunks, createD,
-    compute_within_event_covariance_matrix, get_mean_covs, Input,
+    compute_within_event_covariance_matrix, get_mean_covs, grid_crs, Input,
     JointConditioning, log_event_posterior, select_observed_imts,
     StationConditioning)
 from openquake.hazardlib.tests.calc import \
@@ -481,6 +481,26 @@ def _sitecol(x, y, crs=TEST_CRS):
     lon, lat = transformer.transform(
         numpy.asarray(x, dtype=float), numpy.asarray(y, dtype=float))
     return SiteCollection.from_points(lon, lat)
+
+
+def test_station_projection_keeps_recorded_crs():
+    targets = _sitecol([500_000, 501_000, 500_000, 501_000],
+                       [4_200_000, 4_200_000, 4_201_000, 4_201_000])
+    targets.grid_crs = TEST_CRS
+    original = targets.array.copy()
+    targets.extend([-122.5], [38.5])
+    assert grid_crs(targets, [4]) == TEST_CRS
+    numpy.testing.assert_array_equal(targets.array[:4], original)
+
+
+def test_station_projection_recovers_legacy_utm():
+    rows, columns = numpy.indices((11, 13))
+    targets = _sitecol(650_000 + columns.ravel() * 1000,
+                       1_200_000 + rows.ravel() * 1000, crs='EPSG:32616')
+    lon, lat = Transformer.from_crs(32616, 4326, always_xy=True).transform(
+        680_123., 1_243_210.)
+    targets.extend([lon], [lat])
+    assert grid_crs(targets, [143]) == 'EPSG:32616'
 
 
 def _projected_distances(first, second, crs):

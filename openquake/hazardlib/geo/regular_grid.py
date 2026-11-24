@@ -108,6 +108,7 @@ def regular_grid(mesh, spacing, padding=None):
         raise ValueError('Duplicate grid cells after coordinate rounding; '
                          'increase the grid spacing')
     grid = Mesh(lons, lats)
+    grid.grid_crs = crs
     layout = RegularGridLayout.from_sites(grid, crs=crs)
     logging.info('Regular grid %s: %d rows x %d columns, '
                  '%g km spacing, %d sites', layout.crs,
