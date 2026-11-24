@@ -279,6 +279,16 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         """
         return (self.adjustment_hdf5,)
 
+    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+        """
+        Delegate to compute_central + apply_branch_shift so direct
+        .compute() calls return the non-ergodic mean. The inherited
+        ergodic compute would read C['phi'] which this class's COEFFS
+        does not provide (phi is derived from tot and tau instead).
+        """
+        central = self.compute_central(ctx, imts, mean, sigma, tau, phi)
+        self.apply_branch_shift(central, imts, mean)
+
     # Generic func name so method accepted in get_mean_stds for speedup
     def compute_central(self, ctx, imts, mean, sigma, tau, phi, **_kw):
         """
