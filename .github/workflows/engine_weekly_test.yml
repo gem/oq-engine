@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.13"]
+        python-version: ["3.13", "3.14"]
     steps:
       # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
