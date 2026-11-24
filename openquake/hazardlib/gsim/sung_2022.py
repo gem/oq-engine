@@ -154,6 +154,25 @@ def _lattice_params(ref, path):
                 lon_fast=lon_fast, off_grid_tol=off_grid_tol)
 
 
+_LOADED_ADJUSTMENT_CACHE = {}
+
+
+def _load_adjustments_cached(path):
+    """
+    Shared across GSIM instances with the same adjustment_h5. An N-branch
+    non-ergodic LT otherwise re-reads the same file N times at construction.
+    """
+    hit = _LOADED_ADJUSTMENT_CACHE.get(path)
+    if hit is None:
+        dat = _load_adjustments(path)
+        ref = _verify_grids_match(dat, path)
+        params = _lattice_params(ref, path)
+        hit = (dat, params)
+        _LOADED_ADJUSTMENT_CACHE[path] = hit
+    dat, params = hit
+    return dict(dat), params
+
+
 class SungEtAl2022(GMPE):
     """
     Implements the Sung et al. (2022) ergodic model for France based on the
@@ -234,12 +253,13 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
             'Adjustment h5 not found: %s' % self.adjustment_h5
 
         # Load every (site, freq) dataset, verify they share the same grid,
-        # cache the lattice parameters for O(1) nearest-node indexing
-        self.dat = _load_adjustments(self.adjustment_h5)
+        # cache the lattice parameters for O(1) nearest-node indexing.
+        # The h5 read + grid verification + lattice derivation are
+        # amortised across all GSIM instances sharing this adjustment_h5
+        # (100-branch non-ergodic LTs instantiate 100 copies).
+        self.dat, p = _load_adjustments_cached(self.adjustment_h5)
         self.sites = sorted({s for s, _ in self.dat})
         self.freqs = sorted({f for _, f in self.dat})
-        ref = _verify_grids_match(self.dat, self.adjustment_h5)
-        p = _lattice_params(ref, self.adjustment_h5)
         self._lon0 = p['lon0']
         self._lat0 = p['lat0']
         self._lon_step = p['lon_step']

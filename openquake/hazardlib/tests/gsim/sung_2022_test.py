@@ -29,7 +29,8 @@ import numpy as np
 
 from openquake.hazardlib import imt
 from openquake.hazardlib.gsim.sung_2022 import (
-    SungEtAl2022, SungEtAl2022NonErgodic, _load_adjustments)
+    SungEtAl2022, SungEtAl2022NonErgodic, _load_adjustments,
+    _LOADED_ADJUSTMENT_CACHE)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 H5 = "adj_RE_france.h5"
@@ -172,6 +173,23 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
         imts = [imt.from_string("EAS(5.0)")]
         with self.assertRaises(ValueError):
             gsim.compute_central(ctx, imts, mean, sigma, tau, phi)
+
+    def test_loaded_adjustment_cache_shared(self):
+        # Instances sharing an adjustment_h5 must hit the module-level
+        # cache: one entry per path, ndarray values shared by reference,
+        # but each instance holds its own dict wrapper so a `del` on one
+        # does not corrupt the cache or other instances.
+        _LOADED_ADJUSTMENT_CACHE.clear()
+        a = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id="mean")
+        b = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id=0)
+        self.assertEqual(len(_LOADED_ADJUSTMENT_CACHE), 1)
+        key = ("site1", 5.0)
+        self.assertIs(a.dat[key], b.dat[key])
+        self.assertIsNot(a.dat, b.dat)
+        del a.dat[key]
+        self.assertIn(key, b.dat)
+        c = SungEtAl2022NonErgodic(adjustment_h5=H5, rlz_id=99)
+        self.assertIn(key, c.dat)
 
     def test_adj_name_pattern_enforced(self):
         # A dataset starting with 'adj_' but not matching the adj_<N>hz
