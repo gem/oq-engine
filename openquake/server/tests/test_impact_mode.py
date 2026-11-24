@@ -40,7 +40,9 @@ from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import loadnpz
 from openquake.server.views import format_oqparam, _impact_base_url
-from openquake.server.services import _impact_urls
+from openquake.server.services import (
+    _impact_urls, sign_usgs_file, unsign_usgs_file)
+from openquake.server.internal_api import ApiError
 from openquake.server.tests.views_test import (
     get_or_create_user, start_webui, stop_webui)
 
@@ -706,6 +708,29 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         self.assertIn('station_data_file', resp)
         self.assertIn('n_stations', resp)
         self.assertIsNone(resp['station_data_issue'])
+        # the server path is sent signed, not in clear
+        self.assertFalse(os.path.isabs(resp['station_data_file']))
+
+    def test_usgs_file_paths_are_signed(self):
+        path = '/tmp/rupture.json'
+        signed = sign_usgs_file(path)
+        self.assertNotEqual(signed, path)
+        self.assertEqual(unsign_usgs_file(signed, 'rupture_from_usgs'), path)
+        self.assertEqual(unsign_usgs_file('', 'rupture_from_usgs'), '')
+        self.assertEqual(unsign_usgs_file('None', 'rupture_from_usgs'), '')
+        tampered = signed[:-1] + ('B' if signed[-1] == 'A' else 'A')
+        for value in [path, tampered]:
+            with self.assertRaises(ApiError) as ctx:
+                unsign_usgs_file(value, 'rupture_from_usgs')
+            self.assertEqual(ctx.exception.status, 400)
+
+    def test_impact_run_rejects_unsigned_usgs_files(self):
+        # only the paths signed by the server are accepted
+        self.set_user_level_and_remove_groups(1)
+        for field in ['rupture_from_usgs', 'station_data_file_from_usgs']:
+            resp = self.post('impact_run', data={field: '/tmp/usgs_data.json'})
+            self.assertEqual(resp.status_code, 400)
+            self.assertEqual(resp.json()['invalid_inputs'], [field])
 
     def test_impact_get_rupture_data(self):
         self.set_user_level_and_remove_groups(2)

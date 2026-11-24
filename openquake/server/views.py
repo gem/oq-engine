@@ -991,9 +991,10 @@ def impact_get_stations_from_usgs(request):
     station_data_issue = None
     if err:
         station_data_issue = err['error_msg']
-    response_data = dict(station_data_file=station_data_file,
-                         n_stations=n_stations,
-                         station_data_issue=station_data_issue)
+    # the browser sends the signed path back when launching the calculation
+    response_data = dict(
+        station_data_file=services.sign_usgs_file(station_data_file),
+        n_stations=n_stations, station_data_issue=station_data_issue)
     return JsonResponse(response_data)
 
 
