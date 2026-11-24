@@ -374,3 +374,30 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
             ruptures = [r for r in source.iter_ruptures()]
             self._ruptures_animation('test05', source.surface, ruptures,
                                      source.profiles)
+
+
+class KiteFaultParametersTestCase(_BaseFaultSourceTestCase):
+
+    def _mfd(self):
+        return TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.5,
+                              max_mag=5.6, bin_width=0.1)
+
+    def test_profiles_sampling_given(self):
+        """ An explicit profiles_sampling must be stored and used """
+        profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.01, 15.0)]),
+                    Line([Point(0.3, 0.0, 0.0), Point(0.3, 0.01, 15.0)])]
+        src = KiteFaultSource(
+            'src', 'src', self.TRT, self._mfd(), 2.5, PeerMSR(), 1.5,
+            self.TOM, profiles, self.RAKE, profiles_sampling=2.5)
+        self.assertEqual(src.profiles_sampling, 2.5)
+        # With the default sampling (2.5 / 1.5 km) the mesh has 10 rows
+        # along dip; with 2.5 km it must have fewer
+        self.assertLess(src.surface.mesh.lons.shape[0], 10)
+
+    def test_floating_y_step_without_x_step(self):
+        """ floating_y_step must be used even when floating_x_step is 0 """
+        src_all = self._make_source(mfd=self._mfd(), aspect_ratio=1.5,
+                                    floating_x_step=0, floating_y_step=0)
+        src_y = self._make_source(mfd=self._mfd(), aspect_ratio=1.5,
+                                  floating_x_step=0, floating_y_step=0.5)
+        self.assertLess(src_y.count_ruptures(), src_all.count_ruptures())
