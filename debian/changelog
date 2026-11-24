@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Fixed scenario calculations with a `rupture_dict`, a region grid, a site
+    model and an exposure: the complete site collection was not associated
+    to the site model, so the GMFs were computed with the default site
+    parameters, giving wrong losses or no losses at all
+  * The exported job.zip does not contain `region_grid_spacing` anymore,
+    since the sites are exported in sites.csv: before, rerunning it
+    inferred a different grid from the exposure
   * Fixed default GSIM logic-tree weights not being applied to IMTs without
     explicit IMT-specific weights. Thanks to Mathieu Primeau for the report.
 
