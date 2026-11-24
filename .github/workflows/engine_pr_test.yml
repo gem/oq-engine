@@ -96,7 +96,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.11"]
+        python-version: ["3.13", "3.14"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
@@ -137,7 +137,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.11"]
+        python-version: ["3.13", "3.14"]
         browser: ['chromium', 'firefox']
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
