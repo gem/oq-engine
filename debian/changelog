@@ -1,9 +1,8 @@
-  [Christopher Brooks, Michele Simionato]
-  * Implement Marco Pagani's experimental OQ implementation of the Sung et al.
-    (2022) non-ergodic GMM for France. Experimental status will be removed
-    once implementation can be validated against independent test results
-    provided by the model authors (for now unit tests are circular). QA test
-    added to classical/case_21.
+  [Marco Pagani, Christopher Brooks]
+  * Add an experimental of the Sung et al. (2022) non-ergodic GMM for France.
+    Experimental status will be removed once implementation can be validated
+    against independent test results provided by the model authors (for now
+    unit tests are circular). QA test added to classical/case_21.
   
   [Michele Simionato]
   * Fixed scenario calculations with a `rupture_dict`, a region grid, a site
