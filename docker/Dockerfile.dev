@@ -20,6 +20,9 @@ RUN apt-get update &&  \
     useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
 ARG oq_branch=master
 ENV LANG=en_US.UTF-8
+ENV VIRTUAL_ENV=/opt/openquake
+RUN python3 -m venv "$VIRTUAL_ENV" && chown -R openquake:openquake "$VIRTUAL_ENV"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 WORKDIR /usr/src
 # Clone the repository for a local editable installation.
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && \
@@ -27,9 +30,7 @@ RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch
 USER openquake
 ENV HOME=/home/openquake
 WORKDIR ${HOME}
-RUN cd /usr/src/oq-engine && python3 install.py devel
-ENV VIRTUAL_ENV="$HOME/openquake"
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN cd /usr/src/oq-engine && python3 install.py devel --novenv
 RUN mkdir -p oqdata
 ADD scripts/oq-start.sh ${HOME}
 #

@@ -18,6 +18,9 @@ LABEL maintainer="GEM Foundation <devops@openquake.org>" \
 RUN useradd -m -u 1000 -U -s /bin/bash openquake
 RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
 ARG oq_branch=master
+ENV VIRTUAL_ENV=/opt/openquake
+RUN python3 -m venv "$VIRTUAL_ENV" && chown -R openquake:openquake "$VIRTUAL_ENV"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 # Clone the repository and install the engine for the container user.
 WORKDIR /usr/src
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && \
@@ -25,17 +28,17 @@ RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch
 USER openquake
 ENV HOME=/home/openquake
 WORKDIR ${HOME}
-RUN python3 /usr/src/oq-engine/install.py --version "$oq_branch" user
+RUN python3 /usr/src/oq-engine/install.py user --version "$oq_branch" --novenv
 #
 FROM python:3.12.6-slim AS build-image
 RUN useradd -m -u 1000 -U -s /bin/bash openquake
 COPY --from=compile-image --chown=openquake:openquake \
-    /home/openquake/openquake/ /home/openquake/openquake/
+    /opt/openquake/ /opt/openquake/
 ENV LANG=en_US.UTF-8
 USER openquake
 ENV HOME=/home/openquake
 WORKDIR ${HOME}
-ENV VIRTUAL_ENV=/home/openquake/openquake
+ENV VIRTUAL_ENV=/opt/openquake
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 #
 ADD scripts/oq-start.sh ${HOME}
