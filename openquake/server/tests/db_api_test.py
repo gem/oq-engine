@@ -79,8 +79,7 @@ def test_dbcmd_uses_explicit_write_transaction(api_client, monkeypatch):
 
 # the column names passed with ?S, ?D, ?A and ?O are inserted in the SQL
 # text, so anything that is not a plain name must be rejected
-INJECTION = ("description=(SELECT group_concat(username||':'||password) "
-             "FROM auth_user), status")
+SUBQUERY = "description=(SELECT max(id) FROM job), status"
 
 
 def test_match_accepts_plain_column_names():
@@ -98,7 +97,7 @@ def test_match_accepts_plain_column_names():
 
 
 def test_match_rejects_unsafe_column_names():
-    for name in [INJECTION, 'id; DROP TABLE job', 'status--', '1=1 OR id',
+    for name in [SUBQUERY, 'id; DROP TABLE job', 'status--', '1=1 OR id',
                  'a.b.c', 'id)', '{0}', '']:
         for templ in ['UPDATE job SET ?D WHERE id=?x',
                       'SELECT * FROM job WHERE ?A',
@@ -110,10 +109,8 @@ def test_match_rejects_unsafe_column_names():
             dbapi.match('INSERT INTO job (?S) VALUES (?X)', [name], ['x'])
 
 
-def test_database_api_rejects_sql_injection(api_client):
-    # reproduce the attack found in the security review: a crafted column
-    # name in update_job used to copy the password hashes into the job
-    # description
+def test_database_api_rejects_unsafe_column_names(api_client):
+    # a column name containing a subquery must not reach the database
     headers = {'X-API-Key': API_KEY}
 
     def call(action, *args):
@@ -127,7 +124,7 @@ def test_database_api_rejects_sql_injection(api_client):
 
     job_id = call('create_job', tempfile.gettempdir()).json()
     try:
-        ret = call('update_job', job_id, {INJECTION: 'x'})
+        ret = call('update_job', job_id, {SUBQUERY: 'x'})
         assert ret.status_code == 400, ret.text
         assert get_description() == 'just created'
         # plain column names still work
