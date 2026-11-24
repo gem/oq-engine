@@ -1042,6 +1042,19 @@ def impact_get_nodal_planes_and_info(request):
     return JsonResponse(response_data)
 
 
+def drop_email_file_path(data):
+    """
+    Remove ``email_file_path`` from the data sent by the client, unless
+    running the tests. The field makes the notification emails be written
+    into the given directory instead of being sent: the tests use it to
+    collect the emails of each job, since they cannot change the settings
+    of the WebUI process.
+    """
+    if not settings.TEST:
+        data.pop('email_file_path', None)
+    return data
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -1061,7 +1074,7 @@ def impact_run(request):
     """
     if request.user.level == 0:
         return HttpResponseForbidden()
-    data = request.POST.dict()
+    data = drop_email_file_path(request.POST.dict())
     data.update(
         user_level=str(request.user.level),
         username=utils.get_username(request),
@@ -1105,6 +1118,7 @@ def impact_run_with_shakemap(request):
     for field in ('make_impact_reports', 'notes', 'email_file_path'):
         if field in request.POST:
             post[field] = request.POST[field]
+    drop_email_file_path(post)
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
@@ -1279,7 +1293,7 @@ def aelo_run(request):
         a `django.http.HttpRequest` object containing lon, lat, site_name,
         asce_version, site_class, vs30
     """
-    data = request.POST.dict()
+    data = drop_email_file_path(request.POST.dict())
     data.update(
         username=utils.get_username(request),
         email=getattr(getattr(request, 'user', None), 'email', ''),

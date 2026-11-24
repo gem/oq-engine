@@ -32,12 +32,14 @@ import django
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.test import override_settings
 from openquake.calculators.base import get_aelo_version
 from openquake.commonlib.oqvalidation import OqParam, ASCE_VERSIONS
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import (
     EngineServerTestCase, start_webui, stop_webui)
-from openquake.server.views import get_disp_val
+from openquake.server.views import (
+    get_disp_val, drop_email_file_path)
 
 django.setup()
 try:
@@ -182,6 +184,15 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
             else:
                 raise ValueError(f'No tested site was found for {model}')
             return float(row['lon']), float(row['lat'])
+
+    def test_email_file_path_is_ignored_outside_tests(self):
+        # outside the tests a client cannot choose where the notification
+        # emails are written
+        data = {'email_file_path': '/tmp/somewhere', 'lon': '1'}
+        with override_settings(TEST=False):
+            self.assertEqual(drop_email_file_path(dict(data)), {'lon': '1'})
+        with override_settings(TEST=True):
+            self.assertEqual(drop_email_file_path(dict(data)), data)
 
     def test_aelo_successful_run_CCA_then_remove_calc(self):
         lon, lat = self.get_tested_lon_lat('CCA')
