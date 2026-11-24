@@ -135,8 +135,7 @@ def fix_toml(v):
     return v
 
 
-OK_METHODS = ('compute', 'compute_central', 'apply_branch_shift',
-              'set_poes', 'requires', 'set_parameters')
+OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
 
 
 def bad_methods(clsdict):

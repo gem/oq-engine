@@ -126,9 +126,7 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
         mean, sigma, tau, phi = (np.zeros((1, n)) for _ in range(4))
         imts = [imt.from_string("EAS(5.0)")]
         with self.assertRaises(ValueError):
-            res = self.gsim.compute_central(
-                ctx, imts, mean, sigma, tau, phi)
-            self.gsim.apply_branch_shift(res, imts, mean)
+            self.gsim.compute(ctx, imts, mean, sigma, tau, phi)
 
     def test_missing_frequency_raises(self):
         # Asking for a frequency the hdf5 doesn't include (here EAS(2.0); only
@@ -144,7 +142,7 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
         mean, sigma, tau, phi = (np.zeros((1, 1)) for _ in range(4))
         imts = [imt.from_string("EAS(2.0)")]
         with self.assertRaises((KeyError, ValueError)):
-            self.gsim.compute_central(ctx, imts, mean, sigma, tau, phi)
+            self.gsim.compute(ctx, imts, mean, sigma, tau, phi)
 
     def test_unknown_site_raises(self):
         # A ctx row carrying a custom_site_id not present in the hdf5 must
@@ -160,11 +158,11 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
         mean, sigma, tau, phi = (np.zeros((1, 1)) for _ in range(4))
         imts = [imt.from_string("EAS(5.0)")]
         with self.assertRaises(ValueError):
-            self.gsim.compute_central(ctx, imts, mean, sigma, tau, phi)
+            self.gsim.compute(ctx, imts, mean, sigma, tau, phi)
 
     def test_site_missing_frequency_raises(self):
         # When a (site, freq) pair isn't in the hdf5 the GSIM must raise
-        # rather than silently skip. Patch self.dat to simulate a site
+        # rather than silently skip. Patch gsim.dat to simulate a site
         # that only has 1 Hz (stored hdf5 has both freqs for all sites).
         gsim = SungEtAl2022NonErgodic(adjustment_file=HDF5, rlz_id="mean")
         del gsim.dat[("site1", 5.0)]
@@ -179,7 +177,7 @@ class SungEtAl2022StructuralTestCase(unittest.TestCase):
         mean, sigma, tau, phi = (np.zeros((1, 1)) for _ in range(4))
         imts = [imt.from_string("EAS(5.0)")]
         with self.assertRaises(ValueError):
-            gsim.compute_central(ctx, imts, mean, sigma, tau, phi)
+            gsim.compute(ctx, imts, mean, sigma, tau, phi)
 
     def test_loaded_adjustment_cache_shared(self):
         # Instances sharing an adjustment_file must hit the module-level
@@ -249,11 +247,7 @@ class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
     def _compute(self, gsim, ctx, im):
         imts = [imt.from_string(im)]
         mean, sigma, tau, phi = (np.zeros((1, 1)) for _ in range(4))
-        if isinstance(gsim, SungEtAl2022NonErgodic):
-            res = gsim.compute_central(ctx, imts, mean, sigma, tau, phi)
-            gsim.apply_branch_shift(res, imts, mean)
-        else:
-            gsim.compute(ctx, imts, mean, sigma, tau, phi)
+        gsim.compute(ctx, imts, mean, sigma, tau, phi)
         return mean[0, 0], sigma[0, 0], tau[0, 0], phi[0, 0]
 
     def test_delta_mu_additivity(self):

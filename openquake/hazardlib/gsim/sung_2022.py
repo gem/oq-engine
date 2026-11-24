@@ -171,6 +171,19 @@ def _load_adjustments_cached(path):
     return dict(dat), params
 
 
+# The variants share the mean equation (with cRB = 50 km as in BA18).
+# Standard deviations are constant per frequency and broadcast over sites.
+def _compute_backbone(coeffs, ctx, imts, mean, sigma, tau, phi, *, ergodic):
+    for m, imt in enumerate(imts):
+        C = coeffs[imt]
+        mean[m] = (_magnitude_scaling(C, ctx) + _path_scaling(C, ctx) +
+                   _ztor_scaling(C, ctx) + _linear_site_response(C, ctx))
+        sigma[m] = C['tot']
+        tau[m] = C['tau']
+        phi[m] = (C['phi'] if ergodic else
+                  np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.)))
+
+
 class SungEtAl2022(GMPE):
     """
     Implements the Sung et al. (2022) ergodic model for France based on the
@@ -194,23 +207,105 @@ class SungEtAl2022(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
-            # Ergodic mean = magnitude + path + Ztor + linear Vs30 terms
-            mean[m] = (_magnitude_scaling(C, ctx) +
-                       _path_scaling(C, ctx) +
-                       _ztor_scaling(C, ctx) +
-                       _linear_site_response(C, ctx))
-            # Sigma components are constants per frequency, broadcast over sites
-            sigma[m] = C['tot']
-            tau[m] = C['tau']
-            phi[m] = C['phi']
+        _compute_backbone(self.COEFFS, ctx, imts, mean, sigma, tau, phi,
+                          ergodic=True)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT                c1   c2           c3     c4          c5          c6           c7           c8           c9          cn          cM         chm   tot   tau   phi site_sd record_sd
 EAS(1.0) -3.831335618 1.27 -0.339593397 -2.165 7.581303952 0.451924112 -0.003743823 -1.220089093 -0.002488724 3.714155909       5.616 3.811150377 1.025   0.6 0.805   0.569     0.523
 EAS(5.0) -4.042505531 1.27 -0.041712502 -2.165 7.487714222 0.476000074 -0.007202382 -0.699440349  0.031866505 14.31473379 5.165553252 3.507442691  0.94 0.439  0.78   0.509      0.53
 """)
+
+
+def compute_central(gsim, ctx, imts, mean, sigma, tau, phi, **_kw):
+    """
+    Branch-independent work: ergodic backbone + nearest-node index +
+    per-row site-name decode. Returns (idx_all, csids) so
+    apply_branch_shift() can pull the per-rlz column for the right
+    site without redoing the work.
+
+    ``**_kw`` absorbs ContextMaker kwargs (e.g. ``gra_mon``) that this
+    GSIM has no use for - accepted for interface compatibility only.
+    """
+    missing = sorted({imt.frequency for imt in imts} - set(gsim.freqs))
+    if missing:
+        raise ValueError(
+            '%s: no adjustment dataset for frequency %s Hz '
+            '(available: %s Hz)' % (
+                os.path.basename(gsim.adjustment_file),
+                ', '.join('%g' % f for f in missing),
+                ', '.join('%g' % f for f in gsim.freqs)))
+
+    # Decode custom_site_id per row and reject any unknown ones
+    csids = np.array([s.decode('utf-8').strip('\x00')
+                      if isinstance(s, (bytes, bytearray))
+                      else str(s).strip('\x00')
+                      for s in ctx.custom_site_id])
+    unknown = sorted(set(csids) - set(gsim.sites))
+    if unknown:
+        raise ValueError(
+            '%s: custom_site_id(s) not present in the adjustment hdf5: '
+            '%s. Known sites: %s'
+            % (os.path.basename(gsim.adjustment_file),
+               unknown, gsim.sites))
+    # Every (site, freq) pair touched by this batch must exist
+    for site in set(csids):
+        for imt in imts:
+            if (site, imt.frequency) not in gsim.dat:
+                raise ValueError(
+                    '%s: no adjustment for site=%s at frequency=%g Hz'
+                    % (os.path.basename(gsim.adjustment_file),
+                       site, imt.frequency))
+
+    grid = gsim.dat[(gsim.sites[0], gsim.freqs[0])]
+    # Nearest-node index from lattice arithmetic; O(n_ctx) ops total
+    i_lon = np.round(
+        (ctx.clon - gsim._lon0) / gsim._lon_step).astype(np.int64)
+    i_lat = np.round(
+        (ctx.clat - gsim._lat0) / gsim._lat_step).astype(np.int64)
+    # Clip indices before the flat-index computation; off-grid ctx
+    # points will be caught below by the tolerance check
+    i_lon = np.clip(i_lon, 0, gsim._n_lon - 1)
+    i_lat = np.clip(i_lat, 0, gsim._n_lat - 1)
+    if gsim._lon_fast:
+        idx_all = i_lat * gsim._n_lon + i_lon
+    else:
+        idx_all = i_lon * gsim._n_lat + i_lat
+
+    # Off-grid check: compare the selected node's coords to the query;
+    # catches both out-of-envelope ruptures and any lattice-index bug
+    dlon = np.abs(grid['lon'][idx_all] - ctx.clon)
+    dlat = np.abs(grid['lat'][idx_all] - ctx.clat)
+    off = (dlon > gsim.off_grid_tol) | (dlat > gsim.off_grid_tol)
+    if off.any():
+        i = int(np.where(off)[0][0])
+        raise ValueError(
+            'Rupture (%.4f, %.4f) is outside the provided adjustment '
+            'grid: nearest node (%.4f, %.4f), delta=(%.4f, %.4f) deg'
+            % (ctx.clon[i], ctx.clat[i],
+               grid['lon'][idx_all[i]], grid['lat'][idx_all[i]],
+               dlon[i], dlat[i]))
+
+    _compute_backbone(gsim.COEFFS, ctx, imts, mean, sigma, tau, phi,
+                      ergodic=False)
+    return idx_all, csids
+
+
+def apply_branch_shift(gsim, central, imts, mean):
+    """
+    Branch-specific shift: for each unique custom_site_id in the batch,
+    add Delta-mu from that site's rlz column into the central mean.
+    """
+    idx_all, csids = central
+    for site in np.unique(csids):
+        mask = csids == site
+        nidx = idx_all[mask]
+        for m, imt in enumerate(imts):
+            dat = gsim.dat[(site, imt.frequency)]
+            if gsim.rlz_id == 'mean':
+                mean[m, mask] += dat['mean'][nidx]
+            else:
+                mean[m, mask] += dat['rlz'][nidx, int(gsim.rlz_id)]
 
 
 class SungEtAl2022NonErgodic(SungEtAl2022):
@@ -253,6 +348,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
 
     experimental = True # For now
+    central_functions = (compute_central, apply_branch_shift)
 
     def __init__(self, adjustment_file, rlz_id="mean"):
         self.adjustment_file = adjustment_file
@@ -294,107 +390,8 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         ergodic compute would read C['phi'] which this class's COEFFS
         does not provide (phi is derived from tot and tau instead).
         """
-        central = self.compute_central(ctx, imts, mean, sigma, tau, phi)
-        self.apply_branch_shift(central, imts, mean)
-
-    # Generic func name so method accepted in get_mean_stds for speedup
-    def compute_central(self, ctx, imts, mean, sigma, tau, phi, **_kw):
-        """
-        Branch-independent work: ergodic backbone + nearest-node index +
-        per-row site-name decode. Returns (idx_all, csids) so
-        apply_branch_shift() can pull the per-rlz column for the right
-        site without redoing the work.
-
-        ``**_kw`` absorbs ContextMaker kwargs (e.g. ``gra_mon``) that this
-        GSIM has no use for - accepted for interface compatibility only.
-        """
-        missing = sorted({imt.frequency for imt in imts} - set(self.freqs))
-        if missing:
-            raise ValueError(
-                '%s: no adjustment dataset for frequency %s Hz '
-                '(available: %s Hz)' % (
-                    os.path.basename(self.adjustment_file),
-                    ', '.join('%g' % f for f in missing),
-                    ', '.join('%g' % f for f in self.freqs)))
-
-        # Decode custom_site_id per row and reject any unknown ones
-        csids = np.array([s.decode('utf-8').strip('\x00')
-                          if isinstance(s, (bytes, bytearray))
-                          else str(s).strip('\x00')
-                          for s in ctx.custom_site_id])
-        unknown = sorted(set(csids) - set(self.sites))
-        if unknown:
-            raise ValueError(
-                '%s: custom_site_id(s) not present in the adjustment hdf5: '
-                '%s. Known sites: %s'
-                % (os.path.basename(self.adjustment_file),
-                   unknown, self.sites))
-        # Every (site, freq) pair touched by this batch must exist
-        for site in set(csids):
-            for imt in imts:
-                if (site, imt.frequency) not in self.dat:
-                    raise ValueError(
-                        '%s: no adjustment for site=%s at frequency=%g Hz'
-                        % (os.path.basename(self.adjustment_file),
-                           site, imt.frequency))
-
-        grid = self.dat[(self.sites[0], self.freqs[0])]
-        # Nearest-node index from lattice arithmetic; O(n_ctx) ops total
-        i_lon = np.round(
-            (ctx.clon - self._lon0) / self._lon_step).astype(np.int64)
-        i_lat = np.round(
-            (ctx.clat - self._lat0) / self._lat_step).astype(np.int64)
-        # Clip indices before the flat-index computation; off-grid ctx
-        # points will be caught below by the tolerance check
-        i_lon = np.clip(i_lon, 0, self._n_lon - 1)
-        i_lat = np.clip(i_lat, 0, self._n_lat - 1)
-        if self._lon_fast:
-            idx_all = i_lat * self._n_lon + i_lon
-        else:
-            idx_all = i_lon * self._n_lat + i_lat
-
-        # Off-grid check: compare the selected node's coords to the query;
-        # catches both out-of-envelope ruptures and any lattice-index bug
-        dlon = np.abs(grid['lon'][idx_all] - ctx.clon)
-        dlat = np.abs(grid['lat'][idx_all] - ctx.clat)
-        off = (dlon > self.off_grid_tol) | (dlat > self.off_grid_tol)
-        if off.any():
-            i = int(np.where(off)[0][0])
-            raise ValueError(
-                'Rupture (%.4f, %.4f) is outside the provided adjustment '
-                'grid: nearest node (%.4f, %.4f), delta=(%.4f, %.4f) deg'
-                % (ctx.clon[i], ctx.clat[i],
-                   grid['lon'][idx_all[i]], grid['lat'][idx_all[i]],
-                   dlon[i], dlat[i]))
-
-        # Ergodic backbone + sigma components (do NOT depend on rlz_id)
-        for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
-            mean[m] = (_magnitude_scaling(C, ctx) +
-                       _path_scaling(C, ctx) + # Assuming cRB = 50 km as in BA18
-                       _ztor_scaling(C, ctx) +
-                       _linear_site_response(C, ctx))
-            sigma[m] = C['tot']
-            tau[m] = C['tau']
-            phi[m] = np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.))
-        return idx_all, csids
-
-    # Generic func name so method accepted in get_mean_stds for speedup
-    def apply_branch_shift(self, central, imts, mean):
-        """
-        Branch-specific shift: for each unique custom_site_id in the batch,
-        add Delta-mu from that site's rlz column into the central mean.
-        """
-        idx_all, csids = central
-        for site in np.unique(csids):
-            mask = csids == site
-            nidx = idx_all[mask]
-            for m, imt in enumerate(imts):
-                dat = self.dat[(site, imt.frequency)]
-                if self.rlz_id == 'mean':
-                    mean[m, mask] += dat['mean'][nidx]
-                else:
-                    mean[m, mask] += dat['rlz'][nidx, int(self.rlz_id)]
+        central = compute_central(self, ctx, imts, mean, sigma, tau, phi)
+        apply_branch_shift(self, central, imts, mean)
 
     # The Coefficients used here are the same of the ergodic model BUT the
     # standard deviations differ given they are for the non-ergodic variant

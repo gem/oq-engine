@@ -427,26 +427,29 @@ class GridAdjustedGMPETest(unittest.TestCase):
             adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
                                    grid_hdf5_file=GRID_HDF5, epsilons=eps)
             cm = simple_cmaker([base, adj], IMTS)
-            reference.append(cm.get_mean_stds([self._make_ctx(cm)]))
+            ctx = cm.recarray([self._make_ctx(cm)])
+            reference.append(cm.get_mean_stds([ctx, ctx], split_by_mag=False))
 
         adjs = [GridAdjustedGMPE(gmpe_name=BASE_GSIM,
                                  grid_hdf5_file=GRID_HDF5, epsilons=eps)
                 for eps in combos]
-        cm = simple_cmaker([base] + adjs, IMTS)
-        with mock.patch.object(GridAdjustedGMPE, "compute_central",
-                               autospec=True,
-                               side_effect=GridAdjustedGMPE.compute_central
-                               ) as central:
-            shared = cm.get_mean_stds([self._make_ctx(cm)])
-        # The central part is computed once for all 27 adj GSIMs
-        self.assertEqual(central.call_count, 1)
-        # Ray tracing is monitored once per IMT, not once per branch.
-        self.assertEqual(cm.gra_mon.counts, len(IMTS))
+        cm = simple_cmaker(adjs[:1] + [base] + adjs[1:], IMTS)
+        ctx = cm.recarray([self._make_ctx(cm)])
+        central = mock.Mock(wraps=mod.compute_central)
+        with mock.patch.object(GridAdjustedGMPE, 'central_functions',
+                               (central, mod.apply_epsilons)):
+            shared = cm.get_mean_stds([ctx, ctx], split_by_mag=False)
+        # Each slice shares one central computation across all 27 branches.
+        self.assertEqual(central.call_count, 2)
+        # Ray tracing is monitored once per IMT and slice.
+        self.assertEqual(cm.gra_mon.counts, 2 * len(IMTS))
         self.assertIn(cm.gra_mon, cm.monitor.children)
+        np.testing.assert_array_equal(shared[:, 1], reference[0][:, 0])
         for i, eps in enumerate(combos):
+            g = i + (i > 0)
             for name_i, name in enumerate(("mean", "sig", "tau", "phi")):
                 np.testing.assert_array_equal(
-                    reference[i][name_i, 1], shared[name_i, 1 + i],
+                    reference[i][name_i, 1], shared[name_i, g],
                     err_msg=f"{name} mismatch for epsilons={eps}")
 
     def test_sharing_preserves_backbone_adjustment_order(self):
