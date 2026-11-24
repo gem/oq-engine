@@ -361,7 +361,7 @@ if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'IMPACT'):
 
 if LOCKDOWN and TEST and '*' in ALLOWED_HOSTS:
     # the tests reach the WebUI on the local host
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'testserver']
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 
 STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
 
