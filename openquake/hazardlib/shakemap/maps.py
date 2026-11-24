@@ -70,7 +70,8 @@ def get_sitecol_shapefile(uridict, required_imts, sitecol=None,
         filtered_imts)
 
 
-@get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
+@get_sitecol_shakemap.add(
+    'usgs_xml', 'usgs_id', 'file_npy', 'shake_result_hdf')
 def get_sitecol_usgs(uridict, required_imts, sitecol=None,
                      assoc_dist=None, assoc_mode='warn', imt_mode='strict'):
     """
@@ -101,10 +102,24 @@ def get_sitecol_usgs(uridict, required_imts, sitecol=None,
             filtered_imts)
 
 
+def _has_tau(shakemap, required_imts):
+    # True if the ShakeMap stores the conditional between-event standard
+    # deviation tau of all the required IMTs (NaN values mark the missing
+    # ones, see get_array_shake_result_hdf)
+    if 'tau' not in shakemap.dtype.names:
+        return False
+    missing = [im for im in sorted(required_imts) if len(shakemap) and
+               numpy.isnan(shakemap['tau'][im]).all()]
+    if missing:
+        logging.warning('The ShakeMap has no tau for %s', ', '.join(missing))
+    return not missing
+
+
 def filter_unused_imts(shakemap, required_imts,
                        site_fields=('lon', 'lat', 'vs30')):
     """
-    build a copy of the ShakeMap with only the relevant IMTs
+    build a copy of the ShakeMap with only the relevant IMTs, keeping
+    the conditional between-event standard deviation tau, if any
 
     :param shakemap: shakemap array which should be filtered
     :param required_imts: imts to keep in shakemap array
@@ -116,10 +131,14 @@ def filter_unused_imts(shakemap, required_imts,
     dt = [(imt, F32) for imt in sorted(required_imts)]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
+    fields = ['val', 'std']
+    if _has_tau(shakemap, required_imts):
+        dtlist.append(('tau', dt))
+        fields.append('tau')
     data = numpy.zeros(len(shakemap), dtlist)
     for name in site_fields:
         data[name] = shakemap[name]
-    for name in ('val', 'std'):
+    for name in fields:
         for im in required_imts:
             data[name][im] = shakemap[name][im]
     return data

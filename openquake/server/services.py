@@ -43,7 +43,7 @@ from openquake.engine.aelo import get_params_from
 from openquake.engine.export.core import DataStoreExportError, export_from_db
 from openquake.hazardlib import valid
 from openquake.hazardlib.shakemap.validate import (
-    IMPACT_APPROACHES, impact_validate)
+    IMPACT_APPROACHES, IMPACT_IMTS, impact_validate)
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.server.internal_api import (
     ApiError, _pairs, _split, _uri_builder, json_response)
@@ -241,8 +241,7 @@ def create_impact_job(params, username, job_owner_email, build_urls,
     if rupdic['approach'] == 'use_shakemap_from_usgs':
         params['secondary_perils'] = (
             'AllstadtEtAl2022Landslides, AllstadtEtAl2022Liquefaction')
-        params['intensity_measure_types'] = (
-            'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)')
+        params['intensity_measure_types'] = IMPACT_IMTS['shakemap']
     [jobctx] = engine.create_jobs(
         [params], config.distribution.log_level, user_name=username)
     urls = build_urls(jobctx.calc_id)
