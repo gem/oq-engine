@@ -1706,35 +1706,45 @@ class ContextMaker(object):
                     f'ModifiableGMPE, please read {url}')
             # GSIMs opt in with two module-level functions and a key that
             # identifies the inputs to their shared computation.
-            functions = getattr(gsim, 'central_functions', None)
-            if functions is None:
+            central_functions = getattr(gsim, 'central_functions', None)
+            key = gsim.central_key if central_functions else None
+            if key is None:
                 out[:, g] = self.get_4MN(recarrays, gsim)
             else:
-                key = (functions, gsim.central_key)
-                groups.setdefault(key, []).append((g, gsim))
-        for (functions, _), branches in groups.items():
-            self._compute_group(recarrays, functions, branches, out)
+                groups.setdefault((central_functions, key), []).append(
+                    (g, gsim))
+        for (central_functions, _), g_gsim_pairs in groups.items():
+            compute_central, apply_shift = central_functions
+            self._compute_group(recarrays, g_gsim_pairs, out,
+                                compute_central, apply_shift)
         return out
 
     # Share the backbone and spatial lookups for one context slice at a time.
-    def _compute_group(self, ctxs, functions, branches, out):
-        compute_central, apply_shift = functions
-        backbone = branches[0][1]
-        for _, gsim in branches:
+    def _compute_group(self, ctxs, g_gsim_pairs, out, compute_central,
+                       apply_shift):
+        # Every branch has the same central_key, so use the first GSIM
+        # to compute the shared result.
+        first, backbone = g_gsim_pairs[0]
+        for _, gsim in g_gsim_pairs:
             gsim.adj = []
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
-            central = numpy.zeros((4, len(self.imts), len(ctx)))
+            central = out[:, first, :, slc]
+            central.fill(0)
             resolved = compute_central(
                 backbone, ctx, self.imts, *central, gra_mon=self.gra_mon)
-            for g, gsim in branches:
+            # Shift the first branch last since its slot holds the backbone.
+            for g, gsim in reversed(g_gsim_pairs):
                 branch = out[:, g, :, slc]
-                branch[:] = central
-                apply_shift(gsim, resolved, self.imts, branch[0])
+                if g != first:
+                    branch[:] = central
+                adj = apply_shift(gsim, resolved, self.imts, branch[0])
+                if adj is not None:
+                    gsim.adj.append(adj)
             start = slc.stop
-        for g, gsim in branches:
-            self._check_conv(out[:, g], gsim)
+        for g, gsim in g_gsim_pairs:
+            self._finish_mean_stds(out[:, g], gsim)
 
     def get_4MN(self, ctxs, gsim):
         """
@@ -1752,13 +1762,13 @@ class ContextMaker(object):
             if adj is not None:
                 gsim.adj.append(adj)
             start = slc.stop
-        if gsim.adj:
-            gsim.adj = numpy.concatenate(gsim.adj)
-        self._check_conv(out, gsim)
+        self._finish_mean_stds(out, gsim)
         return out
 
-    # check the stddevs and apply the horizontal component conversion
-    def _check_conv(self, out, gsim):
+    # Collect adjustments for PoEs, check stddevs and convert components.
+    def _finish_mean_stds(self, out, gsim):
+        if gsim.adj:
+            gsim.adj = numpy.concatenate(gsim.adj)
         if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
             raise ValueError('Total StdDev is zero for %s' % gsim)
         if self.conv:

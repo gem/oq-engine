@@ -25,6 +25,8 @@ Module exports :class:`AbrahamsonEtAl2014`
 import numpy as np
 from scipy import interpolate
 
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -524,6 +526,12 @@ def get_epistemic_sigma(ctx):
     return sigma_epi
 
 
+# Apply the same epistemic factor to every IMT in a branch.
+def _apply_nshm_shift(gsim, ctx, imts, mean):
+    if len(imts) and gsim.sigma_mu_epsilon:
+        mean[:len(imts)] += gsim.sigma_mu_epsilon * get_epistemic_sigma(ctx)
+
+
 class AbrahamsonEtAl2014(GMPE):
     """
     Implements GMPE by Abrahamson, Silva and Kamai developed within the
@@ -577,7 +585,8 @@ class AbrahamsonEtAl2014(GMPE):
         self.usgs_basin_scaling = usgs_basin_scaling
         self.cybershake_basin_adj = cybershake_basin_adj
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -606,11 +615,16 @@ class AbrahamsonEtAl2014(GMPE):
             mean[m] += _get_regional_term(
                 self.region, C, imt, ctx.vs30, ctx.rrup)
 
-            mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
             # get standard deviations
             sig[m], tau[m], phi[m] = _get_stddevs(
                 self.region, C, imt, ctx, sa1180)
+
+        if apply_shift:
+            _apply_nshm_shift(self, ctx, imts, mean)
+
+    central_functions = (compute_without_shift, _apply_nshm_shift)
+    central_key = sigma_mu_key(compute)
 
     #: Coefficient tables as per annex B of Abrahamson et al. (2014)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

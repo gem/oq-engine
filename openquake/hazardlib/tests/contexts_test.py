@@ -48,6 +48,8 @@ from openquake.hazardlib.geo.surface.planar import (
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
+from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput
 from openquake.hazardlib.rmap_maker import get_cmakers
 from openquake.hazardlib.source_reader import (
@@ -469,6 +471,63 @@ class EstimateNctxsTestCase(unittest.TestCase):
                 self.cmaker.pointsource_distance = psdist
                 self.assertEqual(contexts.estimate_nctxs(
                     self.cmaker, [self.src], sites), 4)
+
+
+class SharedGSIMTestCase(unittest.TestCase):
+    def test_europe_backbones(self):
+        fname = os.path.join(os.path.dirname(mosaic.__file__),
+                             'EUR', 'in', 'gmmLT.xml')
+        trts = ('Shallow Default', 'Craton', 'Subduction Interface',
+                'Subduction Inslab', 'Non-Subduction Deep',
+                'Iceland Atlantic Active Region')
+        gsims_by_trt = GsimLogicTree(fname, trts).values
+        for trt in trts:
+            with self.subTest(trt=trt):
+                cm = contexts.simple_cmaker(gsims_by_trt[trt],
+                                            ['PGA', 'SA(0.5)'])
+                ctx = cm.new_ctx(2)
+                ctx.mag = [6.0, 7.2]
+                ctx.rrup = [30.0, 110.0]
+                ctx.vs30 = [300.0, 900.0]
+                if 'rjb' in ctx.dtype.names:
+                    ctx.rjb = ctx.rrup - 5
+                if 'hypo_depth' in ctx.dtype.names:
+                    ctx.hypo_depth = [18.0, 55.0]
+                if 'xvf' in ctx.dtype.names:
+                    ctx.xvf = [-80.0, 80.0]
+                with mock.patch.object(cm, '_compute_group',
+                                       wraps=cm._compute_group) as grouped:
+                    actual = cm.get_mean_stds([ctx[:1], ctx[1:]])
+                groups = [call.args[1] for call in grouped.call_args_list]
+                sizes = [len(pairs) for pairs in groups]
+                self.assertEqual(sizes.count(5), 3)
+                expected = numpy.stack([
+                    cm.get_4MN([ctx[:1], ctx[1:]], gsim)
+                    for gsim in cm.gsims], axis=1)
+                numpy.testing.assert_array_equal(actual, expected)
+
+    def test_nshmp_preserves_poe_adjustment(self):
+        gsims = [
+            valid.gsim(f'AbrahamsonEtAl2014NSHMP{suffix}')
+            for suffix in ('Lower', 'Mean', 'Upper')]
+        cm = contexts.simple_cmaker(gsims, ['PGA', 'SA(0.5)'])
+        ctx = cm.new_ctx(2)
+        ctx.mag = [5.8, 7.2]
+        ctx.rrup = [7.0, 40.0]
+        ctx.rjb = [5.0, 35.0]
+        ctx.vs30 = [300.0, 900.0]
+        ctx.dip = 60.0
+        ctx.width = 15.0
+        expected = numpy.stack([cm.get_4MN([ctx], gsim)
+                                for gsim in cm.gsims], axis=1)
+        adj = [gsim.adj.copy() for gsim in cm.gsims]
+        with mock.patch.object(cm, '_compute_group',
+                               wraps=cm._compute_group) as grouped:
+            actual = cm.get_mean_stds([ctx])
+        grouped.assert_called_once()
+        numpy.testing.assert_array_equal(actual, expected)
+        for gsim, expected_adj in zip(cm.gsims, adj):
+            numpy.testing.assert_array_equal(gsim.adj, expected_adj)
 
 
 class CollapseCtxTestCase(unittest.TestCase):

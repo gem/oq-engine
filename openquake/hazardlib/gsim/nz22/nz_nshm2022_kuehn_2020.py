@@ -46,12 +46,14 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.kuehn_2020 import (
     _get_ln_z_ref,
     _infer_z,
     get_mean_values,
-    get_sigma_mu_adjustment,
+    _apply_sigma_mu,
     KuehnEtAl2020SInter,
     CONSTS,
     REGION_TERMS_IF,
@@ -233,7 +235,8 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 self.__class__.REQUIRES_SITES_PARAMETERS
 
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -300,11 +303,6 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                     mean[m] += get_basin_term(C, ctx, self.region)
                 mean[m] += get_backarc_term(trt, imt, ctx)
 
-            # Apply the sigma mu adjustment if necessary
-            if self.sigma_mu_epsilon:
-                sigma_mu_adjust = get_sigma_mu_adjustment(
-                    self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
-                mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
             # Get standard deviations
             if self.modified_sigma:
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(
@@ -314,6 +312,13 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 phi[m] = C["phi"]
                 sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
+        if apply_shift:
+            _apply_sigma_mu(self, ctx, imts, mean)
+
+
+
+    central_functions = (compute_without_shift, _apply_sigma_mu)
+    central_key = sigma_mu_key(compute, 'gmpe_table')
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
     #: Supported tectonic region type is subduction in-slab

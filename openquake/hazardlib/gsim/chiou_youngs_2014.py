@@ -26,7 +26,9 @@ import numpy as np
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
-from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
+from openquake.hazardlib.gsim.abrahamson_2014 import _apply_nshm_shift
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -753,7 +755,8 @@ class ChiouYoungs2014(GMPE):
         if not hasattr(self, "COEFFS_EMME"):
             self.COEFFS_EMME = False
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -772,7 +775,6 @@ class ChiouYoungs2014(GMPE):
 
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
-                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             
             else:
@@ -789,9 +791,14 @@ class ChiouYoungs2014(GMPE):
                     if repr(imt).startswith("SA") and imt.period <= 0.3 and \
                         not self.COEFFS_EMME else imt_mean
                 
-                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
+
+        if apply_shift:
+            _apply_nshm_shift(self, ctx, imts, mean)
+
+    central_functions = (compute_without_shift, _apply_nshm_shift)
+    central_key = sigma_mu_key(compute)
 
     #: Coefficient tables are constructed from values in tables 1 - 5
     COEFFS = CoeffsTable(sa_damping=5, table="""\

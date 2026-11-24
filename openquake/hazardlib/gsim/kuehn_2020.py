@@ -41,6 +41,8 @@ import os
 import h5py
 from scipy.interpolate import RegularGridInterpolator
 
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -738,6 +740,15 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
     return sig, tau, phi
 
 
+# Apply the final epistemic mean shift for this branch.
+def _apply_sigma_mu(gsim, ctx, imts, mean):
+    if gsim.sigma_mu_epsilon:
+        for m, imt in enumerate(imts):
+            sigma_mu = get_sigma_mu_adjustment(
+                gsim.sigma_mu_model, imt, ctx.mag, ctx.rrup)
+            mean[m] += gsim.sigma_mu_epsilon * sigma_mu
+
+
 class KuehnEtAl2020SInter(GMPE):
     """
     Implements the NGA Subduction model of Kuehn et al. (2020)
@@ -884,7 +895,8 @@ class KuehnEtAl2020SInter(GMPE):
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -945,15 +957,16 @@ class KuehnEtAl2020SInter(GMPE):
                 # Apply Alaska 2023 bias adjustment
                 mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
 
-            # Apply the sigma mu adjustment if necessary
-            if self.sigma_mu_epsilon:
-                sigma_mu_adjust = get_sigma_mu_adjustment(
-                    self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
-                mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
-
             # Get standard deviations
             sig[m], tau[m], phi[m] = get_std_dev(
                 C, C_PGA, ctx, pga1100, self.ak23_cb14_sig)
+
+        if apply_shift:
+            _apply_sigma_mu(self, ctx, imts, mean)
+
+    central_functions = (compute_without_shift, _apply_sigma_mu)
+    # gmpe_table is a marker for magnitude splitting in shifted branches.
+    central_key = sigma_mu_key(compute, 'gmpe_table')
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:

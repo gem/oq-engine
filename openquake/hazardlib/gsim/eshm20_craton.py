@@ -23,6 +23,8 @@ import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, branch_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
@@ -124,6 +126,13 @@ def get_stddevs(ergodic, tau_model, TAU, PHI_SS, imt, ctx):
     tau = TAU_EXECUTION[tau_model](imt, ctx.mag, TAU)
     sigma = np.sqrt(tau ** 2. + phi ** 2.)
     return [sigma, tau, phi]
+
+
+# Apply the final epistemic mean shift for this branch.
+def _apply_sigma_mu(gsim, ctx, imts, mean):
+    if gsim.epsilon:
+        for m, imt in enumerate(imts):
+            mean[m] += gsim.epsilon * gsim.COEFFS[imt]["sigma_mu"]
 
 
 class ESHM20Craton(GMPE):
@@ -238,7 +247,8 @@ class ESHM20Craton(GMPE):
         self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
                                              self.phi_ss_quantile)
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         Returns the mean and standard deviations
         """
@@ -262,9 +272,12 @@ class ESHM20Craton(GMPE):
             sig[m], tau[m], phi[m] = get_stddevs(
                 self.ergodic, self.tau_model, self.TAU, self.PHI_SS,
                 imt, ctx)
-            if self.epsilon:
-                # If requested, apply epistemic uncertainty
-                mean[m] += (self.epsilon * C["sigma_mu"])
+
+        if apply_shift:
+            _apply_sigma_mu(self, ctx, imts, mean)
+
+    central_functions = (compute_without_shift, _apply_sigma_mu)
+    central_key = branch_key(compute, 'epsilon')
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                    e1                 b1                    b2                  b3                  c1                   c2                    c3            sigma_mu

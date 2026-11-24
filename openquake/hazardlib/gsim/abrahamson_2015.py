@@ -28,6 +28,8 @@ Module exports :class:`AbrahamsonEtAl2015`
 """
 import numpy as np
 
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -282,6 +284,14 @@ def _compute_site_response_term(C, ctx, pga1000):
     return site_resp_term
 
 
+# Apply the final epistemic mean shift for this branch.
+def _apply_sigma_mu(gsim, ctx, imts, mean):
+    if gsim.sigma_mu_epsilon:
+        slab = gsim.trt == const.TRT.SUBDUCTION_INTRASLAB
+        for m, imt in enumerate(imts):
+            mean[m] += get_stress_factor(imt, slab) * gsim.sigma_mu_epsilon
+
+
 class AbrahamsonEtAl2015SInter(GMPE):
     """
     Implements the Subduction GMPE developed by Norman Abrahamson, Nicholas
@@ -372,7 +382,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
         else:
             self.faba_model = None
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -399,15 +410,16 @@ class AbrahamsonEtAl2015SInter(GMPE):
                     self.kind, self.trt, C, ctx, self.faba_model) +
                 _compute_site_response_term(
                     C, ctx, pga1000))
-            if self.sigma_mu_epsilon:
-                sigma_mu = get_stress_factor(
-                    imt, self.trt == const.TRT.SUBDUCTION_INTRASLAB)
-                mean[m] += sigma_mu * self.sigma_mu_epsilon
-
             sig[m] = C["sigma"] if self.ergodic else C["sigma_ss"]
             tau[m] = C['tau']
             phi[m] = C["phi"] if self.ergodic else np.sqrt(
                 C["sigma_ss"] ** 2. - C["tau"] ** 2.)
+
+        if apply_shift:
+            _apply_sigma_mu(self, ctx, imts, mean)
+
+    central_functions = (compute_without_shift, _apply_sigma_mu)
+    central_key = sigma_mu_key(compute)
 
     # Period-dependent coefficients (Table 3)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

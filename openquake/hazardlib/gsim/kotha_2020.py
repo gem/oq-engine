@@ -33,6 +33,8 @@ from shapely.geometry import shape
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.geo.packager import fiona
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
@@ -401,6 +403,19 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
     return [np.sqrt(tau ** 2. + phi ** 2.), tau, phi]
 
 
+# Apply the final epistemic mean shift for this branch.
+def _apply_mean_shift(gsim, ctx, imts, mean):
+    if gsim.dl2l:
+        # The source-region parameter is specified explicitly.
+        for m, imt in enumerate(imts):
+            mean[m] += gsim.dl2l[imt]["dl2l"]
+    elif gsim.sigma_mu_epsilon and gsim.kind != 'regional':
+        for m, imt in enumerate(imts):
+            sigma_mu = get_sigma_mu_adjustment(
+                gsim.kind, gsim.COEFFS[imt], imt, ctx)
+            mean[m] += gsim.sigma_mu_epsilon * sigma_mu
+
+
 class KothaEtAl2020(GMPE):
     """
     Implements the first complete version of the newly derived GMPE
@@ -512,7 +527,8 @@ class KothaEtAl2020(GMPE):
         else:
             self.c3 = None
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -556,20 +572,16 @@ class KothaEtAl2020(GMPE):
                 mean[m] -= np.log(100.0 * g)
             sig[m], tau[m], phi[m] = get_stddevs(
                 self.kind, self.ergodic, phi_s2s, C, ctx, imt)
-            if self.dl2l:
-                # The source-region parameter is specified explicity
-                mean[m] += self.dl2l[imt]["dl2l"]
-
-            elif self.kind == 'regional':
+            if self.kind == 'regional' and not self.dl2l:
                 dl2l = get_dl2l(self.tec_vals, tec_feat_idx, str(imt),
                                 self.delta_l2l_epsilon)
                 mean[m] += dl2l
 
-            elif self.sigma_mu_epsilon:
-                # epistemic uncertainty factor (sigma_mu) multiplied by
-                # the number of standard deviations
-                sigma_mu = get_sigma_mu_adjustment(self.kind, C, imt, ctx)
-                mean[m] += self.sigma_mu_epsilon * sigma_mu
+        if apply_shift:
+            _apply_mean_shift(self, ctx, imts, mean)
+
+    central_functions = (compute_without_shift, _apply_mean_shift)
+    central_key = sigma_mu_key(compute)
 
     # Coefficients obtained direclty from the regression outputs of
     # Kotha et al. (2020)
@@ -820,6 +832,7 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     REQUIRES_SITES_PARAMETERS = set(("region", "vs30", "vs30measured"))
 
     kind = "ESHM20"
+    central_key = sigma_mu_key(KothaEtAl2020.compute, 'dl2l')
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                   e1                 b1                  b2                  b3                  c1                   c2                   c3              tau_c3             phi_s2s         tau_event_0             tau_l2l               phi_0       d0_obs        d1_obs   phi_s2s_obs       d0_inf        d1_inf   phi_s2s_inf

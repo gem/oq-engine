@@ -24,6 +24,8 @@ Module exports :class:`AbrahamsonGulerce2020SInter`,
 import os
 import numpy as np
 
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -544,6 +546,14 @@ def get_epistemic_adjustment(C, rrup):
     return C["e1"] + C["e2"] * rrup_norm + C["e3"] * (rrup_norm ** 2.0)
 
 
+# Apply the final epistemic mean shift for this branch.
+def _apply_sigma_mu(gsim, ctx, imts, mean):
+    if gsim.sigma_mu_epsilon:
+        for m, imt in enumerate(imts):
+            sigma_mu = get_epistemic_adjustment(gsim.COEFFS[imt], ctx.rrup)
+            mean[m] += gsim.sigma_mu_epsilon * sigma_mu
+
+
 class AbrahamsonGulerce2020SInter(GMPE):
     """
     Implements the 2020 Subduction ground motion model of Abrahamson &
@@ -675,7 +685,8 @@ class AbrahamsonGulerce2020SInter(GMPE):
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -700,11 +711,6 @@ class AbrahamsonGulerce2020SInter(GMPE):
                 # Apply Alaska 2023 bias adjustment
                 mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
 
-            if self.sigma_mu_epsilon:
-                # Apply an epistemic adjustment factor
-                mean[m] += (self.sigma_mu_epsilon *
-                            get_epistemic_adjustment(C, ctx.rrup))
-
             # Get the standard deviations
             tau_m, phi_m = get_tau_phi(C, C_PGA, self.region, imt.period,
                                        ctx.rrup, ctx.vs30, pga1000,
@@ -713,6 +719,12 @@ class AbrahamsonGulerce2020SInter(GMPE):
             phi[m] = phi_m
 
         sig[:] = np.sqrt(tau ** 2.0 + phi ** 2.0)
+
+        if apply_shift:
+            _apply_sigma_mu(self, ctx, imts, mean)
+
+    central_functions = (compute_without_shift, _apply_sigma_mu)
+    central_key = sigma_mu_key(compute)
 
     # Coefficients taken from digital files supplied by Norm Abrahamson
     COEFFS = CoeffsTable(sa_damping=5, table="""\

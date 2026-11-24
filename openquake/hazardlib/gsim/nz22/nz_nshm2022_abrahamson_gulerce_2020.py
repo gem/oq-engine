@@ -44,13 +44,15 @@ Module exports :class:`NZNSHM2022_AbrahamsonGulerce2020SInter`
 import numpy as np
 from scipy.interpolate import interp1d
 
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
     AbrahamsonGulerce2020SInter,
     get_acceleration_on_reference_rock,
-    get_epistemic_adjustment,
+    _apply_sigma_mu,
     get_mean_acceleration,
     get_tau_phi,
     SUPPORTED_REGIONS,)
@@ -125,7 +127,8 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
             apply_usa_adjustment=apply_usa_adjustment,
             sigma_mu_epsilon=sigma_mu_epsilon)
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -147,10 +150,6 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
                 pga1000,
                 imt,
                 self.apply_usa_adjustment)
-            if self.sigma_mu_epsilon:
-                # Apply an epistmic adjustment factor
-                mean[m] += self.sigma_mu_epsilon * get_epistemic_adjustment(
-                    C, ctx.rrup)
             # Get the standard deviations
             tau_m, phi_m = get_tau_phi(
                 C,
@@ -165,6 +164,13 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
             phi[m] = phi_m
         sig += np.sqrt(tau**2.0 + phi**2.0)
 
+        if apply_shift:
+            _apply_sigma_mu(self, ctx, imts, mean)
+
+
+
+    central_functions = (compute_without_shift, _apply_sigma_mu)
+    central_key = sigma_mu_key(compute)
 
 class NZNSHM2022_AbrahamsonGulerce2020SSlab(
     NZNSHM2022_AbrahamsonGulerce2020SInter

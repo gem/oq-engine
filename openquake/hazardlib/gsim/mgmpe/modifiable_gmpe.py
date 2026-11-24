@@ -24,6 +24,8 @@ import toml
 import numpy as np
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, configuration_key)
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 
@@ -669,6 +671,21 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
     return sorted(imts_req)
 
 
+MEDIAN_SCALING = {'set_scale_median_scalar', 'set_scale_median_vector'}
+INDEPENDENT_SCALING = MEDIAN_SCALING | {
+    'set_scale_total_sigma_scalar', 'set_scale_total_sigma_vector'}
+
+
+# Median scaling commutes with total sigma scaling. Reuse the original
+# modifiers in the order specified by the branch.
+def _apply_median_scaling(gsim, ctx, imts, mean):
+    for name, kwargs in gsim.params.items():
+        if name in MEDIAN_SCALING:
+            scale = globals()[name]
+            for m, imt in enumerate(imts):
+                scale(ctx, imt, mean[m], None, None, None, **kwargs)
+
+
 class ModifiableGMPE(GMPE):
     """
     This is a class to modify an underlying GMPE.
@@ -742,7 +759,18 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    central_functions = (compute_without_shift, _apply_median_scaling)
+
+    @property
+    def central_key(self):
+        if (type(self).compute is ModifiableGMPE.compute
+                and MEDIAN_SCALING.intersection(self.params)
+                and INDEPENDENT_SCALING.issuperset(self.params)):
+            return (type(self), configuration_key(
+                self.kwargs.items(), MEDIAN_SCALING | {'weight'}))
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -769,6 +797,8 @@ class ModifiableGMPE(GMPE):
         # Apply sequentially the modifications
         g = globals()
         for methname, kw in self.params.items():
+            if not apply_shift and methname in MEDIAN_SCALING:
+                continue
 
             # CEUS 2020 site term needs ref PGA stored
             if methname in ['ceus2020_site_term']:

@@ -25,7 +25,9 @@ import numpy as np
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
-from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
+from openquake.hazardlib.gsim.abrahamson_2014 import _apply_nshm_shift
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -343,7 +345,8 @@ class BooreEtAl2014(GMPE):
         if region != "nobasin":  # z1pt0 is used if period >= 0.65
             self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -365,9 +368,13 @@ class BooreEtAl2014(GMPE):
                                   C, pga_rock, ctx, imt, ctx.rjb,
                                   self.usgs_basin_scaling,
                                   self.cybershake_basin_adj))
-            if self.sigma_mu_epsilon:
-                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
+
+        if apply_shift:
+            _apply_nshm_shift(self, ctx, imts, mean)
+
+    central_functions = (compute_without_shift, _apply_nshm_shift)
+    central_key = sigma_mu_key(compute)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2       tau1       tau2

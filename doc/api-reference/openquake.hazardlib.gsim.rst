@@ -447,6 +447,12 @@ bradley_2013
     :undoc-members:
     :show-inheritance:
 
+branching
+---------
+
+.. automodule:: openquake.hazardlib.gsim.branching
+    :members:
+
 campbell_1997
 ---------------------------------------------
 

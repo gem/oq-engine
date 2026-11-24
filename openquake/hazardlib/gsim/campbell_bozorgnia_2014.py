@@ -24,7 +24,9 @@ Module exports :class:`CampbellBozorgnia2014`
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
-from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
+from openquake.hazardlib.gsim.abrahamson_2014 import _apply_nshm_shift
+from openquake.hazardlib.gsim.branching import (
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -521,7 +523,8 @@ class CampbellBozorgnia2014(GMPE):
         self.usgs_basin_scaling = usgs_basin_scaling
         self.cybershake_basin_adj = cybershake_basin_adj
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                apply_shift=True):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -565,10 +568,15 @@ class CampbellBozorgnia2014(GMPE):
                 idx = mean[m] <= pga
                 mean[m, idx] = pga[idx]
 
-            mean[m] += self.sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
             sig[m], tau[m], phi[m] = compute_sigma(
                 C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b)
+
+        if apply_shift:
+            _apply_nshm_shift(self, ctx, imts, mean)
+
+    central_functions = (compute_without_shift, _apply_nshm_shift)
+    central_key = sigma_mu_key(compute)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0     c1      c2      c3      c4      c5     c6     c7     c8      c9    c10     c11     c12    c13      c14     c15    c16      c17     c18      c19      c20  Dc20     a2     h1     h2      h3      h5      h6    k1      k2     k3   phi1   phi2   tau1   tau2  rho1pga  rho2pga      philnAF   phiC  rholny
