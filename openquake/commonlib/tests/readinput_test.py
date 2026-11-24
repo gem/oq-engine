@@ -1009,6 +1009,51 @@ class AllowedDirTestCase(unittest.TestCase):
         self.assert_refused()
         self.assertEqual(os.listdir(self.outside), ['exposure.zip'])
 
+    def check_shakemap_uri(self, uri):
+        # return the error raised for an uploaded job with the given
+        # shakemap_uri, or None if it is accepted
+        with open(self.job_ini) as f:
+            ini = f.read()
+        job_ini = os.path.join(self.upload, 'job_shakemap.ini')
+        with open(job_ini, 'w') as f:
+            f.write(ini + '\n[shakemap]\nshakemap_uri = %s\n' % uri)
+        try:
+            readinput.get_oqparam(
+                job_ini, validate=False, allowed_dir=self.upload)
+        except ValueError as exc:
+            return str(exc)
+
+    def test_shakemap_uri(self):
+        # the ShakeMap files must be uploaded or downloaded from the USGS
+        grid = os.path.join(self.outside, 'grid.xml')
+        with open(grid, 'w') as f:
+            f.write('<shakemap_grid/>')
+        usgs = 'https://earthquake.usgs.gov/product/shakemap/x/grid.xml'
+        self.assertIsNone(self.check_shakemap_uri(
+            '{"kind": "usgs_xml", "grid_url": "%s"}' % usgs))
+        self.assertIsNone(self.check_shakemap_uri(
+            '{"kind": "usgs_id", "id": "us7000abcd"}'))
+        npy = os.path.join(self.upload, 'shakemap.npy')
+        with open(npy, 'wb') as f:
+            f.write(b'')
+        self.assertIsNone(self.check_shakemap_uri(
+            '{"kind": "file_npy", "fname": "shakemap.npy"}'))
+        for url in ['https://example.com/grid.xml',
+                    'http://localhost:8800/grid.xml',
+                    'https://earthquake.usgs.gov.example.com/grid.xml',
+                    'https://earthquake.usgs.gov@example.com/grid.xml',
+                    'http://earthquake.usgs.gov/grid.xml',
+                    'file:' + grid, 'ftp://earthquake.usgs.gov/grid.xml']:
+            err = self.check_shakemap_uri(
+                '{"kind": "usgs_xml", "grid_url": "%s"}' % url)
+            self.assertIn('must be among the uploaded files or come from',
+                          err or 'accepted: %s' % url)
+        # the command line is not restricted
+        oq = readinput.get_oqparam(
+            os.path.join(self.upload, 'job_shakemap.ini'), validate=False)
+        self.assertEqual(oq.shakemap_uri['grid_url'],
+                         'ftp://earthquake.usgs.gov/grid.xml')
+
     def test_subdirectories_of_the_upload(self):
         # a job.ini in a subdirectory can use the other uploaded files
         sub = os.path.join(self.upload, 'sub')

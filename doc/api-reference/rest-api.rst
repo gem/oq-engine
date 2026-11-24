@@ -1068,7 +1068,10 @@ POST /v1/calc/run
 Run a new calculation with uploaded files (or a single ``job.zip``).
 All the input files of an uploaded job, including those referenced by other
 input files, must be among the uploaded files: paths leading outside of them
-are refused.
+are refused. The ShakeMap files referenced by ``shakemap_uri`` must also be
+among the uploaded files, or be URLs of an allowed ShakeMap service
+(``SHAKEMAP_SERVICES`` in ``openquake.hazardlib.shakemap.parsers``, currently
+``https://earthquake.usgs.gov`` only).
 
 Parameters::
 

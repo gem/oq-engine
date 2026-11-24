@@ -58,6 +58,9 @@ from openquake.hazardlib.source.rupture import (
 
 NOT_FOUND = "No file with extension '.%s' file found"
 US_GOV = 'https://earthquake.usgs.gov'
+# services from which the jobs submitted via the WebUI can download
+# ShakeMap files (see readinput.check_shakemap_uri)
+SHAKEMAP_SERVICES = [US_GOV]
 USGS_TIMEOUT = 30
 USGS_MAX_ATTEMPTS = 5
 USGS_RANGE_CHUNK_SIZE = 1024 * 1024

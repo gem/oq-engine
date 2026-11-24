@@ -68,7 +68,8 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.geo.regular_grid import regular_grid
-from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
+from openquake.hazardlib.shakemap.parsers import (
+    convert_to_oq_xml, SHAKEMAP_SERVICES)
 from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.pfd.gsim import get_pfd_gsim_lt
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
@@ -281,6 +282,29 @@ def check_inside(fname, allowed_dir):
         pass
     raise ValueError('Invalid path %s: the input files must be among the '
                      'uploaded files' % os.path.relpath(fname, allowed_dir))
+
+
+def check_shakemap_uri(oqparam):
+    """
+    Raise a ValueError unless the ShakeMap files of the job are among its
+    input files or are downloaded from one of the SHAKEMAP_SERVICES. Used
+    for the jobs submitted via the WebUI.
+    """
+    uri = oqparam.shakemap_uri
+    if not isinstance(uri, dict):
+        return
+    for key, val in uri.items():
+        if not (key == 'fname' or key.endswith('_url')):
+            continue
+        if val in oqparam._input_files:  # local file, see get_input_files
+            continue
+        # the trailing slash makes sure that the host is the service host
+        if any(val.startswith(service.rstrip('/') + '/')
+               for service in SHAKEMAP_SERVICES):
+            continue
+        raise ValueError('Invalid shakemap_uri %s=%s: the ShakeMap files must '
+                         'be among the uploaded files or come from %s'
+                         % (key, val, ', '.join(SHAKEMAP_SERVICES)))
 
 
 def normpath(fnames, base_path, allowed_dir=None):
@@ -598,6 +622,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True, allowed_dir=None):
         for fname in oqparam._input_files:
             if fname != '<in-memory>':
                 check_inside(fname, allowed_dir)
+        check_shakemap_uri(oqparam)
     if validate:  # always true except from oqzip
         oqparam.validate()
     return oqparam
