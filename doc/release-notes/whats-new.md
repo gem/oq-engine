@@ -354,6 +354,15 @@ This operation had been the main performance bottleneck.
 Scenario aggregate risk quantiles are now correctly computed from the
 total portfolio losses per event.
 
+Scenario risk calculations with a `rupture_dict`, a `region_grid_spacing`,
+a site model and an exposure now compute the ground-motion fields with
+the site parameters of the site model. Previously the default site
+parameters were used, giving wrong losses or no losses at all.
+
+The job.zip exported from a calculation with a `region_grid_spacing` now
+reruns on the same sites. Previously the rerun inferred a different grid
+from the exported exposure.
+
 Damage calculations now handle multiple loss types and
 perils without overstating undamaged buildings or producing incorrect
 building counts.
