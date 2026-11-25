@@ -111,6 +111,28 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertIn('/accounts/login/', resp['Location'])
 
+    def test_login_redirects_to_the_requested_page(self):
+        # use the in-process client, which skips the CSRF checks
+        client = django.test.Client()
+        resp = client.get('/engine/')
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(resp['Location'].endswith(
+            '/accounts/login/?next=/engine/'), resp['Location'])
+        resp = client.get(resp['Location'])
+        self.assertContains(resp, 'name="next" value="/engine/"')
+        credentials = dict(username=self.user0.username,
+                           password=self.password0)
+        resp = client.post('/accounts/login/', dict(credentials,
+                                                    next='/engine/'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp['Location'], '/engine/')
+        # pages of other sites are not accepted
+        client.logout()
+        resp = client.post('/accounts/login/', dict(
+            credentials, next='https://example.com/'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertNotIn('example.com', resp['Location'])
+
     def test_share_complete_job(self):
         job_dic = dict(calculation_mode='event_based',
                        description='test_share_complete_job')
