@@ -735,7 +735,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='preclassical',
                       calibration_only='true', concurrent_tasks='4')
         oq = self.calc.datastore['oqparam']
-        self.assertEqual(oq.ps_grid_spacing, 50.)
+        self.assertEqual(oq.ps_grid_spacing, 45.)
         calib = self.calc.datastore.read_df('calibration')
         self.assertEqual(len(calib), 4)
         self.assertNotIn('source_info', self.calc.datastore)
@@ -753,9 +753,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_43.__file__, 'job.ini',
                       calculation_mode='preclassical', concurrent_tasks='4')
         oq = self.calc.datastore['oqparam']
-        self.assertEqual(oq.ps_grid_spacing, 50.)
+        self.assertEqual(oq.ps_grid_spacing, 45.)
         self.assertEqual(oq.pointsource_distance['default'], 50.)
-        # 50 km is within the tolerance, so only its 4 distances are tried
+        # 45 km is within the tolerance, so only its 4 distances are tried
         calib = self.calc.datastore.read_df('calibration')
         self.assertEqual(len(calib), 4)
         hc_id = str(self.calc.datastore.calc_id)
