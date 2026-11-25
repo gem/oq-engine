@@ -25,16 +25,16 @@ classifiers = [
 # Core dependencies (simplified based on common engine requirements)
 # Note: oq-engine uses requirements-py3x.txt files for exact pinning
 dependencies = [
-    "numpy>=2.4.0",
-    "scipy~=1.17",
-    "pandas~=2.2",
-    "h5py>=3.13",
+    "numpy~=2.4.0",
+    "scipy~=1.17.0",
+    "pandas~=2.2.0",
+    "h5py~=3.13",
     "django~=5.2.0",
     "psutil",
     "requests",
     "pyzmq~=26.0.3; python_version <= '3.11'",
     "pyzmq~=26.2.0; python_version >  '3.11'",
-    "h3>=4.4",
+    "h3~=4.4.0",
 
     # unplanned deps
     "decorator~=5.1.1",

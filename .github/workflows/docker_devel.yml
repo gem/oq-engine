@@ -57,8 +57,8 @@ jobs:
           EMAIL_HOST=smtp.gmail.com
           EMAIL_PORT=587
           EMAIL_USE_TLS=True
-          EMAIL_USER=admin@reply.com
-          EMAIL_PASS=polhjuih@
+          EMAIL_HOST_USER=admin@reply.com
+          EMAIL_HOST_PASSWORD=polhjuih@
           EMAIL_SUPPORT=noreply@reply.com
           DJANGO_SETTINGS_MODULE=openquake.server.settings
           EOF
