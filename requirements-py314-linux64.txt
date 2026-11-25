@@ -2,6 +2,7 @@
 # GEM Mirror
 #
 https://wheelhouse.openquake.org/unified/onnxruntime-1.32.0-cp314-cp314-manylinux_2_28_x86_64.whl
+https://wheelhouse.openquake.org/unified/numpy-2.4.6-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/unified.test/gdal-3.13.3-cp314-cp314-manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/unified.test/pyproj-3.8.0-cp314-cp314-manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/unified.test/rasterio-1.5.2-cp314-cp314-manylinux_2_28_x86_64.whl

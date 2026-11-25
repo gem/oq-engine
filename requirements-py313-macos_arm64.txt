@@ -14,7 +14,7 @@ https://wheelhouse.openquake.org/unified/kiwisolver-1.4.7-cp313-cp313-macosx_11_
 https://wheelhouse.openquake.org/unified/llvmlite-0.49.0-cp313-cp313-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/unified/matplotlib-3.10.1-cp313-cp313-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/unified/numba-0.67.0-cp313-cp313-macosx_12_0_arm64.whl
-https://wheelhouse.openquake.org/unified/numpy-2.4.6-cp313-cp313-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/unified/numpy-2.4.6-cp313-cp313-macosx_14_0_arm64.whl
 https://wheelhouse.openquake.org/unified/onnxruntime-1.32.0-cp313-cp313-macosx_14_0_arm64.whl
 https://wheelhouse.openquake.org/unified/pandas-2.2.3-cp313-cp313-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/unified/pillow-13.0.0-cp313-cp313-macosx_11_0_arm64.whl
