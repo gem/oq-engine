@@ -79,8 +79,8 @@ jobs:
           echo "branch to test: ${BRANCH}"
           if [[ "$BRANCH" != "" ]]
           then
-          #$python install.py devel --version ${BRANCH}
-            python install.py devel --version ${BRANCH}
+          #$python install.py devel
+            python install.py devel
           else
           #$python install.py devel
             python install.py devel

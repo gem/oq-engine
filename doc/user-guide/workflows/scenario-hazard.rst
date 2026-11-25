@@ -33,6 +33,74 @@ proposed by Engler et al. (2022).
 To conditioning of ground shaking to observations in OpenQuake-engine, it is necessary to provide additional input files 
 and adjustments to the configuration file, as presented in the :ref:`input-models` section.
 
+Sampling ShakeMap ground motion fields
+--------------------------------------
+
+When retrieving a ShakeMap by USGS ID, the engine prefers
+``shake_result.hdf`` and falls back to ``grid.xml`` (with
+``uncertainty.xml``) only if the HDF product cannot be read. From either
+product the engine takes, at each grid point, the median and the total
+standard deviation :math:`\sigma_c` of the ground motion conditioned on the
+stations. ``shake_result.hdf`` also stores :math:`\tau_c`, the conditional
+standard deviation of the between-event term; its ``phi`` is the prior
+within-event standard deviation and is not used.
+
+Without correlation, the residuals are sampled independently with
+:math:`\sigma_c`. With a ``within_event_correlation_model`` (in impact jobs
+``LothBaker2013`` and ``AbrahamsonEtAl2014BetweenEvent`` by default), the
+engine uses the same sampler of the scenario calculations, i.e. circulant
+embedding for sites on a regular grid and a dense factorization otherwise,
+on the conditional ShakeMap values:
+
+.. math::
+
+   \ln Y_{ij} = \ln \mu_{ij} + \tau_{c,ij}\,\eta_j +
+   \phi_{c,ij}\,\varepsilon_{ij},
+   \qquad \phi_c = \sqrt{\sigma_c^2 - \tau_c^2}
+   \quad \text{(without truncation)},
+
+where :math:`i` is the site, :math:`j` the IMT, :math:`\mu` the ShakeMap
+median, :math:`\eta_j` a standard normal event term, common to all the
+sites and correlated across the IMTs by the
+``between_event_correlation_model`` (independent across the IMTs if no
+model is given), and :math:`\varepsilon_{ij}` a standard normal field,
+correlated in space and across the IMTs by the within-event model (and by
+the cross-IMT model, if any; with separate spatial and cross-IMT models
+the circulant embedding uses the cross-spectra
+:math:`c_{jk}\sqrt{S_j S_k}`, :math:`S_j` being the spectrum of the
+spatial correlation of the IMT :math:`j`, the stationary analogue of the
+dense factorization). The within-event variance is the conditional
+total variance minus the variance of the between-event term actually
+sampled, so that the uncertainty is not counted twice and the marginal
+variance :math:`\sigma_c^2` of ShakeMap is preserved; :math:`\tau_c` is
+clipped to :math:`\sigma_c` to absorb the single precision rounding of the
+products. When :math:`\tau_c` is not available (``grid.xml`` products) the
+field :math:`\varepsilon` is scaled by :math:`\sigma_c` and the
+between-event model is not used (a warning is logged). With a finite
+truncation level :math:`\phi_c` is adjusted as explained below.
+
+This is an approximation. The realizations reproduce the conditional
+marginal distributions of ShakeMap, but their spatial and cross-IMT
+dependence is the one of the selected correlation models, not the
+station-conditioned covariance of ShakeMap, which is not available in
+``shake_result.hdf``. We assume that the selected correlation models
+represent reasonably well the spatial and cross-IMT dependence of the
+conditioned ground motion; the actual dependence can differ, especially
+close to the stations, where the conditioning reduces the uncertainty the
+most. Reconstructing the station-conditioned dependence (for instance with
+a Matheron update of unconditional realizations) is left to future work.
+In impact mode the outputs page reports the correlation models and the
+strategy actually used.
+
+As in ordinary scenario calculations, a finite truncation level reduces
+the residual variances by the variance :math:`v_T` of the truncated
+normal, and a zero truncation level reproduces the ShakeMap median. The
+between-event models truncate the IMTs jointly, so their event terms have
+smaller variances than :math:`v_T` (up to ~25% smaller at truncation
+level 1); the engine estimates them and enlarges the within-event
+variance accordingly, so that the marginal variance is
+:math:`v_T\,\sigma_c^2` for every IMT.
+
 
 The concept of “mean” ground motion field
 -----------------------------------------

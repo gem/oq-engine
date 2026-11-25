@@ -1,4 +1,20 @@
   [Michele Simionato]
+  * Changed `oq export -e zip job` to return an archive, plus a few fixes
+  * Internal: add `oq compare errors` to measure the errors of the
+    ps_grid_spacing approximation
+
+  [Marco Pagani, Christopher Brooks]
+  * Add an experimental implementation of the Sung et al. (2022) non-ergodic
+    GMM for France. Experimental status will be removed once implementation
+    can be validated against independent test results provided by the model
+    authors (for now unit tests are circular). QA test added to classical/case_21.
+  
+  [Michele Simionato]
+  * Fixed scenario calculations with a `rupture_dict`, a region grid, a site
+    model and an exposure: the complete site collection was not associated
+    to the site model, so the GMFs were computed with the default site
+    parameters, giving wrong losses or no losses at all
+  * Fixed export_job_zip in presence of a region_grid_spacing
   * Fixed default GSIM logic-tree weights not being applied to IMTs without
     explicit IMT-specific weights. Thanks to Mathieu Primeau for the report.
 

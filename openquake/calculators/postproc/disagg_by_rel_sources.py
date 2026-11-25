@@ -106,6 +106,9 @@ def middle(arr):
 
 
 def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
+    # the workers read the multifault sections from the datastore, so it
+    # cannot stay open in write mode while they run
+    dstore.swmr_on()  # must come before the Starmap
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
     rel_ids_by_imt = general.AccumDict(accum={})
     src2idx = {}  # sid, src_id -> idx

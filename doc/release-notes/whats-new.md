@@ -143,6 +143,11 @@ realizations and logic-tree views.
 [Amir Banimahd](https://github.com/banimahd) contributed the 
 Banimahd et al. (2026) ground-motion model for Türkiye.
 
+`SungEtAl2022NonErgodic` is an experimental implementation of the
+Sung et al. (2022) ground-motion model for France. It reads site-specific
+adjustments from an HDF5 file and can use either the posterior mean or a
+sampled realization of the adjustment field.
+
 [Savas Ceylan](https://github.com/sceylan) contributed period-selectable 
 Swiss site-specific SA corrections, which can be applied with `ModifiableGMPE`;
 only the site columns for the selected periods are required.
@@ -353,6 +358,15 @@ This operation had been the main performance bottleneck.
 
 Scenario aggregate risk quantiles are now correctly computed from the
 total portfolio losses per event.
+
+Scenario risk calculations with a `rupture_dict`, a `region_grid_spacing`,
+a site model and an exposure now compute the ground-motion fields with
+the site parameters of the site model. Previously the default site
+parameters were used, giving wrong losses or no losses at all.
+
+The job.zip exported from a calculation with a `region_grid_spacing` now
+reruns on the same sites. Previously the rerun inferred a different grid
+from the exported exposure.
 
 Damage calculations now handle multiple loss types and
 perils without overstating undamaged buildings or producing incorrect

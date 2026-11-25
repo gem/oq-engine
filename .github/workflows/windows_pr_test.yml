@@ -71,10 +71,32 @@ jobs:
           }
           else
           {
-            Write-Host "Install on PR"
-            Write-Host "Head ref: $env:GITHUB_HEAD_REF"
-            Write-Host "python install.py devel --version ${env:GITHUB_HEAD_REF}"
-            python install.py devel --version ${env:GITHUB_HEAD_REF}
+            echo "${Env:environment}"
+            Write-Host $Env:GITHUB_REF
+            echo "Branch environment"
+            Write-Host $Env:BRANCH
+            git status
+            set PIP_DEFAULT_TIMEOUT=100
+            python -m pip install pip --upgrade
+            #echo Branch to test %BRANCH%
+            # Install the checked-out repository in devel mode.
+            write-Host "Branch to test $($Env:BRANCH)"
+            #
+            if ($Env:BRANCH)
+            {
+              Write-Host "Install with workflow_dispatch"
+              Write-Host "python install.py devel"
+              python install.py devel
+            }
+            else
+            {
+              Write-Host "Install on PR"
+              Write-Host "Head ref: $env:GITHUB_HEAD_REF"
+              Write-Host "python install.py devel"
+              python install.py devel
+            }
+            C:\Users\runneradmin\openquake\Scripts\activate.ps1
+            python -m pip install pytest flake8
           }
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           python -m pip install pytest flake8

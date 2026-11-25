@@ -29,6 +29,7 @@ from openquake.calculators.base import run_calc, expose_outputs
 from openquake.calculators.views import text_table
 from openquake.calculators.checkers import check, assert_close
 from openquake.calculators.export import export
+from openquake.engine import impact
 
 cd = pathlib.Path(__file__).parent
 aac = numpy.testing.assert_allclose
@@ -119,13 +120,16 @@ def test_impact(n):
                 # [job.ini, exposure.xml, rupture.csv, ...]
                 fnames = check_export_job_zip(calc.datastore)
 
-                # repeat the calculation starting from job.zip unzipped
-                calc2, log2 = check(fnames[0])
+                # repeat the calculation starting from job.zip unzipped;
+                # the exported assets are already sampled, so OQ_SAMPLE_ASSETS
+                # must not be applied again
+                with patch.dict(os.environ):
+                    os.environ.pop('OQ_SAMPLE_ASSETS', None)
+                    calc2, log2 = check(fnames[0])
                 with log2:
                     expose_outputs(calc.datastore)
                     expose_outputs(calc2.datastore)
-                    # TODO: restore the check
-                    #  compare(calc.datastore, calc2.datastore)
+                    compare(calc.datastore, calc2.datastore)
 
 
 def test_impact5():
@@ -198,9 +202,35 @@ def test_shakemap():
         'structural_vulnerability.xml', 'taxonomy_mapping.csv',
         'sites.csv', 'assetcol.csv']
     try:
+        with open(fnames[1], encoding='utf8') as inp:
+            job_ini = inp.read()
+        assert 'shakemap_uri' not in job_ini
+        assert 'mmi_file' not in job_ini
+        assert 'rupture_file' not in job_ini
         run_calc(fnames[1])
     finally:
         # with open(fnames[1]) as f:
         #     print(f.read())
         for fname in fnames:
             os.remove(fname)
+
+
+@pytest.mark.parametrize('kw, level, expected', [
+    ({}, 1, (None, None)),  # the ShakeMap is used
+    ({'nodal_plane': 'NP1'}, 2, (None, None)),  # the rupture is built
+    ({'within_event_correlation_model': 'DuNing2021Interpolated',
+      'between_event_correlation_model': 'NoCrossCorrelation',
+      'nodal_plane': 'NP1'}, 2,
+     ('DuNing2021Interpolated', 'NoCrossCorrelation'))])
+def test_cli_correlation_models(kw, level, expected):
+    # oq impact passes the chosen models, if any, to impact_validate, which
+    # sets the defaults as for the web form
+    err = {'status': 'failed', 'error_msg': 'stop'}
+    with patch.object(impact, 'impact_validate',
+                      return_value=(None, {}, {}, err)) as validate:
+        impact.main_cmd('us6000t7zp', exposure_hdf5='exposure.hdf5',
+                        callback=lambda *args, **kw: None, **kw)
+    post, user = validate.call_args.args[:2]
+    assert user.level == level
+    assert (post['within_event_correlation_model'],
+            post['between_event_correlation_model']) == expected

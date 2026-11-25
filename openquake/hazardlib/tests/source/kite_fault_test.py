@@ -26,9 +26,9 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tests import assert_pickleable
 from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
-from openquake.hazardlib.source.base import SourceParam
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
-from openquake.hazardlib.mfd import TruncatedGRMFD
+from openquake.hazardlib.source.simple_fault import SimpleFaultSource
+from openquake.hazardlib.mfd import TruncatedGRMFD, ArbitraryMFD
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 
 # Movies are in /tmp
@@ -158,13 +158,14 @@ class FromSimpleFaultDataTestCase(unittest.TestCase):
         floating_x_step = 0.5
         floating_y_step = 0.5
         dip = 90.0
-        param = SourceParam(
-            source_id, name, trt, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio, tom)
         src = KiteFaultSource.as_simple_fault(
-            param, upper_seismogenic_depth,
-            lower_seismogenic_depth, fault_trace, dip, rake,
-            floating_x_step, floating_y_step)
+            source_id, name, trt, mfd, rupture_mesh_spacing,
+            magnitude_scaling_relationship, rupture_aspect_ratio, tom,
+            upper_seismogenic_depth=upper_seismogenic_depth,
+            lower_seismogenic_depth=lower_seismogenic_depth,
+            fault_trace=fault_trace, dip=dip, rake=rake,
+            floating_x_step=floating_x_step,
+            floating_y_step=floating_y_step)
 
         sfs = SimpleFaultSurface.from_fault_data(fault_trace,
                                                  upper_seismogenic_depth,
@@ -180,6 +181,80 @@ class FromSimpleFaultDataTestCase(unittest.TestCase):
 
         if MAKE_PICTURES:
             ppp(src.profiles, src.surface)
+
+    def test_from_simple_fault(self):
+        """ Converts a SimpleFaultSource into a KiteFaultSource """
+        fault_trace = Line([Point(0.0, 0.0),
+                            Point(0.0, 0.0359728811758),
+                            Point(0.0190775080917, 0.0550503815181),
+                            Point(0.03974514139, 0.0723925718855)])
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.8, max_mag=6.2,
+                             bin_width=0.1)
+        usd, lsd, dip, rake = 0.0, 4.2426406871192848, 90.0, 30.0
+        sfs_src = SimpleFaultSource(
+            'sf', 'simple fault', self.TRT, mfd, 2.5, PeerMSR(), 2.0,
+            self.TOM, usd, lsd, fault_trace, dip, rake)
+
+        src = KiteFaultSource.from_simple_fault(
+            sfs_src, floating_x_step=0.5, floating_y_step=0.25,
+            profiles_sampling=1.25)
+
+        # The attributes of the simple fault source are carried over
+        self.assertIsInstance(src, KiteFaultSource)
+        self.assertEqual(src.source_id, 'sf')
+        self.assertEqual(src.name, 'simple fault')
+        self.assertEqual(src.tectonic_region_type, self.TRT)
+        self.assertIs(src.mfd, mfd)
+        self.assertEqual(src.rupture_mesh_spacing, 2.5)
+        self.assertIs(src.magnitude_scaling_relationship,
+                      sfs_src.magnitude_scaling_relationship)
+        self.assertEqual(src.rupture_aspect_ratio, 2.0)
+        self.assertIs(src.temporal_occurrence_model, self.TOM)
+        self.assertEqual(src.rake, rake)
+
+        # The kite specific parameters are the ones given
+        self.assertEqual(src.floating_x_step, 0.5)
+        self.assertEqual(src.floating_y_step, 0.25)
+        self.assertEqual(src.profiles_sampling, 1.25)
+
+        # The profiles start at the upper seismogenic depth and reach the
+        # lower one; the bottom can exceed it by less than one mesh spacing
+        # since the width of the simple fault mesh is a multiple of it
+        for pro in src.profiles:
+            depths = [pnt.depth for pnt in pro.points]
+            self.assertAlmostEqual(min(depths), usd)
+            self.assertGreaterEqual(max(depths), lsd - 1e-6)
+            self.assertLess(max(depths), lsd + 2.5 * 1.01)
+
+        # The kite surface reproduces the simple fault surface
+        sfs = SimpleFaultSurface.from_fault_data(fault_trace, usd, lsd, dip,
+                                                 2.5)
+        msh = Mesh(lons=numpy.array([0.02, 0.05]),
+                   lats=numpy.array([0.03, 0.01]),
+                   depths=numpy.array([0.0, 0.0]))
+        numpy.testing.assert_almost_equal(
+            sfs.get_min_distance(msh), src.surface.get_min_distance(msh),
+            decimal=1)
+
+    def test_from_simple_fault_defaults(self):
+        """ Default floating steps and profiles sampling; the converted
+        source generates ruptures with the rake of the simple fault """
+        fault_trace = Line([Point(0.0, 0.0), Point(0.0, 0.1)])
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.8, max_mag=6.0,
+                             bin_width=0.1)
+        sfs_src = SimpleFaultSource(
+            'sf', 'sf', self.TRT, mfd, 2.0, PeerMSR(), 2.0, self.TOM,
+            0.0, 10.0, fault_trace, 60.0, self.RAKE)
+        src = KiteFaultSource.from_simple_fault(sfs_src)
+        self.assertEqual(src.floating_x_step, 0)
+        self.assertEqual(src.floating_y_step, 0)
+        self.assertEqual(src.profiles_sampling, 2.0 / 2.0)
+
+        ruptures = list(src.iter_ruptures())
+        self.assertGreater(len(ruptures), 0)
+        self.assertEqual(len(ruptures), src.count_ruptures())
+        for rup in ruptures:
+            self.assertEqual(rup.rake, self.RAKE)
 
 
 class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
@@ -374,3 +449,60 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
             ruptures = [r for r in source.iter_ruptures()]
             self._ruptures_animation('test05', source.surface, ruptures,
                                      source.profiles)
+
+
+class KiteFaultParametersTestCase(_BaseFaultSourceTestCase):
+
+    def _mfd(self):
+        return TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.5,
+                              max_mag=5.6, bin_width=0.1)
+
+    def test_profiles_sampling_given(self):
+        """ An explicit profiles_sampling must be stored and used """
+        profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.01, 15.0)]),
+                    Line([Point(0.3, 0.0, 0.0), Point(0.3, 0.01, 15.0)])]
+        src = KiteFaultSource(
+            'src', 'src', self.TRT, self._mfd(), 2.5, PeerMSR(), 1.5,
+            self.TOM, profiles, self.RAKE, profiles_sampling=2.5)
+        self.assertEqual(src.profiles_sampling, 2.5)
+        # With the default sampling (2.5 / 1.5 km) the mesh has 10 rows
+        # along dip; with 2.5 km it must have fewer
+        self.assertLess(src.surface.mesh.lons.shape[0], 10)
+
+    def test_floating_y_step_without_x_step(self):
+        """ floating_y_step must be used even when floating_x_step is 0 """
+        src_all = self._make_source(mfd=self._mfd(), aspect_ratio=1.5,
+                                    floating_x_step=0, floating_y_step=0)
+        src_y = self._make_source(mfd=self._mfd(), aspect_ratio=1.5,
+                                  floating_x_step=0, floating_y_step=0.5)
+        self.assertLess(src_y.count_ruptures(), src_all.count_ruptures())
+
+    def test_too_small_ruptures_are_skipped(self):
+        """ Magnitudes whose ruptures are smaller than the mesh spacing
+        must be skipped instead of raising an error """
+        fault_trace = Line([Point(0.0, 0.0),
+                            Point(0.0, 0.0359728811758),
+                            Point(0.0190775080917, 0.0550503815181),
+                            Point(0.03974514139, 0.0723925718855)])
+        # With a 2.5 km spacing along strike and 1.25 km along dip, the
+        # rupture for M4.6 is too small to be represented, while the one for
+        # M5.15 is 5 km x 2.5 km
+        mfd = ArbitraryMFD([4.6, 5.15], [0.1, 0.01])
+        sfs_src = SimpleFaultSource(
+            'sf', 'sf', self.TRT, mfd, 2.5, PeerMSR(), 2.0, self.TOM,
+            0.0, 4.2426406871192848, fault_trace, 90.0, self.RAKE)
+        src = KiteFaultSource.from_simple_fault(sfs_src,
+                                                profiles_sampling=1.25)
+        num = src.count_ruptures()
+        self.assertGreater(num, 0)
+        ruptures = list(src.iter_ruptures())
+        self.assertEqual(len(ruptures), num)
+        for rup in ruptures:
+            self.assertAlmostEqual(rup.mag, 5.15)
+
+        # Only small magnitudes: no ruptures, but no error either
+        sfs_src.mfd = ArbitraryMFD([4.6, 4.7], [0.1, 0.05])
+        src = KiteFaultSource.from_simple_fault(sfs_src,
+                                                profiles_sampling=1.25)
+        self.assertEqual(src.count_ruptures(), 0)
+        self.assertEqual(list(src.iter_ruptures()), [])

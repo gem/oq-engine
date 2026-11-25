@@ -228,3 +228,14 @@ samples 5_213 sites instead of 5_200. pointsource_distance=50 as before
 | save_rates        | rmap=1.83 GB num_chunks=980 B h5=784 B                 | 784 B     |
 | postclassical     | pgetter=74.31 MB hstats=10.16 KB individual_rlzs=640 B | 4.11 MB   |
 | make_hmap_png     | lons=572.25 KB hmap=288.36 KB                          | 16.41 MB  |
+
+* errors on the UHS, ps_grid_spacing=0 as reference
+
+mean_err and p99_err have one element for each poe, in the order of the UHS poes (0.002105 0.000404).
+
+| version              | mean_err          | p99_err         |
+|----------------------|-------------------|-----------------|
+| 3.24.1               | 0.02115 0.05228   | 0.09497 0.2644  |
+| 3.25.1               | 0.02115 0.05228   | 0.09498 0.2644  |
+| 3.26.2               | 0.02122 0.05235   | 0.09536 0.2655  |
+| 3.27.0-gitf3c01f687c | 0.003219 0.006938 | 0.01978 0.04372 |
