@@ -31,6 +31,7 @@ import subprocess
 import tempfile
 import unittest
 import numpy
+import h5py
 
 from openquake.baselib.general import encode
 from openquake.baselib.general import gettemp
@@ -389,6 +390,32 @@ class RunShowExportTestCase(unittest.TestCase):
 
 
 class CompareTestCase(unittest.TestCase):
+    def test_errors(self):
+        # comparing a calculation with itself, given by ID and by path
+        ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
+        [job] = run_jobs(create_jobs([ini]))
+        with read(job.calc_id) as ds:
+            path = ds.filename
+        with tempfile.TemporaryDirectory() as tmp:
+            copy = os.path.join(tmp, 'sparse_sids.hdf5')
+            shutil.copy(path, copy)
+            with h5py.File(copy, 'r+') as f:
+                f['sitecol/sids'][:] = numpy.array(
+                    [10, 20, 30], numpy.uint32)
+            with Print.patch() as p:
+                sap.runline(
+                    f"openquake.commands compare errors {job.calc_id} "
+                    f"{copy}")
+        out = str(p)
+        self.assertIn('3 common sites out of 3', out)
+        rows = [line.split('|')[1:-1] for line in out.splitlines()
+                if line.startswith('| UHS')]
+        # one row for the UHS, with one error for each poe
+        [(_imt, _poes, mean_err, p99_err, p99_norm)] = rows
+        self.assertEqual([float(x) for x in mean_err.split()], [0])
+        self.assertEqual([float(x) for x in p99_err.split()], [0])
+        self.assertEqual(float(p99_norm), 0)
+
     def test_med_gmv(self):
         # testing the postprocessor med_gmv
         ini = os.path.join(os.path.dirname(case_13.__file__), 'job_gmv.ini')

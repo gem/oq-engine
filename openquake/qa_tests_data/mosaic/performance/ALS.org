@@ -157,3 +157,13 @@ previous 3.27 run (calc_20956, 3.27.0-gitb11bcc1eb4) took 3_342 s.
 | save_rates        | rmap=714.8 MB num_chunks=105 B h5=84 B               | 84 B     |
 | fast_mean         | pgetter=2.23 MB                                      | 44.27 MB |
 | make_hmap_png     | lons=3.41 MB hmap=1.71 MB                            | 16.41 MB |
+
+* errors on the UHS, ps_grid_spacing=0 as reference
+
+mean_err and p99_err have one element for each poe, in the order of the UHS poes (0.002105 0.000404).
+
+| version              | mean_err          | p99_err          |
+|----------------------|-------------------|------------------|
+| 3.25.1               | 0.004242 0.009592 | 0.03647 0.09843  |
+| 3.26.2               | 0.004242 0.009592 | 0.03647 0.09843  |
+| 3.27.0-gitf3c01f687c | 0.000767 0.000863 | 0.00376 0.005073 |
