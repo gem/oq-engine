@@ -44,7 +44,7 @@ from django.utils.html import urlize
 import numpy
 
 from openquake.baselib import hdf5, config
-from openquake.baselib.general import groupby, gettemp, zipfiles, mp, decode
+from openquake.baselib.general import groupby, gettemp, mp, decode
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
@@ -61,6 +61,7 @@ from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
     EXPOSED_VALUE_EXPLANATION, REPORTED_VALUE_EXPLANATION,
     EXPOSURE_FIELD_DESCRIPTION)
+from openquake.calculators.export.risk import export_job_archive
 from openquake.calculators.extract import extract as _extract
 from openquake.risklib.scientific import TIME_EVENTS, TIME_LOSSES
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
@@ -1712,21 +1713,19 @@ def calc_zip(request, job_id):
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    tmpdir = tempfile.mkdtemp(dir=temp_dir)
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            exported = export(('job', 'zip'), ds)
+            archive = export_job_archive(ds, tmpdir)
     except Exception as exc:
+        shutil.rmtree(tmpdir, ignore_errors=True)
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'job_zip', tb),
             content_type='text/plain', status=400)
-    # zipping the files
-    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
-    tmpdir = tempfile.mkdtemp(dir=temp_dir)
-    archname = f'job_{job_id}.zip'
-    zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
-    return stream_response(os.path.join(tmpdir, archname), ZIP)
+    return stream_response(archive, ZIP, f'job_{job_id}.zip')
 
 
 def web_engine(request, **kwargs):

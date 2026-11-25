@@ -968,6 +968,23 @@ def _export_taxmap_and_consequences(dstore, oq, ddic, inputs):
         inputs['consequence'] = dic
 
 
+def export_job_archive(dstore, export_dir):
+    """
+    Bundle the generated job files and return the path to the archive.
+    """
+    archive = dstore.export_path('job.zip', export_dir)
+    original_dir = dstore.export_dir
+    with tempfile.TemporaryDirectory(dir=export_dir) as tmpdir:
+        dstore.export_dir = tmpdir
+        try:
+            files = export_job_zip(('job', 'zip'), dstore)
+            staged = general.zipfiles(files, os.path.join(tmpdir, 'job.zip'))
+            os.replace(staged, archive)
+        finally:
+            dstore.export_dir = original_dir
+    return archive
+
+
 # tested in impact_test[1]
 @export.add(('job', 'zip'))
 def export_job_zip(ekey, dstore):

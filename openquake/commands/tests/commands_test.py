@@ -279,6 +279,18 @@ class RunShowExportTestCase(unittest.TestCase):
             cls.calc_id = sap.runline(f'openquake.commands run {job_ini}')
         cls.job_ini = job_ini
 
+    def test_export_job_zip(self):
+        with tempfile.TemporaryDirectory() as tmp, Print.patch():
+            sap.runline(f'openquake.commands export -e zip job '
+                        f'{self.calc_id} -d {tmp}')
+            archive = f'job_{self.calc_id}.zip'
+            self.assertEqual(os.listdir(tmp), [archive])
+            with zipfile.ZipFile(os.path.join(tmp, archive)) as job_zip:
+                ini = job_zip.read(f'job_{self.calc_id}.ini').decode('utf8')
+                sites = f'sites_{self.calc_id}.csv'
+                self.assertIn(sites, job_zip.namelist())
+                self.assertIn(f'site_model_file = {sites}', ini)
+
     def test_jobs_from_inis(self):
         dic = jobs_from_inis([self.job_ini])
         self.assertEqual(len(dic['success']), 1)
