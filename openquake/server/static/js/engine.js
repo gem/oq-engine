@@ -28,6 +28,7 @@ else if (window.application_mode === 'IMPACT') {
     /* classic event management */
     $(document).ready(
         function () {
+            refresh_tag_column();
             refresh_tag_selector();
             set_calc_list_params();
             setTimer();

@@ -391,6 +391,7 @@ $(document).on('errorDialog:hidden', function () {
 
 function setTimer() {
     closeTimer();
+    refresh_tag_column();
     refresh_calcs = setInterval(function () {
         refresh_tag_selector();
         fetch_calc_page();
@@ -460,6 +461,18 @@ function fetch_calc_page() {
 function set_calc_list_params() {
     calc_page = 0;
     fetch_calc_page();
+}
+
+function refresh_tag_column() {
+    $.getJSON('/v1/calc/list_tags', function(resp) {
+        if (resp.tags.length == 0) {
+            $("#tag-column-table").hide();
+        } else {
+            $("#tag-column-table").show();
+        }
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+        console.error('Error fetching tags:', textStatus, errorThrown);
+    });
 }
 
 function refresh_tag_selector() {
