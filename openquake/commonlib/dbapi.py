@@ -220,10 +220,19 @@ class TooManyColumns(Exception):
     """Raised when a scalar query has more than one column"""
 
 
+class InvalidName(ValueError):
+    """Raised when a column name is not a plain SQL identifier"""
+
+
 class _Replacer(object):
     # helper class for the match function below
     rx = re.compile(r'\?S|\?X|\?D|\?A|\?O|\?s|\?x')
     ph = '?'
+    # the names passed with ?S, ?D, ?A and ?O are inserted in the SQL text,
+    # not bound as parameters, so they must be plain column names (possibly
+    # qualified by a table alias, like j.id), otherwise they could inject SQL
+    name_rx = re.compile(
+        r'[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?\Z')
 
     def __init__(self, all_args):
         self.all_args = list(all_args)
@@ -238,11 +247,11 @@ class _Replacer(object):
             self.xargs.extend(arg)
             return ', '.join([self.ph] * len(arg))
         elif placeholder == '?S':
-            self.sargs.extend(arg)
+            self.sargs.extend(self.names(arg))
             return ', '.join(['{}'] * len(arg))
         elif placeholder == '?D':
             keys, values = zip(*sorted(arg.items()))
-            self.sargs.extend(keys)
+            self.sargs.extend(self.names(keys))
             self.xargs.extend(values)
             return ', '.join(['{}=' + self.ph] * len(arg))
         elif placeholder == '?A':
@@ -256,9 +265,17 @@ class _Replacer(object):
             self.sargs.append(arg)
             return '{}'
 
+    def names(self, names):
+        # check that the names can be inserted in the SQL text
+        names = list(names)
+        for name in names:
+            if not (isinstance(name, str) and self.name_rx.match(name)):
+                raise InvalidName('Invalid column name: %r' % (name,))
+        return names
+
     def join(self, sep, arg):
         ls = []
-        for name in sorted(arg):
+        for name in self.names(sorted(arg)):
             self.sargs.append(name)
             value = arg[name]
             if value is None:

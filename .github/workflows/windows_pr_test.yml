@@ -80,21 +80,21 @@ jobs:
             set PIP_DEFAULT_TIMEOUT=100
             python -m pip install pip --upgrade
             #echo Branch to test %BRANCH%
-            #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
+            # Install the checked-out repository in devel mode.
             write-Host "Branch to test $($Env:BRANCH)"
             #
             if ($Env:BRANCH)
             {
               Write-Host "Install with workflow_dispatch"
-              Write-Host "python install.py devel --version ${env:BRANCH}"
-              python install.py devel --version ${env:BRANCH}
+              Write-Host "python install.py devel"
+              python install.py devel
             }
             else
             {
               Write-Host "Install on PR"
               Write-Host "Head ref: $env:GITHUB_HEAD_REF"
-              Write-Host "python install.py devel --version ${env:GITHUB_HEAD_REF}"
-              python install.py devel --version ${env:GITHUB_HEAD_REF}
+              Write-Host "python install.py devel"
+              python install.py devel
             }
             C:\Users\runneradmin\openquake\Scripts\activate.ps1
             python -m pip install pytest flake8

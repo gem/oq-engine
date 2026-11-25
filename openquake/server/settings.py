@@ -27,6 +27,7 @@ from django.core.exceptions import ImproperlyConfigured
 from openquake.baselib import config, is_server_installation
 from openquake.baselib.general import engine_version
 from openquake.commonlib import datastore
+from openquake.hazardlib import valid
 from openquake.server.utils import get_or_create_django_secret_key
 
 
@@ -59,8 +60,19 @@ OQSERVER_ROOT = os.path.dirname(__file__)
 DEBUG = not is_server_installation()
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+
+def env_flag(name, default=False):
+    """
+    Read a boolean flag from the environment variable `name` (accepting
+    '', '0', '1', 'false' and 'true', case-insensitively); a plain
+    os.environ.get would return a string and 'False' would count as true.
+    """
+    value = os.environ.get(name)
+    return default if value is None else valid.boolean(value)
+
+
 WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
-USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', False)
+USE_X_FORWARDED_HOST = env_flag('USE_X_FORWARDED_HOST')
 
 CONTEXT_PROCESSORS = [
     'django.template.context_processors.debug',
@@ -280,7 +292,7 @@ HELP_URL = 'https://docs.openquake.org/oq-engine/latest/manual/'
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
 EMAIL_PORT = os.environ.get('EMAIL_PORT')
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
+EMAIL_USE_TLS = env_flag('EMAIL_USE_TLS')
 EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
 EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')

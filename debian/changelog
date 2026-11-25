@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Changed `oq export -e zip job` to return an archive, plus a few fixes
+  * Internal: add `oq compare errors` to measure the errors of the
+    ps_grid_spacing approximation
+
   [Marco Pagani, Christopher Brooks]
   * Add an experimental implementation of the Sung et al. (2022) non-ergodic
     GMM for France. Experimental status will be removed once implementation
