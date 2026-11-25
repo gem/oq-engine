@@ -20,6 +20,7 @@ import os
 from openquake.baselib import general, performance
 from openquake.commonlib import datastore
 from openquake.calculators.export import export as export_
+from openquake.calculators.export.risk import export_job_archive
 
 
 # the export is tested in the demos
@@ -39,7 +40,11 @@ def main(datastore_key, calc_id: str=-1, *, exports='csv', export_dir='.'):
     dstore.export_dir = export_dir
     with performance.Monitor('export', measuremem=True) as mon:
         for fmt in exports.split(','):
-            fnames = export_((datastore_key, fmt), dstore)
+            ekey = (datastore_key, fmt)
+            if ekey == ('job', 'zip'):
+                fnames = [export_job_archive(dstore, export_dir)]
+            else:
+                fnames = export_(ekey, dstore)
             nbytes = sum(os.path.getsize(f) for f in fnames)
             print('Exported %s in %s' % (general.humansize(nbytes), fnames))
     if mon.duration > 1:

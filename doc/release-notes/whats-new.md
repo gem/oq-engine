@@ -143,6 +143,11 @@ realizations and logic-tree views.
 [Amir Banimahd](https://github.com/banimahd) contributed the 
 Banimahd et al. (2026) ground-motion model for Türkiye.
 
+`SungEtAl2022NonErgodic` is an experimental implementation of the
+Sung et al. (2022) ground-motion model for France. It reads site-specific
+adjustments from an HDF5 file and can use either the posterior mean or a
+sampled realization of the adjustment field.
+
 [Savas Ceylan](https://github.com/sceylan) contributed period-selectable 
 Swiss site-specific SA corrections, which can be applied with `ModifiableGMPE`;
 only the site columns for the selected periods are required.
