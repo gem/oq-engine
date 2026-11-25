@@ -286,8 +286,7 @@ def _read_hmaps(calc):
         dset = f['hmaps-stats']  # shape (N, S, M, P)
         info = json.loads(dset.attrs['json'])
         hmaps = dset[:, info['stat'].index('mean')]  # shape (N, M, P)
-        lonlats = zip(numpy.round(f['sitecol/lon'][:], 5),
-                      numpy.round(f['sitecol/lat'][:], 5))
+        lonlats = zip(f['sitecol/lon'][:], f['sitecol/lat'][:])
         return dict(name=calc, version=f.attrs['engine_version'],
                     imts=info['imt'], poes=info['poe'], hmaps=hmaps,
                     idx={ll: i for i, ll in enumerate(lonlats)})
