@@ -13,7 +13,7 @@ https://wheelhouse.openquake.org/unified/llvmlite-0.49.0-cp313-cp313-win_amd64.w
 https://wheelhouse.openquake.org/unified/matplotlib-3.10.1-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/unified/numba-0.67.0-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/unified/numpy-2.4.6-cp313-cp313-win_amd64.whl
-https://wheelhouse.openquake.org/unified/onnxruntime-1.23.2-cp313-cp313-win_amd64.whl
+https://wheelhouse.openquake.org/unified/onnxruntime-1.32.0-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/unified/pandas-2.2.3-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/unified/pillow-13.0.0-cp313-cp313-win_amd64.whl
 https://wheelhouse.openquake.org/unified/psutil-7.2.2-cp37-abi3-win_amd64.whl

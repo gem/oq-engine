@@ -11,7 +11,7 @@ https://wheelhouse.openquake.org/unified/llvmlite-0.49.0-cp313-cp313-manylinux20
 https://wheelhouse.openquake.org/unified/matplotlib-3.10.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/unified/numba-0.67.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/unified/numpy-2.4.6-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
-https://wheelhouse.openquake.org/unified/onnxruntime-1.23.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+https://wheelhouse.openquake.org/unified/onnxruntime-1.32.0-cp313-cp313-manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/unified/pandas-2.2.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/unified/pillow-13.0.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/unified/psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl
