@@ -12,31 +12,26 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-FROM python:3.12.6-slim AS compile-image
+FROM python:3.13.16-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
 RUN apt-get update &&  \
     apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh dnsutils telnet netbase net-tools lsof tcpdump sudo strace time && \
     useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
-ARG oq_branch
+ARG oq_branch=master
 ENV LANG=en_US.UTF-8
-WORKDIR /usr/src
-# Create venv
 ENV VIRTUAL_ENV=/opt/openquake
-RUN python3 -m venv $VIRTUAL_ENV
+RUN python3 -m venv "$VIRTUAL_ENV" && chown -R openquake:openquake "$VIRTUAL_ENV"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-# Install dependencies and engine
-RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && chown -R openquake:openquake oq-engine && \
-    cd oq-engine && pip --disable-pip-version-check install -e . -r requirements-py312-linux64.txt --no-warn-script-location
-#
+WORKDIR /usr/src
+# Clone the repository for a local editable installation.
+RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && \
+    chown -R openquake:openquake oq-engine
 USER openquake
 ENV HOME=/home/openquake
-#
-#ENV OQ_CONFIG_FILE /opt/openquake/openquake.cfg
-#ADD openquake.cfg /opt/openquake/openquake.cfg
-#
 WORKDIR ${HOME}
-RUN mkdir oqdata
+RUN cd /usr/src/oq-engine && python3 install.py devel --novenv
+RUN mkdir -p oqdata
 ADD scripts/oq-start.sh ${HOME}
 #
 EXPOSE 8800
