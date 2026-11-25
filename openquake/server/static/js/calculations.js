@@ -409,6 +409,14 @@ function get_calc_list_params() {
     if (search) {
         params.search = search;
     }
+    var calc_mode = $('select#calc_mode_selector').val();
+    if (calc_mode) {
+        params.calculation_mode = calc_mode;
+    }
+    var status = $('select#status_selector').val();
+    if (status) {
+        params.status = status;
+    }
 
     return params;
 }
@@ -486,3 +494,39 @@ $('input#search_input').on('input', function() {
     }, 300);
 });
 
+$('select#calc_mode_selector').change(function() {
+    set_calc_list_params();
+});
+$('select#status_selector').change(function() {
+    set_calc_list_params();
+});
+
+function populate_filter_dropdowns() {
+    $.getJSON(gem_oq_server_url + "/v1/calc/list_filter_values", function(resp) {
+        var $cm = $('select#calc_mode_selector');
+        var $st = $('select#status_selector');
+        var selected_cm = $cm.val();
+        var selected_st = $st.val();
+
+        $cm.empty().append('<option value="">All calculations</option>');
+        $st.empty().append('<option value="">All statuses</option>');
+
+        $.each(resp.calculation_modes, function(_, m) {
+            $cm.append($('<option>').val(m).text(m));
+        });
+        $.each(resp.statuses, function(_, s) {
+            $st.append($('<option>').val(s).text(s));
+        });
+
+        if (selected_cm && resp.calculation_modes.includes(selected_cm)) {
+            $cm.val(selected_cm);
+        }
+        if (selected_st && resp.statuses.includes(selected_st)) {
+            $st.val(selected_st);
+        }
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+        console.error('Error fetching filter values:', textStatus, errorThrown);
+    });
+}
+
+populate_filter_dropdowns();

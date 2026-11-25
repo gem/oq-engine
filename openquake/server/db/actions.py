@@ -634,6 +634,18 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         search_filter = 1
 
+    if request_get_dict.get('calculation_mode'):
+        calc_mode_filter = "j.calculation_mode = ?x"
+        query_params.append(request_get_dict['calculation_mode'])
+    else:
+        calc_mode_filter = 1
+
+    if request_get_dict.get('status'):
+        status_filter = "j.status = ?x"
+        query_params.append(request_get_dict['status'])
+    else:
+        status_filter = 1    
+
     preferred_only = int(request_get_dict.get('preferred_only', 0))
     filter_by_tag = request_get_dict.get('filter_by_tag', 0)
 
@@ -656,6 +668,9 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         where_clause += " OR j.status == 'shared'"
     where_clause += f") AND {time_filter} AND j.status != 'deleted'"
     where_clause += f" AND {search_filter}"
+    where_clause += f" AND {calc_mode_filter}"
+    where_clause += f" AND {status_filter}"
+
     if relevant_only:
         where_clause += " AND j.relevant != 0"
     if preferred_only:
@@ -998,6 +1013,25 @@ def get_results(db, job_id):
                      scalar=True)
     datadir = os.path.dirname(ds_calc_dir)
     return datadir, [output.ds_key for output in get_outputs(db, job_id)]
+
+
+def get_distinct_filter_values(db):
+    """
+    Return the distinct values of calculation_mode and status actually
+    present in the job table, used to populate the filter dropdowns.
+
+    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
+    :returns: dict with keys 'calculation_modes' and 'statuses'
+    """
+    calc_modes = [r.calculation_mode for r in db(
+        "SELECT DISTINCT calculation_mode FROM job "
+        "WHERE calculation_mode IS NOT NULL AND calculation_mode != '' "
+        "ORDER BY calculation_mode")]
+    statuses = [r.status for r in db(
+        "SELECT DISTINCT status FROM job "
+        "WHERE status IS NOT NULL AND status != '' "
+        "ORDER BY status")]
+    return {'calculation_modes': calc_modes, 'statuses': statuses}
 
 
 # ############################### db commands ########################### #

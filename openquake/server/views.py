@@ -2527,6 +2527,16 @@ def calc_list_tags(request):
 
 
 @require_http_methods(['GET'])
+@cross_domain_ajax
+def calc_filter_values(request):
+    """
+    Return the distinct calculation_mode and status values present in the DB,
+    used to populate the filter dropdowns.
+    """
+    return internal_api.run(services.calc_filter_values)
+
+
+@require_http_methods(['GET'])
 def license(request, **kwargs):
     return render(request, "engine/license.html")
 

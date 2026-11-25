@@ -380,11 +380,27 @@ input[type="radio"] {
     position: relative;
 }
 
-div#search-filters {
-    text-align: right;
+#search-filters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
-div#search-filters span {
+
+#search-filters .filter-item {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 0.4rem;
+    margin: 0;
+}
+
+#search-filters .filter-item label {
+    margin: 0;
+    white-space: nowrap;
+}
+
+#search-filters .filter-item .form-control {
+    margin: 0;
 }
