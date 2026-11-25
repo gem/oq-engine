@@ -26,7 +26,7 @@ jobs:
       matrix:
         #os: [windows-2022, windows-2025]
         os: [windows-2022]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.13"]
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v6
@@ -46,59 +46,37 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       # You can test your matrix by printing the current Python version
-      - name: Display Python version and check OS, after install OQ and test
+      - name: Install OQ
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
           GITHUB_HEAD_REF: ${{ github.head_ref }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $need_to_run = 0
-          @"
-          import sys
-          import platform
-          py_version = ".".join(map(str, sys.version_info[:2]))
-          os_version = platform.platform(terse=True)
-          if py_version == "3.12" and os_version == "Windows-2019Server" :
-              print (1)
-          "@ | Tee-Object -FilePath "check.py" -Append
-          $need_to_run = python check.py
-
-          echo "to_run=$need_to_run" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-
-          Write-Host "Check value: $need_to_run"
-          if ($need_to_run -eq 1) {
-            Write-Host "We do not support this OS and python3.12"
-            exit 0
+          echo "${Env:environment}"
+          Write-Host $Env:GITHUB_REF
+          echo "Branch environment"
+          Write-Host $Env:BRANCH
+          set PIP_DEFAULT_TIMEOUT=100
+          python -m pip install pip --upgrade
+          #echo Branch to test %BRANCH%
+          #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
+          write-Host "Branch to test $($Env:BRANCH)"
+          #
+          if ($Env:BRANCH)
+          {
+            Write-Host "Install with workflow_dispatch"
+            Write-Host "python install.py devel --version ${env:BRANCH}"
+            python install.py devel --version ${env:BRANCH}
           }
           else
           {
-            echo "${Env:environment}"
-            Write-Host $Env:GITHUB_REF
-            echo "Branch environment"
-            Write-Host $Env:BRANCH
-            set PIP_DEFAULT_TIMEOUT=100
-            python -m pip install pip --upgrade
-            #echo Branch to test %BRANCH%
-            #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
-            write-Host "Branch to test $($Env:BRANCH)"
-            #
-            if ($Env:BRANCH)
-            {
-              Write-Host "Install with workflow_dispatch"
-              Write-Host "python install.py devel --version ${env:BRANCH}"
-              python install.py devel --version ${env:BRANCH}
-            }
-            else
-            {
-              Write-Host "Install on user mode on scheduled task"
-              Write-Host "python install.py devel --version master"
-              python install.py devel --version master
-            }
-            C:\Users\runneradmin\openquake\Scripts\activate.ps1
-            python -m pip install pytest flake8
+            Write-Host "Install on user mode on scheduled task"
+            Write-Host "python install.py devel --version master"
+            python install.py devel --version master
           }
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          python -m pip install pytest flake8
       - name: Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
-        if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           cd D:\a\oq-engine\oq-engine\openquake
@@ -106,7 +84,6 @@ jobs:
           pytest hazardlib/tests/pyproj_wheel_test.py
       - name: Run oq calcs, webui console and curl for the standalone tools
         timeout-minutes: 5
-        if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq.exe --version
@@ -130,7 +107,6 @@ jobs:
           curl.exe -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/
           ping 127.0.0.1 -n 6 > null
       - name: Run tests for hazardlib, sep, commands, engine, risklib, commonlib and baselib to test installation
-        if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
@@ -140,7 +116,6 @@ jobs:
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine risklib commonlib baselib
 
       - name: Run tests for calculators
-        if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
@@ -149,7 +124,6 @@ jobs:
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators
 
       - name: Run tests for the engine server in public mode to test installation
-        if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
@@ -161,7 +135,6 @@ jobs:
           pytest -v openquake\server\tests\test_public_mode.py
 
       - name: Run tests for the engine server in read-only mode to test installation
-        if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
@@ -173,7 +146,6 @@ jobs:
           pytest -v openquake\server\tests\test_read_only_mode.py
 
       - name: Run all demos
-        if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version

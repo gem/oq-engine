@@ -122,7 +122,7 @@ jobs:
           oq engine --upgrade-db
           pip install https://wheelhouse.openquake.org/unified/pytest_django-4.9.0-py3-none-any.whl
           pip install -r requirements-aelo-py-linux64.txt
-          pip install -r requirements-impact-py311-linux64.txt
+          pip install -r requirements-impact-py314-linux64.txt
           OQ_APPLICATION_MODE=PUBLIC pytest -vx openquake/server/tests/test_public_mode.py
           OQ_APPLICATION_MODE=RESTRICTED pytest -vx openquake/server/tests/test_restricted_mode.py
           OQ_APPLICATION_MODE=READ_ONLY pytest -vx openquake/server/tests/test_read_only_mode.py

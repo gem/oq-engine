@@ -39,7 +39,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
-        python-version: "3.12"
+        python-version: "3.14"
     - name: Setup upterm session
       uses: owenthereal/action-upterm@v2
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
