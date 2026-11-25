@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.13"]
+        python-version: ["3.13", "3.14"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
@@ -215,6 +215,6 @@ jobs:
       engine_ref: ${{ github.event.pull_request.head.sha }}
       irmt_ref: master
       integration_only: true
-      python_versions: '["3.13"]'
+      python_versions: '["3.13", "3.14"]'
     permissions:
       contents: read

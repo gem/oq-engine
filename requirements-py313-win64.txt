@@ -25,6 +25,7 @@ https://wheelhouse.openquake.org/unified/setproctitle-1.3.7-cp313-cp313-win_amd6
 https://wheelhouse.openquake.org/unified/shapely-2.1.0-cp313-cp313-win_amd64.whl
 #
 #pp
+https://wheelhouse.openquake.org/unified/affine-3.0.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/alpha_shapes-1.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/asgiref-3.11.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/attrs-23.1.0-py3-none-any.whl

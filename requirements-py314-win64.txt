@@ -5,6 +5,7 @@ https://wheelhouse.openquake.org/unified/numpy-2.4.6-cp314-cp314-win_amd64.whl
 https://wheelhouse.openquake.org/unified/onnxruntime-1.32.0-cp314-cp314-win_amd64.whl
 #
 #pp
+https://wheelhouse.openquake.org/unified/affine-3.0.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/alpha_shapes-1.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/asgiref-3.11.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/attrs-23.1.0-py3-none-any.whl
