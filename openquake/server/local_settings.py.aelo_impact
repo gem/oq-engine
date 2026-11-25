@@ -1,4 +1,5 @@
 import os
+from openquake.hazardlib import valid
 
 # - For 'devel' and 'user' installations, if SECRET_KEY is not defined,
 # when Django settings are read, a new secret key is created and stored
@@ -46,7 +47,8 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = os.environ.get('EMAIL_PORT', 587)
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', True)
+# NB: a plain os.environ.get would return a string, and 'False' is true
+EMAIL_USE_TLS = valid.boolean(os.environ.get('EMAIL_USE_TLS', 'true'))
 EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
 EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')
