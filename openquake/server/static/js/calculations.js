@@ -361,6 +361,15 @@ var CalculationTable = Backbone.View.extend({
 
     render: function () {
         if (!this.can_be_rendered) return;
+	if (this.calculations.models.length === 0) {
+            this.$el.html(
+                '<div class="alert alert-info">No calculations found</div>'
+            );
+            this.table_html = null;
+            this.$el.find('.pagination').remove();
+            this.render_pagination();
+            return;
+        }
         var table_html = _.template(
             $('#calculation-table-template').html(), {
                 calculations: this.calculations.models

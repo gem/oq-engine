@@ -392,8 +392,9 @@ input[type="radio"] {
 #search-filters .filter-item {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
     margin: 0;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 #search-filters .filter-item label {
