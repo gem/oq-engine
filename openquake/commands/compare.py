@@ -286,22 +286,11 @@ def _read_hmaps(calc):
         dset = f['hmaps-stats']  # shape (N, S, M, P)
         info = json.loads(dset.attrs['json'])
         hmaps = dset[:, info['stat'].index('mean')]  # shape (N, M, P)
-        sids = f['sitecol/sids'][:]
         lonlats = zip(numpy.round(f['sitecol/lon'][:], 5),
                       numpy.round(f['sitecol/lat'][:], 5))
         return dict(name=calc, version=f.attrs['engine_version'],
-                    imts=info['imt'], poes=info['poe'], hmaps=hmaps[sids],
+                    imts=info['imt'], poes=info['poe'], hmaps=hmaps,
                     idx={ll: i for i, ll in enumerate(lonlats)})
-
-
-# the error row of the uniform hazard spectra (PGA and SA) with respect to
-# the reference ones: mean_err and p99_err have one element for each poe
-def _error_rows(hmaps, ref, imts, poes):
-    mean_err, p99_err, p99_norm = uhs_errors(hmaps, ref, imts)
-    fmt = ' '.join('%.4g' % x for x in mean_err)
-    fmt2 = ' '.join('%.4g' % x for x in p99_err)
-    return [['UHS', ' '.join(str(poe) for poe in poes), fmt, fmt2,
-             '%.4g' % p99_norm]]
 
 
 def compare_errors(ref, calcs):
@@ -326,8 +315,12 @@ def compare_errors(ref, calcs):
         ci, ri = numpy.array(sorted(common)).T
         print(f"{calc} ({c['version']}) vs {ref} ({r['version']}), "
               f"{len(common)} common sites out of {len(c['idx'])}")
-        rows = _error_rows(c['hmaps'][ci], r['hmaps'][ri], r['imts'],
-                           r['poes'])
+        mean_err, p99_err, p99_norm = uhs_errors(
+            c['hmaps'][ci], r['hmaps'][ri], r['imts'])
+        rows = [['UHS', ' '.join(str(poe) for poe in r['poes']),
+                 ' '.join('%.4g' % x for x in mean_err),
+                 ' '.join('%.4g' % x for x in p99_err),
+                 '%.4g' % p99_norm]]
         print(views.text_table(
             rows, ['imt', 'poes', 'mean_err', 'p99_err', 'p99_norm'],
             ext='org'))
