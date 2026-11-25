@@ -26,6 +26,7 @@ import logging
 import traceback
 import requests
 from pdb import post_mortem
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 from openquake.baselib import config, parallel, use_server
 from openquake.commonlib.auth import API_KEY
@@ -47,6 +48,17 @@ WORKER_ACTIONS = {
 }
 
 
+def _refused_host(response, server):
+    # the internal API answers its errors in JSON, while Django refuses
+    # with an HTML page the requests whose Host is not in ALLOWED_HOSTS:
+    # in that case return an explanation instead of the page
+    if (response is not None and response.status_code == 400 and
+            'json' not in response.headers.get('Content-Type', '')):
+        return ('the WebUI at %s refused the request: check that "%s" is '
+                'listed in its ALLOWED_HOSTS (see the WebUI log)' % (
+                    server, urlparse(server).hostname))
+
+
 def _worker_api(action, *args):
     """Call a worker-control endpoint on the WebUI API."""
     server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
@@ -57,8 +69,8 @@ def _worker_api(action, *args):
             headers={'X-API-Key': API_KEY}, timeout=600)
         response.raise_for_status()
     except requests.RequestException as exc:
-        raise RuntimeError(
-            'Unable to call worker endpoint %s: %s' % (endpoint, exc)) from exc
+        raise RuntimeError('Unable to call worker endpoint %s: %s' % (
+            endpoint, _refused_host(exc.response, server) or exc)) from exc
     return response.json()
 
 
@@ -78,8 +90,9 @@ def _db_api(action, *args):
     try:
         response.raise_for_status()
     except requests.RequestException as exc:
+        detail = _refused_host(response, server) or response.text
         raise RuntimeError(
-            'Database action %s failed: %s' % (action, response.text)) from exc
+            'Database action %s failed: %s' % (action, detail)) from exc
     return dbapi.from_json(response.json())
 
 
