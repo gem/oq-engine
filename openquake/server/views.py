@@ -2440,7 +2440,7 @@ def on_same_fs(request):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_create_tag(request, tag_name):
     """
     Create a tag named `tag_name`
@@ -2451,7 +2451,7 @@ def calc_create_tag(request, tag_name):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_delete_tag(request, tag_name):
     """
     Delete a tag named `tag_name`
@@ -2462,7 +2462,7 @@ def calc_delete_tag(request, tag_name):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_add_tag(request, calc_id, tag_name):
     """
     Assign to the calculation of given `calc_id` a tag named `tag_name`
@@ -2473,7 +2473,7 @@ def calc_add_tag(request, calc_id, tag_name):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_remove_tag(request, calc_id, tag_name):
     """
     Remove the tag named `tag_name` from the calculation of given `calc_id`
@@ -2484,7 +2484,7 @@ def calc_remove_tag(request, calc_id, tag_name):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_set_preferred_job_for_tag(request, calc_id, tag_name):
     """
     Set the calculation of given `calc_id` as the preferred one for tag
@@ -2496,7 +2496,7 @@ def calc_set_preferred_job_for_tag(request, calc_id, tag_name):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_unset_preferred_job_for_tag(request, tag_name):
     """
     Unset the preferred job for tag `tag_name`
