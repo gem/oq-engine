@@ -405,6 +405,11 @@ function get_calc_list_params() {
     if (filter_by_tag) {
         params.filter_by_tag = filter_by_tag;
     }
+    var search = $('input#search_input').val().trim();
+    if (search) {
+        params.search = search;
+    }
+
     return params;
 }
 
@@ -470,5 +475,14 @@ $('input#list_preferred_only').change(function() {
 
 $('select#tag_selector').change(function() {
     set_calc_list_params();
+});
+
+var search_timeout = null;
+$('input#search_input').on('input', function() {
+    if (search_timeout) window.clearTimeout(search_timeout);
+    search_timeout = window.setTimeout(function() {
+        calc_page = 0;
+        fetch_calc_page();
+    }, 300);
 });
 

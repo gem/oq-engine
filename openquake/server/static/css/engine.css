@@ -375,3 +375,16 @@ input[type="radio"] {
     width: 18px;
     height: 18px;
 }
+
+.title_list_calc {
+    position: relative;
+}
+
+div#search-filters {
+    text-align: right;
+}
+div#search-filters span {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}

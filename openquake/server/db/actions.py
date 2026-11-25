@@ -620,6 +620,20 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
+    # search by id, description and user
+    if 'search' in request_get_dict:
+        search = request_get_dict.get('search').strip()
+        if search.isdigit():
+            search_filter = "j.id = ?x"
+            query_params.append(int(search))
+        else:
+            search_filter = ("(j.description LIKE ?x COLLATE NOCASE "
+                             "OR j.user_name LIKE ?x COLLATE NOCASE)")
+            query_params.append(f'%{search}%')
+            query_params.append(f'%{search}%')
+    else:
+        search_filter = 1
+
     preferred_only = int(request_get_dict.get('preferred_only', 0))
     filter_by_tag = request_get_dict.get('filter_by_tag', 0)
 
@@ -641,6 +655,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     if include_shared:
         where_clause += " OR j.status == 'shared'"
     where_clause += f") AND {time_filter} AND j.status != 'deleted'"
+    where_clause += f" AND {search_filter}"
     if relevant_only:
         where_clause += " AND j.relevant != 0"
     if preferred_only:
