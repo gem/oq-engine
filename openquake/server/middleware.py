@@ -19,7 +19,6 @@
 import re
 
 from django.conf import settings
-from django.contrib.auth.views import redirect_to_login
 from django.http import HttpResponseForbidden
 
 EXEMPT_URLS = [re.compile(settings.LOGIN_URL.lstrip('/'))]
@@ -60,7 +59,11 @@ class LoginRequiredMiddleware:
                 else:
                     # pass the requested page as ?next=, so that after the
                     # login the user lands there (the login view accepts
-                    # only pages of the same site)
+                    # only pages of the same site); imported here, as in
+                    # Django's login_required, since the auth views need
+                    # the auth apps, which are not installed in PUBLIC mode
+                    # (where the docs import this module)
+                    from django.contrib.auth.views import redirect_to_login
                     return redirect_to_login(
                         request.get_full_path(), settings.LOGIN_URL)
 
