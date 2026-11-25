@@ -53,7 +53,7 @@ jobs:
           OQ_ADMIN_USERNAME=user
           OQ_ADMIN_PASSWORD=login
           OQ_ADMIN_EMAIL=user@login.input
-          EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+          EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
           EMAIL_HOST=smtp.gmail.com
           EMAIL_PORT=587
           EMAIL_USE_TLS=True
