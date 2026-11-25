@@ -58,6 +58,29 @@ def adjust_limits(ax, xlim, ylim, padding=1):
     ax.set_ylim(*ylim)
 
 
+def _polygon_to_path(polygon):
+    # Private: convert a shapely polygon (with holes) into a matplotlib Path
+    from matplotlib.path import Path as MplPath
+    if polygon.is_empty:
+        return None
+    vertices = []
+    codes = []
+    # Exterior
+    ext_coords = numpy.array(polygon.exterior.coords)
+    vertices.append(ext_coords)
+    codes.append(
+        [MplPath.MOVETO] + [MplPath.LINETO] * (len(ext_coords) - 2)
+        + [MplPath.CLOSEPOLY])
+    # Interiors, holes
+    for interior in polygon.interiors:
+        int_coords = numpy.array(interior.coords)
+        vertices.append(int_coords)
+        codes.append(
+            [MplPath.MOVETO] + [MplPath.LINETO] * (len(int_coords) - 2)
+            + [MplPath.CLOSEPOLY])
+    return MplPath(numpy.concatenate(vertices), numpy.concatenate(codes))
+
+
 def add_borders(
         ax, read_df=readinput.read_countries_df,
         facecolor='#F5F5F2',   # Very light grey
@@ -71,7 +94,6 @@ def add_borders(
     """
 
     from matplotlib.patches import PathPatch
-    from matplotlib.path import Path
     from matplotlib.collections import PatchCollection
 
     df = read_df()
@@ -81,26 +103,6 @@ def add_borders(
 
     # Persistent storage for the collection
     state = {'coll': None, 'busy': False}
-
-    def _polygon_to_path(polygon):
-        if polygon.is_empty:
-            return None
-        vertices = []
-        codes = []
-        # Exterior
-        ext_coords = numpy.array(polygon.exterior.coords)
-        vertices.append(ext_coords)
-        codes.append(
-            [Path.MOVETO] + [Path.LINETO] * (len(ext_coords) - 2)
-            + [Path.CLOSEPOLY])
-        # Interiors, holes
-        for interior in polygon.interiors:
-            int_coords = numpy.array(interior.coords)
-            vertices.append(int_coords)
-            codes.append(
-                [Path.MOVETO] + [Path.LINETO] * (len(int_coords) - 2)
-                + [Path.CLOSEPOLY])
-        return Path(numpy.concatenate(vertices), numpy.concatenate(codes))
 
     def redraw(event_ax=None):
         # matplotlib >= 3.11 emits xlim_changed from get_xlim(), so
