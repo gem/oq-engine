@@ -1,6 +1,7 @@
 # Suggested versions for development
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
+https://wheelhouse.openquake.org/unified/h5py-3.15.1-cp314-cp314-macosx_11_0_arm64.whl
 #
 https://wheelhouse.openquake.org/unified/cffi-1.17.1-cp313-cp313-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/unified/charset_normalizer-3.4.0-cp313-cp313-macosx_11_0_arm64.whl
