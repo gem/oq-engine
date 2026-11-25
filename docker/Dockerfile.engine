@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-FROM python:3.12.6-slim AS compile-image
+FROM python:3.13.16-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
 RUN useradd -m -u 1000 -U -s /bin/bash openquake
@@ -31,7 +31,10 @@ WORKDIR ${HOME}
 RUN cd /usr/src/oq-engine && \
     python3 install.py devel --novenv
 #
-FROM python:3.12.6-slim AS build-image
+FROM python:3.13.16-slim AS build-image
+# fiona needs libexpat.so.1, which is not in the slim base image
+RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 \
+    && rm -rf /var/lib/apt/lists/*
 RUN useradd -m -u 1000 -U -s /bin/bash openquake
 COPY --from=compile-image --chown=openquake:openquake \
     /opt/openquake/ /opt/openquake/
