@@ -384,17 +384,34 @@ def get_hmaps(rates, imtls, oq):
     return compute_hmaps(curves, imtls, oq.poes or [.002105])
 
 
+def uhs_errors(hmaps, ref, imts):
+    """
+    :param hmaps: hazard maps in g, with the IMTs along the second axis
+    :param ref: reference hazard maps with the same shape
+    :param imts: the IMTs; only the uniform hazard spectrum ones (PGA and
+        SA) are considered
+    :returns: arrays with one element per poe, the mean and the 99th
+        percentile of the absolute errors on the UHS (in g), and the 99th
+        percentile over all poes of the errors divided by
+        ATOL + RTOL * |ref|, so that a value is close when it is <= 1
+        (as in numpy.testing.assert_allclose)
+    """
+    uhs = [m for m, imt in enumerate(imts) if imt.startswith(('PGA', 'SA'))]
+    errs = numpy.abs(hmaps[:, uhs] - ref[:, uhs])  # shape (N, U, P)
+    norm = errs / (ATOL + RTOL * numpy.abs(ref[:, uhs]))
+    return (errs.mean(axis=(0, 1)), numpy.percentile(errs, 99, axis=(0, 1)),
+            numpy.percentile(norm, 99))
+
+
 # yield a Candidate with spacing, distance, weight, mean_err, p99_err and
-# p99_norm, where mean_err and p99_err are the absolute errors (in g) on
-# the hazard maps and p99_norm is the 99th percentile of the error divided
-# by ATOL + RTOL * |reference|, so that a value is close when it is <= 1
+# p99_norm, see uhs_errors; mean_err and p99_err are the maxima over the
+# poes, only p99_norm is used to choose the candidate
 def _get_rows(results, ref, imtls, oq):
+    imts = list(imtls)
     # sorted, so that the choice among equal weights does not depend on
     # the order in which the tasks finish
     for key, result in sorted(results.items()):
         hmaps = get_hmaps(result['rates'], imtls, oq)
-        errs = numpy.abs(hmaps - ref)
-        norm = errs / (ATOL + RTOL * numpy.abs(ref))
-        yield Candidate(*key, result['weight'], errs.mean(),
-                        numpy.percentile(errs, 99),
-                        numpy.percentile(norm, 99))
+        mean_err, p99_err, p99_norm = uhs_errors(hmaps, ref, imts)
+        yield Candidate(*key, result['weight'], mean_err.max(),
+                        p99_err.max(), p99_norm)

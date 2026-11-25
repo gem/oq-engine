@@ -206,3 +206,14 @@ subtasks.
 | save_rates        | rmap=19.34 GB num_chunks=1.3 KB h5=1.04 KB           | 1.04 KB   |
 | fast_mean         | pgetter=70.44 MB                                     | 166.29 MB |
 | make_hmap_png     | lons=12.79 MB hmap=6.4 MB                            | 16.41 MB  |
+
+* errors on the UHS, ps_grid_spacing=0 as reference
+
+mean_err and p99_err have one element for each poe, in the order of the UHS poes (0.002105 0.000404).
+
+| version              | mean_err            | p99_err           |
+|----------------------|---------------------|-------------------|
+| 3.24.1               | 0.000555 0.001781   | 0.008569 0.02588  |
+| 3.25.1               | 0.0005557 0.001782  | 0.008569 0.02587  |
+| 3.26.2               | 0.0005294 0.001858  | 0.00824 0.02762   |
+| 3.27.0-git11e4d59a1d | 0.0003599 0.0009321 | 0.001716 0.008659 |

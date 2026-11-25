@@ -389,6 +389,25 @@ class RunShowExportTestCase(unittest.TestCase):
 
 
 class CompareTestCase(unittest.TestCase):
+    def test_errors(self):
+        # comparing a calculation with itself, given by ID and by path
+        ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
+        [job] = run_jobs(create_jobs([ini]))
+        with read(job.calc_id) as ds:
+            path = ds.filename
+        with Print.patch() as p:
+            sap.runline(
+                f"openquake.commands compare errors {job.calc_id} {path}")
+        out = str(p)
+        self.assertIn('3 common sites out of 3', out)
+        rows = [line.split('|')[1:-1] for line in out.splitlines()
+                if line.startswith('| UHS')]
+        # one row for the UHS, with one error for each poe
+        self.assertEqual(len(rows), 1)
+        self.assertEqual([float(x) for x in rows[0][2].split()], [0])
+        self.assertEqual([float(x) for x in rows[0][3].split()], [0])
+        self.assertEqual(float(rows[0][4]), 0)
+
     def test_med_gmv(self):
         # testing the postprocessor med_gmv
         ini = os.path.join(os.path.dirname(case_13.__file__), 'job_gmv.ini')
