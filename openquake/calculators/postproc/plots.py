@@ -80,7 +80,7 @@ def add_borders(
     ax.set_facecolor(sea_color)
 
     # Persistent storage for the collection
-    state = {'coll': None}
+    state = {'coll': None, 'busy': False}
 
     def _polygon_to_path(polygon):
         if polygon.is_empty:
@@ -103,6 +103,18 @@ def add_borders(
         return Path(numpy.concatenate(vertices), numpy.concatenate(codes))
 
     def redraw(event_ax=None):
+        # matplotlib >= 3.11 emits xlim_changed from get_xlim(), so
+        # _redraw can re-enter redraw: skip the nested calls
+        if state['busy']:
+            return
+        state['busy'] = True
+        try:
+            _redraw()
+        finally:
+            state['busy'] = False
+
+    def _redraw():
+        # Private: called only through redraw, which guards it
         if state['coll'] is not None:
             state['coll'].remove()
             state['coll'] = None
