@@ -28,7 +28,7 @@ dependencies = [
     "numpy~=2.4.0",
     "scipy~=1.17.0",
     "pandas~=2.2.0",
-    "h5py~=3.13",
+    "h5py~=3.13.0",
     "django~=5.2.0",
     "psutil",
     "requests",
