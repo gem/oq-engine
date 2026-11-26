@@ -690,16 +690,9 @@ def estimate_nctxs(cmaker, srcs, sitecol):
 _CDF_GRID = 64
 _CDF_LIMIT = 9
 _CDF_OFFSET = _CDF_LIMIT * _CDF_GRID
-
-
-def _cdf_coefficients():
-    # Each row stores Phi and its first three Taylor coefficients.
-    x = numpy.arange(-_CDF_OFFSET, _CDF_OFFSET + 1) / _CDF_GRID
-    d = numpy.exp(-x*x/2) / numpy.sqrt(2*numpy.pi)
-    return numpy.column_stack((ndtr(x), d, -x*d/2, (x*x - 1)*d/6))
-
-
-_CDF = _cdf_coefficients()
+_x = numpy.arange(-_CDF_OFFSET, _CDF_OFFSET + 1) / _CDF_GRID
+_d = numpy.exp(-_x*_x/2) / numpy.sqrt(2*numpy.pi)
+_CDF = numpy.column_stack((ndtr(_x), _d, -_x*_d/2, (_x*_x - 1)*_d/6))
 
 
 @compile("float64(float64, float64, float64, float64)")
