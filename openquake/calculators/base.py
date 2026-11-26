@@ -1449,14 +1449,17 @@ def prepare_risk_worker_data(dstore, assetcol, oq):
 # NB: this function is patched in risk_aggregation_test.py
 def read_crmodel(monitor, oq):
     """
-    Read the risk model stored by .save_crmodel, possibly in the parent
+    Read the risk model stored by .save_crmodel in the calculation datastore
 
     :param monitor: a Monitor associated to the calculation datastore
     :param oq: the OqParam instance of the calculation, with runtime
         attributes set
     """
-    with datastore.read(monitor.filename) as dstore:
-        return riskmodels.CompositeRiskModel.read(dstore, oq)
+    # NB: the parent is not opened: it is not needed, since .save_crmodel
+    # stores the risk model in the child too, and it can be still open for
+    # writing, as in the interdependencies postrisk calculator
+    with hdf5.File(monitor.filename, 'r') as h5:
+        return riskmodels.CompositeRiskModel.read(h5, oq)
 
 
 class RiskCalculator(HazardCalculator):

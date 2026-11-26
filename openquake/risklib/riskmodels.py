@@ -610,7 +610,7 @@ class CompositeRiskModel(collections.abc.Mapping):
     @classmethod
     def read(cls, dstore, oqparam, country='???'):
         """
-        :param dstore: a DataStore instance
+        :param dstore: a DataStore or hdf5.File instance
         :returns: a :class:`CompositeRiskModel` instance
         """
         if country != '???':  # reading from exposure.hdf5 in OQImpact mode
@@ -621,10 +621,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             region = ''
 
         risklist = RiskFuncList()
-        if hasattr(dstore, 'get_attr'):
-            # missing only in IMPACT mode, where dstore is an hdf5.File
-            risklist.limit_states = dstore.get_attr(
-                f'crm{region}', 'limit_states')
+        risklist.limit_states = dstore[f'crm{region}'].attrs['limit_states']
         df = dstore.read_df(f'crm{region}')
         if 'peril' in df.columns:
             perils = df.peril
