@@ -1861,8 +1861,7 @@ class ContextMaker(object):
         contexts plus the number of contexts times the cost of the GSIMs
         per context, measured on a sample of the contexts of the sources
         with the same code (the cost depends on the GSIMs, the IMTs and
-        the kind of source: in ALS it is 37 microseconds for the
-        collapsed point sources of the slab and 77 for the interface)
+        the kind of source)
         """
         if srcfilter.sitecol is None:
             for src in sources:
