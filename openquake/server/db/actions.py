@@ -626,7 +626,9 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     # search by id, description and user
     if 'search' in request_get_dict:
         search = request_get_dict.get('search').strip()
-        if search.isdigit():
+        # isdigit() alone accepts non-ASCII digits like '²' (int() fails)
+        # and huge numbers overflowing SQLite INTEGER (max 19 digits)
+        if search.isascii() and search.isdigit() and len(search) < 19:
             search_filter = "j.id = ?x"
             query_params.append(int(search))
         else:
