@@ -17,12 +17,21 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import shutil
+import tempfile
+from unittest import mock
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.hazardlib import InvalidFile
+from openquake.hazardlib.stats import mean_curve
+from openquake.hazardlib.tom import NegativeBinomialTOM
+from openquake.hazardlib.calc.disagg import to_probs, to_rates
 from openquake.commonlib import readinput
 from openquake.calculators.export import export
+from openquake.calculators.displacement import (
+    DisplacementCalculator, explicit_rates, get_stat_curve)
 from openquake.calculators.getters import MapGetter
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.pfd.primary_surf_rup.mammarella2024 import (
@@ -97,6 +106,18 @@ class DisplacementTestCase(CalculatorTestCase):
             dstore['hmaps-stats'][0, 0, 0], hmap1, rtol=5e-3)
         numpy.testing.assert_allclose(
             dstore['mean_rates_by_src'][:], bysrc1, rtol=1e-6)
+
+    def test_stat_curve_long_investigation_time(self):
+        # one level, two realizations: over a long investigation time the
+        # probability of the first one rounds to 1, and a rate recomputed
+        # from it saturates at 100 instead of 43.76
+        rates = numpy.array([[43.76, 0.5]])
+        weights = numpy.array([0.01, 0.99])
+        [mean] = get_stat_curve(rates, weights, mean_curve)
+        self.assertAlmostEqual(mean, -numpy.expm1(-(0.4376 + 0.495)))
+        [saturated] = to_probs(mean_curve(to_rates(to_probs(rates)).T,
+                                          weights))
+        self.assertGreater(saturated - mean, 0.1)
 
     def test_missing_investigation_time(self):
         params = readinput.get_params(
@@ -185,6 +206,70 @@ class DisplacementTestCase(CalculatorTestCase):
         # the 2-section rupture spans both kites (no gap bridging)
         self.assertAlmostEqual(float(multi.x_l[0]), 0.25425, places=4)
         self.assertAlmostEqual(float(multi.length[0]), 77.313, places=2)
+
+    def run_case_4(self, probs_occur, **params):
+        # case_4 with other probabilities of occurrence of its 3 ruptures
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        dest = os.path.join(tmp, 'case_4')
+        shutil.copytree(os.path.dirname(case_4.__file__), dest)
+        with hdf5.File(os.path.join(dest, 'ssm.hdf5'), 'r+') as h5:
+            del h5['1/probs_occur']
+            h5['1/probs_occur'] = numpy.array(probs_occur, float)
+        # the source model declares the time of its probabilities, which
+        # must be the investigation time of the job
+        itime = params.get('investigation_time', '1.0')
+        ssm = os.path.join(dest, 'ssm.xml')
+        with open(ssm, encoding='utf-8') as f:
+            text = f.read()
+        with open(ssm, 'w', encoding='utf-8') as f:
+            f.write(text.replace('investigation_time="1.0"',
+                                 'investigation_time="%s"' % itime))
+        self.run_calc(os.path.join(dest, 'job.ini'), 'job.ini', **params)
+        dstore = self.calc.datastore
+        return (dstore['hcurves-rlzs'][0, 0, 0].astype(float),
+                dstore['mean_rates_by_src'][:])
+
+    def test_case_4_probabilities_of_occurrence(self):
+        # with infer_occur_rates = false (the default) the ruptures carry the
+        # distribution of the number of occurrences in the investigation
+        # time, used in full as in the classical calculator: P(no
+        # exceedance) = sum_k p(k) (1 - q)^k (before, zero hazard)
+        p0 = numpy.array([.8, .7, .9])  # P(no occurrence) of the ruptures
+        poisson, _ = self.run_case_4(numpy.c_[p0, 1 - p0],
+                                     infer_occur_rates='true')
+        # the Poisson distribution with the same P(no occurrence) gives the
+        # curve obtained by inferring the rates
+        k = numpy.arange(40)
+        lam = -numpy.log(p0)[:, None]
+        pmf = numpy.exp(-lam + k * numpy.log(lam) - numpy.cumsum(
+            numpy.log(numpy.maximum(k, 1))))
+        got, by_src = self.run_case_4(pmf, infer_occur_rates='false')
+        numpy.testing.assert_allclose(got, poisson, rtol=1e-6)
+        # exactly one and exactly two occurrences: no P(no occurrence) to
+        # infer a rate from, and P(no exceedance) is squared
+        one, by_src = self.run_case_4([[0., 1., 0.]] * 3,
+                                      infer_occur_rates='false')
+        two, _ = self.run_case_4([[0., 0., 1.]] * 3,
+                                 infer_occur_rates='false')
+        self.assertTrue((one > 0).all())
+        self.assertTrue(numpy.isfinite(by_src).all())
+        numpy.testing.assert_allclose(two, 1 - (1 - one) ** 2, rtol=1e-6)
+
+    def test_case_4_inferred_rates_investigation_time(self):
+        # the probabilities of occurrence refer to the investigation time:
+        # the same source over 50 years gives the same annual rates
+        p0 = numpy.array([.8, .7, .9])
+        curve1, by_src1 = self.run_case_4(numpy.c_[p0, 1 - p0],
+                                          infer_occur_rates='true')
+        p50 = p0 ** 50
+        curve50, by_src50 = self.run_case_4(
+            numpy.c_[p50, 1 - p50], infer_occur_rates='true',
+            investigation_time='50')
+        numpy.testing.assert_allclose(by_src50, by_src1, rtol=1e-6)
+        annual = -numpy.log1p(-curve1)
+        numpy.testing.assert_allclose(
+            curve50, -numpy.expm1(-50 * annual), rtol=1e-5)
 
     def test_case_5(self):
         # a heavy CSV-backed model (Kuehn2024PrimaryFD, aggregate definition)
@@ -337,6 +422,218 @@ class DisplacementTestCase(CalculatorTestCase):
         self.assertEqual(list(by_src.src_id), ['3'])
         numpy.testing.assert_allclose(by_src.array[0, 0, :, 0], rates, rtol=1e-5)
 
+    def copy_case(self, case, replacements):
+        """
+        :param replacements: file name -> list of (old, new) texts
+        :returns: the directory of a copy of the case, with the replacements
+        """
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        src = os.path.dirname(case.__file__)
+        dest = os.path.join(tmp, os.path.basename(src))
+        shutil.copytree(src, dest)
+        for fname, pairs in replacements.items():
+            path = os.path.join(dest, fname)
+            with open(path, encoding='utf-8') as f:
+                text = f.read()
+            for old, new in pairs:
+                self.assertIn(old, text)
+                text = text.replace(old, new)
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(text)
+        return dest
+
+    def test_case_10_colon_convention(self):
+        # by the colon convention of the engine the sources "fault:17" and
+        # "fault:18" are fragments of the source "fault", which is what the
+        # logic trees refer to: applyToSources="fault" applies to both
+        self.run_calc(case_10.__file__, 'job.ini')
+        ref = self.calc.datastore['hcurves-stats'][:, 0]
+        self.assertTrue((ref > 0).any())
+        rename = [('id="A"', 'id="fault:17"'), ('id="B"', 'id="fault:18"')]
+        bset = 'branchSetID="bs_psr"'
+        dest = self.copy_case(case_10, {
+            'source_model.xml': rename,
+            'pfd_logic_tree.xml': [(bset, bset + ' applyToSources="fault"')]})
+        self.run_calc(os.path.join(dest, 'job.ini'), 'job.ini')
+        numpy.testing.assert_allclose(
+            self.calc.datastore['hcurves-stats'][:, 0], ref, rtol=1e-6)
+        # a fragment cannot be addressed on its own, as in the source model
+        # logic tree, and a source that does not exist is an error
+        for src_id, msg in [('fault:17', 'colon convention'),
+                            ('faultX', 'no such source')]:
+            dest = self.copy_case(case_10, {
+                'source_model.xml': rename,
+                'pfd_logic_tree.xml': [
+                    (bset, bset + ' applyToSources="%s"' % src_id)]})
+            with self.assertRaises(InvalidFile) as ctx:
+                self.run_calc(os.path.join(dest, 'job.ini'), 'job.ini')
+            self.assertIn(msg, str(ctx.exception))
+
+    def test_case_4_split_source(self):
+        # a multi-fault source with more ruptures than BLOCKSIZE is split in
+        # blocks "1:0", "1:1", which the tasks read from the datastore: a
+        # branch set with applyToSources="1" applies to them
+        bset = 'branchSetID="bs_1_primary_surf_rup"'
+        dest = self.copy_case(case_4, {'pfd_logic_tree.xml': [
+            (bset, bset + ' applyToSources="1"')]})
+        modes = []  # SWMR mode when the outputs are written
+        post_execute = DisplacementCalculator.post_execute
+
+        def spy(calc, *args):
+            modes.append(calc.datastore.hdf5.swmr_mode)
+            return post_execute(calc, *args)
+        with mock.patch('openquake.hazardlib.source.multi_fault.BLOCKSIZE', 2):
+            self.run_calc(case_4.__file__, 'job.ini')
+            ref = self.calc.datastore['hcurves-stats'][0, 0, 0]
+            with mock.patch.object(DisplacementCalculator, 'post_execute', spy):
+                self.run_calc(os.path.join(dest, 'job.ini'), 'job.ini')
+        ids = sorted(src.source_id for grp in self.calc.csm.src_groups
+                     for src in grp)
+        self.assertEqual(ids, ['1:0', '1:1'])
+        # the outputs are written after leaving the SWMR mode of the tasks
+        self.assertEqual(modes, [False])
+        numpy.testing.assert_allclose(
+            self.calc.datastore['hcurves-stats'][0, 0, 0], ref, rtol=1e-6)
+
+    def test_case_10_negative_binomial(self):
+        # fault A with a negative binomial TOM (rate 0.3, alpha 2): with q
+        # the probability that one event exceeds the level, the probability
+        # of no exceedance in the investigation time T is
+        # (1 + alpha * rate * T * q) ** (-1 / alpha); where q = 0 (off the
+        # trace, primary displacement only) there is no hazard at all
+        head = ('<characteristicFaultSource id="A" name="Fault A" '
+                'tectonicRegion="Active Shallow Crust">\n'
+                '        <incrementalMFD binWidth="0.1" minMag="6.0">\n'
+                '          <occurRates>1.0E-3</occurRates>')
+        sites = '10.0 45.1079186, 10.025 45.1079186'
+        poisson = self.copy_case(case_10, {'source_model_char.xml': [
+            (head, head.replace('1.0E-3', '0.3'))]})
+        negbinom = self.copy_case(case_10, {'source_model_char.xml': [
+            (head, head.replace('1.0E-3', '0.3').replace(
+                'tectonicRegion="Active Shallow Crust">',
+                'tectonicRegion="Active Shallow Crust" '
+                'tom="NegativeBinomialTOM" mu="0.3" alpha="2">', 1))]})
+
+        def run(path, **params):
+            self.run_calc(os.path.join(path, 'job_char.ini'), 'job_char.ini',
+                          sites=sites, **params)
+            on = numpy.argmin(numpy.abs(self.calc.sitecol.lons - 10.0))
+            curves = self.calc.datastore['hcurves-stats'][:, 0, 0]
+            return curves[on].astype(float), curves[1 - on]
+        poe, _ = run(poisson)
+        q = -numpy.log1p(-poe) / 0.3  # exceedance probability of one event
+        self.assertTrue((q > 0).all())
+        for itime in (1, 50):
+            got, off = run(negbinom, investigation_time=str(itime))
+            expected = 1 - (1 + 2 * 0.3 * itime * q) ** -.5
+            # the closed form is the series summed by the TOM itself
+            tom = NegativeBinomialTOM(itime, mu=0.3, alpha=2.)
+            numpy.testing.assert_allclose(
+                1 - tom.get_probability_no_exceedance(0.3, q[None])[0],
+                expected, rtol=1e-9)
+            numpy.testing.assert_allclose(got, expected, rtol=1e-5)
+            numpy.testing.assert_array_equal(off, 0.)
+
+    def test_case_10_single_source_filters(self):
+        # a job restricted to source A (source_id) with a branch set for B:
+        # applyToSources names a source of the whole model, so B is valid
+        # and A gets the same curve as in the job with both sources, while a
+        # misspelled ID is still an error
+        bset = 'branchSetID="bs_psr"'
+        dest = self.copy_case(case_10, {'pfd_logic_tree.xml': [
+            (bset, bset + ' applyToSources="B"')]})
+        self.run_calc(os.path.join(dest, 'job.ini'), 'job.ini')
+        both = self.calc.datastore['hcurves-stats'][0, 0]
+        self.run_calc(os.path.join(dest, 'job.ini'), 'job.ini', source_id='A')
+        numpy.testing.assert_allclose(
+            self.calc.datastore['hcurves-stats'][0, 0], both, rtol=1e-6)
+        bad = self.copy_case(case_10, {'pfd_logic_tree.xml': [
+            (bset, bset + ' applyToSources="Bx"')]})
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(os.path.join(bad, 'job.ini'), 'job.ini',
+                          source_id='A')
+        self.assertIn('no such source', str(ctx.exception))
+
+    def test_case_4_single_precision_probabilities(self):
+        # the probabilities of occurrence stored in single precision do not
+        # sum to 1 exactly (0.9 + 0.1 = 0.99999998): they are normalized,
+        # and off the trace (primary displacement only, q = 0) the hazard
+        # is exactly 0
+        sites = '10.25 45.0, 10.25 45.015'
+        curves = {}
+        for dtype in ('float64', 'float32'):
+            dest = self.copy_case(case_4, {})
+            lt = os.path.join(dest, 'pfd_logic_tree.xml')
+            with open(lt, encoding='utf-8') as f:
+                text = f.read()
+            primary = text[:text.index(
+                '<logicTreeBranchSet branchSetID="bs_3_secondary_surf_rup"')]
+            with open(lt, 'w', encoding='utf-8') as f:
+                f.write(primary + '</logicTree>\n</nrml>\n')
+            with hdf5.File(os.path.join(dest, 'ssm.hdf5'), 'r+') as h5:
+                del h5['1/probs_occur']
+                h5['1/probs_occur'] = numpy.array(
+                    [[.9, .1], [.7, .3], [.9, .1]], dtype)
+            self.run_calc(os.path.join(dest, 'job.ini'), 'job.ini',
+                          sites=sites, infer_occur_rates='false')
+            on = numpy.argmin(numpy.abs(self.calc.sitecol.lats - 45.0))
+            hcurves = self.calc.datastore['hcurves-stats'][:, 0, 0]
+            curves[dtype] = hcurves[on], hcurves[1 - on]
+        for dtype, (on_trace, off_trace) in curves.items():
+            self.assertTrue((on_trace > 0).all())
+            numpy.testing.assert_array_equal(off_trace, 0.)
+        numpy.testing.assert_allclose(
+            curves['float32'][0], curves['float64'][0], rtol=1e-6)
+
+    def test_case_10_mutex_sources(self):
+        # the calculator does not use the weights of mutually exclusive
+        # sources: such a group is rejected
+        group = ('<sourceGroup name="faults" '
+                 'tectonicRegion="Active Shallow Crust">')
+        dest = self.copy_case(case_10, {'source_model_char.xml': [
+            ('id="A"', 'id="fault:0"'), ('id="B"', 'id="fault:1"'),
+            (group, group.replace(
+                '>', ' src_interdep="mutex" srcs_weights="0.25 0.75">'))]})
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(os.path.join(dest, 'job_char.ini'), 'job_char.ini')
+        self.assertIn('mutually exclusive', str(ctx.exception))
+
+    def test_case_10_cluster_sources(self):
+        # the calculator does not use the occurrence rate of a cluster of
+        # sources: such a group is rejected
+        group = ('<sourceGroup name="faults" '
+                 'tectonicRegion="Active Shallow Crust">')
+        dest = self.copy_case(case_10, {'source_model_char.xml': [
+            (group, group.replace('>', ' cluster="true" tom="PoissonTOM" '
+                                  'occurrence_rate="0.1">'))]})
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(os.path.join(dest, 'job_char.ini'), 'job_char.ini')
+        self.assertIn('cluster', str(ctx.exception))
+
+    def test_case_4_inferred_rate_from_zero_probability(self):
+        # infer_occur_rates = true needs P(no occurrence) > 0
+        with self.assertRaises(ValueError) as ctx:
+            self.run_case_4([[0., 1.], [.7, .3], [.9, .1]],
+                            infer_occur_rates='true')
+        self.assertIn('infer_occur_rates = false', str(ctx.exception))
+
+    def test_case_11_colon_convention(self):
+        # the same job with the source declared as "fault:17", a fragment of
+        # the source "fault" by the colon convention, and applyToSources
+        # referring to "fault": the same curves (before, the source got no
+        # P(SR) model, +22%)
+        self.run_calc(case_11.__file__, 'job.ini')
+        ref = self.calc.datastore['hcurves-stats'][0, 0, 0]
+        rename = [('id="3"', 'id="fault:17"')]
+        dest = self.copy_case(case_11, {
+            'source_model_a.xml': rename, 'source_model_b.xml': rename,
+            'pfd_logic_tree.xml': [('applyToSources="3"',
+                                    'applyToSources="fault"')]})
+        self.run_calc(os.path.join(dest, 'job.ini'), 'job.ini')
+        numpy.testing.assert_allclose(
+            self.calc.datastore['hcurves-stats'][0, 0, 0], ref, rtol=1e-6)
+
 
 def test_pinned_geometry():
     # a primary surface-rupture branch pinning the dip or the depth of
@@ -389,3 +686,22 @@ def test_visini_branch_segment_sampling_reaches_pipeline():
     adapters, _ = get_adapters(selections(), 0., 0.2)
     assert adapters['secondary_combined'].segment_sampling == 'truncated'
 
+
+def test_explicit_rates():
+    # exactly 20 occurrences: -log P(no exceedance) = -20 log(1 - q) in both
+    # tails (P(no exceedance) = 1e-20 at q = 0.9, where the probability of
+    # exceedance rounds to 1), and the cap of to_rates where it is 0
+    probs = numpy.zeros(21)
+    probs[20] = 1.
+    q = numpy.array([[0., 1e-12, .9, .99, 1.]])
+    expected = [0., -20 * numpy.log1p(-1e-12), -20 * numpy.log(.1),
+                -20 * numpy.log(.01), -numpy.log(1e-45)]
+    numpy.testing.assert_allclose(explicit_rates(probs, q)[0], expected,
+                                  rtol=1e-12)
+    # q = 1 with a positive probability of no occurrence
+    numpy.testing.assert_allclose(
+        explicit_rates([.3, .7], numpy.ones((1, 1))), [[-numpy.log(.3)]],
+        rtol=1e-12)
+    # probabilities stored in single precision: exactly 0 where q = 0
+    probs32 = numpy.array([.9, .1], numpy.float32)
+    assert explicit_rates(probs32, numpy.zeros((1, 3))).tolist() == [[0.] * 3]

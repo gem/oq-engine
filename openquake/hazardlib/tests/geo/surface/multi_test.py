@@ -24,7 +24,7 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
-from openquake.hazardlib.geo.surface.multi import MultiSurface
+from openquake.hazardlib.geo.surface.multi import MultiSurface, build_secparams
 from openquake.hazardlib.tests.geo.line_test import get_mesh, plot_pattern
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
@@ -322,3 +322,16 @@ def _plotting(surf, dst, mlons, mlats, lons=[], lats=[], label=''):
         ax.plot(coo[0, 0], coo[0, 1], 'g', marker="$s$", ms=5)
         ax.plot(coo[-1, 0], coo[-1, 1], 'r', marker="$e$", mfc='none', ms=8)
     return ax
+
+
+def test_secparams_zbot_ignores_nan_padding():
+    # profiles reaching 15, 12, 9 and 6 km: the mesh is padded with NaNs
+    profiles = [Line([Point(lon, 0., 0.), Point(lon, lat, depth)])
+                for lon, lat, depth in [(0., .001, 15.), (.1, .01, 12.),
+                                        (.2, .02, 9.), (.3, .03, 6.)]]
+    sfc = KiteSurface.from_profiles(profiles, 2.5, 2.5, idl=False,
+                                    align=False)
+    assert numpy.isnan(sfc.mesh.depths).any()
+    [zbot] = build_secparams([sfc])['zbot']
+    numpy.testing.assert_allclose(zbot, numpy.nanmax(sfc.mesh.depths),
+                                  rtol=1e-6)

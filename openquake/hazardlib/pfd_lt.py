@@ -33,10 +33,11 @@ paths is ``count_paths(root_branchset.branches)``.  The
 ``<uncertaintyModel>`` values are parsed by
 :data:`openquake.hazardlib.lt.parse_uncertainty`.
 """
+import re
 from dataclasses import dataclass
 
 from openquake.baselib.node import context
-from openquake.hazardlib import lt, nrml
+from openquake.hazardlib import lt, nrml, valid
 from openquake.hazardlib.gsim_lt import bsnodes
 from openquake.hazardlib.logictree import check_branchset_weights
 
@@ -83,6 +84,39 @@ def _choice(utype, branch_id, value, weight):
     slot = PFD_SLOTS_BY_UTYPE[utype]
     class_name, params = value
     return slot, PfdModelChoice(class_name, params, branch_id, weight)
+
+
+def logical_id(source_id):
+    """
+    :param source_id: the ID of a source as seen by the calculator
+    :returns: the ID of the source as seen by the logic trees, which is
+        what ``applyToSources`` refers to: the part before the first of
+        "!" (source repeated in several files), ":" (fragment of a source,
+        the colon convention of the engine, also used for the blocks of a
+        split multi-fault source), ";" (variant of a source), "." (split
+        source) and "@" (split multi-fault source). The source model logic
+        tree records the source IDs in the same way (see ``get_trt_by_src``
+        and ``SourceModelLogicTree.prune``).
+
+    >>> logical_id('fault:17!b2')
+    'fault'
+    >>> logical_id('mf@3')
+    'mf'
+    """
+    return re.split('[!:;.@]', source_id)[0]
+
+
+def source_basename(source_id):
+    """
+    :param source_id: the ID of a source as seen by the calculator
+    :returns: the key of the source in ``mean_rates_by_src``, i.e. the
+        name returned by ``CompositeSourceModel.get_basenames``: without the
+        suffixes ":<n>", ".<n>", ";<n>" and "!<branch>"
+
+    >>> source_basename('fault:17!b2')
+    'fault'
+    """
+    return valid.basename(source_id, ';:.').split('!')[0]
 
 
 class PFDLogicTree(lt.ExtraLogicTree):
@@ -187,7 +221,7 @@ class PFDLogicTree(lt.ExtraLogicTree):
     def _applies(self, bs, source_id, style, chosen_ids):
         filters = bs.filters
         ats = filters.get('applyToSources')
-        if ats is not None and source_id not in ats:
+        if ats is not None and logical_id(source_id) not in ats:
             return False
         atb = filters.get('applyToBranches')
         if atb is not None and not (chosen_ids & set(atb)):

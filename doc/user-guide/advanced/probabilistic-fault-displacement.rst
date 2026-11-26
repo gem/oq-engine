@@ -44,9 +44,23 @@ positions and assigns it to the positions whose top edge is within
 ``surface_rupture_depth_tolerance_km`` of the surface, which provide the
 geometry (trace, length, position along strike): for these sources
 ``lambda(m) * P(SR | m)`` is the rate of surface rupture, for any mesh.
+The sum is done for each position along strike, so the distribution of
+the rate along strike is kept also on complex and kite faults whose
+width changes along strike; where no position at the surface exists
+along strike, the rate there is discarded as blind (see below).
 The ruptures of characteristic, multi-fault and non-parametric sources
 are given one by one: one with a buried top edge is a blind rupture and
-is skipped. A floating source with no position at the surface for a
+is skipped. A rupture given with the probabilities :math:`p(k)` of
+:math:`k` occurrences in the investigation time (multi-fault sources with
+``infer_occur_rates = false``, non-parametric sources) contributes, as in
+the classical calculator, :math:`-\ln \sum_k p(k)\,(1 - q)^k` to the rate
+over the investigation time, where :math:`q` is the probability that one
+occurrence exceeds the displacement (the :math:`p(k)` are normalized to
+sum to 1; for a negative binomial TOM the series is summed exactly).
+With ``infer_occur_rates = true`` the rate of a multi-fault rupture is
+:math:`-\ln p(0) / T`: the probabilities of a source model refer to its
+investigation time, which must be the one of the job. A floating source
+with no position at the surface for a
 magnitude (i.e. an upper seismogenic depth below the tolerance) is blind
 as well: the engine logs a warning with the discarded rate.
 
@@ -139,7 +153,13 @@ The PFD logic tree is also *source-oriented*: a
 branch set can carry the attributes ``applyToSources`` (a
 space-separated list of source IDs) and ``applyToStyle`` (normal,
 reverse or strike-slip), so that different model combinations can be
-applied to different sources or faulting styles. The total number of
+applied to different sources or faulting styles. As in the source model
+logic tree, ``applyToSources`` names sources of the source models, and a
+source that does not exist is an error. By the colon convention of the
+engine, sources with IDs ``fault:17`` and ``fault:18`` are fragments of
+the source ``fault``, which is the name to use; the blocks of a split
+multi-fault source belong to the source as well.
+The total number of
 realizations of a displacement calculation is the product of the
 number of source model realizations and the number of paths of the
 PFD logic tree.
@@ -252,7 +272,9 @@ measure levels:
   each probability of exceedence; the export key is ``hmaps``
 - per-source rates: the mean annual rate contributed by each source,
   as ``mean_rates_by_src`` (the export key is ``mean_rates_by_src``),
-  useful to see which fault drives the hazard at a site
+  useful to see which fault drives the hazard at a site; as in the
+  classical calculator, the fragments of a source (``fault:17``,
+  ``fault:18``) are added together under its name (``fault``)
 - source information: ``source_info`` and ``source_data`` tables with
   the number of contexts, ruptures and the computation time per
   source
@@ -273,6 +295,9 @@ Caveats
   hazard: a source with no rupture having the top edge within
   ``surface_rupture_depth_tolerance_km`` is blind and is ignored, so
   the calculator is meant for active, shallow faulting sources
+- groups of mutually exclusive sources or ruptures
+  (``src_interdep="mutex"`` or ``rup_interdep="mutex"``) and clusters of
+  sources (``cluster="true"``) are not supported and are rejected
 - the probability of surface rupture is the business of the primary
   surface-rupture model alone: do not correct the magnitude-frequency
   distribution of a floating source for the buried float positions,
