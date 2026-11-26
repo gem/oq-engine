@@ -237,7 +237,11 @@ STANDALONE_APP_INFO = [
     {"pkg": "oq-platform-taxonomy", "name": "openquakeplatform_taxonomy",
      "ver": "~=1.2.1"},
     {"pkg": "django-gem-taxonomy", "name": "django_gem_taxonomy",
-     "ver": "~=1.5.1"}]
+     "ver": "~=1.5.1"},
+]
+# WARNING: don't touch the "]" alone just above: it is used by oq-builder:..build.sh
+#          script to identify the end of STANDALONE_APP_INFO
+
 WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
 
