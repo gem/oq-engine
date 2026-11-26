@@ -24,7 +24,8 @@ from django.core.exceptions import ImproperlyConfigured
 
 from openquake.baselib import config
 from openquake.commonlib import auth
-from openquake.server import apps, internal_api
+from openquake.commands import webui
+from openquake.server import apps, internal_api, postinstall
 
 
 @pytest.mark.parametrize('environ, authkey, expected', [
@@ -54,11 +55,31 @@ def test_no_key_closes_the_internal_api():
     (True, 'a-key', False),
     (False, '', False)])  # nobody else uses the internal API
 def test_server_installation_requires_key(server, key, refused):
-    with mock.patch.object(apps, 'is_server_installation',
+    with mock.patch.object(auth, 'is_server_installation',
                            return_value=server), \
-            mock.patch.object(apps.auth, 'API_KEY', key):
+            mock.patch.object(auth, 'API_KEY', key):
+        error = auth.api_key_error()
         if refused:
+            assert 'authkey' in error
+            # the second line of defense, when Django starts
             with pytest.raises(ImproperlyConfigured, match='authkey'):
                 apps.check_api_key()
         else:
+            assert error is None
             apps.check_api_key()
+
+
+def test_missing_key_stops_the_webui_before_it_starts():
+    # both the ExecStartPre of the gunicorn units and `oq webui start` exit
+    # before touching the database or starting the server
+    with mock.patch.object(auth, 'is_server_installation',
+                           return_value=True), \
+            mock.patch.object(auth, 'API_KEY', ''), \
+            mock.patch.object(postinstall.actions, 'check_outdated') as chk, \
+            mock.patch.object(webui, 'runserver') as runserver:
+        with pytest.raises(SystemExit, match='authkey'):
+            postinstall.main()
+        with pytest.raises(SystemExit, match='authkey'):
+            webui.main('start', skip_browser=True)
+    chk.assert_not_called()
+    runserver.assert_not_called()

@@ -21,7 +21,7 @@ import importlib
 from django.apps import AppConfig
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from openquake.baselib import config, is_server_installation
+from openquake.baselib import config
 from openquake.commonlib import auth, dbapi
 from openquake.server.db import actions
 
@@ -39,17 +39,12 @@ oqdir = os.path.dirname(os.path.dirname(__file__))
 
 
 def check_api_key():
-    """
-    In a server installation the processes of the users reach the WebUI via
-    the internal API, so its key must be set (install.py generates it)
-    """
-    if is_server_installation() and not auth.API_KEY:
-        raise ImproperlyConfigured(
-            'The key of the internal API is not set: set the authkey in the '
-            '[webapi] section of openquake.cfg (or the OQ_API_KEY environment '
-            'variable) to a random string, e.g. the output of python3 -c '
-            '"import secrets; print(secrets.token_urlsafe(32))"; the public '
-            f'"{auth.PUBLIC_KEY}" is not accepted')
+    # second line of defense: `oq webui start` and the ExecStartPre of the
+    # gunicorn units (python -m openquake.server.postinstall) already stop
+    # the WebUI before it starts, but a unit may lack the ExecStartPre
+    error = auth.api_key_error()
+    if error:
+        raise ImproperlyConfigured(error)
 
 
 class ServerConfig(AppConfig):

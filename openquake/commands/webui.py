@@ -25,7 +25,7 @@ import psutil
 
 from openquake.baselib import config, general
 from openquake.commonlib import dbapi
-from openquake.commonlib.auth import API_KEY
+from openquake.commonlib.auth import API_KEY, api_key_error
 from openquake.server import postinstall
 from openquake.server.db import actions
 from openquake.server.utils import check_webserver_running
@@ -129,6 +129,9 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         _stop(hostport)
         return
 
+    error = api_key_error()
+    if error:
+        sys.exit(error)
     api_host, api_port = hostport.rsplit(':', 1)
     if api_host == '0.0.0.0':
         api_host = '127.0.0.1'
