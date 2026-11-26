@@ -140,7 +140,7 @@ user level, are described in the section of each route.
      - ✓
      - ✓
      - ✓
-     -
+     - 
    * - ``/v1/calc/jobs_from_inis``
      - GET
      - login
