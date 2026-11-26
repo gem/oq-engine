@@ -35,7 +35,7 @@ def classical_risk(riskinputs, oqparam, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    crmodel = monitor.read('crmodel')
+    crmodel = base.read_crmodel(monitor, oqparam)
     result = dict(loss_curves=[], stat_curves=[])
     weights = oqparam._weights[:, -1]
     _statnames, stats = zip(*oqparam._stats)
@@ -115,9 +115,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         :param result: aggregated result of the task classical_risk
         """
-        curve_res = {cp.loss_type: cp.curve_resolution
-                     for cp in self.crmodel.curve_params
-                     if cp.user_provided}
+        curve_res = self.crmodel.get_curve_resolutions()
         self.loss_curve_dt = scientific.build_loss_curve_dt(
             curve_res, insurance_losses=False)
         ltypes = self.crmodel.loss_types

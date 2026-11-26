@@ -27,6 +27,7 @@ from scipy import sparse
 from openquake.baselib import hdf5, performance, general, config
 from openquake.hazardlib import stats, InvalidFile
 from openquake.risklib import riskmodels
+from openquake.commonlib import datastore
 from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID, LOSSTYPE)
@@ -100,34 +101,26 @@ def size_mb(df):
     return df.memory_usage().sum() / 1024**2
 
 
-def get_assetdf_startstop(assetcol):
-    """
-    :param assetcol: an AssetCollection
-    :returns: (dataframe of assets, idx_start_stop array)
-    """
-    assetdf = assetcol.to_dframe()
-    del assetdf['id']
-    if 'ID_0' not in assetdf.columns:
-        assetdf['ID_0'] = U32(0)
-    if 'NAME_1' in assetdf:
-        assetdf = assetdf.sort_values(['ID_0', 'NAME_1', 'ordinal'])
-        id1 = assetdf.NAME_1.to_numpy()
-    else:
-        assetdf = assetdf.sort_values(['ID_0', 'ordinal'])
-        id1 = numpy.zeros(len(assetdf), U32)
+# Index the existing asset table in the order used to compute losses.
+def _asset_rows_and_slices(assets):
+    names = assets.dtype.names
+    zeros = numpy.zeros(len(assets), U32)
+    id0 = assets['ID_0'] if 'ID_0' in names else zeros
+    id1 = assets['NAME_1'] if 'NAME_1' in names else zeros
     # NB: this is subtle! without the ordering by 'ordinal'
-    # the asset dataframe will be ordered differently on AMD machines
+    # the assets will be ordered differently on AMD machines
     # with respect to Intel machines, depending on the machine, thus
     # causing different losses
+    rows = numpy.lexsort((assets['ordinal'], id1, id0)).astype(U32)
 
     # building start-stop indices, so that the assets are read by region
     maxsize = int(config.memory.max_assets_chunk)
-    id01 = assetdf.ID_0.to_numpy() * TWO16 + id1
+    id01 = (id0 * TWO16 + id1)[rows]
     iss = []
     for idx, start, stop in performance.idx_start_stop(id01):
         for slc in general.gen_slices(start, stop, maxsize):
             iss.append((idx, slc.start, slc.stop))
-    return assetdf, U32(iss)
+    return rows, U32(iss)
 
 
 def fast_agg(keys, values, li, loss2):
@@ -300,71 +293,99 @@ def set_oqparam(oq, assetcol, dstore):
 
 class AssetReader:
     """
-    Read a slice of assets by measuring type spent and memory allocated
+    Read the assets of a region which are on the sites with GMFs,
+    measuring the time spent and the memory allocated
     """
-    def __init__(self, monitor):
+    def __init__(self, dstore, monitor):
         self.monitor = monitor('reading assets', measuremem=True)
+        self.rows = dstore['_risk_worker/asset_rows']
+        # assetcol/array is stored contiguously, so it can be memory-mapped
+        # and the scattered rows of a region do not need HDF5 point I/O
+        dset = dstore['assetcol/array']
+        offset = dset.id.get_offset()
+        assert offset is not None, 'assetcol/array is not contiguous'
+        self.assets = numpy.memmap(dset.file.filename, dset.dtype, 'r',
+                                   offset, dset.shape)
 
-    def read(self, s0, s1):
-        with self.monitor as mon:
-            return mon.read('assets', slice(s0, s1)).set_index('ordinal')
+    def read(self, s0, s1, active_sites):
+        with self.monitor:
+            arr = self.assets[self.rows[s0:s1]]
+            arr = arr[active_sites[arr['site_id']]]
+            cols = {name: arr[name] for name in arr.dtype.names
+                    if name != 'id'}
+            # Pack columns once so filtering does not scan strided records.
+            return pandas.DataFrame(cols).set_index('ordinal')
 
 
-def event_based_risk(gmf_df, monitor):
+def event_based_risk(gmf_df, oq, monitor):
     """
     Aggregate the losses for all assets for the given event slice
 
     :returns: dictionary with keys 'alt', 'avg', 'gmf_bytes'
     """
-    with monitor('reading crmodel', measuremem=True):
-        crmodel = monitor.read('crmodel')
-    oq = crmodel.oqparam
-    xtypes = oq.xtypes
-    R = 1 if oq.collect_rlzs else len(monitor.read('weights'))
-    X = len(xtypes)
-    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
-    loss3 = {'aids': [], 'bids': [], 'loss': []}
-    if os.environ.get('OQ_DEBUG_SITE'):
-        print(gmf_df)
+    # NB: the DataStore reads assetcol, events and crm from the parent
+    # calculation, if they are not in the current one
+    with datastore.read(monitor.filename) as dstore:
+        with monitor('reading crmodel', measuremem=True):
+            crmodel = riskmodels.CompositeRiskModel.read(dstore, oq)
+        xtypes = oq.xtypes
+        worker = dstore['_risk_worker']
+        X = len(xtypes)
+        loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+        loss3 = {'aids': [], 'bids': [], 'loss': []}
+        if os.environ.get('OQ_DEBUG_SITE'):
+            print(gmf_df)
 
-    aggids = monitor.read('aggids')
-    rlz_id = monitor.read('rlz_id')
-    areader = AssetReader(monitor)
-    items = ((id01, areader.read(s0, s1))
-             for id01, s0, s1 in monitor.read('start-stop'))
-    if oq.ignore_master_seed or oq.ignore_covs:
-        rng = None
-    else:
-        rng = MultiEventRNG(oq.master_seed, gmf_df.eid.unique(),
-                            int(oq.asset_correlation))
-    risk_mon = monitor('computing risk', measuremem=False)
-    fil_mon = monitor('filtering GMFs', measuremem=False)
-    agg_mon = monitor('aggregating losses', measuremem=False)
-    try:
-        countries = monitor.read('countries')
-    except KeyError:  # no ID_0 in the exposure
-        countries = ["?"]  # assume a single contry
-    for id01, adf_ in items:
-        id0, id1 = numpy.divmod(id01, TWO16)
-        for taxo in adf_.taxonomy.unique():
-            with fil_mon:
-                # filtering is *crucial* for the performance of the next step
-                adf = adf_[adf_.taxonomy == taxo]
-                gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id.unique())]
-                if len(gdf) == 0:
-                    continue
-            # passing the contry is crucial for impact_test,
-            # where the exposure contains multiple countries
+        aggids = worker['aggids'][:] if oq.K else ()
+        if oq.avg_losses and not oq.collect_rlzs:
+            rlz_id = dstore['events'].fields('rlz_id')[:]
+        else:
+            rlz_id = ()
+        areader = AssetReader(dstore, monitor)
+        sids = gmf_df.sid.to_numpy()
+        active = numpy.zeros(len(worker['num_assets']), bool)
+        active[sids[sids < len(active)]] = True
+        items = zip(worker['asset_slices'][:], worker['taxonomy_order'][:])
+        if oq.ignore_master_seed or oq.ignore_covs:
+            rng = None
+        else:
+            rng = MultiEventRNG(oq.master_seed, gmf_df.eid.unique(),
+                                int(oq.asset_correlation))
+        risk_mon = monitor('computing risk', measuremem=False)
+        fil_mon = monitor('filtering GMFs', measuremem=False)
+        agg_mon = monitor('aggregating losses', measuremem=False)
+        try:
+            countries = general.decode(dstore['assetcol/tagcol/ID_0'][:])
+        except KeyError:  # no ID_0 in the exposure
+            countries = ["?"]  # assume a single country
+        for (id01, s0, s1), taxonomies in items:
+            adf_ = areader.read(s0, s1, active)
+            if len(adf_) == 0:
+                continue
+            id0 = id01 // TWO16
+            # the country selects the taxonomy mapping in multi-country
+            # impacts
             try:
                 country = countries[id0]
             except IndexError:
                 raise IndexError(f'Index {id0} not in {countries}')
-            with risk_mon:
-                [out] = crmodel.get_outputs(
-                    adf, gdf, crmodel.oqparam._sec_losses, rng, country)
-            with agg_mon:
-                aggreg(out, aggids, rlz_id, oq, loss2, loss3)
-    avg = build_avg(loss3, oq.A, R*X)
+            with fil_mon:
+                groups = adf_.groupby('taxonomy', sort=False).indices
+            for taxo in taxonomies:
+                with fil_mon:
+                    # filtering is *crucial* for the performance of the
+                    # next step
+                    positions = groups.get(taxo)
+                    if positions is None:
+                        continue
+                    adf = adf_.take(positions)
+                    gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id.unique())]
+                with risk_mon:
+                    [out] = crmodel.get_outputs(
+                        adf, gdf, oq._sec_losses, rng, country)
+                with agg_mon:
+                    aggreg(out, aggids, rlz_id, oq, loss2, loss3)
+    avg = build_avg(loss3, oq.A, oq.R * X)
     alt = build_alt(loss2, xtypes, int(oq.asset_correlation))
     return dict(avg=avg, alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
 
@@ -387,7 +408,8 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
     items = ((dic['gmfdata'], dic.get('times', ()))
              for dic in event_based.event_based(
                  allrups, cmakers, sids, secperils, dstore, monitor))
-    num_assets = monitor.read('num_assets')
+    with hdf5.File(monitor.filename, 'r') as h5:
+        num_assets = h5['_risk_worker/num_assets'][:]
     for blk in general.block_splitter(
             items, AE_MAX, lambda item: num_assets[item[0].sid].sum()):
         times = [t for _, t in blk if len(t)]
@@ -402,9 +424,9 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
         if ae > AE_MAX:  # big task
             calc_id, task_no = monitor.calc_id, monitor.task_no
             print(f'{calc_id=}, {task_no=}, {ae=:_d}')
-            yield event_based_risk, pandas.concat(dfs)
+            yield event_based_risk, pandas.concat(dfs), oq
         else:
-            yield event_based_risk(pandas.concat(dfs), monitor)
+            yield event_based_risk(pandas.concat(dfs), oq, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -424,35 +446,23 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     precalc = 'event_based'
     accept_precalc = ['scenario', 'event_based', 'event_based_risk']
 
-    def save_tmp(self, monitor):
-        """
-        Save some useful data in the file calc_XXX_tmp.hdf5
-        """
+    # Store the data shared by the risk workers before enabling SWMR.
+    def _prepare_worker_data(self):
         oq = self.oqparam
-        monitor.save('sids', self.sitecol.sids)
-        adf, iss = get_assetdf_startstop(self.assetcol)
+        oq.R = self.R  # 1 if collect_rlzs
+        worker = base.prepare_risk_worker_data(
+            self.datastore, self.assetcol, oq)
+        rows, iss = _asset_rows_and_slices(self.assetcol.array)
         max_assets_per_region = (iss[:, 2] - iss[:, 1]).max()
         logging.info(f'{max_assets_per_region=:_d}')
-        monitor.save('assets', adf)
-        monitor.save('num_assets', general.fast_agg(self.assetcol['site_id']))
-        monitor.save('start-stop', iss)
-        monitor.save('crmodel', self.crmodel)
-        monitor.save('rlz_id', self.rlzs)
-
-        # crucial for impact_test
-        if 'ID_0' in self.assetcol.tagnames:
-            monitor.save('countries', self.assetcol.tagcol.ID_0)
-        try:
-            ws = base.get_weights(oq, self.datastore)
-        except KeyError:  # not needed in from ses
-            pass
-        else:
-            monitor.save('weights', ws)
-        if oq.K:
-            aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
-        else:
-            aggids = ()
-        monitor.save('aggids', aggids)
+        worker['asset_rows'] = rows
+        worker['num_assets'] = general.fast_agg(self.assetcol['site_id'])
+        worker['asset_slices'] = iss
+        # Keep the original taxonomy order so stochastic losses use the
+        # same sequence of draws when assets without GMFs are skipped.
+        taxonomy = self.assetcol['taxonomy']
+        self.datastore.hdf5.save_vlen('_risk_worker/taxonomy_order', [
+            pandas.unique(taxonomy[rows[s0:s1]]) for _, s0, s1 in iss])
 
     def pre_execute(self):
         oq = self.oqparam
@@ -475,7 +485,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     len(self.datastore['ruptures']),
                     len(self.datastore['events'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
-        self.datastore.swmr_on()
         set_oqparam(oq, self.assetcol, self.datastore)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
@@ -556,6 +565,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             if not hasattr(self, 'sec_perils'):
                 self.add_sec_perils(oq)
             self.datastore.create_dset('ruptimes', event_based.rup_dt)
+            self._prepare_worker_data()
             event_based.run(ebrisk, oq, rup0, self)
             if self.gmf_bytes == 0:
                 logging.error(
@@ -566,11 +576,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
+            self._prepare_worker_data()
             smap, gmf_dfs = starmap_from_gmfs(
                 event_based_risk, oq, self.datastore, self._monitor)
-            self.save_tmp(smap.monitor)
             for gmf_df in gmf_dfs:
-                smap.submit((gmf_df,))
+                smap.submit((gmf_df, oq))
             smap.reduce(self.agg_dicts)
 
         if self.parent_events:
