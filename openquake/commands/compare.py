@@ -18,14 +18,17 @@
 
 import os
 import sys
+import json
 import shutil
 import collections
+import h5py
 import numpy
 import pandas
 from openquake.baselib import writers
 from openquake.hazardlib import nrml
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
+from openquake.calculators.autogrid import uhs_errors
 from openquake.calculators import views
 from openquake.calculators.export.hazard import workflow_hmaps_array
 
@@ -267,6 +270,59 @@ def compare_hcurves(imt, calc_ids: int, files=False, *,
     """
     c = Comparator(calc_ids)
     c.compare('hcurves', imt, files, samplesites, rtol, atol)
+
+
+# read the sites and the mean hazard maps of a calculation, given its ID
+# or the path of its .hdf5 file; the arrays are read with h5py, without
+# the OqParam, so that also the datastores of old engine versions (for
+# instance computed with docker) can be read
+def _read_hmaps(calc):
+    if calc.endswith('.hdf5'):
+        path = calc
+    else:
+        with datastore.read(int(calc)) as ds:
+            path = ds.filename
+    with h5py.File(path, 'r') as f:
+        dset = f['hmaps-stats']  # shape (N, S, M, P)
+        info = json.loads(dset.attrs['json'])
+        hmaps = dset[:, info['stat'].index('mean')]  # shape (N, M, P)
+        lonlats = zip(f['sitecol/lon'][:], f['sitecol/lat'][:])
+        return dict(name=calc, version=f.attrs['engine_version'],
+                    imts=info['imt'], poes=info['poe'], hmaps=hmaps,
+                    idx={ll: i for i, ll in enumerate(lonlats)})
+
+
+def compare_errors(ref, calcs):
+    """
+    Compare the mean hazard maps and uniform hazard spectra of one or more
+    calculations with the ones of a reference calculation on the common
+    sites (matched by longitude and latitude); the calculations are given
+    as IDs or paths to .hdf5 files, also of old versions of the engine.
+    The errors are in g; p99_norm <= 1 means that the 99th percentile of
+    the errors is within the tolerances used in the calibration
+    """
+    r = _read_hmaps(ref)
+    for calc in calcs:
+        c = _read_hmaps(calc)
+        if c['imts'] != r['imts'] or c['poes'] != r['poes']:
+            sys.exit(f"{calc} has IMTs {c['imts']} and poes {c['poes']}, "
+                     f"{ref} has IMTs {r['imts']} and poes {r['poes']}")
+        common = [(i, r['idx'][ll]) for ll, i in c['idx'].items()
+                  if ll in r['idx']]
+        if not common:
+            sys.exit(f'{calc} and {ref} have no sites in common')
+        ci, ri = numpy.array(sorted(common)).T
+        print(f"{calc} ({c['version']}) vs {ref} ({r['version']}), "
+              f"{len(common)} common sites out of {len(c['idx'])}")
+        mean_err, p99_err, p99_norm = uhs_errors(
+            c['hmaps'][ci], r['hmaps'][ri], r['imts'])
+        rows = [['UHS', ' '.join(str(poe) for poe in r['poes']),
+                 ' '.join('%.4g' % x for x in mean_err),
+                 ' '.join('%.4g' % x for x in p99_err),
+                 '%.4g' % p99_norm]]
+        print(views.text_table(
+            rows, ['imt', 'poes', 'mean_err', 'p99_err', 'p99_norm'],
+            ext='org'))
 
 
 def compare_avg_gmf(imt, calc_ids: int, files=False, *,
@@ -646,6 +702,7 @@ main = dict(rups=compare_rups,
             uhs=compare_uhs,
             hmaps=compare_hmaps,
             hcurves=compare_hcurves,
+            errors=compare_errors,
             rates=compare_rates,
             avg_gmf=compare_avg_gmf,
             med_gmv=compare_med_gmv,
@@ -663,6 +720,10 @@ compare_asce.dir1 = 'directory with the ASCE files'
 compare_asce.dir2 = 'directory with the expected ASCE files'
 compare_asce.atol = 'absolute tolerance'
 compare_asce.rtol = 'relative tolerance'
+
+compare_errors.ref = 'reference calculation (ID or path to the .hdf5 file)'
+compare_errors.calcs = dict(
+    help='calculations to compare (IDs or paths to .hdf5 files)', nargs='+')
 
 compare_workflow.expected_dir = 'directory with the exported CSV files'
 compare_workflow.calc_id = (

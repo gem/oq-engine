@@ -629,7 +629,6 @@ def get_mesh_exp(oqparam, h5=None):
     # the site model has the precedence over the exposure, see the
     # discussion in https://github.com/gem/oq-engine/pull/5217
     elif 'site_model' in oqparam.inputs:
-        logging.info('Extracting the hazard sites from the site model')
         sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
     elif 'exposure' in oqparam.inputs:
@@ -1577,7 +1576,11 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
 
 def assoc_to_shakemap(oq, haz_sitecol, assetcol):
     """
-    Download the shakemap, reduce the assetcol and returns a reduced sitecol
+    Download the shakemap, reduce the assetcol and returns a reduced sitecol,
+    the shakemap and the same sites in the hazard site collection (with
+    their original site IDs and complete collection, like a regular grid,
+    as needed by the circulant embedding, since the reduced sitecol is
+    turned into a complete one)
     """
     oq.risk_imtls = {imt: list(imls) for imt, imls in oq.imtls.items()}
     logging.info('Getting/reducing shakemap, sitecol, assetcol')
@@ -1595,9 +1598,14 @@ def assoc_to_shakemap(oq, haz_sitecol, assetcol):
     sitecol, shakemap, discarded, *_ = get_sitecol_shakemap(
         uridict, oq.risk_imtls, haz_sitecol,
         oq.asset_hazard_distance['default'])
+    # a copy of the sites, before reduce_also changes their IDs
+    haz_sites = sitecol.complete.filtered(sitecol.sids)
+    if haz_sites is sitecol:
+        haz_sites = copy.copy(sitecol)
+        haz_sites.array = sitecol.array.copy()
     assetcol.reduce_also(sitecol)
     logging.info('Extracted %d assets', len(assetcol))
-    return sitecol, shakemap
+    return sitecol, shakemap, haz_sites
 
 
 def assoc_exposure(exp, haz_sitecol, oqparam, h5):

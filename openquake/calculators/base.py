@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
-import gc
 import os
 import sys
 import abc
@@ -46,6 +45,7 @@ from openquake.hazardlib.countries import mosaic_index
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.correlation_models.base import CorrelationContext
 from openquake.hazardlib.gsim.base import check_sites
 from openquake.hazardlib.site_amplification import (
     Amplifier, AmplificationFunction)
@@ -54,7 +54,8 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
-from openquake.hazardlib.shakemap.gmfs import to_gmfs
+from openquake.hazardlib.shakemap.gmfs import (
+    to_gmfs, circulant_embedding_feasible)
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
 from openquake.commonlib.model_provenance import copy_model_provenance
@@ -319,6 +320,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             return
         copy_model_provenance(exposure_path, self.datastore)
 
+    def _store_rupture_model(self):
+        # store the temporary rupture model file, so that the impact reports
+        # can be regenerated after its removal
+        fname = self.oqparam.inputs.get('rupture_model')
+        if fname and os.path.exists(fname):
+            ext = os.path.splitext(fname)[1]
+            self.datastore.store_files([fname], 'input/rupture_model' + ext)
+
     def save_params(self, **kw):
         """
         Update the current calculation parameters and save engine_version
@@ -352,14 +361,13 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 'but you provided a %r instead' %
                 (calc_mode, ok_mode, precalc_mode))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, remove=False,
+    def run(self, pre_execute=True, concurrent_tasks=None,
             shutdown=False, **kw):
         """
         Run the calculation and return the exported outputs.
 
         :param pre_execute: set it to False to avoid running pre_execute
         :param concurrent_tasks: set it to 0 to disable parallelization
-        :param remove: set it to False to remove the hdf5cache file (if any)
         :param shutdown: set it to True to shutdown the ProcessPool
         """
         oq = self.oqparam
@@ -391,6 +399,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             try:
                 if oq.impact:
                     self._copy_model_provenance()
+                    self._store_rupture_model()
                 if os.environ.get('OQ_CHECK_INPUT'):
                     # do not execute the calculation; risk jobs have a
                     # fake parent, so only read the inputs (including
@@ -422,14 +431,12 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                     else:
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
 
-                # remove temporary hdf5 file, if any
-                if os.path.exists(self.datastore.tempname):
-                    multi_fault.SECTIONS.pop(self.datastore.tempname, None)
-                    gc.collect()  # just in case
-                    if remove and oq.calculation_mode != 'preclassical':
-                        # removing in preclassical with multiFaultSources
-                        # would break --hc which is reading the temp file
-                        os.remove(self.datastore.tempname)
+                # Release cached multifault sections from this job and its
+                # parents. Their geometry is stored in the main datastore.
+                dstore = self.datastore
+                while dstore:
+                    multi_fault.SECTIONS.pop(dstore.filename, None)
+                    dstore = dstore.parent
         return getattr(self, 'exported', {})
 
     def core_task(*args):
@@ -617,25 +624,10 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
-        oq = self.oqparam
         f, s = self.csm.get_floating_spinning_factors()
-        if f != 1:
-            logging.info('Rupture floating factor = %s', f)
-        if s != 1:
-            logging.info('Rupture spinning factor = %s', s)
-        if (f * s >= 1.5 and oq.no_pointsource_distance
-                and ('classical' in oq.calculation_mode or
-                     'disaggregation' in oq.calculation_mode)):
-            logging.info(
-                'You are not using the pointsource_distance approximation')
-        elif 'classical' in oq.calculation_mode:
-            if oq.ps_grid_spacing:
-                logging.info('Using pointsource_distance=%s and '
-                             'ps_grid_spacing=%s', oq.pointsource_distance,
-                             oq.ps_grid_spacing)
-            else:
-                logging.info('Using pointsource_distance=%s',
-                             oq.pointsource_distance)
+        if f != 1 or s != 1:
+            logging.info('Rupture floating factor = %.2f, '
+                         'spinning factor = %.2f', f, s)
 
     def check_consequences(self):
         oq = self.oqparam
@@ -800,7 +792,7 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.from_engine = self.from_engine
-            calc.run(remove=False)
+            calc.run()
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_gb '
@@ -1085,10 +1077,8 @@ class HazardCalculator(BaseCalculator):
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
             if oq.shakemap_id or 'shakemap' in oq.inputs or oq.shakemap_uri:
-                self.sitecol, self.assetcol = store_gmfs_from_shakemap(
-                    self, haz_sitecol, assetcol)
-                self.datastore['sitecol'] = self.sitecol
-                self.datastore['assetcol'] = self.assetcol
+                # this also sets and stores self.sitecol and self.assetcol
+                store_gmfs_from_shakemap(self, haz_sitecol, assetcol)
             elif hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
@@ -1244,8 +1234,13 @@ class HazardCalculator(BaseCalculator):
                             or oq.siteid else 'strict')
                     self.sitecol.assoc(sm, assoc_dist, mode,
                                        station_sids=station_sids)
-                    if 'station_data' in oq.inputs or oq.impact:
-                        # the complete sitecol is required
+                    # the complete sitecol is required and must have the
+                    # same parameters of the sitecol, i.e. the same site
+                    # model must be associated to both (also when the
+                    # calculation is rerun from the exported job.zip, where
+                    # oq.impact is not set)
+                    if ('station_data' in oq.inputs or oq.impact or
+                            self.sitecol is not self.sitecol.complete):
                         self.sitecol.complete.assoc(sm, assoc_dist, mode,
                                                     station_sids=station_sids)
 
@@ -1870,12 +1865,67 @@ def store_events(dstore, eids):
     return events
 
 
-def store_gmfs(calc, sitecol, shakemap, gmf_dict):
+def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
+    # record for the outputs page the correlation really used; in all
+    # cases the conditional medians and standard deviations of the
+    # ShakeMap are preserved, while the dependence is imposed by the
+    # models, since the station-conditioned covariance is not available
+    calc.datastore['correlation_strategy_used'] = numpy.array(
+        [strategy], dtype=hdf5.vstr)
+    if gmf_dict.get('spatial_model') is None:
+        return
+    name = gmf_dict['spatial_model'].__class__.__name__
+    model = f'{name}, {strategy}'
+    if strategy != calc.oqparam.correlation_strategy:
+        model += (f' ({calc.oqparam.correlation_strategy} is not '
+                  'applicable to these sites)')
+    model += ('; approximation imposing the model on the conditional '
+              'ShakeMap medians and standard deviations')
+    between_model = gmf_dict.get('between_event_model')
+    if 'tau' in shakemap.dtype.names:
+        model += ('; between-event terms with the conditional tau, ' + (
+            'independent across IMTs' if between_model is None else
+            f'correlated across IMTs with '
+            f'{between_model.__class__.__name__}'))
+    elif between_model is not None:
+        # only the total uncertainty is known
+        logging.warning('The between-event correlation model is not '
+                        'used, since the ShakeMap has no tau')
+        model += (f'; {between_model.__class__.__name__} not used, '
+                  'the ShakeMap has no between-event uncertainty')
+    calc.datastore['correlation_model_used'] = numpy.array(
+        [model], dtype=hdf5.vstr)
+
+
+def store_gmfs(calc, sitecol, shakemap, gmf_dict, haz_sites=None):
     """
     Store a ShakeMap array as a gmf_data dataset.
+
+    :param haz_sites: the sites of sitecol in the hazard site collection,
+        whose complete grid is used by the circulant embedding (by default
+        sitecol)
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
+    if gmf_dict['kind'] == 'Silva&Horspool':
+        rupture_dict = oq.rupture_dict or {}
+        strategy = oq.correlation_strategy
+        haz_sites = sitecol if haz_sites is None else haz_sites
+        if (strategy == 'circulant_embedding' and
+                not circulant_embedding_feasible(haz_sites)):
+            # sparse sites, e.g. a ShakeMap with gaps: use Cholesky instead
+            logging.warning(
+                'Circulant embedding is not applicable to these sites, '
+                'using cholesky_decomposition instead')
+            strategy = 'cholesky_decomposition'
+        _save_correlation_info(calc, shakemap, gmf_dict, strategy)
+        gmf_dict.update(
+            correlation_strategy=strategy,
+            sites=haz_sites,
+            context=CorrelationContext(
+                mag=rupture_dict.get('mag'),
+                rake=rupture_dict.get('rake'),
+                trt=oq.tectonic_region_type))
     sec_perils = oq.get_sec_perils()  # FIXME: it should be in calc.sec_perils
     with calc.monitor('building/saving GMFs'):
         vs30 = None  # do not amplify, the ShakeMap takes care of that already
@@ -1930,9 +1980,19 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     """
     oq = calc.oqparam
     with calc.monitor('getting/reducing shakemap'):
-        sitecol, shakemap = readinput.assoc_to_shakemap(
+        sitecol, shakemap, haz_sites = readinput.assoc_to_shakemap(
             oq, haz_sitecol, assetcol)  # also reducing assetcol
+        # NB: the reduced sitecol has been made complete, i.e. its sids
+        # are 0..N-1, consistently with the asset site_ids and the gmf
+        # sids; the previously stored sitecol and complete sitecol (if
+        # any, for instance a region grid) must be replaced, otherwise
+        # the exporters would associate the GMFs to the wrong sites
+        calc.sitecol = sitecol
+        calc.assetcol = assetcol
+        calc.datastore['sitecol'] = sitecol
         calc.datastore['assetcol'] = assetcol
+        if 'complete' in calc.datastore.hdf5:
+            del calc.datastore['complete']
     # assemble dictionary to decide on the calculation method for the gmfs
     if 'MMI' in oq.imtls:
         # calculations with MMI should be executed
@@ -1953,21 +2013,21 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
                 % ', '.join(oq.imtls))
     else:
         # no MMI intensities, calculation with or without correlation
-        if oq.impact:
-            gmf_dict = {'kind': 'basic'}  # possibly add correlation
-        elif (oq.within_event_correlation_model or
-              oq.total_residual_correlation_model):
+        if (oq.within_event_correlation_model or
+                oq.total_residual_correlation_model):
             # spatial and cross-IMT correlation after Silva and Horspool
             gmf_dict = {'kind': 'Silva&Horspool',
                         'spatial_model':
                         oq.get_within_event_correlation_model(),
                         'cross_imt_model':
                         oq.get_total_residual_correlation_model(),
+                        'between_event_model':
+                        oq.get_between_event_correlation_model(),
                         'cholesky_limit': oq.cholesky_limit}
         else:
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
-    store_gmfs(calc, sitecol, shakemap, gmf_dict)
+    store_gmfs(calc, sitecol, shakemap, gmf_dict, haz_sites)
     return sitecol, assetcol
 
 

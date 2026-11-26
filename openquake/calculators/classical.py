@@ -38,7 +38,8 @@ from openquake.hazardlib.rmap_maker import read_unc_ts_sets
 from openquake.hazardlib.lt import (
     get_bset_value, GEOMETRY_PRESERVING)
 from openquake.hazardlib.rmap_maker import (
-    build_cmakers, read_full_lt_by_label, make_results, mag_support)
+    build_cmakers, read_full_lt_by_label, make_results, mag_support,
+    VARIANT_DT)
 from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
@@ -110,14 +111,26 @@ class Set(set):
     __iadd__ = set.__ior__
 
 
-def store_ctxs(dstore, rupdata, grp_id, gid):
+def store_ctxs(dstore, rupdata, grp_id, gid, ratios=()):
     """
     Store contexts in the datastore
 
     :param gid: the gid of the index of rate attribution, stored since the
         contexts of a group have different gids
+    :param ratios: a list of pairs (gid, ratios) for the MFD variants
+        sharing the contexts, see make_results; they are stored in the
+        rup_variants dataset, see read_ctx_by_grp
     """
     nr = len(rupdata)
+    start = len(dstore['rup/grp_id'])
+    if len(ratios):
+        recs = numpy.zeros(len(ratios), VARIANT_DT)
+        for rec, (vgid, ratio) in zip(recs, ratios):
+            rec['gid'] = vgid
+            rec['start'] = start
+            rec['stop'] = start + nr
+            rec['ratios'] = F32(ratio)
+        hdf5.extend(dstore['rup_variants'], recs)
     known = set(rupdata.dtype.names)
     for par in dstore['rup']:
         if par == 'rup_id':
@@ -360,6 +373,10 @@ def _make_results(pairs, sites, cmaker, remove_zeros, as_rmap):
         # sources were filtered away
         return None
     for (_, gids), dic in zip(pairs, dics):
+        if 'rup_ratios' in dic:
+            # replace the variant index with the gid used by store_ctxs
+            dic['rup_ratios'] = [(U32(pairs[v][1]).min(), ratio)
+                                 for v, ratio in dic['rup_ratios']]
         dic['rmap'] = dic['rmap'].remove_zeros() \
             if remove_zeros else dic['rmap']
         dic['rmap'].gid = gids
@@ -525,6 +542,7 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
         if cmaker.oq.disagg_by_src:
             # Reduce packet sizes to avoid hanging ZMQ due to lost packets.
             rup_data = dic.pop('rup_data')
+            ratios = dic.pop('rup_ratios', ())  # see make_results
             if len(rup_data):
                 max_rows = max(1, 32 * 1024**2 // rup_data.dtype.itemsize)
                 grp_id = dic['source_data']['grp_id'][0]
@@ -532,7 +550,8 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
                 # of this realization set; the rmap retains all gids.
                 gid = dic['rmap'].gid.min()
                 for slc in general.gen_slices(0, len(rup_data), max_rows):
-                    yield dict(rup_data=rup_data[slc], grp_id=grp_id, gid=gid)
+                    yield dict(rup_data=rup_data[slc], grp_id=grp_id, gid=gid,
+                               rup_ratios=[(g, r[slc]) for g, r in ratios])
         yield dic
 
 
@@ -772,7 +791,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if self.few_sites:
                 with self.monitor('saving rup_data'):
                     store_ctxs(self.datastore, dic['rup_data'], dic['grp_id'],
-                               dic['gid'])
+                               dic['gid'], dic.get('rup_ratios', ()))
             return acc
         elif not dic['source_data']:
             # all the sources were filtered out
@@ -791,7 +810,7 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving rup_data'):
                 # NB: each result has its own gid, see bysrc_results
                 store_ctxs(self.datastore, dic['rup_data'], grp_id,
-                           dic['rmap'].gid.min())
+                           dic['rmap'].gid.min(), dic.pop('rup_ratios', ()))
 
         rmap = dic.pop('rmap', None)
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
@@ -842,6 +861,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
+            # the MFD variants sharing the contexts, see store_ctxs
+            self.datastore.create_dset('rup_variants', VARIANT_DT)
             # NB: the gid is the gid of the index of rate attribution,
             # stored since the contexts of a group have different gids,
             # i.e. the same rupture is stored once per index of rate
@@ -873,8 +894,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # [0] contexts after collapsing, [1] removed by collapse_precision,
         # [2] contexts before collapse_precision for the gridding baseline,
-        # [3] contexts saved by the variant sources optimization
-        self.cfactor = numpy.zeros(4)
+        # [3] contexts saved by the variant sources optimization,
+        # [4] estimated contexts of the gridded sources without gridding
+        self.cfactor = numpy.zeros(5)
         self.dparam_mb = 0
         self.source_mb = 0
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -898,7 +920,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         self.num_chunks = getters.get_num_chunks(self.datastore)
-        logging.info('Using num_chunks=%d', self.num_chunks)
+        logging.info('Using num_chunks=%d%s', self.num_chunks,
+                     ' and the fast_mean algorithm' if oq.fastmean else '')
 
         # create empty dataframes
         self.datastore.create_df(
@@ -939,8 +962,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 return {}
 
         self.init_poes()
-        if oq.fastmean:
-            logging.info('Will use the fast_mean algorithm')
         self.srcidx = {
             name: i for i, name in enumerate(self.csm.get_basenames())}
         rlzs = self.R == 1 or oq.individual_rlzs
@@ -982,12 +1003,14 @@ class ClassicalCalculator(base.HazardCalculator):
         in the 'collapsed' field, the contexts of the gridded point sources
         before collapse_precision in the 'gridded' field and the contexts
         without the variant sources optimization in the 'separate' field,
-        see contexts.py. If collapse_precision or ps_grid_spacing is set and
-        there is no estimate in the 'exact' field, the 'exact' field is set
-        to the contexts before collapse_precision, counted for all source
-        types.
+        see contexts.py. The 'exact' field is set to the estimated contexts
+        of the gridded point sources without gridding, if any (see
+        contexts._count_nogrid); otherwise, if collapse_precision or
+        ps_grid_spacing is set and there is no estimate in the 'exact'
+        field, it is set to the contexts before collapse_precision,
+        counted for all source types.
         """
-        after, removed, gridded, saved = self.cfactor
+        after, removed, gridded, saved, nogrid = self.cfactor
         est = numpy.zeros(1, preclassical.CTX_EST)
         if 'nctxs' in self.datastore:
             # NB: the dataset can lack some fields, if it was stored by
@@ -999,7 +1022,9 @@ class ClassicalCalculator(base.HazardCalculator):
         est['collapsed'] = int(after)
         est['separate'] = int(after + saved)
         oq = self.oqparam
-        if ((oq.collapse_precision or oq.ps_grid_spacing)
+        if nogrid:
+            est['exact'] = int(nogrid)
+        elif ((oq.collapse_precision or oq.ps_grid_spacing)
                 and est['exact'][0] == 0):
             est['exact'] = int(after + removed)
         self.datastore['nctxs'] = est
@@ -1011,7 +1036,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Warn when collapse_precision removes fewer than 10% of contexts.
         Log the reduction due to the variant sources optimization, if any.
         """
-        after, removed, gridded, saved = self.cfactor
+        after, removed, gridded, saved, _nogrid = self.cfactor
         before = after + removed
         collapse = before / after  # reduction by collapse_precision
         # NB: the estimates are zero when not computed, see CTX_EST

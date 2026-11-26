@@ -31,7 +31,6 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import IMC, StdDev, KNOWN_DISTANCES
-from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as gag
 from openquake.hazardlib import imc_conversion
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
@@ -278,6 +277,23 @@ def simple_cmaker(gsims, imts, **params):
     return ContextMaker('*', gsims, dic)
 
 
+# estimate of the contexts that the point sources underlying a gridded
+# source would generate without gridding and without the pointsource
+# distance approximation: for each magnitude, nphc contexts for each site
+# within the magnitude distance, being nphc the number of nodal planes
+# times the number of hypocenters; the distances are approximated with the
+# distances `cdist` from the location of the gridded source
+def _count_nogrid(src, cdist, magdist):
+    cdist = numpy.sort(cdist)
+    nctxs = 0
+    for psrc in getattr(src, 'pointsources', [src]):
+        mdists = [magdist[mag] for mag, _rate in
+                  psrc.get_annual_occurrence_rates() if mag in magdist]
+        nctxs += psrc.count_nphc() * numpy.searchsorted(
+            cdist, mdists, 'right').sum()
+    return nctxs
+
+
 # generator of tuples (ks, rup_index, mag, magdist, planars, sites), being
 # ks the indices of the pointsource distances (sorted) for which the
 # planars must be used; called first in preclassical with a reduced sitecol
@@ -285,11 +301,8 @@ def simple_cmaker(gsims, imts, **params):
 # pointsource_distance (see autogrid) the contexts for several distances
 # are built at once, sharing the planars and the contexts
 def _sextets(cmaker, src, sitecol, psdists):
-    with cmaker.ir_mon:
-        # building planar geometries
-        planardict = src.get_planar(cmaker.shift_hypo)
-
-    magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
+    magdist = {mag: cmaker.maximum_distance(mag)
+               for mag, _rate in src.get_annual_occurrence_rates()}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range, and
     # it is 0 for all the magnitudes if the source has no magnitude inside
     # the range, which can happen since for the sources modified by the
@@ -308,29 +321,56 @@ def _sextets(cmaker, src, sitecol, psdists):
     sites = sitecol.filter(mask)
     if sites is None:
         return
+    if getattr(src, 'count_nogrid', False):  # see classical.store_grid
+        cmaker.cfactor[4] += _count_nogrid(src, cdist[mask], valid)
 
-    minmag = cmaker.maximum_distance.x[0]
-    maxmag = cmaker.maximum_distance.x[-1]
     ks = tuple(range(len(psdists)))
     # splitting by magnitude
     if src.count_nphc() == 1:
-        # one rupture per magnitude, the same for all distances
-        if (getattr(cmaker, 'batch_point_sources', False) and
-                not cmaker.fewsites):
-            items = [(mag, pla[0]) for mag, pla in planardict.items()
-                     if minmag <= mag <= maxmag]
-            if items:
-                mags = numpy.array([mag for mag, _pla in items])
-                mdists = numpy.array([magdist[mag] for mag in mags])
-                planars = numpy.concatenate(
-                    [pla for _mag, pla in items]).view(numpy.recarray)
-                yield ks, 0, mags, mdists, [planars], sites
-            return
-        for m, (mag, pla) in enumerate(planardict.items()):
-            if minmag <= mag <= maxmag:
-                yield ks, m, mag, magdist[mag], pla, sites
+        yield from _sextets_single(cmaker, src, magdist, ks, sites)
+    else:
+        yield from _sextets_multi(cmaker, src, magdist, ks, sites,
+                                  cdist[mask], psdists, radii)
+
+
+# sextets for the sources with one rupture per magnitude, i.e. a single
+# nodal plane and hypocenter, the same for all the distances; if
+# batch_point_sources is set, all the magnitudes are yielded at once
+def _sextets_single(cmaker, src, magdist, ks, sites):
+    minmag = cmaker.maximum_distance.x[0]
+    maxmag = cmaker.maximum_distance.x[-1]
+    with cmaker.ir_mon:
+        # building planar geometries
+        planardict = src.get_planar(cmaker.shift_hypo)
+    if (getattr(cmaker, 'batch_point_sources', False) and
+            not cmaker.fewsites):
+        items = [(mag, pla[0]) for mag, pla in planardict.items()
+                 if minmag <= mag <= maxmag]
+        if items:
+            mags = numpy.array([mag for mag, _pla in items])
+            mdists = numpy.array([magdist[mag] for mag in mags])
+            planars = numpy.concatenate(
+                [pla for _mag, pla in items]).view(numpy.recarray)
+            yield ks, 0, mags, mdists, [planars], sites
         return
-    cd = cdist[mask]
+    for m, (mag, pla) in enumerate(planardict.items()):
+        if minmag <= mag <= maxmag:
+            yield ks, m, mag, magdist[mag], pla, sites
+
+
+# sextets for the sources with several nodal planes/hypocenters (including
+# the collapsed point sources): for each magnitude the sites far from the
+# source use the mean rupture, while the close sites use all the ruptures;
+# cd are the distances of the sites from the location of the source
+def _sextets_multi(cmaker, src, magdist, ks, sites, cd, psdists, radii):
+    minmag = cmaker.maximum_distance.x[0]
+    maxmag = cmaker.maximum_distance.x[-1]
+    # NB: the planar geometries are built only for the sources with close
+    # sites; for the collapsed point sources they are built for all the
+    # underlying point sources, so they are expensive and they are needed
+    # only if some site is within the pointsource distance (in alaska
+    # building them upfront was taking 1/3 of the total runtime)
+    planardict = None
     for m, rup in enumerate(src.iruptures()):
         mag = rup.mag
         if mag > maxmag or mag < minmag:
@@ -339,13 +379,18 @@ def _sextets(cmaker, src, sitecol, psdists):
         # far sites use the mean rupture from src.iruptures(),
         # close sites use all the nodal planes/hypocenters
         meanpla = [rup.surface.array.reshape(-1, 3)]
-        allpla = planardict[mag]
         # NB: having a good psdist is essential for performance!
         psdist = numpy.array([src.get_psdist(m, mag, psd, magdist, radii)
                               for psd in psdists])
         # a site of band i, i.e. psdist[i-1] < cd <= psdist[i], is far
         # for the distances before i and close for the others
         bands = numpy.searchsorted(psdist, cd)
+        if (bands < len(ks)).any():  # some site is close
+            if planardict is None:
+                with cmaker.ir_mon:
+                    # building planar geometries
+                    planardict = src.get_planar(cmaker.shift_hypo)
+            allpla = planardict[mag]
         if cmaker.fewsites:
             # all the sites are far for the distances without close sites
             nfar = bands.min()
@@ -914,8 +959,9 @@ class ContextMaker(object):
         # [2] contexts before collapse_precision for the gridding baseline,
         # [3] contexts saved by the variant sources optimization, i.e. the
         # extra contexts the variants would generate if computed separately
-        # (see rmap_maker.update_variants)
-        self.cfactor = numpy.zeros(4)
+        # (see rmap_maker.update_variants), [4] estimated contexts of the
+        # gridded point sources without gridding (see _count_nogrid)
+        self.cfactor = numpy.zeros(5)
 
     def copy(self, **kw):
         """
@@ -1681,7 +1727,7 @@ class ContextMaker(object):
                 recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         out = numpy.empty((4, G, M, N))
-        central = {}  # central part shared by sibling GridAdjustedGMPEs
+        groups = {}
         for g, gsim in enumerate(self.gsims):
             if gsim.conditional and not gsim.from_mgmpe:
                 url = ('https://docs.openquake.org/oq-engine/master/manual/'
@@ -1689,39 +1735,37 @@ class ContextMaker(object):
                 raise NotImplementedError(
                     f'{gsim} was not instantiated with a '
                     f'ModifiableGMPE, please read {url}')
-            key = getattr(gsim, 'central_key', None)
-            if key is None:
+            # GSIMs opt in with two module-level functions and a key that
+            # identifies the inputs to their shared computation.
+            functions = getattr(gsim, 'central_functions', None)
+            if functions is None:
                 out[:, g] = self.get_4MN(recarrays, gsim)
-                continue
-            if key not in central:
-                central[key] = self._get_central(recarrays, gsim)
-            out[:, g] = self._add_epsilons(central[key], gsim)
+            else:
+                key = (functions, gsim.central_key)
+                groups.setdefault(key, []).append((g, gsim))
+        for (functions, _), branches in groups.items():
+            self._compute_group(recarrays, functions, branches, out)
         return out
 
-    # compute the part of a GridAdjustedGMPE independent from the
-    # epsilons, i.e. the backbone and the grid lookups (the expensive part)
-    def _get_central(self, ctxs, gsim):
-        N = sum(len(ctx) for ctx in ctxs)
-        out = numpy.zeros((4, len(self.imts), N))
-        resolved = []
+    # Share the backbone and spatial lookups for one context slice at a time.
+    def _compute_group(self, ctxs, functions, branches, out):
+        compute_central, apply_shift = functions
+        backbone = branches[0][1]
+        for _, gsim in branches:
+            gsim.adj = []
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
-            res = gag.compute_central(
-                gsim, ctx, self.imts, *out[:, :, slc], gra_mon=self.gra_mon)
-            resolved.append((slc, res))
+            central = numpy.zeros((4, len(self.imts), len(ctx)))
+            resolved = compute_central(
+                backbone, ctx, self.imts, *central, gra_mon=self.gra_mon)
+            for g, gsim in branches:
+                branch = out[:, g, :, slc]
+                branch[:] = central
+                apply_shift(gsim, resolved, self.imts, branch[0])
             start = slc.stop
-        return out, resolved
-
-    # add the epsilon shifts of a GridAdjustedGMPE to the central part
-    def _add_epsilons(self, central, gsim):
-        out, resolved = central
-        out = out.copy()
-        gsim.adj = []
-        for slc, res in resolved:
-            gag.apply_epsilons(gsim, res, self.imts, out[0, :, slc])
-        self._check_conv(out, gsim)
-        return out
+        for g, gsim in branches:
+            self._check_conv(out[:, g], gsim)
 
     def get_4MN(self, ctxs, gsim):
         """
@@ -1796,7 +1840,9 @@ class ContextMaker(object):
         elif src.code in b'pP':  # no subsampling
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites))
         else:
-            step = 5  # a sparser sampling misses the close ruptures
+            # the faults reduce the ruptures by about step ** 2, so about
+            # 500 ruptures are sampled for the big ones (step > 5)
+            step = max(5, int(numpy.sqrt(src.num_ruptures / 500)))
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
             # compensate the subsampling of the ruptures with the actual
             # ratio between all the ruptures and the sampled ones

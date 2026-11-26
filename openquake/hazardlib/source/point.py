@@ -544,10 +544,20 @@ class CollapsedPointSource(PointSource):
         """
         :returns: a list of pairs [(mag, mag_occur_rate), ...]
         """
-        acc = AccumDict(accum=0)
-        for psource in self.pointsources:
-            acc += dict(psource.get_annual_occurrence_rates())
-        return sorted(acc.items())
+        # NB: the rates are cached since they are needed several times per
+        # source in preclassical and classical and computing them requires
+        # building all the underlying point sources; the cache is reset
+        # in _update_pointsources, the only place where pdata changes.
+        # The cache uses little memory, ~3 KB per source (260 MB in the
+        # master for the 90,000 gridded sources of AUS), and it is pickled
+        # together with the source, so that classical does not recompute it
+        rates = self.__dict__.get('_rates')
+        if rates is None:
+            acc = AccumDict(accum=0)
+            for psource in self.pointsources:
+                acc += dict(psource.get_annual_occurrence_rates())
+            rates = self._rates = sorted(acc.items())
+        return list(rates)
 
     def count_nphc(self):
         """
@@ -611,6 +621,7 @@ class CollapsedPointSource(PointSource):
 
     def _update_pointsources(self, pointsources):
         self.pdata = psources_to_pdata(pointsources, self.source_id)
+        self.__dict__.pop('_rates', None)  # see get_annual_occurrence_rates
         vars(self).update(calc_average(pointsources))
         self.location = Point(self.lon, self.lat, self.dep)
         self.nodal_plane_distribution = PMF(

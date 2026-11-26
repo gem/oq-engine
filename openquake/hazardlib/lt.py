@@ -24,8 +24,8 @@ from ExtraLogicTree. Here is the hierarchy, with the methods defined or
 overridden by each class::
 
     AbstractLogicTree
-    │   [abstract] get_num_paths, get_realizations, __toh5__, __fromh5__
-    │   sample, to_node, to_nrml
+    │   get_realizations, sample, get_num_paths, __toh5__, __fromh5__
+    │   to_node, to_nrml
     ├── BranchSetLogicTree
     │   │   __init__, root_branchset, set_num_paths, get_num_paths,
     │   │   get_realizations, sample, get_all_paths, sample_paths,
@@ -595,11 +595,14 @@ def _minmagGR_absolute(utype, source, value):
 @apply_uncertainty.add('multiMFDAbsolute')
 def _multiMFD_absolute(utype, source, value):
     kind, size, kwargs = value
-    if size != len(source.mfd):
+    # a segment ID:i of a split MultiPointSource has the slice of the
+    # MultiMFD of its parent, which has size points (see splitMF)
+    slc = getattr(source, 'mfd_slice', None)
+    if slc is None and size != len(source.mfd):
         raise ValueError(f'{utype}: {source.source_id} has {len(source.mfd)}'
                          f' points, got a MultiMFD of size {size}')
-    source.mfd = MultiMFD(kind, size, source.mfd.width_of_mfd_bin,
-                          **dict(kwargs))
+    mfd = MultiMFD(kind, size, source.mfd.width_of_mfd_bin, **dict(kwargs))
+    source.mfd = mfd if slc is None else mfd[slc]
 
 
 @apply_uncertainty.add('incrementalMFDAbsolute')
@@ -746,6 +749,14 @@ def get_bset_values(lt_path, source_model_lt):
     return [(bset, value)
             for bset, value in source_model_lt.bset_values(lt_path)
             if bset.uncertainty_type not in ('extendModel', 'dummy')]
+
+
+def _parent_id(srcid):
+    # the ID of the source of which srcid is a segment (ID:i), or srcid
+    # itself; valid.corename keeps the colon, since the IDs in the logic
+    # tree can contain it (e.g. mutex sources)
+    base, sep, num = srcid.rpartition(':')
+    return base if sep and num.isdigit() else srcid
 
 
 def source_ids(sources):
@@ -1185,8 +1196,12 @@ class BranchSet(object):
                 if value != source.tectonic_region_type:
                     return False
             elif key == 'applyToSources':
-                if source and valid.corename(source, '!') not in value:
-                    return False
+                if source:
+                    # the segments ID:i of a split source must get the
+                    # uncertainties of ID, see source_reader.splitMF
+                    cid = valid.corename(source, '!')
+                    if cid not in value and _parent_id(cid) not in value:
+                        return False
             elif key == 'applyToBranches':
                 pass
             else:

@@ -1,3 +1,28 @@
+  [Michele Simionato]
+  * Changed `oq export -e zip job` to return an archive, plus a few fixes
+  * Internal: add `oq compare errors` to measure the errors of the
+    ps_grid_spacing approximation
+
+  [Marco Pagani, Christopher Brooks]
+  * Add an experimental implementation of the Sung et al. (2022) non-ergodic
+    GMM for France. Experimental status will be removed once implementation
+    can be validated against independent test results provided by the model
+    authors (for now unit tests are circular). QA test added to classical/case_21.
+  
+  [Michele Simionato]
+  * Fixed scenario calculations with a `rupture_dict`, a region grid, a site
+    model and an exposure: the complete site collection was not associated
+    to the site model, so the GMFs were computed with the default site
+    parameters, giving wrong losses or no losses at all
+  * Fixed export_job_zip in presence of a region_grid_spacing
+  * Fixed default GSIM logic-tree weights not being applied to IMTs without
+    explicit IMT-specific weights. Thanks to Mathieu Primeau for the report.
+
+  [Savvinos Aristeidou]
+  * Added the Aristeidou et al. (2025) cross-IMT correlation model
+    AristeidouEtAl2025 for SA, Sa_avg2, Sa_avg3, FIV3, PGA, PGV, RSD575
+    and RSD595, with the coefficients of the ANNs stored in an HDF5 file
+
   [Christopher Brooks]
   * Fix _get_ctx_planar to correctly track all variants of required rup params
     required for computation of closest point to a rupture (c_lon, c_lat and
@@ -5,6 +30,11 @@
     variant (uses clon_clat).
 
   [Michele Simionato]
+  * Classical calculations with few sites now store the contexts of the MFD
+    variants computed together only once, with the ratios of the occurrence
+    rates of each variant in the new dataset `rup_variants`, instead of a
+    rescaled copy per variant: this saves GBs of memory in the
+    BC Hydro model; the copies are rebuilt when reading the contexts
   * Added file AI_POLICY.md
   * Changed the signature of MultiPointSource to be consistent with the other
     parametric sources
@@ -57,8 +87,8 @@
   * Added `oq engine --calibrate JOB_INI` to calibrate point-source settings
   * Added a warning for sources with different IDs, the same geometry and
     different MFDs, which are likely variants of a base source, and
-    `oq check_input --better-smlt` now generates a job.zip
-  * Added an option `oq check_input --better-smlt` to reduce sources with
+    `oq check_input --optimize` now generates a job.zip
+  * Added an option `oq check_input --optimize` to reduce sources with
     the same geometry
   * Added a new uncertainty `minMagGRAbsolute` to replace the minimum
     magnitude of a truncated Gutenberg-Richter MFD

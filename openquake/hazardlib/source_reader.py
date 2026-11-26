@@ -110,6 +110,9 @@ def splitMF(sources, disagg_by_src, blocksize=1000):
                     hypocenter_distribution=src.hypocenter_distribution,
                     mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]))
                 _copy_uncertainty_attrs(src, segment)
+                # the uncertainties of the MultiMFD of src must be sliced
+                # like its MFD, see lt._multiMFD_absolute
+                segment.mfd_slice = slc
                 splits.append(segment)
         elif src.code == b'F' and not disagg_by_src:
             # use the colon convention only in absence of kendra-splitting
@@ -324,7 +327,6 @@ def get_csm(oq, full_lt, dstore=None):
         filter_sourcecodes=oq.filter_sourcecodes,
         dip_spacing=oq.dip_spacing)
     full_lt.ses_seed = oq.ses_seed
-    logging.info('Reading the source model(s) in parallel')
 
     # NB: the source models file must be in the shared directory
     # NB: dstore is None in logictree_test.py
@@ -763,8 +765,7 @@ def build_csm(oq, full_lt, smdict, dstore):
 
 def store_data(oq, smdict, csm, dstore):
     """
-    Create src_mutex, grp_probability in calc_XXX.hdf5 and sources
-    and mf_sections in calc_XXX_tmp.hdf5
+    Store source mutex metadata and multifault geometry in the datastore.
     """
     out = []
     probs = []
@@ -800,7 +801,7 @@ def store_data(oq, smdict, csm, dstore):
     # must be called *after* add_semicolons
     t0 = time.time()
     secparams = fix_geometry_sections(
-        smdict, csm.src_groups, dstore.tempname if dstore else '',
+        smdict, csm.src_groups, dstore.hdf5 if dstore else '',
         sitecol if oq.disagg_by_src and oq.use_rates else None,
         split=not oq.calculation_mode.startswith('event_based'))
     if secparams is not None and len(secparams):
@@ -950,7 +951,7 @@ def check_same_sources(smdict, fname):
             'copy is computed separately. They are likely variants of a '
             'base source: if so, give them the same ID and move the MFDs '
             'in the logic tree (see the warning about MFD variants; '
-            '`oq check_input --better-smlt` does not change sources with '
+            '`oq check_input --optimize` does not change sources with '
             'different IDs):\n%s%s', fname, len(variants), '\n'.join(shown),
             '\n  ...' if len(variants) > 3 else '')
     if errors:
@@ -970,7 +971,7 @@ def check_same_sources(smdict, fname):
 
 
 # uncertainty types for the MFD variants, by NRML tag: suggested by
-# check_mfd_variants and used by commonlib.better_smlt to convert them
+# check_mfd_variants and used by commonlib.optimize_smlt to convert them
 MFD_UNCERTAINTY = {
     'incrementalMFD': 'incrementalMFDAbsolute',
     'multiMFD': 'multiMFDAbsolute',
@@ -1044,7 +1045,7 @@ def check_mfd_variants(smdict, fname):
             'containing one branch\nper MFD; then the contexts are computed '
             'once for all the MFDs, which can be much faster. You can '
             'do it automatically with\n`oq check_input job.ini '
-            '--better-smlt`\nThe sources are:\n%s',
+            '--optimize`\nThe sources are:\n%s',
             fname, len(lines), '\n'.join(shown))
     return [line.split(':')[0].strip() for line in lines]
 
@@ -1071,7 +1072,7 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None,
     check_unique(sec_ids, 'section ID in files ' + ' '.join(gfiles))
 
     if sections:
-        # save in the temporary file sources and sections
+        # save the shared sections and each segment's rupture indices
         assert hdf5path, ('You forgot to pass the dstore to '
                           'get_composite_source_model')
         mfsources = []

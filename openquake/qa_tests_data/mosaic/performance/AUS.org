@@ -1,0 +1,219 @@
+Model: AUS (v2023.0.0)
+Sites used: 119_743 of 239_812
+Cores used: 160
+ps_grid_spacing = 50 (up to 3.26.2: pointsource_distance = 40 + 50;
+master: pointsource_distance = 75, from calibration)
+
+| engine_version       | tot_runtime              | max_memory |
+|----------------------|--------------------------|------------|
+| 3.23.5               | not run (unknown GSIM)   | -          |
+| 3.24.1               | 71_046 s                 | 338.4 GB   |
+| 3.25.1               | 39_064 s                 | 263.0 GB   |
+| 3.26.2               | 44_281 s                 | 213.5 GB   |
+| 3.27.0-gitce4792e5b8 | 56_408 s                 | 189.7 GB   |
+
+The versions up to 3.26.2 ran in docker (--memory=400g) with
+site_model_file = sites_aus_half.csv, containing the same 119_743 sites
+sampled by OQ_SAMPLE_SITES=.5 in calc_25071; 3.27 ran natively on
+job_vs30.ini. 3.27 is slower than 3.25 and 3.26 because the calibration
+picks pointsource_distance=75 instead of the old 40 + 50, but it uses
+less memory.
+
+** v3.23.5
+
+Not run: the gmmLT.xml requires NGAEastAUS23_vs3000, which is unknown
+to v3.23 (ValueError: Unknown GSIM).
+
+** v3.24.1
+
+# oq show performance
+| calc_1, maxmem=338.4 GB    | time_sec  | memory_mb | counts      |
+|----------------------------+-----------+-----------+-------------|
+| total classical            | 6_686_262 | 1_221     | 327         |
+| get_poes                   | 4_567_897 | 0.0       | 126_900_049 |
+| computing mean_std         | 1_179_322 | 0.0       | 2_355_645   |
+| planar contexts            | 105_942   | 0.0       | 4_937_503   |
+| ClassicalCalculator.run    | 71_043    | 7_197     | 1           |
+| total fast_mean            | 58_604    | 94.7969   | 438         |
+| reading rates              | 58_561    | 94.7969   | 438         |
+| nonplanar contexts         | 5_261     | 0.0       | 746_201     |
+| iter_ruptures              | 1_544     | 0.0       | 96_547      |
+| total preclassical         | 1_539     | 13.8516   | 523         |
+| weighting sources          | 1_300     | 0.0       | 523         |
+| PreClassicalCalculator.run | 514.5     | 7_163     | 1           |
+
+# oq show task_info
+| operation-duration | counts | mean     | stddev | min      | max      | slowfac |
+|--------------------+--------+----------+--------+----------+----------+---------|
+| classical          | 315    | 21_192   | 50%    | 2_353    | 38_331   | 1.8087  |
+| fast_mean          | 438    | 133.7997 | 12%    | 105.4946 | 147.7652 | 1.1044  |
+| make_hmap_png      | 14     | 2.3689   | 01%    | 2.3441   | 2.4471   | 1.0330  |
+| preclassical       | 511    | 3.0086   | 61%    | 0.3147   | 15.7883  | 5.2478  |
+| read_source_model  | 8      | 27.5979  | 32%    | 12.9868  | 36.3808  | 1.3182  |
+
+# oq show job_info
+| task              | sent                                                    | received  |
+|-------------------+---------------------------------------------------------+-----------|
+| read_source_model | converter=6.11 KB fname=907 B branch=279 B              | 653.66 MB |
+| preclassical      | sf=3.6 GB srcs=367.68 MB cmaker=157.56 MB               | 398.41 MB |
+| classical         | sources=394.64 MB cmaker=114.26 MB tilegetters=60.35 KB | 104.97 GB |
+| fast_mean         | pgetter=2.82 MB                                         | 293.07 MB |
+| make_hmap_png     | lons=12.79 MB hmap=6.4 MB                               | 16.41 MB  |
+
+** v3.25.1
+
+# oq show performance
+| calc_1, maxmem=263.0 GB    | time_sec  | memory_mb | counts      |
+|----------------------------+-----------+-----------+-------------|
+| get_poes                   | 4_097_862 | 0.0       | 377_114_780 |
+| total classical            | 3_570_907 | 170.9766  | 1_122       |
+| total baseclassical        | 2_141_263 | 347.4     | 349         |
+| computing mean_std         | 759_918   | 0.0       | 6_984_711   |
+| planar contexts            | 124_037   | 0.0       | 17_200_818  |
+| ClassicalCalculator.run    | 39_061    | 21_251    | 1           |
+| total fast_mean            | 25_360    | 296.8     | 160         |
+| total save_rates           | 18_882    | 85.1875   | 252         |
+| nonplanar contexts         | 12_411    | 0.0       | 597_522     |
+| total filter_weight        | 8_660     | 16.3164   | 396         |
+| iter_ruptures              | 5_200     | 0.0       | 340_576     |
+| PreClassicalCalculator.run | 396.4     | 7_032     | 1           |
+
+# oq show task_info
+| operation-duration | counts | mean     | stddev | min      | max      | slowfac |
+|--------------------+--------+----------+--------+----------+----------+---------|
+| baseclassical      | 349    | 6_135    | 26%    | 4_107    | 8_867    | 1.4453  |
+| classical          | 395    | 9_040    | 33%    | 1_363    | 15_685   | 1.7352  |
+| fast_mean          | 160    | 158.4994 | 00%    | 158.3843 | 158.7253 | 1.0014  |
+| filter_weight      | 363    | 23.7678  | 46%    | 2.2531   | 50.2505  | 2.1142  |
+| make_hmap_png      | 14     | 2.6888   | 01%    | 2.6645   | 2.7759   | 1.0324  |
+| preclassical       | 39     | 4.7011   | 75%    | 0.6883   | 12.0409  | 2.5613  |
+| read_source_model  | 8      | 27.3291  | 32%    | 13.2883  | 35.0655  | 1.2831  |
+| save_rates         | 252    | 74.9290  | 40%    | 9.9242   | 118.5786 | 1.5825  |
+
+# oq show job_info
+| task              | sent                                                | received  |
+|-------------------+-----------------------------------------------------+-----------|
+| read_source_model | converter=6.11 KB fname=907 B branch=279 B          | 653.66 MB |
+| preclassical      | sources=567.53 MB sf=6.11 MB cmaker=5.74 MB         | 1.55 KB   |
+| filter_weight     | srcs=368.67 MB sf=54.96 MB cmaker=51.68 MB          | 399.52 MB |
+| classical         | cmaker=69.48 MB tilegetter=73.05 KB dstore=60.55 KB | 69.35 GB  |
+| baseclassical     | grp=540.97 MB cmaker=274.5 MB tgetter=63.73 KB      | 34.29 GB  |
+| save_rates        | rmap=18.15 GB num_chunks=1.23 KB h5=1008 B          | 1008 B    |
+| fast_mean         | pgetter=67.93 MB                                    | 166.29 MB |
+| make_hmap_png     | lons=12.79 MB hmap=6.4 MB                           | 16.41 MB  |
+
+** v3.26.2
+
+# oq show performance
+| calc_1, maxmem=213.5 GB    | time_sec  | memory_mb | counts      |
+|----------------------------+-----------+-----------+-------------|
+| get_poes                   | 4_412_654 | 0.0       | 221_776_230 |
+| total classical            | 3_229_352 | 107.7773  | 1_308       |
+| total baseclassical        | 2_974_533 | 304.5     | 583         |
+| computing mean_std         | 862_234   | 0.0       | 4_107_503   |
+| ClassicalCalculator.run    | 44_281    | 23_163    | 1           |
+| total fast_mean            | 21_765    | 290.7     | 160         |
+| total save_rates           | 13_548    | 81.5312   | 259         |
+| total filter_weight        | 8_669     | 16.8594   | 396         |
+| iter_ruptures              | 3_037     | 0.0       | 195_925     |
+| PreClassicalCalculator.run | 410.6     | 6_984     | 1           |
+
+# oq show task_info
+| operation-duration | counts | mean     | stddev | min      | max      | slowfac |
+|--------------------+--------+----------+--------+----------+----------+---------|
+| baseclassical      | 583    | 5_102    | 18%    | 4_047    | 9_106    | 1.7847  |
+| classical          | 360    | 8_963    | 25%    | 1_493    | 19_358   | 2.1599  |
+| fast_mean          | 160    | 136.0315 | 00%    | 135.9301 | 136.1735 | 1.0010  |
+| filter_weight      | 361    | 23.9174  | 46%    | 2.2397   | 49.6575  | 2.0762  |
+| make_hmap_png      | 14     | 2.7346   | 01%    | 2.7059   | 2.8520   | 1.0429  |
+| preclassical       | 39     | 4.5267   | 73%    | 0.6173   | 11.5499  | 2.5515  |
+| read_source_model  | 8      | 28.4900  | 33%    | 13.3196  | 37.4168  | 1.3133  |
+| save_rates         | 259    | 52.3080  | 55%    | 5.3123   | 89.1423  | 1.7042  |
+
+# oq show job_info
+| task              | sent                                                | received  |
+|-------------------+-----------------------------------------------------+-----------|
+| read_source_model | converter=6.11 KB fname=907 B branch=279 B          | 655.87 MB |
+| preclassical      | sources=578.03 MB sf=6.11 MB cmaker=5.14 MB         | 1.55 KB   |
+| filter_weight     | srcs=393.55 MB sf=54.96 MB cmaker=46.34 MB          | 426.06 MB |
+| classical         | cmaker=54.11 MB tilegetter=67.39 KB dstore=55.85 KB | 107.05 GB |
+| baseclassical     | cmaker=586.24 MB grp=385.2 MB tgetter=106.47 KB     | 103.94 GB |
+| save_rates        | rmap=18.75 GB num_chunks=1.26 KB h5=1.01 KB         | 1.01 KB   |
+| fast_mean         | pgetter=68.05 MB                                    | 166.29 MB |
+| make_hmap_png     | lons=12.79 MB hmap=6.4 MB                           | 16.41 MB  |
+
+** 3.27, run natively, calc_25071
+
+Run with OQ_SAMPLE_SITES=.5 on AUS/in/job_vs30.ini -p strict=false.
+The calibration cannot reach the tolerance: p99_norm is above 1 for all
+the pointsource_distances, so the largest one (75) is used:
+
+| psgs | psd | weight      | mean_err | p99_err | p99_norm |
+|------+-----+-------------+----------+---------+----------|
+|   50 |  15 | 181_383_920 |   0.0045 |  0.0181 |   2.9548 |
+|   50 |  25 | 203_491_370 |   0.0031 |  0.0114 |   2.0228 |
+|   50 |  50 | 272_914_661 |   0.0015 |  0.0070 |   1.4584 |
+|   50 |  75 | 361_861_390 |   0.0011 |  0.0056 |   1.3154 |
+
+For comparison, calc_21231 (3.27.0-gitd987c597b1) ran on all the
+239_812 sites with ps_grid_spacing=25, pointsource_distance=0 and
+collapse_precision=0.03 in 21_714 s and 281.2 GB (tot_weight 131.8M
+against 182.8M here). The run is CPU-bound, not badly balanced: the
+tasks sum to ~8.5M core-seconds, i.e. ~53_000 s on 160 cores; with
+split_time=2192 s the 375 classical tasks generated 824 baseclassical
+subtasks.
+
+# oq show performance
+| calc_25071, maxmem=189.7 GB | time_sec  | memory_mb | counts      |
+|-----------------------------+-----------+-----------+-------------|
+| total baseclassical         | 4_630_957 | 276.8     | 824         |
+| total classical             | 3_872_623 | 164.3633  | 1_563       |
+| get_poes                    | 2_801_043 | 0.0       | 945_952_229 |
+| computing mean_std          | 651_555   | 0.0       | 17_547_916  |
+| building contexts           | 101_174   | 0.0       | 6_832_526   |
+| ClassicalCalculator.run     | 56_408    | 23_983    | 1           |
+| total fast_mean             | 23_812    | 205.8     | 160         |
+| total save_rates            | 17_835    | 2.8242    | 266         |
+| total filter_weight         | 12_866    | 14.8555   | 396         |
+| total calibration           | 7_613     | 15.6797   | 3_456       |
+| iter_ruptures               | 1_065     | 0.0       | 80_401      |
+| PreClassicalCalculator.run  | 358.2     | 8_554     | 1           |
+
+# oq show task_info
+| operation-duration | counts | mean     | stddev | min      | max      | slowfac |
+|--------------------+--------+----------+--------+----------+----------+---------|
+| baseclassical      | 824    | 5_620    | 12%    | 3_906    | 8_899    | 1.5833  |
+| calibrate_group    | 40     | 3.3379   | 51%    | 0.3286   | 6.7946   | 2.0356  |
+| calibration        | 3_446  | 2.2089   | 22%    | 0.2245   | 6.1790   | 2.7973  |
+| classical          | 372    | 10_410   | 22%    | 1_194    | 12_884   | 1.2377  |
+| fast_mean          | 160    | 148.8241 | 05%    | 140.1379 | 162.1185 | 1.0893  |
+| filter_weight      | 344    | 37.1838  | 49%    | 3.3053   | 80.0275  | 2.1522  |
+| make_hmap_png      | 14     | 2.5026   | 01%    | 2.4655   | 2.6009   | 1.0393  |
+| preclassical       | 41     | 2.0511   | 50%    | 0.3499   | 4.1619   | 2.0292  |
+| read_source_model  | 40     | 7.7624   | 33%    | 3.5172   | 10.0844  | 1.2991  |
+| save_rates         | 266    | 67.0475  | 38%    | 8.0884   | 106.2010 | 1.5840  |
+
+# oq show job_info
+| task              | sent                                                 | received  |
+|-------------------+------------------------------------------------------+-----------|
+| read_source_model | converter=41.25 KB fname=4.51 KB branch=1.03 KB      | 691.09 MB |
+| calibrate_group   | sg=607.41 MB cmaker=5.65 MB sites=719.95 KB          | 13.5 KB   |
+| calibration       | cmaker=461.19 MB srcs=430.52 MB sites=57.85 MB       | 558.44 MB |
+| preclassical      | sources=607.88 MB sf=12.41 MB cmaker=5.95 MB         | 1.55 KB   |
+| filter_weight     | srcs=410.25 MB sf=111.67 MB cmaker=53.6 MB           | 475.92 MB |
+| classical         | cmaker=68.45 MB ts2gids=99.99 KB tilegetter=68.48 KB | 111.79 GB |
+| baseclassical     | grp=488.88 MB cmaker=182.64 MB tgetter=150.48 KB     | 139.62 GB |
+| save_rates        | rmap=19.34 GB num_chunks=1.3 KB h5=1.04 KB           | 1.04 KB   |
+| fast_mean         | pgetter=70.44 MB                                     | 166.29 MB |
+| make_hmap_png     | lons=12.79 MB hmap=6.4 MB                            | 16.41 MB  |
+
+* errors on the UHS, ps_grid_spacing=0 as reference
+
+mean_err and p99_err have one element for each poe, in the order of the UHS poes (0.002105 0.000404).
+
+| version              | mean_err            | p99_err           |
+|----------------------|---------------------|-------------------|
+| 3.24.1               | 0.000555 0.001781   | 0.008569 0.02588  |
+| 3.25.1               | 0.0005557 0.001782  | 0.008569 0.02587  |
+| 3.26.2               | 0.0005294 0.001858  | 0.00824 0.02762   |
+| 3.27.0-git11e4d59a1d | 0.0003599 0.0009321 | 0.001716 0.008659 |

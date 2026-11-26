@@ -24,6 +24,7 @@ import numpy
 from openquake.baselib.general import (
     AccumDict, getsizeof)
 from openquake.baselib.general import decode
+from openquake.baselib.hdf5 import vfloat32
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import (
@@ -33,6 +34,14 @@ from openquake.hazardlib.site_amplification import (
     AmplificationFunction)
 from openquake.hazardlib.contexts import (
     ContextMaker, concat, F32, F64, U32, TWO20, TWO24)
+
+# the MFD variants of a block of contexts stored once by store_ctxs: the
+# rows start:stop of the rup datasets belong to the base variant (the
+# grp_id and base gid are the ones of the rows) and the variant gid has
+# the occurrence rates multiplied by the ratios, one per row (zero for the
+# rows missing in the variant), see make_results
+VARIANT_DT = numpy.dtype([('gid', U32), ('start', numpy.int64),
+                          ('stop', numpy.int64), ('ratios', vfloat32)])
 
 
 class RmapMaker(object):
@@ -349,13 +358,17 @@ def make_results(groups, cmakers, sites):
     pnemaps = [MapArray(sids, cm.imtls.size, len(cm.gsims),
                         True).fill(False) for _ in groups]
     rmaker.source_data = AccumDict(accum=[])
-    rups = [[] for _ in groups]  # the rup_data of each variant
+    # the rup_data are kept once, for the base variant, together with the
+    # ratios of the occurrence rates of each variant, one per row, instead
+    # of a rescaled copy of the contexts per variant (see _keep_rups);
     # e.g. logictree/case_18/job_bis: at the first depth the base has 6
     # ruptures (magnitudes 5.5, 6.5, 7.5) and the 6 variants with
-    # magnitudes 5.5, 6.5 keep 4 of them, see _scale_rups
+    # magnitudes 5.5, 6.5 have ratio 0 for 2 of them
+    rups = []
+    ratios = [[] for _ in groups]
     t0 = time.time()
     cfactor0 = cm.cfactor.copy()  # see RmapMaker.make
-    nctxs = _process_sources(rmaker, mag_ratios, pnemaps, rups)
+    nctxs = _process_sources(rmaker, mag_ratios, pnemaps, rups, ratios)
     cfactor = cm.cfactor - cfactor0
     dt = (time.time() - t0) / len(sources)
     # the source data are recorded only for the first variant, the
@@ -366,20 +379,26 @@ def make_results(groups, cmakers, sites):
     for v, pnemap in enumerate(pnemaps):
         sdata = rmaker.source_data if v == 0 else _zero_source_data(
             rmaker.source_data)
-        rup_data = concat(rups[v]) if rups[v] else ()
         # the cfactor too is recorded only for the first variant
         dic = dict(rmap=pnemap.to_rates(),
                    cfactor=cfactor if v == 0 else numpy.zeros_like(cfactor),
-                   rup_data=rup_data, source_data=sdata,
+                   rup_data=(), source_data=sdata,
                    task_no=rmaker.task_no, dparam_mb=0.,
                    source_mb=cm.source_mb)
+        if v == b and rups:
+            # the base carries the contexts and, for each other variant
+            # (identified by its index), the ratios aligned to the rows;
+            # the base itself has ratio 1 on all the kept rows
+            dic['rup_data'] = concat(rups)
+            dic['rup_ratios'] = [(w, numpy.concatenate(ratios[w]))
+                                 for w in range(len(groups)) if w != b]
         if rmaker.disagg_by_src:  # see RmapMaker.make
             dic['basename'] = valid.basename(sources[0])
         out.append(dic)
     return out
 
 
-def _process_sources(rmaker, mag_ratios, pnemaps, rups):
+def _process_sources(rmaker, mag_ratios, pnemaps, rups, ratios):
     # Feed the probability maps of the variants with the contexts of all the
     # sources, see make_results. The contexts are concatenated in chunks, as
     # in _make_src_indep, otherwise gen_poes is called on tiny arrays and the
@@ -389,7 +408,8 @@ def _process_sources(rmaker, mag_ratios, pnemaps, rups):
     # :param rmaker: a RmapMaker instance for the base variant
     # :param mag_ratios: mag_ratios[v][s] as in make_results
     # :param pnemaps: a list of V MapArrays, one per variant, to update
-    # :param rups: a list of V lists, the rup_data of each variant, to extend
+    # :param rups: a list with the rup_data of the base variant, to extend
+    # :param ratios: a list of V lists of ratios, see _keep_rups, to extend
     # :returns: the number of contexts of each source
     cm = rmaker.cmaker
     tspan = rmaker.tom.time_span
@@ -400,10 +420,9 @@ def _process_sources(rmaker, mag_ratios, pnemaps, rups):
         ctxs = list(rmaker.gen_ctxs(src))
         rmaker.rupdata = []  # the contexts are kept in ctxs
         nctxs.append(sum(len(ctx) for ctx in ctxs))
-        # the ruptures of each variant, kept only with few sites as in gen_ctxs
+        # the ruptures of the variants, kept only with few sites as in gen_ctxs
         if cm.oq.keep_rupdata and rmaker.fewsites:
-            for v, rup in enumerate(rups):
-                rup.extend(_scale_rups(ctxs, mag_ratios[v][s]))
+            _keep_rups(ctxs, [mr[s] for mr in mag_ratios], rups, ratios)
         for ctx in ctxs:
             chunk.append(ctx)
             sidxs.append(numpy.full(len(ctx), s))
@@ -504,23 +523,45 @@ def update_variants(cm, pnemaps, mag_ratios, tspan, ctxs, sidxs):
                                                 sids, itime)
 
 
-
-def _scale_rups(rupdata, ratio):
+def _keep_rups(rupdata, src_ratios, rups, ratios):
+    # Keep the contexts of a source once, instead of a rescaled copy per
+    # variant, which would use V times more memory (GBs for BCHydro)
+    #
     # :param rupdata: a list of context arrays of the same source
-    # :param ratio: dictionary mag -> ratio of the occurrence rates, see
-    #     _mag_ratios
-    # :returns: a list of context arrays with the occurrence rates rescaled
-    #     by the ratio of their magnitude; the ruptures with zero rate, i.e.
-    #     with a magnitude missing in the variant, are dropped
-    out = []
+    # :param src_ratios: a list of V dictionaries mag -> ratio of the
+    #     occurrence rates of the source, see _mag_ratios
+    # :param rups: a list of context arrays, to extend with copies of the
+    #     rows having a positive ratio in at least one variant
+    # :param ratios: a list of V lists, to extend with the ratios of the
+    #     kept rows; a zero ratio means a magnitude missing in the variant
     for ctxs in rupdata:
-        factor = numpy.array([ratio.get(round(float(m), 3), 0.)
-                              for m in ctxs.mag])
-        mask = factor > 0
-        new = ctxs[mask].copy()
-        new['occurrence_rate'] *= factor[mask]
+        mags = numpy.round(ctxs.mag.astype(float), 3)
+        factor = numpy.array([[ratio.get(m, 0.) for m in mags]
+                              for ratio in src_ratios], F32)  # shape (V, U)
+        mask = factor.max(axis=0) > 0
+        # NB: copying, since update_variants can change the original
+        rups.append(ctxs[mask].copy())
+        for ratio, fac in zip(ratios, factor):
+            ratio.append(fac[mask])
+
+
+def _add_variants(ctx, variants):
+    # Rebuild the contexts of the MFD variants computed together by
+    # make_results, stored once with the gid of the base variant: the
+    # contexts of a variant are the base rows with the occurrence rates
+    # multiplied by the stored ratios; the rows with zero ratio are dropped
+    #
+    # :param ctx: a recarray with all the stored contexts, in storage order
+    # :param variants: an array of dtype VARIANT_DT
+    out = [ctx]
+    for rec in variants:
+        start, stop, ratio = rec['start'], rec['stop'], rec['ratios']
+        ok = ratio > 0
+        new = ctx[start:stop][ok].copy()
+        new.occurrence_rate *= ratio[ok]
+        new.gid = rec['gid']
         out.append(new)
-    return out
+    return numpy.concatenate(out).view(numpy.recarray)
 
 
 def _zero_source_data(sdata):
@@ -790,6 +831,10 @@ def read_ctx_by_grp(dstore):
     """
     :param dstore: DataStore instance
     :returns: dictionary grp_id -> ctx
+
+    The contexts of the MFD variants computed together by make_results
+    are stored once, with the ratios of the occurrence rates of each
+    variant, and they are rebuilt here, as if stored separately
     """
     sitecol = dstore['sitecol'].complete.array
     # NB: the gid of each context, i.e. of the index of rate attribution
@@ -816,6 +861,10 @@ def read_ctx_by_grp(dstore):
     for par in sitecol.dtype.names:
         if par != 'sids':
             ctx[par] = sitecol[par][ctx.sids]
+    if 'rup_variants' in dstore and len(dstore['rup_variants']):
+        # must be done before sorting, since the variants refer to
+        # the storage order
+        ctx = _add_variants(ctx, dstore['rup_variants'][:])
     grp_ids = numpy.unique(ctx.grp_id)
     ctx = ctx[numpy.argsort(ctx.mag)]  # NB: crucial for performance
     return {grp_id: ctx[ctx.grp_id == grp_id] for grp_id in grp_ids}

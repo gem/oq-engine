@@ -564,39 +564,55 @@ def _build_legend_labels(classifier, legend_digits):
 
 
 @functools.lru_cache(maxsize=1)
-def _read_basemap(basemap_path):
-    # basemap_path must identify a georeferenced raster supported by
-    # rasterio (for example, a GeoTIFF). The raster can cover the whole
-    # world or just the area being plotted, but its CRS must match the
-    # vector data, as checked by _overlay_basemap().
+def _read_basemap(basemap_path, bounds):
+    # Cache the visible pixels for successive maps with the same viewport.
+    # The georeferenced raster can cover the whole world or just the area
+    # being plotted. As before, its transform is assumed to be north-up.
     import rasterio
+    xmin, ymin, xmax, ymax = bounds
     with rasterio.open(basemap_path) as src:
-        return src.read(), src.transform, src.crs
+        # Round outwards to include partially visible pixels at the edges.
+        inverse = ~src.transform
+        x0, y0 = inverse * (xmin, ymax)
+        x1, y1 = inverse * (xmax, ymin)
+        col0 = max(0, math.floor(min(x0, x1)))
+        col1 = min(src.width, math.ceil(max(x0, x1)))
+        row0 = max(0, math.floor(min(y0, y1)))
+        row1 = min(src.height, math.ceil(max(y0, y1)))
+        if col1 <= col0 or row1 <= row0:
+            return None, None, src.crs
+        window = ((row0, row1), (col0, col1))
+        crop = src.read(window=window)
+        west, south, east, north = src.window_bounds(window)
+        image = crop[0] if len(crop) == 1 else numpy.moveaxis(crop, 0, -1)
+        return image, (west, east, south, north), src.crs
 
 
-def _overlay_basemap(ax, basemap_path, target_crs):
-    """
-    Safely handles rasterio imports and displays the basemap overlay.
-    Raster data is cached after the first load via _read_basemap().
-    """
+def _overlay_basemap(ax, basemap_path, target_crs, margin_ratio=0.1):
+    # Call after setting the limits so each draw resamples only the
+    # viewport and its margin.
     if basemap_path is None:
         # Some plot callers do not use a raster basemap. Impact reports
         # configure one before calling this function.
         return
-    try:
-        import rasterio  # noqa
-    except ImportError as exc:
-        raise RuntimeError(
-            "In order to plot raster basemaps, 'rasterio' should be installed"
-        ) from exc
-    from rasterio.plot import show
-    # Normalise to str for the cache key; resolve() collapses any symlinks
-    # or relative segments so the same file always hits the same cache slot.
+    # Resolve symlinks and relative segments for the cache key.
     path_str = str(Path(basemap_path).resolve())
-    data, transform, crs = _read_basemap(path_str)
+    xlim, ylim = ax.get_xlim(), ax.get_ylim()
+    xpad = (max(xlim) - min(xlim)) * margin_ratio
+    ypad = (max(ylim) - min(ylim)) * margin_ratio
+    image, extent, crs = _read_basemap(path_str, (
+        min(xlim) - xpad, min(ylim) - ypad,
+        max(xlim) + xpad, max(ylim) + ypad))
     if crs != target_crs:
         raise ValueError("Raster CRS does not match vector CRS")
-    show(data, transform=transform, ax=ax, alpha=0.8)
+    if image is None:  # the viewport is outside of the raster
+        return
+    # zorder=0 keeps the basemap below the other layers, even if it is
+    # added after them
+    ax.imshow(image, extent=extent, alpha=0.8, zorder=0)
+    # make sure that adding the image does not change the viewport
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
 
 
 def _overlay_cities(ax, cities, city_font_size):
@@ -607,11 +623,10 @@ def _overlay_cities(ax, cities, city_font_size):
     if not cities:
         return
     import matplotlib.patheffects as path_effects
-    city_scatters = []
+    lons, lats = numpy.array(list(cities.values())).T
+    ax.scatter(lons, lats, color='black', marker='o', s=8, zorder=6)
     texts = []
     for city, (x, y) in cities.items():
-        sc = ax.scatter(x, y, color='black', marker='o', s=8, zorder=6)
-        city_scatters.append(sc)
         t = ax.text(x, y, city, fontsize=city_font_size, color="black",
                     zorder=7)
         t.set_path_effects([
@@ -623,16 +638,20 @@ def _overlay_cities(ax, cities, city_font_size):
         from adjustText import adjust_text
         if texts:
             legend = ax.get_legend()
+            # NOTE: the city markers are avoided anyway, since the texts
+            # are anchored to them (avoid_self=True by default); they
+            # cannot be passed as objects, since the extent of a scatter
+            # with a single point is degenerate and adjustText would
+            # fail with NaNs
+            objects = [legend] if legend else None
             # Resolving city label overlaps is particularly slow when a
             # report repeats this step across several maps.
             # adjustText otherwise runs until it reaches zero overlap.  For
             # some city layouts that condition is never reached, leaving the
             # impact report running indefinitely.
             adjust_text(
-                texts, ax=ax, add_objects=city_scatters + [legend],
-                arrowprops=None, force_text=(0.1, 0.2),
-                expand_points=(1.2, 1.2), save_steps=False, time_lim=2.0
-            )
+                texts, ax=ax, objects=objects, force_text=(0.1, 0.2),
+                time_lim=2.0)
     except ImportError:
         pass
 
@@ -743,7 +762,6 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     labels = _build_legend_labels(classifier, style.legend_digits)
 
     fig, ax = plt.subplots(figsize=style.figsize)
-    _overlay_basemap(ax, elements.basemap_path, df.crs)
 
     # Plot each class with its corresponding color
     for i, color in enumerate(colors):
@@ -766,6 +784,8 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
                           facecolor="none", linewidth=0.4)
     _resolve_limits(ax, elements.x_limits, elements.y_limits, event_points)
+    # the basemap is cropped to the limits, so it must be added after them
+    _overlay_basemap(ax, elements.basemap_path, df.crs)
     _overlay_cities(ax, elements.cities, style.city_font_size)
     if elements.scale_bar:
         _overlay_scale_bar(ax)
@@ -801,19 +821,20 @@ def _overlay_region_names(ax, admin_boundaries, font_size):
             path_effects.Normal()])
 
 
-def _plot_basemap_with_borders(admin_boundaries, elements, style):
-    # Create a figure with the basemap and the borders of the regions
+def _plot_borders(admin_boundaries, style):
+    # Create a figure with the borders of the regions (the basemap is
+    # added by _add_map_decorations, after setting the viewport)
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=style.figsize)
-    _overlay_basemap(ax, elements.basemap_path, admin_boundaries.crs)
     admin_boundaries.plot(ax=ax, edgecolor='black', facecolor='none',
                           linewidth=0.8)
     return fig, ax
 
 
-def _add_map_decorations(fig, ax, elements, style):
-    # Add rupture/epicenter and legend, set the viewport, then add the scale
-    # bar, title and axis labels, consistently with plot_variable
+def _add_map_decorations(fig, ax, elements, style, crs):
+    # Add rupture/epicenter and legend, set the viewport and add the
+    # basemap cropped to it, then add the scale bar, title and axis
+    # labels, consistently with plot_variable
     # NOTE: the legend handles of the event are taken from _overlay_event,
     # which returns a single handle for a rupture with multiple surfaces
     handles = ax.get_legend_handles_labels()[0]
@@ -825,6 +846,7 @@ def _add_map_decorations(fig, ax, elements, style):
                   title_fontsize=style.font_size,
                   fontsize=style.legend_font_size, loc='best')
     _resolve_limits(ax, elements.x_limits, elements.y_limits, event_points)
+    _overlay_basemap(ax, elements.basemap_path, crs)
     if elements.scale_bar:
         _overlay_scale_bar(ax)
     if elements.plot_title:
@@ -848,8 +870,8 @@ def plot_region_names(admin_boundaries, *, elements: MapDataElements = None,
     """
     style = style or MapStyleConfig()
     elements = elements or MapDataElements()
-    fig, ax = _plot_basemap_with_borders(admin_boundaries, elements, style)
-    _add_map_decorations(fig, ax, elements, style)
+    fig, ax = _plot_borders(admin_boundaries, style)
+    _add_map_decorations(fig, ax, elements, style, admin_boundaries.crs)
     _overlay_region_names(ax, admin_boundaries, style.city_font_size)
     return fig, ax
 
@@ -871,18 +893,29 @@ def plot_assets_map(lons, lats, admin_boundaries, *,
     """
     style = style or MapStyleConfig()
     elements = elements or MapDataElements()
-    fig, ax = _plot_basemap_with_borders(admin_boundaries, elements, style)
+    fig, ax = _plot_borders(admin_boundaries, style)
     # many assets can share the same location: plot each location once
     lonlats = numpy.unique(numpy.column_stack([lons, lats]), axis=0)
     # bright orange contrasts with both land and sea; the markers shrink
     # as the number of locations grows, to limit overlaps, and the dark
     # edge is kept only while they are big enough not to hide the fill
     size = numpy.clip(120 / numpy.sqrt(len(lonlats)), 0.5, 12)
-    ax.scatter(lonlats[:, 0], lonlats[:, 1], marker='o', s=size,
-               color='#ff7f00', edgecolor='black',
-               linewidth=0.4 if size >= 4 else 0, alpha=0.9, zorder=5,
-               label='Asset locations')
-    _add_map_decorations(fig, ax, elements, style)
+    points = ax.scatter(lonlats[:, 0], lonlats[:, 1], marker='o', s=size,
+                        color='#ff7f00', edgecolor='black',
+                        linewidth=0.4 if size >= 4 else 0, alpha=0.9,
+                        zorder=5, label='Asset locations')
+    _add_map_decorations(fig, ax, elements, style, admin_boundaries.crs)
+    # once the viewport is set, keep only the visible locations (with a
+    # margin for the markers at the edges), since there can be hundreds
+    # of thousands of them; the marker size still depends on all of them
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    xpad, ypad = (xmax - xmin) * .02, (ymax - ymin) * .02
+    visible = ((lonlats[:, 0] >= xmin - xpad) &
+               (lonlats[:, 0] <= xmax + xpad) &
+               (lonlats[:, 1] >= ymin - ypad) &
+               (lonlats[:, 1] <= ymax + ypad))
+    points.set_offsets(lonlats[visible])
     # keep the marker in the legend readable, whatever the size in the map
     legend = ax.get_legend()
     for handle, text in zip(legend.legend_handles, legend.get_texts()):

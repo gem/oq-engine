@@ -78,16 +78,31 @@ is built in 3 steps:
    inspected and job.zip is not touched.
 
 NB: the equivalence concerns the rates of the sources, not the numerical
-approximations of the calculation. With ps_grid_spacing the point sources
-are collapsed into averages weighted by their rates (see calc_average in
-source/point.py), so the hazard of the converted job can differ slightly
-from the original one: in KOR with ps_grid_spacing=50 the hazard curves
-differ by up to 1% at the lowest intensity levels, while without
-ps_grid_spacing the difference is at the level of the numerical noise
-(about 1E-5, like the difference between two runs of the original job with
-a different number of tasks).
+approximations of the calculation nor the sampling of the logic tree:
 
-Use it with `oq check_input --better-smlt job.ini`.
+- with ps_grid_spacing the point sources of the original job are
+  collapsed in the preclassical phase (see grid_point_sources in
+  source/point.py), while the converted sources are modified by the
+  uncertainties (bysrc_unc), so they are split in the workers and never
+  collapsed; moreover pointsource_distance, when not given, is calibrated
+  on a sample of sites (see autogrid.calibrate) and the calibration can
+  choose a different value for the two jobs (in a test 75 km for the
+  original job and 50 km for the converted one). Therefore the hazard of
+  the converted job can differ slightly from the original one, by the size
+  of these approximations (in that test, with ps_grid_spacing=50 and full
+  enumeration, the UHS differed by 2E-4 rms, 1E-3 max), while without
+  ps_grid_spacing the difference is at the level of the numerical noise
+  (about 1E-5, like the difference between two runs of the original job
+  with a different number of tasks);
+- with number_of_logic_tree_samples the results are equal only in
+  distribution, not sample by sample: each branchset takes its own column
+  of random numbers (see BranchSetLogicTree.sample in lt.py), including the
+  single-branch ones, so the converted tree, with a base branchset followed
+  by a branchset of MFDs in place of each collapsed branchset, samples
+  different paths with the same seed (in the same test, with 1000 samples
+  the UHS differed by 3E-3 rms, 8E-3 max).
+
+Use it with `oq check_input --optimize job.ini`.
 """
 import os
 import copy
@@ -761,7 +776,9 @@ def rates_table(sources, bset_values, paths, renamed, detail):
             mfd = getattr(src, 'mfd', None)
             if mfd is None:
                 continue
-            srcid = re.split('[!;]', src.source_id)[0]
+            # the point sources of a multiPointSource are named ID:i, so
+            # they are grouped with the original ID (see multi_point.py)
+            srcid = re.split('[!;:]', src.source_id)[0]
             srcid = renamed.get(srcid, srcid)
             h = _digest(srcid, mfd.get_annual_occurrence_rates())
             for t in trt_smrs:

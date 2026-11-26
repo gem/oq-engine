@@ -143,20 +143,25 @@ def get_fatalities_loss_type(oqparam):
 # are ever used within the same process.
 @functools.lru_cache(maxsize=1)
 def _read_admin_layer(fname):
-    """Read and repair an administrative-boundary layer.
+    """Read an administrative-boundary layer.
 
     :param fname: path to a vector file containing administrative boundaries
-    :returns: a GeoDataFrame with valid geometries
+    :returns: a GeoDataFrame, possibly with invalid geometries
     """
-    gdf = gpd.read_file(fname)
+    return gpd.read_file(fname)
+
+
+def _fix_invalid_geometries(gdf):
+    # repair the invalid geometries of the given GeoDataFrame, in place;
+    # it is called only on the regions of a country, since checking all
+    # the regions of the world is slow
     invalid = ~gdf.is_valid
+    for idx in gdf[invalid].index:
+        reason = explain_validity(gdf.at[idx, "geometry"])
+        logging.warning("Invalid geometry at index %s: %s", idx, reason)
     if invalid.any():
-        for idx in gdf[invalid].index:
-            reason = explain_validity(gdf.at[idx, "geometry"])
-            logging.warning("Invalid geometry at index %s: %s", idx, reason)
-        # fix invalid geometries
-        gdf["geometry"] = gdf["geometry"].apply(make_valid)
-    return gdf
+        gdf.loc[invalid, "geometry"] = gdf.loc[invalid, "geometry"].apply(
+            make_valid)
 
 
 @functools.lru_cache(maxsize=1)
@@ -257,6 +262,7 @@ def load_admin_boundaries(
         id_col: "region_id",
         name_col: "region_name",
     })
+    _fix_invalid_geometries(gdf)
     gdf["region_id"] = gdf["region_id"].astype(str)
     gdf["region_name"] = gdf["region_name"].astype(str)
     gdf["country_iso3"] = gdf["country_iso3"].astype(str)

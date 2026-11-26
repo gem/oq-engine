@@ -22,11 +22,14 @@ import unittest
 from unittest.mock import patch
 import pytest
 import numpy
+import pandas
 from openquake.qa_tests_data.scenario_risk import case_shakemap
+from openquake.commonlib import datastore
 from openquake.calculators.base import run_calc, expose_outputs
 from openquake.calculators.views import text_table
 from openquake.calculators.checkers import check, assert_close
 from openquake.calculators.export import export
+from openquake.engine import impact
 
 cd = pathlib.Path(__file__).parent
 aac = numpy.testing.assert_allclose
@@ -117,13 +120,16 @@ def test_impact(n):
                 # [job.ini, exposure.xml, rupture.csv, ...]
                 fnames = check_export_job_zip(calc.datastore)
 
-                # repeat the calculation starting from job.zip unzipped
-                calc2, log2 = check(fnames[0])
+                # repeat the calculation starting from job.zip unzipped;
+                # the exported assets are already sampled, so OQ_SAMPLE_ASSETS
+                # must not be applied again
+                with patch.dict(os.environ):
+                    os.environ.pop('OQ_SAMPLE_ASSETS', None)
+                    calc2, log2 = check(fnames[0])
                 with log2:
                     expose_outputs(calc.datastore)
                     expose_outputs(calc2.datastore)
-                    # TODO: restore the check
-                    #  compare(calc.datastore, calc2.datastore)
+                    compare(calc.datastore, calc2.datastore)
 
 
 def test_impact5():
@@ -142,6 +148,47 @@ def test_impact5():
     assert_close(tt, cd / 'impact5/exposure_by_mmi.org')
 
 
+def test_impact_shakemap():
+    # GMFs from a ShakeMap on a region grid: the stored sitecol must be
+    # the reduced one, consistent with the gmf and asset site IDs; before
+    # the fix the region grid was stored as complete sitecol and the
+    # exported GMFs were associated to the first sites of the grid
+    if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
+        raise unittest.SkipTest(f'Missing {expo}')
+    with patch.dict(os.environ, {'OQ_SAMPLE_ASSETS': SAMPLE_ASSETS}):
+        calc = run_calc(cd / 'impact6/job.ini')
+    dstore = calc.datastore
+    sitecol = dstore['sitecol']
+    assert 'complete' not in dstore.hdf5
+    aac(sitecol.sids, numpy.arange(len(sitecol)))
+    aac(numpy.unique(dstore['gmf_data/sid'][:]), sitecol.sids)
+    aac(numpy.unique(dstore['assetcol/array']['site_id']), sitecol.sids)
+
+    # the exported GMFs are on the sites of the exported sitemesh
+    fnames = export(('gmf_data', 'csv'), dstore)
+    try:
+        [gmf_csv] = [f for f in fnames if 'gmf-data' in f]
+        [mesh_csv] = [f for f in fnames if 'sitemesh' in f]
+        gmf = pandas.read_csv(gmf_csv, comment='#')
+        mesh = pandas.read_csv(mesh_csv, comment='#')
+        assert len(mesh) == len(sitecol)
+        col = 'custom_site_id' if 'custom_site_id' in mesh else 'site_id'
+        assert set(gmf[col]) == set(mesh[col])
+    finally:
+        for fname in fnames:
+            os.remove(fname)
+
+    # emulate a datastore produced before the fix, with the sitecol
+    # referring to a larger grid: the GMF export must be refused
+    calc_id = dstore.calc_id
+    dstore.close()
+    with datastore.read(calc_id, mode='r+') as ds:
+        sitecol.array['sids'] += 1000
+        ds['sitecol'] = sitecol
+        with pytest.raises(ValueError, match='do not match the stored site'):
+            export(('gmf_data', 'csv'), ds)
+
+
 # NB: there is another test of export_job_zip in scenario_damage/case_22
 def test_shakemap():
     cdir = os.path.dirname(case_shakemap.__file__)
@@ -155,9 +202,35 @@ def test_shakemap():
         'structural_vulnerability.xml', 'taxonomy_mapping.csv',
         'sites.csv', 'assetcol.csv']
     try:
+        with open(fnames[1], encoding='utf8') as inp:
+            job_ini = inp.read()
+        assert 'shakemap_uri' not in job_ini
+        assert 'mmi_file' not in job_ini
+        assert 'rupture_file' not in job_ini
         run_calc(fnames[1])
     finally:
         # with open(fnames[1]) as f:
         #     print(f.read())
         for fname in fnames:
             os.remove(fname)
+
+
+@pytest.mark.parametrize('kw, level, expected', [
+    ({}, 1, (None, None)),  # the ShakeMap is used
+    ({'nodal_plane': 'NP1'}, 2, (None, None)),  # the rupture is built
+    ({'within_event_correlation_model': 'DuNing2021Interpolated',
+      'between_event_correlation_model': 'NoCrossCorrelation',
+      'nodal_plane': 'NP1'}, 2,
+     ('DuNing2021Interpolated', 'NoCrossCorrelation'))])
+def test_cli_correlation_models(kw, level, expected):
+    # oq impact passes the chosen models, if any, to impact_validate, which
+    # sets the defaults as for the web form
+    err = {'status': 'failed', 'error_msg': 'stop'}
+    with patch.object(impact, 'impact_validate',
+                      return_value=(None, {}, {}, err)) as validate:
+        impact.main_cmd('us6000t7zp', exposure_hdf5='exposure.hdf5',
+                        callback=lambda *args, **kw: None, **kw)
+    post, user = validate.call_args.args[:2]
+    assert user.level == level
+    assert (post['within_event_correlation_model'],
+            post['between_event_correlation_model']) == expected

@@ -1732,6 +1732,25 @@ class BranchSetFilterTestCase(unittest.TestCase):
             rake=0,
             temporal_occurrence_model=PoissonTOM(50.))
 
+    def test_split_segments(self):
+        # the segments ID:i of a split source get the uncertainties of ID,
+        # while an ID containing a colon, as written in the logic tree,
+        # must still match exactly
+        seg = deepcopy(self.point)
+        seg.source_id = 'point:0'
+
+        def test(ids, source):
+            return logictree.BranchSet(
+                'maxMagGRAbsolute', filters={'applyToSources': ids}
+            ).filter_source(source)
+
+        self.assertTrue(test(['point'], seg))
+        self.assertTrue(test(['point:0'], seg))
+        self.assertFalse(test(['point:1'], seg))
+        self.assertFalse(test([self.area.source_id], seg))
+        self.assertTrue(test(['point'], self.point))
+        self.assertFalse(test(['point'], self.area))
+
     def test_unknown_filter(self):
         bs = logictree.BranchSet(
             'maxMagGRAbsolute', filters={'applyToSources': [1], 'foo': 'bar'})
@@ -1818,6 +1837,28 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             # each realization uses a single GSIM for each TRT
             ordinals = numpy.concatenate(list(rlzs_by_gsim.values()))
             self.assertEqual(sorted(ordinals), list(range(12)))
+
+    def test_default_imt_weights(self):
+        xml = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                branchSetID="bs1"
+                                applyToTectonicRegionType="Shield">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.6</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.6</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>ToroEtAl2002</uncertaintyModel>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTree>""")
+        rlzs = self.parse_valid(xml).get_realizations()
+        numpy.testing.assert_allclose(rlzs[0].weight, [0.6, 0.6, 0.6])
+        numpy.testing.assert_allclose(rlzs[1].weight, [0.4, 0.4, 0.4])
 
     def test_not_xml(self):
         self.parse_invalid('xxx', ExpatError)

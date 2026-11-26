@@ -286,7 +286,7 @@ user level, are described in the section of each route.
      - ✓
      - 
    * - ``/v1/calc/create_tag/:tag_name``
-     - GET
+     - POST
      - login
      - ✓
      - ✓
@@ -295,7 +295,7 @@ user level, are described in the section of each route.
      - ✓
      - 
    * - ``/v1/calc/delete_tag/:tag_name``
-     - GET
+     - POST
      - login
      - ✓
      - ✓
@@ -304,7 +304,7 @@ user level, are described in the section of each route.
      - ✓
      - 
    * - ``/v1/calc/:calc_id/add_tag/:tag_name``
-     - GET
+     - POST
      - login
      - ✓
      - ✓
@@ -313,7 +313,7 @@ user level, are described in the section of each route.
      - ✓
      - 
    * - ``/v1/calc/:calc_id/remove_tag/:tag_name``
-     - GET
+     - POST
      - login
      - ✓
      - ✓
@@ -322,7 +322,7 @@ user level, are described in the section of each route.
      - ✓
      - 
    * - ``/v1/calc/:calc_id/set_preferred_job_for_tag/:tag_name``
-     - GET
+     - POST
      - login
      - ✓
      - ✓
@@ -331,7 +331,7 @@ user level, are described in the section of each route.
      - ✓
      - 
    * - ``/v1/calc/unset_preferred_job_for_tag/:tag_name``
-     - GET
+     - POST
      - login
      - ✓
      - ✓
@@ -832,41 +832,41 @@ List all available tags. Response::
 
 	{"success": "ok", "tags": ["tag-a", "tag-b"]}
 
-*********************************
-GET /v1/calc/create_tag/:tag_name
-*********************************
+**********************************
+POST /v1/calc/create_tag/:tag_name
+**********************************
 
 Create a tag. Requires user level at least 2.
 
-*********************************
-GET /v1/calc/delete_tag/:tag_name
-*********************************
+**********************************
+POST /v1/calc/delete_tag/:tag_name
+**********************************
 
 Delete a tag. Requires user level at least 2.
 
-***************************************
-GET /v1/calc/:calc_id/add_tag/:tag_name
-***************************************
+****************************************
+POST /v1/calc/:calc_id/add_tag/:tag_name
+****************************************
 
 Add an existing or new tag to a calculation. Requires user level at least 2.
-The tag endpoints are registered as GET in this version.
+The endpoints changing the tags accept only POST requests.
 
-******************************************
-GET /v1/calc/:calc_id/remove_tag/:tag_name
-******************************************
+*******************************************
+POST /v1/calc/:calc_id/remove_tag/:tag_name
+*******************************************
 
 Remove a tag from a calculation. Requires user level at least 2.
 
-*********************************************************
-GET /v1/calc/:calc_id/set_preferred_job_for_tag/:tag_name
-*********************************************************
+**********************************************************
+POST /v1/calc/:calc_id/set_preferred_job_for_tag/:tag_name
+**********************************************************
 
 Mark the calculation as the preferred job for the tag and clear the
 preference on any previous job with that tag.
 
-**************************************************
-GET /v1/calc/unset_preferred_job_for_tag/:tag_name
-**************************************************
+***************************************************
+POST /v1/calc/unset_preferred_job_for_tag/:tag_name
+***************************************************
 
 Clear the preferred job for a tag.
 

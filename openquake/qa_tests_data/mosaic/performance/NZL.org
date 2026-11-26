@@ -9,9 +9,9 @@ ps_grid_spacing = 30 (master: pointsource_distance = 50, from calibration)
 | 3.24.1               | 2_618 s     | 142.1 GB   |
 | 3.25.1               | 2_657 s     | 170.4 GB   |
 | 3.26.2               | 2_277 s     | 182.8 GB   |
-| 3.27.0-gita7db31cefa | 3_639 s     | 228.2 GB   |
+| 3.27.0-gitce4792e5b8 | 3_606 s     | 184.0 GB   |
 
-The 3.27 version is much slower and memory consuming because it is
+The 3.27 version is much slower because it is
 more accurate (max_err=3.6% instead of 7.4%, max_abs_err=0.1g).
 The large errors come from the point sources with Mmax 8.15 near
 the sites (4,697 in slab-uniform-1depth-rates.xml). Removing them from the
@@ -173,57 +173,69 @@ source model bring the error down to 0.015g.
 | postclassical     | pgetter=73.98 MB hstats=10.16 KB individual_rlzs=640 B | 4.1 MB   |
 | make_hmap_png     | lons=570.83 KB hmap=287.63 KB                          | 16.41 MB |
 
-** 3.27
+** 3.27, run natively, calc_25068
+
+Run with OQ_SAMPLE_SITES=.5 on NZL/in/job_vs30.ini -p strict=false, which
+samples 5_213 sites instead of 5_200. pointsource_distance=50 as before
+(p99_err=0.0060 g); the previous 3.27 run (calc_20974) took 3_639 s and
+228.2 GB.
 
 # oq show performance
-| calc_20974, maxmem=228.2 GB | time_sec | memory_mb | counts     |
+| calc_25068, maxmem=184.0 GB | time_sec | memory_mb | counts     |
 |-----------------------------+----------+-----------+------------|
-| total classical             | 384_851  | 597.5     | 896        |
-| get_poes                    | 135_166  | 0.0       | 18_830_520 |
-| computing mean_std          | 125_382  | 0.0       | 351_520    |
-| total baseclassical         | 99_104   | 113.2188  | 129        |
-| total postclassical         | 20_386   | 70.4023   | 160        |
-| reading rates               | 18_748   | 76.4102   | 160        |
-| ClassicalCalculator.run     | 3_639    | 4_720     | 1          |
-| building contexts           | 2_425    | 0.0       | 731_094    |
-| total save_rates            | 2_371    | 22.3398   | 196        |
-| total calibration           | 2_105    | 79.7422   | 1_643      |
-| compute stats               | 1_637    | 0.0       | 160        |
-| total filter_weight         | 1_144    | 470.2     | 234        |
-| iter_ruptures               | 1_030    | 0.0       | 20_484     |
-| building dparam             | 464.3    | 0.0       | 144        |
-| total read_source_model     | 353.9    | 38.7422   | 194        |
-| storing rates               | 234.0    | 771.9     | 147        |
-| PreClassicalCalculator.run  | 177.6032 | 3_953     | 1          |
+| total classical             | 398_706  | 711.7     | 874        |
+| get_poes                    | 138_912  | 0.0       | 19_276_293 |
+| computing mean_std          | 129_429  | 0.0       | 359_845    |
+| total baseclassical         | 83_743   | 86.7344   | 107        |
+| total postclassical         | 21_304   | 48.4062   | 160        |
+| reading rates               | 19_703   | 101.4023  | 160        |
+| ClassicalCalculator.run     | 3_606    | 4_924     | 1          |
+| building contexts           | 2_516    | 0.0       | 735_236    |
+| total save_rates            | 2_401    | 21.3047   | 196        |
+| total calibration           | 2_088    | 81.5625   | 595        |
+| compute stats               | 1_600    | 0.0       | 160        |
+| total filter_weight         | 1_125    | 481.3     | 234        |
+| iter_ruptures               | 1_116    | 0.0       | 19_894     |
+| building dparam             | 483.3    | 0.0       | 144        |
+| total read_source_model     | 357.7    | 38.7148   | 194        |
+| storing rates               | 203.1    | 462.2     | 147        |
+| PreClassicalCalculator.run  | 155.8786 | 3_934     | 1          |
 
 # oq show task_info
 | operation-duration | counts | mean     | stddev | min      | max      | slowfac |
 |--------------------+--------+----------+--------+----------+----------+---------|
-| baseclassical      | 129    | 768.3    | 05%    | 711.2    | 850.7    | 1.1073  |
-| calibration        | 1_642  | 1.2821   | 117%   | 0.1634   | 8.6120   | 6.7169  |
-| classical          | 402    | 950.3    | 55%    | 88.5652  | 2_196    | 2.3105  |
-| count_nogrid       | 28     | 1.1263   | 66%    | 0.1371   | 2.5205   | 2.2378  |
-| filter_weight      | 216    | 5.2911   | 99%    | 0.6796   | 15.8956  | 3.0042  |
-| grid_and_weight    | 28     | 0.2522   | 43%    | 0.1371   | 0.5142   | 2.0388  |
-| make_hmap_png      | 14     | 0.2298   | 01%    | 0.2274   | 0.2341   | 1.0189  |
-| postclassical      | 160    | 127.4138 | 00%    | 125.8251 | 128.3327 | 1.0072  |
-| preclassical       | 31     | 0.5008   | 51%    | 0.0298   | 0.9630   | 1.9230  |
-| prepare_points     | 28     | 0.1774   | 42%    | 0.0728   | 0.2803   | 1.5806  |
-| read_source_model  | 98     | 3.5327   | 87%    | 0.3591   | 7.8376   | 2.2186  |
-| save_rates         | 196    | 12.0991  | 31%    | 5.2935   | 15.8273  | 1.3081  |
+| baseclassical      | 107    | 782.6    | 07%    | 699.9    | 894.2    | 1.1425  |
+| calibrate_group    | 28     | 0.4823   | 48%    | 0.2210   | 0.9480   | 1.9656  |
+| calibration        | 592    | 3.5265   | 43%    | 0.5330   | 7.6303   | 2.1637  |
+| classical          | 400    | 988.9    | 56%    | 87.6383  | 2_118    | 2.1419  |
+| filter_weight      | 216    | 5.2040   | 101%   | 0.6258   | 16.1579  | 3.1049  |
+| make_hmap_png      | 14     | 0.2139   | 00%    | 0.2123   | 0.2149   | 1.0046  |
+| postclassical      | 160    | 133.1508 | 00%    | 131.7330 | 134.0259 | 1.0066  |
+| preclassical       | 31     | 0.4834   | 55%    | 0.0292   | 0.8944   | 1.8500  |
+| read_source_model  | 101    | 3.4700   | 90%    | 0.3591   | 7.8739   | 2.2691  |
+| save_rates         | 196    | 12.2501  | 31%    | 5.4618   | 15.9190  | 1.2995  |
 
 # oq show job_info
 | task              | sent                                                   | received  |
 |-------------------+--------------------------------------------------------+-----------|
-| read_source_model | converter=127.88 KB fname=25.52 KB branch=8.05 KB      | 291.98 MB |
-| prepare_points    | sg=250.48 MB sites=522.73 KB maxdist=3.54 KB           | 250.47 MB |
-| grid_and_weight   | points=85.07 MB sites=522.73 KB maxdist=3.54 KB        | 37.26 MB  |
-| calibration       | cmaker=172.44 MB srcs=123.75 MB sites=27.06 MB         | 163.21 MB |
-| preclassical      | secparams=480.58 MB sources=251.63 MB cmaker=9.75 MB   | 1 KB      |
-| filter_weight     | secparams=1.39 GB srcs=63.12 MB cmaker=29.79 MB        | 68.23 MB  |
-| count_nogrid      | srcs=250.47 MB cmaker=4.01 MB sf=499.12 KB             | 1.6 KB    |
-| classical         | cmaker=103.58 MB tilegetter=83.46 KB dstore=74.53 KB   | 48.16 GB  |
-| baseclassical     | cmaker=28.57 MB grp=7.31 MB tgetter=23.56 KB           | 8.08 GB   |
+| read_source_model | converter=133.38 KB fname=25.71 KB branch=8.05 KB      | 292.57 MB |
+| calibrate_group   | sg=250.48 MB cmaker=3.83 MB sites=524.49 KB            | 2.32 KB   |
+| calibration       | srcs=122.45 MB cmaker=62.9 MB sites=9.83 MB            | 93.2 MB   |
+| preclassical      | secparams=480.58 MB sources=251.63 MB cmaker=9.76 MB   | 936 B     |
+| filter_weight     | secparams=1.39 GB srcs=63.12 MB cmaker=29.79 MB        | 74.61 MB  |
+| classical         | cmaker=79.77 MB ts2gids=383.99 KB tilegetter=83.46 KB  | 48.19 GB  |
+| baseclassical     | cmaker=18.12 MB grp=7.19 MB gids=30.83 KB              | 6.5 GB    |
 | save_rates        | rmap=1.83 GB num_chunks=980 B h5=784 B                 | 784 B     |
-| postclassical     | pgetter=74.31 MB hstats=10.16 KB individual_rlzs=640 B | 4.1 MB    |
-| make_hmap_png     | lons=570.83 KB hmap=287.65 KB                          | 16.41 MB  |
+| postclassical     | pgetter=74.31 MB hstats=10.16 KB individual_rlzs=640 B | 4.11 MB   |
+| make_hmap_png     | lons=572.25 KB hmap=288.36 KB                          | 16.41 MB  |
+
+* errors on the UHS, ps_grid_spacing=0 as reference
+
+mean_err and p99_err have one element for each poe, in the order of the UHS poes (0.002105 0.000404).
+
+| version              | mean_err          | p99_err         |
+|----------------------|-------------------|-----------------|
+| 3.24.1               | 0.02115 0.05228   | 0.09497 0.2644  |
+| 3.25.1               | 0.02115 0.05228   | 0.09498 0.2644  |
+| 3.26.2               | 0.02122 0.05235   | 0.09536 0.2655  |
+| 3.27.0-gitf3c01f687c | 0.003219 0.006938 | 0.01978 0.04372 |
