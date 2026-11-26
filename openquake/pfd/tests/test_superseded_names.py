@@ -22,6 +22,7 @@ The PFD model classes were renamed after the GSIM convention
 ``<FirstSurname>EtAl<Year>``). The former names must keep working, warn,
 and stay out of the model listings.
 """
+import importlib
 import os
 import re
 import types
@@ -174,3 +175,12 @@ def test_engine_inputs_use_current_names_only():
                     if former.search(f.read()):
                         found.append(os.path.relpath(path, qa_dir))
     assert not found, 'former PFD model names in %s' % found
+
+
+@pytest.mark.parametrize('slot', sorted(SLOTS))
+def test_slot_package_exports_both_names(slot):
+    # `from openquake.pfd.<slot> import <name>` must keep working for the
+    # former names during the transition, and work for the current ones
+    pkg = importlib.import_module('openquake.pfd.' + slot)
+    for name, cls in get_available(slot).items():
+        assert getattr(pkg, name, None) is cls, name

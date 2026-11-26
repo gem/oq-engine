@@ -23,7 +23,6 @@ surface rupture prediction models
 
 from openquake.pfd.secondary_surf_rup.youngs2003 import YoungsEtAl2003SecondarySR  # noqa: F401
 from openquake.pfd.secondary_surf_rup.petersen2011 import PetersenEtAl2011SecondarySR  # noqa: F401
-from openquake.pfd.secondary_surf_rup.petersen2011 import PetersenEtAl2011SecondarySR  # noqa: F401
 from openquake.pfd.secondary_surf_rup.visini2025 import VisiniEtAl2025SecondarySR  # noqa: F401
 from openquake.pfd.secondary_surf_rup.takao2014 import TakaoEtAl2014SecondarySR  # noqa: F401
 from openquake.pfd.secondary_surf_rup.ferrario2021 import FerrarioLivio2021SecondarySR  # noqa: F401
@@ -31,3 +30,14 @@ from openquake.pfd.secondary_surf_rup.takao2013 import TakaoEtAl2013SecondarySR 
 from openquake.pfd.secondary_surf_rup.rodriguez2023 import RodriguezPadillaOskin2023SecondarySR  # noqa: F401
 from openquake.pfd.secondary_surf_rup.fixed import FixedSecondarySR  # noqa: F401
 from openquake.pfd.secondary_surf_rup.moss2022 import MossEtAl2022SecondarySR  # noqa: F401
+
+# former names, deprecated: they will be removed in a future version
+# (see openquake.pfd.meta)
+from openquake.pfd.secondary_surf_rup.moss2022 import Moss2022SecondarySR  # noqa: F401
+from openquake.pfd.secondary_surf_rup.petersen2011 import Petersen2011SecondarySR  # noqa: F401
+from openquake.pfd.secondary_surf_rup.petersen2011 import Petersen2011SecondarySR_default  # noqa: F401
+from openquake.pfd.secondary_surf_rup.rodriguez2023 import Rodriguez2023SecondarySR  # noqa: F401
+from openquake.pfd.secondary_surf_rup.takao2013 import Takao2013SecondarySR  # noqa: F401
+from openquake.pfd.secondary_surf_rup.takao2014 import Takao2014SecondarySR  # noqa: F401
+from openquake.pfd.secondary_surf_rup.visini2025 import Visini2025SecondarySR  # noqa: F401
+from openquake.pfd.secondary_surf_rup.youngs2003 import Youngs2003SecondarySR  # noqa: F401

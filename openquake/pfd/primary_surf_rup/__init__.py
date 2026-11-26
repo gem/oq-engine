@@ -29,5 +29,14 @@ from openquake.pfd.primary_surf_rup.moss2013 import MossEtAl2013PrimarySR  # noq
 from openquake.pfd.primary_surf_rup.yang2021 import YangEtAl2021PrimarySR  # noqa: F401
 from openquake.pfd.primary_surf_rup.pizza2023 import PizzaEtAl2023PrimarySR  # noqa: F401
 from openquake.pfd.primary_surf_rup.mammarella2024 import MammarellaEtAl2024PrimarySR  # noqa: F401
-from openquake.pfd.primary_surf_rup.mammarella2024 import MammarellaEtAl2024PrimarySR  # noqa: F401
 from openquake.pfd.primary_surf_rup.fixed import FixedPrimarySR  # noqa: F401
+
+# former names, deprecated: they will be removed in a future version
+# (see openquake.pfd.meta)
+from openquake.pfd.primary_surf_rup.mammarella2024 import Mammarella2024PrimarySR  # noqa: F401
+from openquake.pfd.primary_surf_rup.moss2013 import Moss2013PrimarySR  # noqa: F401
+from openquake.pfd.primary_surf_rup.pizza2023 import Pizza2023PrimarySR  # noqa: F401
+from openquake.pfd.primary_surf_rup.takao2013 import Takao2013PrimarySR  # noqa: F401
+from openquake.pfd.primary_surf_rup.wells_coppersmith1993 import WC1993PrimarySR  # noqa: F401
+from openquake.pfd.primary_surf_rup.yang2021 import Yang2021PrimarySR  # noqa: F401
+from openquake.pfd.primary_surf_rup.youngs2003 import Youngs2003PrimarySR  # noqa: F401

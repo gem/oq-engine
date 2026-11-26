@@ -26,3 +26,12 @@ from openquake.pfd.secondary_surf_displ.takao2016 import TakaoEtAl2016SecondaryF
 from openquake.pfd.secondary_surf_displ.petersen2011 import PetersenEtAl2011SecondaryFD  # noqa: F401
 from openquake.pfd.secondary_surf_displ.visini2025 import VisiniEtAl2025SecondaryFD  # noqa: F401
 from openquake.pfd.secondary_surf_displ.moss2022 import MossEtAl2022SecondaryFD  # noqa: F401
+
+# former names, deprecated: they will be removed in a future version
+# (see openquake.pfd.meta)
+from openquake.pfd.secondary_surf_displ.moss2022 import Moss2022SecondaryFD  # noqa: F401
+from openquake.pfd.secondary_surf_displ.petersen2011 import Petersen2011SecondaryFD  # noqa: F401
+from openquake.pfd.secondary_surf_displ.takao2013 import Takao2013SecondaryFD  # noqa: F401
+from openquake.pfd.secondary_surf_displ.takao2016 import Takao2016SecondaryFD  # noqa: F401
+from openquake.pfd.secondary_surf_displ.visini2025 import Visini2025SecondaryFD  # noqa: F401
+from openquake.pfd.secondary_surf_displ.youngs2003 import Youngs2003SecondaryFD  # noqa: F401

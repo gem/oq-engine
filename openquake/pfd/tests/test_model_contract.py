@@ -44,10 +44,13 @@ from openquake.pfd.primary_surf_displ.base import (
 
 
 def _registered(package, base):
+    # the deprecated former names (superseded_by) are left out: they are
+    # subclasses of a current class and share its contract
     out = []
     for name in sorted(vars(package)):
         obj = getattr(package, name)
-        if inspect.isclass(obj) and issubclass(obj, base) and obj is not base:
+        if (inspect.isclass(obj) and issubclass(obj, base) and obj is not base
+                and not getattr(obj, 'superseded_by', None)):
             out.append(obj)
     return out
 
