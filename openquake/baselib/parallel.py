@@ -177,7 +177,6 @@ fast sources.
 import os
 import sqlite3
 import re
-import ast
 import sys
 import time
 import socket
@@ -198,10 +197,10 @@ import psutil
 import numpy
 
 from openquake.baselib import config, hdf5
-from openquake.baselib.general import decode, gc_disabled
+from openquake.baselib.general import gc_disabled
 from openquake.baselib.zeromq import zmq, Socket, STALL_WARN
 from openquake.baselib.performance import (
-    Monitor, PerfBuffer, memory_gb, init_performance)
+    Monitor, PerfBuffer, memory_gb, init_performance, save_task_sent)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp, engine_version, shortlist, compress, decompress, mp as mp_context)
@@ -1126,13 +1125,14 @@ class Starmap(object):
         return self.perf == 'memory' or self.h5.mode != 'r'
 
     def _loop(self):
-        # the performance info is merged also when the iteration is
-        # stopped early, since the generator is closed in that case
+        # Save an append-only snapshot even if the iteration stops early.
         try:
             yield from self._loop_tasks()
         finally:
             if self.perf == 'memory':
                 self._merge_performance()
+            elif self.save_info():
+                save_task_sent(self.h5, self.sent)
 
     def _loop_tasks(self):
         self.busytime = AccumDict()  # name -> pid -> time
@@ -1201,12 +1201,12 @@ class Starmap(object):
         # save the performance info collected in memory and the task_sent
         # in the datastore, which is opened in 'a' mode for the purpose
         dstore = self.dstore
+        if self.tasks and dstore.hdf5.mode == 'r':
+            return  # unfinished workers may still be reading the file
         with dstore.reopen('a'):
             for name, rows in self.h5.tables.items():
                 hdf5.extend(dstore.hdf5[name], numpy.concatenate(rows))
-            task_sent = ast.literal_eval(decode(dstore['task_sent'][()]))
-            task_sent.update(self.sent)
-            dstore['task_sent'] = str(task_sent)
+            save_task_sent(dstore.hdf5, self.sent)
 
     def _task_ended(self, res, finished):
         finished.add(res.mon.task_no)
@@ -1218,12 +1218,6 @@ class Starmap(object):
         todo = set(range(self.task_no)) - finished
         logging.debug('%d tasks todo %s', len(todo),
                       shortlist(sorted(todo)))
-        if self.perf != 'memory':  # task_sent is saved at the end otherwise
-            task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
-            task_sent.update(self.sent)
-            if self.save_info():
-                del self.h5['task_sent']
-                self.h5['task_sent'] = str(task_sent)
         if self.distribute in ('zmq', 'slurm'):
             mem_gb = 0
             if res.mon.task_no % 10 == 0:

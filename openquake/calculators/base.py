@@ -1421,15 +1421,21 @@ class HazardCalculator(BaseCalculator):
                 func(self.datastore, **oq.postproc_args)
 
 
-def prepare_risk_worker_data(dstore, crmodel):
-    """Store the prepared risk model before workers open the calculation."""
+def prepare_risk_worker_data(dstore, crmodel, assetcol=None):
+    """Create the group of prepared inputs shared by risk workers."""
     if dstore.hdf5.swmr_mode:
         dstore.close()
         dstore.open('a')
     if '_risk_worker' in dstore.hdf5:
         del dstore['_risk_worker']
-    dstore['_risk_worker/crmodel'] = pickle.dumps(
-        crmodel, protocol=pickle.HIGHEST_PROTOCOL)
+    worker = dstore.hdf5.create_group('_risk_worker')
+    worker['crmodel'] = numpy.void(
+        pickle.dumps(crmodel, protocol=pickle.HIGHEST_PROTOCOL))
+    if assetcol is not None and crmodel.oqparam.K:
+        aggids, _ = assetcol.build_aggids(crmodel.oqparam.aggregate_by)
+        dtype = numpy.min_scalar_type(aggids.max(initial=0))
+        worker['aggids'] = aggids.astype(dtype, copy=False)
+    return worker
 
 
 def read_worker_model(h5):
@@ -1491,20 +1497,20 @@ class RiskCalculator(HazardCalculator):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
         Require a `.core_task` to be defined with signature
-        (riskinputs, crmodel, param, monitor).
+        (riskinputs, param, monitor).
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
         ct = self.oqparam.concurrent_tasks or 1
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
         prepare_risk_worker_data(self.datastore, self.crmodel)
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(
-            self.core_task.__func__, h5=self.datastore, perf='memory')
-        for block in general.block_splitter(
-                self.riskinputs, maxw, get_weight, sort=True):
-            smap.submit((block, self.oqparam))
-        return smap.reduce()
+        with self.datastore.reopen('r'):
+            smap = parallel.Starmap(
+                self.core_task.__func__, h5=self.datastore, perf='memory')
+            for block in general.block_splitter(
+                    self.riskinputs, maxw, get_weight, sort=True):
+                smap.submit((block, self.oqparam))
+            return smap.reduce()
 
 
 def longname(name, columns):

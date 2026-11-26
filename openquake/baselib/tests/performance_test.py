@@ -19,7 +19,25 @@ import time
 import unittest
 import pickle
 import numpy
-from openquake.baselib.performance import Monitor
+from openquake.baselib import hdf5
+from openquake.baselib.performance import (
+    Monitor, init_performance, read_task_sent, save_task_sent)
+
+
+def test_task_sent_swmr(tmp_path):
+    path = tmp_path / 'performance.hdf5'
+    before = {'hazard': {'sources': 12}, 'risk': {'assets': 24}}
+    after = {'hazard': {'sources': 35}, 'risk': {'gmfs': 42}}
+    with hdf5.File(path, 'w') as writer:
+        writer['task_sent'] = str(before)  # older file format
+        assert read_task_sent(writer) == before
+        init_performance(writer, swmr=True)
+        with hdf5.File(path, 'r') as reader:
+            assert read_task_sent(reader) == before
+            save_task_sent(writer, {'hazard': after['hazard']})
+            save_task_sent(writer, {'risk': after['risk']})
+            reader['task_sent'].refresh()
+            assert read_task_sent(reader) == after
 
 
 class MonitorTestCase(unittest.TestCase):

@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import ast
 import os
+import json
 import time
 import pstats
 import signal
@@ -132,7 +134,12 @@ def init_performance(hdf5file, swmr=False):
     if 'starmap_info' not in h5:
         hdf5.create(h5, 'starmap_info', starmap_info_dt)
     if 'task_sent' not in h5:
-        h5['task_sent'] = '{}'
+        hdf5.create(h5, 'task_sent', numpy.uint8)
+    elif h5['task_sent'].ndim == 0 and not h5.swmr_mode:
+        sent = read_task_sent(h5)
+        del h5['task_sent']
+        hdf5.create(h5, 'task_sent', numpy.uint8)
+        save_task_sent(h5, sent)
     if swmr:
         try:
             h5.swmr_mode = True
@@ -140,6 +147,27 @@ def init_performance(hdf5file, swmr=False):
             raise ValueError('%s: %s' % (hdf5file, exc))
     if fname:
         h5.close()
+
+
+def read_task_sent(h5):
+    """Return the latest transfer totals for each task in a calculation."""
+    dset = h5['task_sent']
+    if dset.ndim == 0:  # older calculations stored one serialized dictionary
+        return ast.literal_eval(dset.asstr()[()])
+    sent = {}
+    for line in dset[:].tobytes().split(b'\n')[:-1]:
+        sent.update(json.loads(line))
+    return sent
+
+
+def save_task_sent(h5, sent):
+    """Append transfer totals without replacing a dataset during SWMR."""
+    if sent:
+        dset = h5['task_sent']
+        if dset.ndim:  # init_performance migrates the old format when writable
+            line = json.dumps(sent).encode('utf-8') + b'\n'
+            hdf5.extend(dset, numpy.frombuffer(line, numpy.uint8))
+            dset.flush()
 
 
 def performance_view(dstore):

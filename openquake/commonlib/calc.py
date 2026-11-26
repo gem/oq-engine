@@ -520,5 +520,5 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         gmf_dfs.append(pandas.concat(dfs))
 
     dstore.swmr_on()
-    smap = parallel.Starmap(task_func, h5=dstore, perf='memory')
+    smap = parallel.Starmap(task_func, h5=dstore.hdf5)
     return smap, gmf_dfs
