@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib.general import DictArray, gettemp
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import site, contexts
+from openquake.hazardlib import site, contexts, stats
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
@@ -597,8 +597,8 @@ class CubicPoETestCase(unittest.TestCase):
     def test_grid_and_truncation(self):
         # Exercise table centres, midpoints, cutoff, tails, and exact path.
         for cutoff in (1e-9, .68, 5., 9.):
-            phi = contexts.ndtr(cutoff)
-            tmax = contexts.get_tmax(phi)
+            phi = stats.ndtr(cutoff)
+            tmax = stats.get_tmax(phi)
             x = numpy.r_[numpy.arange(-10., 10., 1/128), tmax,
                          numpy.nextafter(tmax, numpy.inf), numpy.nan,
                          -numpy.inf, numpy.inf]
@@ -606,6 +606,6 @@ class CubicPoETestCase(unittest.TestCase):
             mean_std[1] = 1.
             actual = numpy.empty((len(x), 1), numpy.float32)
             contexts._set_poes(mean_std, x[None, :], phi, actual)
-            exact = [contexts._truncnorm_sf(phi, tmax, v) for v in x]
+            exact = [stats._truncnorm_sf(phi, tmax, v) for v in x]
             aac(actual[:, 0], exact, atol=1e-8, rtol=1e-5)
             self.assertTrue((actual[x > tmax] == 0.).all())
