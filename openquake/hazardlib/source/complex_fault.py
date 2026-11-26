@@ -25,6 +25,7 @@ from scipy.stats import truncnorm
 from openquake.hazardlib import mfd
 from openquake.hazardlib.codes import COMPLEX_FAULT
 from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.multi_fault import BLOCKSIZE
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
@@ -169,11 +170,13 @@ class ComplexFaultSource(ParametricSeismicSource):
     for description of other parameters.
 
     :raises ValueError:
-        If :meth:`~openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface.check_fault_data`
-        fails or if rake value is invalid.
+        If :meth:`~openquake.hazardlib.geo.surface.complex_fault.
+        ComplexFaultSurface.check_fault_data` fails or if rake value is
+        invalid.
     """
     code = COMPLEX_FAULT
     # a slice of the rupture_slices, thus splitting the source
+    pos_slice = slice(None)
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'adjust_mfd_from_slip',
@@ -267,7 +270,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                 # dip), so the subsampling is quadratic in the step, as for
                 # the simple faults; this matters in preclassical, see
                 # ContextMaker.estimate_weight
-                sampled = rupture_slices[::step ** 2]
+                sampled = rupture_slices[self.pos_slice][::step ** 2]
                 if only_rates:
                     rates.extend([occurrence_rate] * len(sampled))
                     continue
@@ -317,11 +320,23 @@ class ComplexFaultSource(ParametricSeismicSource):
             return
         self.count_ruptures()
         for i, (mag, rate) in enumerate(mag_rates):
-            src = copy.copy(self)
-            src.mfd = mfd.ArbitraryMFD([mag], [rate])
-            src._num_ruptures = self._nr[i]
-            src.source_id = '%s:%d' % (self.source_id, i)
-            yield src
+            # a magnitude with many ruptures is split in n sources, each
+            # with one rupture position every n, as for the multifault
+            # sources; the occurrence rates are the ones of the magnitude
+            n = -(-self._nr[i] // BLOCKSIZE)
+            for j in range(n):
+                src = copy.copy(self)
+                src.mfd = mfd.ArbitraryMFD([mag], [rate])
+                src.source_id = '%s:%d' % (self.source_id, i)
+                if n == 1:
+                    src._num_ruptures = self._nr[i]
+                    yield src
+                    continue
+                src.pos_slice = slice(j, None, n)
+                del src._nr  # recomputed with pos_slice
+                src._num_ruptures = 0
+                if src.num_ruptures:
+                    yield src
 
     @property
     def polygon(self):
