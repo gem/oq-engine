@@ -24,6 +24,8 @@ from openquake.baselib.performance import (
     Monitor, init_performance, read_task_sent, save_task_sent)
 
 
+# Starmap._loop updates task_sent as tasks complete. Check migration of the
+# older format and visibility to SWMR readers during those updates.
 def test_task_sent_swmr(tmp_path):
     path = tmp_path / 'performance.hdf5'
     before = {'hazard': {'sources': 12}, 'risk': {'assets': 24}}
