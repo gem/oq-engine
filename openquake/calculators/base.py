@@ -1436,8 +1436,6 @@ def prepare_risk_worker_data(dstore, assetcol, oq):
     if dstore.hdf5.swmr_mode:
         dstore.close()
         dstore.open('a')
-    if '_risk_worker' in dstore.hdf5:
-        del dstore['_risk_worker']
     worker = dstore.hdf5.create_group('_risk_worker')
     if oq.K:
         aggids, _ = assetcol.build_aggids(oq.aggregate_by)
@@ -1487,9 +1485,7 @@ class RiskCalculator(HazardCalculator):
             self.crmodel.tmap_df = readinput.taxonomy_mapping(
                 self.oqparam, taxidx)
             # the workers read the taxonomy mapping from the datastore
-            if 'taxmap' not in self.datastore.hdf5:
-                self.datastore.create_df(
-                    'taxmap', self.crmodel.tmap_df, 'gzip')
+            self.datastore.create_df('taxmap', self.crmodel.tmap_df, 'gzip')
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
