@@ -203,6 +203,45 @@ def _mags(mags):
     return ', '.join(map(str, mags))
 
 
+def get_surface_ctxs(src, cmaker, sitecol, tolerance):
+    """
+    :param tolerance: surface_rupture_depth_tolerance_km
+    :returns: the contexts of the ruptures of the source with the top edge
+        at the surface (within `tolerance`), with ``zbot`` set to the
+        declared lower seismogenic depth of the source, if any
+    """
+    if src.code in FLOATING_CODES:
+        # the down-dip float gives the geometry, not a probability:
+        # the surface positions carry the whole rate of their magnitude
+        # and P(SR | m) comes from the primary surface-rupture model only
+        surf = SurfaceRuptures(src, tolerance)
+        ctxs = list(cmaker.get_ctxs(surf, sitecol))
+        # a collapsed rupture stands for all the down-dip positions,
+        # so its bottom is the bottom of the source
+        lower_depth = surf.lower_depth
+        if surf.blind:
+            logging.warning(
+                'Source %s: no rupture of magnitude %s has the top edge '
+                'within surface_rupture_depth_tolerance_km=%s of the '
+                'surface; they are treated as blind and give no '
+                'displacement hazard (annual rate %.3e discarded)',
+                src.source_id, _mags(surf.blind), tolerance,
+                sum(surf.blind.values()))
+    else:
+        # the ruptures are given one by one (no float): a rupture with
+        # a buried top edge is a blind rupture by construction
+        ctxs = [ctx for ctx in cmaker.get_ctxs(src, sitecol)
+                if float(numpy.asarray(ctx.ztor).flat[0]) <= tolerance]
+        # the declared depth of a characteristic fault, if any
+        lower_depth = get_lower_depth(src)
+    if lower_depth is not None:
+        # the seismogenic depth seen by the surface-rupture models is
+        # the declared one, not the bottom of the rupture mesh
+        for ctx in ctxs:
+            ctx.zbot[:] = lower_depth
+    return ctxs
+
+
 def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs_by_ts, bset_values,
                  monitor):
     """
@@ -254,35 +293,7 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs_by_ts, bset_values,
         # applyToSources and mean_rates_by_src refer to it
         srcid = valid.basename(src, ';:.').split('!')[0]
         style = style_from_rake(getattr(src, 'rake', 0.0))
-        if src.code in FLOATING_CODES:
-            # the down-dip float gives the geometry, not a probability:
-            # the surface positions carry the whole rate of their magnitude
-            # and P(SR | m) comes from the primary surface-rupture model only
-            surf = SurfaceRuptures(src, tolerance)
-            ctxs = list(cmaker.get_ctxs(surf, sitecol))
-            # a collapsed rupture stands for all the down-dip positions,
-            # so its bottom is the bottom of the source
-            lower_depth = surf.lower_depth
-            if surf.blind:
-                logging.warning(
-                    'Source %s: no rupture of magnitude %s has the top edge '
-                    'within surface_rupture_depth_tolerance_km=%s of the '
-                    'surface; they are treated as blind and give no '
-                    'displacement hazard (annual rate %.3e discarded)',
-                    src.source_id, _mags(surf.blind), tolerance,
-                    sum(surf.blind.values()))
-        else:
-            # the ruptures are given one by one (no float): a rupture with
-            # a buried top edge is a blind rupture by construction
-            ctxs = [ctx for ctx in cmaker.get_ctxs(src, sitecol)
-                    if float(numpy.asarray(ctx.ztor).flat[0]) <= tolerance]
-            # the declared depth of a characteristic fault, if any
-            lower_depth = get_lower_depth(src)
-        if lower_depth is not None:
-            # the seismogenic depth seen by the surface-rupture models is
-            # the declared one, not the bottom of the rupture mesh
-            for ctx in ctxs:
-                ctx.zbot[:] = lower_depth
+        ctxs = get_surface_ctxs(src, cmaker, sitecol, tolerance)
         if ctxs:
             src_rate = src_rates.setdefault(
                 srcid, numpy.zeros((N, M, L1), F64))
