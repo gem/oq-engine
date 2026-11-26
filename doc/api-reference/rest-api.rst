@@ -132,6 +132,15 @@ user level, are described in the section of each route.
      - ✓
      - ✓
      - 
+   * - ``/v1/calc/list_filter_values``
+     - GET
+     - login
+     - ✓
+     - ✓
+     - ✓
+     - ✓
+     - ✓
+     -
    * - ``/v1/calc/jobs_from_inis``
      - GET
      - login
