@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import ast
 import os
 import json
 import time
@@ -147,7 +148,12 @@ def read_task_sent(h5):
     """
     :returns: a dictionary task name -> argument name -> bytes sent
     """
-    return json.loads(h5['task_sent'][:].tobytes() or b'{}')
+    dset = h5['task_sent']
+    # calculations made by older engines stored the repr of a dictionary;
+    # reading them helps the QGIS plugin, whose tests restore old demos
+    if dset.ndim == 0:
+        return ast.literal_eval(dset.asstr()[()])
+    return json.loads(dset[:].tobytes() or b'{}')
 
 
 def save_task_sent(h5, sent):
