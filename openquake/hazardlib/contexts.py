@@ -1847,11 +1847,9 @@ class ContextMaker(object):
         return src.nctxs
 
     # cost in seconds of the GSIMs per context, measured on a sample of
-    # contexts; the first call on a few contexts excludes from the measure
-    # the compilation of the numba functions in a new worker
+    # contexts (the numba functions are compiled at import time)
     def _cost_per_ctx(self, ctxs):
         ctx = numpy.concatenate(ctxs).view(numpy.recarray)[:NCTXS_SAMPLE]
-        self.get_rmap(ctx[:10])
         t0 = time.time()
         self.get_rmap(ctx)
         return (time.time() - t0) / len(ctx)
