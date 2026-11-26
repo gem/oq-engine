@@ -873,3 +873,24 @@ class AbstractLogicTreeTestCase(unittest.TestCase):
         self.assertLess(output.call_count, 200)
         self.assertTrue(any('shared' in str(call)
                             for call in output.call_args_list))
+
+
+class CharGeometrySurfaceTestCase(unittest.TestCase):
+    # characteristicFaultGeometryAbsolute keeps the declared geometry, as
+    # the source converter does for the source model
+
+    def test_simple(self):
+        coords = [(13.0, 42.0), (13.1, 42.05), (13.2, 42.1)]
+        surf = lt.to_surface(
+            [('simpleFaultGeometry', (coords, 0., 12., 50., 5.))])
+        self.assertEqual(surf.original_dip, 50.)
+        self.assertEqual(surf.original_zbot, 12.)
+        numpy.testing.assert_equal(surf.original_tor, numpy.array(coords))
+
+    def test_complex(self):
+        top = [(13.0, 42.0, 0.), (13.2, 42.1, 0.)]
+        bottom = [(13.0, 41.95, 12.), (13.2, 42.05, 14.)]
+        surf = lt.to_surface([('complexFaultGeometry', ([top, bottom], 5.))])
+        self.assertEqual(surf.original_zbot, 14.)
+        numpy.testing.assert_equal(
+            surf.original_tor, numpy.array([p[:2] for p in top]))

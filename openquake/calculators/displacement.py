@@ -46,20 +46,23 @@ import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import humansize, block_splitter
-from openquake.hazardlib import valid, source_reader
+from openquake.hazardlib import valid, source_reader, InvalidFile, get_smlt
+from openquake.hazardlib.tom import NegativeBinomialTOM
 from openquake.hazardlib.calc.displacement import (
     calc_rates, get_lower_depth, DEFAULT_RED_CFG, FLOATING_CODES,
     SurfaceRuptures)
 from openquake.hazardlib.map_array import (
     MapArray, compute_hazard_maps, rates_dt)
 from openquake.hazardlib.pfd_lt import (
-    CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY, PFD_SLOTS_BY_UTYPE)
+    CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY, PFD_SLOTS_BY_UTYPE, logical_id,
+    source_basename)
 from openquake.pfd.adapter import PFDModelAdapter, style_from_rake
 from openquake.pfd.registry import get_available
 from openquake.pfd.visini import VisiniSecondaryCalculator
 from openquake.calculators import base
 from openquake.calculators.classical import _store
-from openquake.calculators.getters import MapGetter, build_stat_curve, slice_dt
+from openquake.hazardlib.calc.disagg import to_probs
+from openquake.calculators.getters import MapGetter, slice_dt
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -203,6 +206,84 @@ def _mags(mags):
     return ', '.join(map(str, mags))
 
 
+def check_apply_to_sources(pfd_lt, source_model_lt, oq):
+    """
+    Check that the applyToSources filters of the PFD logic tree name sources
+    of the source models, as the source model logic tree requires for its
+    own filters
+    """
+    if oq.source_id:
+        # the source model logic tree has been reduced to the selected
+        # sources, while the filters can name the others
+        source_model_lt = get_smlt(vars(oq))
+    source_data = getattr(source_model_lt, 'source_data', ())
+    known = set(source_data['source']) if len(source_data) else set()
+    if not known:  # no information on the sources
+        return
+    for bset in pfd_lt.branchsets:
+        for src_id in bset.filters.get('applyToSources') or ():
+            if src_id in known:
+                continue
+            msg = ('%s: applyToSources="%s": there is no such source in the '
+                   'source models' % (pfd_lt.filename, src_id))
+            if logical_id(src_id) in known:
+                msg += ('; by the colon convention "%s" is a fragment of the '
+                        'source "%s", which the logic trees refer to' % (
+                            src_id, logical_id(src_id)))
+            raise InvalidFile(msg)
+
+
+def check_independent(csm):
+    """
+    Raise an error for groups of mutually exclusive sources or ruptures and
+    for clusters of sources, whose weights and occurrence rate the
+    calculator does not use: it adds the rates of all the sources and
+    ruptures as independent
+    """
+    for src_group in csm.src_groups:
+        if getattr(src_group, 'cluster', False):
+            raise InvalidFile(
+                'The source group %s is a cluster of sources: clusters are '
+                'not supported by the displacement calculator' %
+                src_group.name)
+        for attr in ('src_interdep', 'rup_interdep'):
+            if getattr(src_group, attr, 'indep') == 'mutex':
+                raise InvalidFile(
+                    'The source group %s has %s="mutex": mutually exclusive '
+                    'sources and ruptures are not supported by the '
+                    'displacement calculator' % (src_group.name, attr))
+
+
+def check_inferred_rates(csm):
+    """
+    Raise an error if a rate is to be inferred (infer_occur_rates = true)
+    from a probability of no occurrence equal to 0, i.e. an infinite rate
+    """
+    for src_group in csm.src_groups:
+        for src in src_group:
+            if getattr(src, 'infer_occur_rates', False):
+                p0 = numpy.array([probs[0] for probs in src.probs_occur])
+                if (p0 <= 0.).any():
+                    raise ValueError(
+                        'Source %s: a rupture has probability 0 of no '
+                        'occurrence, so no rate can be inferred from it; '
+                        'set infer_occur_rates = false to use its '
+                        'probabilities of occurrence' % src.source_id)
+
+
+def get_stat_curve(rates, weights, stat):
+    """
+    :param rates: rates over the investigation time, shape (L, R)
+    :param weights: weights of the realizations, shape R
+    :param stat: a function of (values, weights), see OqParam.hazard_stats
+    :returns: the statistical curve, as probabilities in the investigation
+        time: the statistic is taken on the rates themselves, since rates
+        recomputed from probabilities saturate where a probability rounds
+        to 1 (long investigation times)
+    """
+    return to_probs(stat(rates.T, weights))
+
+
 def get_surface_ctxs(src, cmaker, sitecol, tolerance):
     """
     :param tolerance: surface_rupture_depth_tolerance_km
@@ -221,10 +302,11 @@ def get_surface_ctxs(src, cmaker, sitecol, tolerance):
         lower_depth = surf.lower_depth
         if surf.blind:
             logging.warning(
-                'Source %s: no rupture of magnitude %s has the top edge '
-                'within surface_rupture_depth_tolerance_km=%s of the '
-                'surface; they are treated as blind and give no '
-                'displacement hazard (annual rate %.3e discarded)',
+                'Source %s: the ruptures of magnitude %s have positions '
+                'along strike where no top edge is within '
+                'surface_rupture_depth_tolerance_km=%s of the surface; '
+                'there they are treated as blind and give no displacement '
+                'hazard (annual rate %.3e discarded)',
                 src.source_id, _mags(surf.blind), tolerance,
                 sum(surf.blind.values()))
     else:
@@ -234,12 +316,100 @@ def get_surface_ctxs(src, cmaker, sitecol, tolerance):
                 if float(numpy.asarray(ctx.ztor).flat[0]) <= tolerance]
         # the declared depth of a characteristic fault, if any
         lower_depth = get_lower_depth(src)
-    if lower_depth is not None:
-        # the seismogenic depth seen by the surface-rupture models is
-        # the declared one, not the bottom of the rupture mesh
-        for ctx in ctxs:
+    for ctx in ctxs:
+        if lower_depth is not None:
+            # the seismogenic depth seen by the surface-rupture models is
+            # the declared one, not the bottom of the rupture mesh
             ctx.zbot[:] = lower_depth
+        if getattr(src, 'infer_occur_rates', False):
+            # the probabilities of occurrence of a multi-fault source refer
+            # to the investigation time (see SourceConverter), so the rate
+            # inferred from them, -log(P0), is the rate over that time
+            ctx.occurrence_rate /= cmaker.investigation_time
     return ctxs
+
+
+def explicit_rates(probs, q):
+    """
+    :param probs: probabilities of 0, 1, 2... occurrences of a rupture in
+        the investigation time
+    :param q: probabilities that one occurrence exceeds the levels
+    :returns: -log P(no exceedance) in the investigation time, as in
+        tom.get_pnes, with the probabilities normalized (they may have been
+        stored in single precision). Both the probability of exceedance,
+        sum_k p(k) (1 - (1 - q)^k), and the probability of no exceedance,
+        sum_k p(k) (1 - q)^k, are computed directly and the smaller one is
+        used, so that the result is exactly 0 where q = 0 and accurate in
+        both tails; it is capped at -log(1e-45), as in to_rates
+    """
+    probs = numpy.asarray(probs, float)
+    probs = probs / probs.sum()
+    with numpy.errstate(divide='ignore'):
+        log_q0 = numpy.log1p(-q)  # log(1 - q), -inf where q = 1
+    poe = numpy.zeros_like(q)
+    pne = numpy.full_like(q, probs[0])
+    for k, prob in enumerate(probs[1:], 1):
+        poe -= prob * numpy.expm1(k * log_q0)
+        pne += prob * numpy.exp(k * log_q0)
+    return numpy.where(poe < .5, -numpy.log1p(-numpy.minimum(poe, .5)),
+                       -numpy.log(numpy.maximum(pne, 1E-45)))
+
+
+def has_probs(ctx):
+    """
+    :returns: True if the rupture of the context comes with the
+        probabilities of 0, 1, 2... occurrences in the investigation time,
+        which are then used instead of its rate (as in tom.get_pnes)
+    """
+    return numpy.shape(ctx.probs_occur)[-1] > 0
+
+
+def get_rates(ctxs, n_sites, adapters, levels, oq, r_sigma, tom=None):
+    """
+    :param ctxs: contexts of the ruptures of one source at the surface
+    :param levels: displacement levels of one IMT
+    :param tom: the temporal occurrence model of the source
+    :returns: the rates of exceedance over the investigation time, shape
+        (n_sites, len(levels))
+    """
+    itime = oq.investigation_time
+    poisson = [ctx for ctx in ctxs if not has_probs(ctx)]
+    rates = numpy.zeros((n_sites, len(levels)))
+    if poisson:
+        rate, _principal, _distributed = calc_rates(
+            poisson, n_sites, adapters, levels, oq.r_threshold_km, r_sigma,
+            DEFAULT_RED_CFG)
+        rates += rate * itime
+    for ctx in ctxs:
+        if not has_probs(ctx):
+            continue
+        # a rupture given with the probabilities of 0, 1, 2... occurrences
+        # in the investigation time (multi-fault source with
+        # infer_occur_rates = false, non-parametric source, negative
+        # binomial TOM, which also has a finite rate): as in the
+        # classical calculator, -log P(no exceedance), where P(no
+        # exceedance) = sum_k p(k) (1 - q)^k and q is the probability that
+        # one occurrence exceeds the level
+        rate = ctx.occurrence_rate.copy()
+        ctx.occurrence_rate[:] = 1.
+        try:
+            q, _principal, _distributed = calc_rates(
+                [ctx], n_sites, adapters, levels, oq.r_threshold_km, r_sigma,
+                DEFAULT_RED_CFG)
+        finally:
+            ctx.occurrence_rate[:] = rate
+        sids = numpy.unique(ctx.sids)
+        q = q[sids].clip(0., 1.)
+        if isinstance(tom, NegativeBinomialTOM):
+            # probs_occur is the distribution truncated at 10 occurrences;
+            # the probability generating function of the negative binomial
+            # gives P(no exceedance) = (1 + alpha * rate * T * q) **
+            # (-1 / alpha) exactly, with the parameters of the TOM
+            rates[sids] += numpy.log1p(
+                tom.alpha * rate[0] * tom.time_span * q) / tom.alpha
+            continue
+        rates[sids] += explicit_rates(ctx.probs_occur[0], q)
+    return rates
 
 
 def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs_by_ts, bset_values,
@@ -288,15 +458,14 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs_by_ts, bset_values,
     for rlzs, src in modified:
         t0 = time.time()
         basename = valid.basename(src)
-        # the ID as written in the source model, without the "!<branch>"
-        # suffix added to a source repeated in several source-model files:
-        # applyToSources and mean_rates_by_src refer to it
-        srcid = valid.basename(src, ';:.').split('!')[0]
+        # the ID of the source in the logic trees, for applyToSources
+        srcid = logical_id(src.source_id)
         style = style_from_rake(getattr(src, 'rake', 0.0))
         ctxs = get_surface_ctxs(src, cmaker, sitecol, tolerance)
         if ctxs:
+            # the key of mean_rates_by_src, as in csm.get_basenames()
             src_rate = src_rates.setdefault(
-                srcid, numpy.zeros((N, M, L1), F64))
+                source_basename(src.source_id), numpy.zeros((N, M, L1), F64))
             for rlz in rlzs:
                 k = col[rlz.ordinal]
                 selections = pfd_lt.selections_for(
@@ -304,15 +473,15 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs_by_ts, bset_values,
                 adapters, r_sigma = get_adapters(
                     selections, oq.r_sigma_km, oq.near_far_threshold_km)
                 for m, levels in enumerate(imls):
-                    rate, _principal, _distributed = calc_rates(
-                        ctxs, N, adapters, levels, oq.r_threshold_km,
-                        r_sigma, DEFAULT_RED_CFG)
                     # as in the classical calculator the _rates table
                     # holds the rates over the investigation time, so
                     # that the curves are probabilities of exceedance
                     # in that time; mean_rates_by_src stays annual
-                    rmap.array[:, m*L1:(m+1)*L1, k] += rate * itime
-                    src_rate[:, m, :] += rlz.weight[-1] * rate
+                    rate = get_rates(ctxs, N, adapters, levels, oq, r_sigma,
+                                     getattr(src, 'temporal_occurrence_model',
+                                             None))
+                    rmap.array[:, m*L1:(m+1)*L1, k] += rate
+                    src_rate[:, m, :] += rlz.weight[-1] * rate / itime
         source_data['src_id'].append(basename)
         source_data['grp_id'].append(src.grp_id)
         source_data['nctxs'].append(sum(len(ctx) for ctx in ctxs))
@@ -355,6 +524,9 @@ class DisplacementCalculator(base.HazardCalculator):
         self.csm.set_msparams()
         rlzs = self.full_lt.get_realizations()
         pfd_lt = self.full_lt.extra_lt
+        check_apply_to_sources(pfd_lt, self.full_lt.source_model_lt, oq)
+        check_inferred_rates(self.csm)
+        check_independent(self.csm)
         cmakers = self.csm.get_cmakers()
         # only the reference-line methods the PFD models actually declare
         set_pfd_methods(cmakers, pfd_methods(pfd_lt))
@@ -397,6 +569,10 @@ class DisplacementCalculator(base.HazardCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(displacement, allargs, h5=self.datastore)
         acc = smap.reduce(self.agg, {'src_rates': {}, 'source_data': {}})
+        # the readers are done: back to the ordinary mode before creating
+        # the output datasets, which SWMR does not allow
+        self.datastore.close()
+        self.datastore.open('a')
         self.store_source_info(acc['source_data'])
         df = pandas.DataFrame(acc['source_data'])
         df['impact'] = df.nctxs / N
@@ -446,8 +622,13 @@ class DisplacementCalculator(base.HazardCalculator):
             hcurves_stats = numpy.zeros((N, S, M, L1), F32)
             if P:
                 hmaps_stats = numpy.zeros((N, S, M, P), F32)
+        # rates over the investigation time; since gid == rlz the third
+        # axis of the array is the realization axis
+        array = getter.init()
+        weights = wget.weights[:, -1]
         for idx, sid in enumerate(sids):
-            hcurve = getter.get_hcurve(sid)  # shape (L, R), probabilities
+            rates = array[getter.sid2idx[sid]].astype(F64)  # shape (L, R)
+            hcurve = to_probs(rates)  # probabilities in the investigation time
             if store_rlzs:
                 for r in range(R):
                     hcurves_rlzs[idx, r] = hcurve[:, r].reshape(M, L1)
@@ -458,8 +639,7 @@ class DisplacementCalculator(base.HazardCalculator):
                                 hcurve[slc, r].reshape(1, L1),
                                 oq.imtls[imt], oq.poes)
             for s, stat in enumerate(hstats.values()):
-                arr = build_stat_curve(
-                    hcurve, oq.imtls, stat, wget, use_rates=True)
+                arr = get_stat_curve(rates, weights, stat)
                 hcurves_stats[idx, s] = arr.reshape(M, L1)
                 if P:
                     for m, imt in enumerate(imts):

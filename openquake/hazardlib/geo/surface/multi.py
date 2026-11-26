@@ -53,7 +53,8 @@ def build_secparams(sections_or_items, mon=Monitor()):
         sparam['strike'] = sec.get_strike()
         sparam['width'] = sec.get_width()
         sparam['ztor'] = sec.get_top_edge_depth()
-        sparam['zbot'] = sec.mesh.depths.max()
+        # NB: the mesh of an irregular kite section is padded with NaNs
+        sparam['zbot'] = np.nanmax(sec.mesh.depths)
         sparam['tl0'] = sec.tor.coo[0, 0]
         sparam['tl1'] = sec.tor.coo[0, 1]
         sparam['tr0'] = sec.tor.coo[-1, 0]

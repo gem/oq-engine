@@ -68,12 +68,14 @@ each ``(ctx, ...) -> array``), keyed by the slot names
 Visini rank-2 combined pipeline is not part of this kernel
 yet; a Visini chain is routed through the generic SR x FD path until then.
 """
+import logging
 from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
 from openquake.hazardlib.codes import (
     SIMPLE_FAULT, COMPLEX_FAULT, KITE_FAULT)
+from openquake.hazardlib.source.complex_fault import whole_fault_mesh
 
 #: default Monte-Carlo / epistemic reduction; the mean is oq-pfdha's
 #: default and is exact inside the rate sum (expectation is linear), so
@@ -89,7 +91,7 @@ DEFAULT_RED_CFG = {'method': 'mean'}
 FLOATING_CODES = (SIMPLE_FAULT, COMPLEX_FAULT, KITE_FAULT)
 
 
-def collapse_downdip(ruptures, depth_tolerance_km: float):
+def collapse_downdip(ruptures, depth_tolerance_km: float, columns=None):
     """
     Marginalize the down-dip float of the ruptures of a floating source.
 
@@ -98,41 +100,83 @@ def collapse_downdip(ruptures, depth_tolerance_km: float):
     dip. Whether a rupture of that magnitude breaks the surface is the
     business of the primary surface-rupture model alone, ``P(SR | m)``:
     the fraction of float positions that happen to touch the surface is a
-    property of the mesh, not a probability. So the rates of each magnitude
-    are summed over the down-dip positions and carried by the positions
-    whose top edge is at the surface, which provide the geometry:
-
-        sum of the returned rates of magnitude m == rate of magnitude m
-
-    for any mesh spacing. The surface positions keep their relative rates,
-    i.e. the along-strike distribution of the float is untouched.
+    property of the mesh, not a probability. So, for each magnitude and
+    each position along strike, the rates of the positions down dip are
+    summed and carried by the positions there whose top edge is at the
+    surface, which provide the geometry. The rate of each magnitude and its
+    distribution along strike do not depend on the mesh spacing.
 
     :param ruptures: all the ruptures of ONE floating source, each with
         ``mag``, ``occurrence_rate`` and ``surface.get_top_edge_depth()``.
         Their ``occurrence_rate`` is modified in place.
     :param depth_tolerance_km: a top edge within this depth is at the surface
+    :param columns: the along-strike position of each rupture (see
+        :func:`strike_columns`), or None when the number of positions down
+        dip is the same along strike (simple faults)
     :returns: ``(surface_ruptures, blind)`` where ``blind`` maps the
-        magnitudes with no position at the surface to their (dropped) rate:
-        the geometry declares them buried, so there is no trace to carry
-        the hazard
+        magnitudes having positions along strike with no rupture at the
+        surface to their (dropped) rate: the geometry declares the fault
+        buried there, so there is no trace to carry the hazard
     """
-    by_mag = {}
-    for rup in ruptures:
-        by_mag.setdefault(rup.mag, []).append(rup)
+    if columns is None:
+        columns = [None] * len(ruptures)
+    groups = {}
+    for rup, col in zip(ruptures, columns):
+        groups.setdefault((rup.mag, col), []).append(rup)
     out, blind = [], {}
-    for mag, rups in by_mag.items():
+    for (mag, _col), rups in groups.items():
         total = sum(rup.occurrence_rate for rup in rups)
         surf = [rup for rup in rups
                 if rup.surface.get_top_edge_depth() <= depth_tolerance_km]
         surf_rate = sum(rup.occurrence_rate for rup in surf)
         if surf_rate <= 0.:
-            blind[mag] = total
+            blind[mag] = blind.get(mag, 0.) + total
             continue
         factor = total / surf_rate
         for rup in surf:
             rup.occurrence_rate *= factor
         out.extend(surf)
     return out, blind
+
+
+def strike_columns(src, ruptures):
+    """
+    :param src: a floating source
+    :param ruptures: its ruptures
+    :returns: for each rupture of a complex or kite fault, the first column
+        of the whole-fault mesh it covers, i.e. its position along strike
+        (all its nodes are looked up, since the surface of a kite rupture
+        may reverse the columns of its slice of the mesh);
+        None for a simple fault, which has the same positions down dip in
+        every column, or if a rupture is not a slice of the mesh
+    """
+    if src.code == KITE_FAULT:
+        mesh = src.surface.mesh
+    elif src.code == COMPLEX_FAULT:
+        edges = tuple(
+            tuple((p.longitude, p.latitude, p.depth) for p in edge.points)
+            for edge in src.edges)
+        mesh = whole_fault_mesh(edges, src.rupture_mesh_spacing)[0]
+    else:
+        return None
+    column = {}
+    for (row, col), lon in np.ndenumerate(mesh.lons):
+        column[lon, mesh.lats[row, col], mesh.depths[row, col]] = col
+    columns = []
+    for rup in ruptures:
+        rmesh = rup.surface.mesh
+        cols = [column.get(node) for node in zip(
+            rmesh.lons.flat, rmesh.lats.flat, rmesh.depths.flat)
+            if np.isfinite(node[2])]
+        col = None if not cols or None in cols else min(cols)
+        if col is None:
+            logging.warning(
+                'Source %s: a rupture is not a slice of the fault mesh; the '
+                'rate of each magnitude is shared evenly along strike',
+                src.source_id)
+            return None
+        columns.append(col)
+    return columns
 
 
 def get_lower_depth(src, ruptures=()):
@@ -143,7 +187,7 @@ def get_lower_depth(src, ruptures=()):
 
     :param src: a source
     :param ruptures: the ruptures of a floating source, used if the source
-        declares no depth (kite faults)
+        declares no depth
     :returns: the depth, or None if nothing is declared and there are no
         ruptures; the bottom of each rupture is used then
     """
@@ -153,6 +197,10 @@ def get_lower_depth(src, ruptures=()):
     edges = getattr(src, 'edges', None)
     if edges:  # complex fault
         return float(max(point.depth for edge in edges for point in edge))
+    profiles = getattr(src, 'profiles', None)
+    if profiles:  # kite fault: the deepest point of the profiles, which
+        # does not depend on the magnitudes generated by the MFD
+        return float(max(np.nanmax(pro.coo[:, 2]) for pro in profiles))
     # characteristic fault with a simple or complex geometry
     depth = getattr(getattr(src, 'surface', None), 'original_zbot', None)
     if depth is not None:
@@ -189,7 +237,9 @@ class SurfaceRuptures(object):
     def iter_ruptures(self, **kwargs):
         allrups = list(self.src.iter_ruptures(**kwargs))
         self.lower_depth = get_lower_depth(self.src, allrups)
-        rups, self.blind = collapse_downdip(allrups, self.depth_tolerance_km)
+        rups, self.blind = collapse_downdip(
+            allrups, self.depth_tolerance_km,
+            strike_columns(self.src, allrups))
         if self.src.code == SIMPLE_FAULT:
             # use the declared dip, not the one recomputed from the mesh,
             # as for the characteristic faults

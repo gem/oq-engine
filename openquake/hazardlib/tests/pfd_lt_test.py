@@ -402,3 +402,18 @@ def test_sampling_h5_roundtrip(tmp_path):
         5, 20, 'late_weights')
     assert ([rlz.lt_path for rlz in tree1.sample(20, tree1.seed)] ==
             [rlz.lt_path for rlz in tree2.sample(20, tree2.seed)])
+
+
+def test_apply_to_sources_logical_ids(tmp_path):
+    # applyToSources refers to the sources as the logic trees see them: the
+    # fragments "fault:17", "fault:18" of the source "fault" (colon
+    # convention), its copies in several files ("!<branch>"), its variants
+    # (";<n>") and the blocks of a split multi-fault source ("@<tag>")
+    path = write(tmp_path, branchset(
+        "bs1", "fdhaPrimarySRModel", [("B1", "Moss2013PrimarySR", 1.0)],
+        applyToSources="fault"))
+    tree = PFDLogicTree(path)
+    for src_id in ("fault", "fault:17", "fault:17!b2", "fault;0", "fault@3"):
+        assert selections(tree, src_id, "normal")[0][1]
+    for src_id in ("fault2", "other:17"):
+        assert selections(tree, src_id, "normal")[0][1] == {}

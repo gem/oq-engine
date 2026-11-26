@@ -313,8 +313,10 @@ class PFDModelAdapter:
         # default depth: a context without zbot leaves the model to ask for
         # it. Values pinned in the logic-tree branch still win (see
         # SOURCE_GEOMETRY_PARAMS and pinned_geometry_params).
+        # A NaN zbot counts as missing: a model that needs the depth then
+        # raises its own error instead of failing on NaN arithmetic.
         zbot = _field(ctx, 'zbot')
-        if zbot is not None:
+        if zbot is not None and np.isfinite(zbot[0]):
             kwargs['seismothickness'] = float(zbot[0])
         kwargs.update(
             {k: v for k, v in self.model_params.items() if k != 'style'})
