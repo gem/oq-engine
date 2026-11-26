@@ -18,7 +18,6 @@
 
 import copy
 import time
-import collections
 import warnings
 import operator
 import numpy
@@ -62,17 +61,68 @@ MEA = 0
 STD = 1
 EPS = 1E-3
 
-#: number of contexts per source code used to measure the cost of the
-#: GSIMs per context, see ContextMaker.set_weight
-NCTXS_SAMPLE = 20_000
-#: maximum number of contexts per magnitude in the sample: the classical
-#: tasks evaluate the GSIMs on small batches of a single magnitude, and a
-#: sample made of a few large batches underestimates their cost (by 40%
-#: for a group of CHN, where a single source filled the sample)
-NCTXS_PER_MAG = 1000
-#: cost per context in seconds, used when it cannot be measured, as for
-#: the sources modified by the uncertainties, which have no contexts
-COST_PER_CTX = 50E-6
+#: How many (rupture, site) pairs are as expensive as a single surviving
+#: context, i.e. how much a discarded pair costs with respect to a context
+#: on which the GSIMs are actually evaluated. Determined heuristically
+#: from the @slowtask in oq-risk-tests; used for the nonparametric sources
+PAIR_COST = 20.
+#: Cost per context in microseconds of each kind of source and of each
+#: GSIM, fitted on the mosaic runs of ALS, AUS, CHN, EUR, MEX, NZL, SAM and
+#: USA with engine 3.27 (7 IMTs and 189 levels); the collapsed point
+#: sources, the point sources, the complex faults and the kinds of
+#: sources not listed have no cost besides the cost of the GSIMs
+BASE_COST = {b'F': 55.3, b'S': 13.1, b'X': 211.2}
+GSIM_COST = {
+    'AbrahamsonEtAl2014': 9.7,
+    'AbrahamsonEtAl2015SSlab': 2.5,
+    'AbrahamsonGulerce2020SInter': 1.0,
+    'AbrahamsonGulerce2020SSlab': 5.5,
+    'Allen2012_SS14': 7.3,
+    'Allen2022': 36.8,
+    'Atkinson2010Hawaii': 3.0,
+    'Atkinson2022Crust': 15.9,
+    'Atkinson2022SInter': 9.0,
+    'Atkinson2022SSlab': 15.8,
+    'AtkinsonBoore2006': 1.2,
+    'AtkinsonBoore2006Modified2011': 4.5,
+    'AtkinsonMacias2009': 1.0,
+    'BCHydroESHM20SInter': 3.3,
+    'BCHydroESHM20SSlab': 3.3,
+    'BooreEtAl2014': 1.6,
+    'Bradley2013': 15.8,
+    'CampbellBozorgnia2014': 5.3,
+    'CauzziEtAl2014': 5.1,
+    'ChiouYoungs2014': 5.1,
+    'DrouetBrazil2015': 2.9,
+    'ESHM20Craton': 4.1,
+    'KothaEtAl2020ESHM20': 3.6,
+    'KuehnEtAl2020SInter': 1.0,
+    'KuehnEtAl2020SSlab': 1.0,
+    'LanzanoLuzi2019shallow': 7.6,
+    'ModifiableGMPE': 5.4,
+    'MontalvaEtAl2017SInter': 1.0,
+    'NGAEastUSGSGMPE': 5.3,
+    'NRCan15SiteTerm': 1.3,
+    'NSHMP2014': 11.1,
+    'NZNSHM2022_AbrahamsonGulerce2020SInter': 5.7,
+    'NZNSHM2022_AbrahamsonGulerce2020SSlab': 3.3,
+    'NZNSHM2022_KuehnEtAl2020SInter': 5.4,
+    'NZNSHM2022_KuehnEtAl2020SSlab': 4.5,
+    'NZNSHM2022_ParkerEtAl2020SInter': 5.7,
+    'NZNSHM2022_ParkerEtAl2020SSlab': 4.5,
+    'ParkerEtAl2020SInter': 10.5,
+    'ParkerEtAl2020SInterB': 1.0,
+    'ParkerEtAl2020SSlab': 5.6,
+    'ParkerEtAl2020SSlabB': 4.4,
+    'SomervilleEtAl2009NonCratonic_SS14': 2.2,
+    'SomervilleEtAl2009YilgarnCraton_SS14': 3.5,
+    'Stafford2022': 15.9,
+    'ZhaoEtAl2006SInter': 1.0,
+    'ZhaoEtAl2006SSlabNSHMP2014': 5.2,
+}
+#: median cost of a GSIM in GSIM_COST, used for the GSIMs not listed and
+#: as unit of the weights, so that an average GSIM weighs 1 per context
+COST_UNIT = 4.5
 MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
 # max number of (expected) contexts held in memory at the same time when
 # collapsing, see _collapse_by_mag; 5 millions gave workers of over 11 GB
@@ -1791,14 +1841,19 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, tau),
                 interp1d(ctx.rrup, phi))
 
-    def estimate_weight(self, src, srcfilter, sample=None):
+    # cost of a context of a source of the given code, in units of
+    # COST_UNIT, see GSIM_COST
+    def _ctx_cost(self, code):
+        gsims = sum(GSIM_COST.get(type(gsim).__name__, COST_UNIT)
+                    for gsim in self.gsims)
+        return (BASE_COST.get(code, 0.) + gsims) / COST_UNIT
+
+    def estimate_weight(self, src, srcfilter):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
-        :param sample: if given, a dictionary code -> contexts, populated
-            with up to NCTXS_SAMPLE contexts per source code
-        :returns: the estimated number of contexts of the source (EPS if
-            discarded); it also sets src.dt, the time to build them
+        :returns: an estimate of the CPU cost of processing the source,
+            deterministic, i.e. independent of the machine
         """
         t0 = time.time()
         # NB: nsites is set in preclassical by a different criterion for
@@ -1819,65 +1874,42 @@ class ContextMaker(object):
             # realizations with different uncertainties, the cost is
             # proportional to the number of sets
             C = src.num_ruptures * src.nsites * len(src.get_ts_sets())
+        elif src.code in b'pP':  # no subsampling
+            C = sum(len(ctx) for ctx in self.get_ctxs(src, sites))
         else:
-            if src.code in b'pP':  # no subsampling
-                ctxs = self.get_ctxs(src, sites)
-            else:
-                # the faults reduce the ruptures by about step ** 2, so
-                # about 500 ruptures are sampled for the big ones (step > 5)
-                step = max(5, int(numpy.sqrt(src.num_ruptures / 500)))
-                ctxs = self.get_ctxs(src, sites, step=step)
-            C = 0  # the contexts are not kept, they can be millions
-            for ctx in ctxs:
-                C += len(ctx)
-                if sample is not None and \
-                        sum(map(len, sample[src.code])) < NCTXS_SAMPLE:
-                    sample[src.code].append(ctx[:NCTXS_PER_MAG])
-        src.dt = time.time() - t0  # time to build the contexts
-        if C and not src.bysrc_unc and src.code not in b'pP':
+            # the faults reduce the ruptures by about step ** 2, so about
+            # 500 ruptures are sampled for the big ones (step > 5)
+            step = max(5, int(numpy.sqrt(src.num_ruptures / 500)))
+            C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
             # compensate the subsampling of the ruptures with the actual
             # ratio between all the ruptures and the sampled ones
-            C *= src.num_ruptures / src.num_sampled
-            src.dt *= src.num_ruptures / src.num_sampled
+            if C:  # then src.num_sampled > 0
+                C *= src.num_ruptures / src.num_sampled
+        src.dt = time.time() - t0
         if not C:
             return EPS
+        N = len(srcfilter.sitecol.complete)
         src.nctxs = C * srcfilter.multiplier
         # used to size the tiles in _collapse_by_mag
         src.ctx_frac = min(C / (src.num_ruptures * src.nsites), 1.)
-        return src.nctxs
-
-    # cost in seconds of the GSIMs per context, measured on a sample of
-    # contexts (the numba functions are compiled at import time)
-    def _cost_per_ctx(self, ctxs):
-        ctx = numpy.concatenate(ctxs).view(numpy.recarray)[:NCTXS_SAMPLE]
-        t0 = time.time()
-        self.get_rmap(ctx)
-        return (time.time() - t0) / len(ctx)
+        if src.code == b'N':
+            # the cost per context of the nonparametric sources depends on
+            # the sources (it is 10 times larger in MEX than in SAM), so
+            # they are weighted by the number of GSIMs and of pairs
+            pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
+            return (src.nctxs * len(self.gsims) + pairs / PAIR_COST) / N
+        return src.nctxs * self._ctx_cost(src.code) / N
 
     def set_weight(self, sources, srcfilter):
         """
-        Set the weight attribute on each prefiltered source, an estimate of
-        the seconds needed to compute it: the measured time to build its
-        contexts plus the number of contexts times the cost of the GSIMs
-        per context, measured on a sample of the contexts of the sources
-        with the same code (the cost depends on the GSIMs, the IMTs and
-        the kind of source)
+        Set the weight attribute on each prefiltered source
         """
         if srcfilter.sitecol is None:
             for src in sources:
                 src.weight = EPS
-            return
-        sample = collections.defaultdict(list)  # code -> contexts
-        nctxs = [self.estimate_weight(src, srcfilter, sample)
-                 for src in sources]
-        cost = {code: self._cost_per_ctx(ctxs)
-                for code, ctxs in sample.items()}
-        for src, n in zip(sources, nctxs):
-            if n <= EPS:  # discarded source
-                src.weight = EPS
-            else:
-                c = cost.get(src.code, COST_PER_CTX)
-                src.weight = src.dt * srcfilter.multiplier + n * c
+        else:
+            for src in sources:
+                src.weight = self.estimate_weight(src, srcfilter)
 
     def __repr__(self):
         rlzs = sum(len(rlzs) for rlzs in self.gsims.values())
