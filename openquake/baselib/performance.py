@@ -18,7 +18,6 @@
 
 import ast
 import os
-import json
 import time
 import pstats
 import signal
@@ -37,7 +36,7 @@ import psutil
 import numpy
 import numba
 
-from openquake.baselib.general import humansize
+from openquake.baselib.general import humansize, decode
 from openquake.baselib import hdf5
 
 # NB: one can use vstr fields in extensible datasets, but then reading
@@ -133,8 +132,8 @@ def init_performance(hdf5file, swmr=False):
         hdf5.create(h5, 'task_info', task_info_dt)
     if 'starmap_info' not in h5:
         hdf5.create(h5, 'starmap_info', starmap_info_dt)
-    if 'task_sent' not in h5:  # JSON bytes, see save_task_sent
-        hdf5.create(h5, 'task_sent', numpy.uint8)
+    if 'task_sent' not in h5:
+        h5['task_sent'] = '{}'
     if swmr:
         try:
             h5.swmr_mode = True
@@ -148,27 +147,18 @@ def read_task_sent(h5):
     """
     :returns: a dictionary task name -> argument name -> bytes sent
     """
-    dset = h5['task_sent']
-    # calculations made by older engines stored the repr of a dictionary;
-    # reading them helps the QGIS plugin, whose tests restore old demos
-    if dset.ndim == 0:
-        return ast.literal_eval(dset.asstr()[()])
-    return json.loads(dset[:].tobytes() or b'{}')
+    return ast.literal_eval(decode(h5['task_sent'][()]))
 
 
 def save_task_sent(h5, sent):
     """
-    Update the task_sent dictionary; the dataset is resized and overwritten
-    in place, since it cannot be replaced in SWMR mode
+    Update the task_sent dictionary by overwriting the dataset in place,
+    since in SWMR mode the datasets should not be deleted and recreated
     """
     if sent:
-        dic = read_task_sent(h5)
-        dic.update(sent)
-        data = numpy.frombuffer(json.dumps(dic).encode('utf-8'), numpy.uint8)
-        dset = h5['task_sent']
-        dset.resize((len(data),))
-        dset[:] = data
-        dset.flush()
+        task_sent = read_task_sent(h5)
+        task_sent.update(sent)
+        h5['task_sent'][()] = str(task_sent)
 
 
 def performance_view(dstore):
