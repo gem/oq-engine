@@ -50,7 +50,7 @@ from openquake.hazardlib.site import SiteCollection
 Candidate = namedtuple('Candidate',
     'ps_grid_spacing pointsource_distance weight mean_err p99_err p99_norm')
 
-GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
+GRID_SPACINGS = [15., 30., 45.]  # candidate values in km
 PS_DISTANCES = [15., 25., 50., 75.]  # candidate values in km
 # reference (ps_grid_spacing, pointsource_distance): no gridding and
 # pointsource_distance = 100 km; using 1000 km would be exact but too
@@ -59,7 +59,7 @@ REFERENCE = (0., 100.)
 # the errors on the hazard maps are close when |h - r| <= ATOL + RTOL * |r|,
 # as in numpy.testing.assert_allclose(h, r, rtol=RTOL, atol=ATOL)
 ATOL = .002  # absolute tolerance on the hazard maps (in g)
-RTOL = .01  # relative tolerance on the hazard maps
+RTOL = .02  # relative tolerance on the hazard maps
 # the calibration uses only the IMTs with the periods closest to these:
 # the largest errors are at 0.2 s in SAM and at 1.0 s in Tonga
 PERIODS = [.2, 1.]
