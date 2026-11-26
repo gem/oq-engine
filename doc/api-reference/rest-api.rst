@@ -1168,6 +1168,10 @@ by ``usgs_id`` and optional ``shakemap_version``. Optional parameters include
 ``time_event``, ``maximum_distance``, report options, and form defaults.
 User level 0 is forbidden.
 
+The script ``bin/impact_api_client.py`` is a complete example of a client:
+it logs in, chooses a ShakeMap version, runs the calculation, follows its
+log and retrieves its results.
+
 **************************
 POST /v1/calc/validate_ini
 **************************
