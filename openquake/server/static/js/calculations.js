@@ -530,8 +530,8 @@ function populate_filter_dropdowns() {
         var selected_cm = $cm.val();
         var selected_st = $st.val();
 
-        $cm.empty().append('<option value="">All calculations</option>');
-        $st.empty().append('<option value="">All statuses</option>');
+        $cm.empty().append('<option value="">all</option>');
+        $st.empty().append('<option value="">all</option>');
 
         $.each(resp.calculation_modes, function(_, m) {
             $cm.append($('<option>').val(m).text(m));
