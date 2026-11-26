@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib.general import DictArray, gettemp
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import site, contexts
+from openquake.hazardlib import site, contexts, stats
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
@@ -591,3 +591,21 @@ class FromSrcsPsdistsTestCase(unittest.TestCase):
             exp = cmaker.copy(pointsource_distance=psd).from_srcs(srcs, sites)
             for got, ex in zip(_sorted_rows(ctxs[psd]), _sorted_rows(exp)):
                 numpy.testing.assert_array_equal(got, ex)
+
+
+class CubicPoETestCase(unittest.TestCase):
+    def test_grid_and_truncation(self):
+        # Exercise table centres, midpoints, cutoff, tails, and exact path.
+        for cutoff in (1e-9, .68, 5., 9.):
+            phi = stats.ndtr(cutoff)
+            tmax = stats.get_tmax(phi)
+            x = numpy.r_[numpy.arange(-10., 10., 1/128), tmax,
+                         numpy.nextafter(tmax, numpy.inf), numpy.nan,
+                         -numpy.inf, numpy.inf]
+            mean_std = numpy.zeros((2, 1, 1))
+            mean_std[1] = 1.
+            actual = numpy.empty((len(x), 1), numpy.float32)
+            contexts._set_poes(mean_std, x[None, :], phi, actual)
+            exact = [stats._truncnorm_sf(phi, tmax, v) for v in x]
+            aac(actual[:, 0], exact, atol=1e-8, rtol=1e-5)
+            self.assertTrue((actual[x > tmax] == 0.).all())

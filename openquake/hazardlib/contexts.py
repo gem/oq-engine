@@ -33,7 +33,7 @@ from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import IMC, StdDev, KNOWN_DISTANCES
 from openquake.hazardlib import imc_conversion
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
-from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
+from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf_cubic
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
@@ -689,21 +689,22 @@ def estimate_nctxs(cmaker, srcs, sitecol):
 # the performance is dominated by the CPU cache, i.e. large arrays are slow
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
-# collapse the ruptures, then truncnorm_sf will be called less times;
+# collapse the ruptures, then the survival function will be called fewer times;
 # the loops are fused, i.e. no temporary arrays are allocated, and
-# the scalar function _truncnorm_sf skips the levels where the PoE is 0
+# _truncnorm_sf_cubic skips evaluations beyond the zero-PoE cutoff
 @compile("(float64[:,:,:], float64[:,:], float64, float64, float32[:,:])")
 def _set_poes_(mean_std, loglevels, phi_b, tmax, out):
     M, L1 = loglevels.shape
     N = mean_std.shape[2]
+    scale = 1. / (2*phi_b - 1) if .75 <= phi_b <= 1. else 0.
     for m in range(M):
         mL1 = m * L1
         for n in range(N):
             mea = mean_std[0, m, n]
             std = mean_std[1, m, n]
             for lvl in range(L1):
-                out[mL1 + lvl, n] = _truncnorm_sf(
-                    phi_b, tmax, (loglevels[m, lvl] - mea) / std)
+                out[mL1 + lvl, n] = _truncnorm_sf_cubic(
+                    phi_b, tmax, scale, (loglevels[m, lvl] - mea) / std)
 
 
 def _set_poes(mean_std, loglevels, phi_b, out):
