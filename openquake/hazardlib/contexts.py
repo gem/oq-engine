@@ -65,6 +65,11 @@ EPS = 1E-3
 #: number of contexts per source code used to measure the cost of the
 #: GSIMs per context, see ContextMaker.set_weight
 NCTXS_SAMPLE = 20_000
+#: maximum number of contexts per magnitude in the sample: the classical
+#: tasks evaluate the GSIMs on small batches of a single magnitude, and a
+#: sample made of a few large batches underestimates their cost (by 40%
+#: for a group of CHN, where a single source filled the sample)
+NCTXS_PER_MAG = 1000
 #: cost per context in seconds, used when it cannot be measured, as for
 #: the sources modified by the uncertainties, which have no contexts
 COST_PER_CTX = 50E-6
@@ -1827,7 +1832,7 @@ class ContextMaker(object):
                 C += len(ctx)
                 if sample is not None and \
                         sum(map(len, sample[src.code])) < NCTXS_SAMPLE:
-                    sample[src.code].append(ctx)
+                    sample[src.code].append(ctx[:NCTXS_PER_MAG])
         src.dt = time.time() - t0  # time to build the contexts
         if C and not src.bysrc_unc and src.code not in b'pP':
             # compensate the subsampling of the ruptures with the actual
