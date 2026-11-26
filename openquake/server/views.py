@@ -2530,10 +2530,12 @@ def calc_list_tags(request):
 @cross_domain_ajax
 def calc_filter_values(request):
     """
-    Return the distinct calculation_mode and status values present in the DB,
-    used to populate the filter dropdowns.
+    Return the distinct calculation_mode and status values of the
+    calculations visible to the user, used to populate the filter dropdowns.
     """
-    return internal_api.run(services.calc_filter_values)
+    return internal_api.run(
+        services.calc_filter_values, utils.get_valid_users(request),
+        not utils.is_superuser(request))
 
 
 @require_http_methods(['GET'])

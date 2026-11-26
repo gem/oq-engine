@@ -1011,22 +1011,32 @@ def get_results(db, job_id):
     return datadir, [output.ds_key for output in get_outputs(db, job_id)]
 
 
-def get_distinct_filter_values(db):
+def get_distinct_filter_values(db, allowed_users, user_acl_on=False):
     """
-    Return the distinct values of calculation_mode and status actually
-    present in the job table, used to populate the filter dropdowns.
+    Return the distinct values of calculation_mode and status of the
+    calculations visible to the user, used to populate the filter dropdowns.
 
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
+    :param allowed_users: a list of user names
+    :param user_acl_on:
+        if True, consider only the calculations owned by the allowed users
+        or shared, consistently with get_calcs
     :returns: dict with keys 'calculation_modes' and 'statuses'
     """
+    # deleted calculations are never listed, so they must not be offered
+    where = "status != 'deleted'"
+    params = []
+    if user_acl_on:
+        where += " AND (user_name IN (?X) OR status == 'shared')"
+        params.append(allowed_users)
     calc_modes = [r.calculation_mode for r in db(
-        "SELECT DISTINCT calculation_mode FROM job "
-        "WHERE calculation_mode IS NOT NULL AND calculation_mode != '' "
-        "ORDER BY calculation_mode")]
+        "SELECT DISTINCT calculation_mode FROM job WHERE " + where +
+        " AND calculation_mode IS NOT NULL AND calculation_mode != '' "
+        "ORDER BY calculation_mode", *params)]
     statuses = [r.status for r in db(
-        "SELECT DISTINCT status FROM job "
-        "WHERE status IS NOT NULL AND status != '' "
-        "ORDER BY status")]
+        "SELECT DISTINCT status FROM job WHERE " + where +
+        " AND status IS NOT NULL AND status != '' "
+        "ORDER BY status", *params)]
     return {'calculation_modes': calc_modes, 'statuses': statuses}
 
 
