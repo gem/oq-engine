@@ -5,9 +5,6 @@
     a minor change in the losses when there are unused risk functions
   * Optimized mesh construction and site association with large exposures
   * Raised the tolerance and refined the ps_grid_spacing approximation (3x speedup)
-  * Risk workers read the exposure and the risk model from the calculation
-    datastore, reducing disk usage by eliminating the temporary HDF5 file;
-    the consequences are now stored in the datastore too
   * Changed `oq export -e zip job` to return an archive, plus a few fixes
   * Internal: add `oq compare errors` to measure the errors of the
     ps_grid_spacing approximation
