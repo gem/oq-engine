@@ -323,7 +323,7 @@ class ComplexFaultSource(ParametricSeismicSource):
             # a magnitude with many ruptures is split in n sources, each
             # with one rupture position every n, as for the multifault
             # sources; the occurrence rates are the ones of the magnitude
-            n = -(-self._nr[i] // BLOCKSIZE)
+            n = (self._nr[i] + BLOCKSIZE - 1) // BLOCKSIZE
             for j in range(n):
                 src = copy.copy(self)
                 src.mfd = mfd.ArbitraryMFD([mag], [rate])

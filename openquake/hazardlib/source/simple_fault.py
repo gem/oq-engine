@@ -756,7 +756,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             # with one position along the strike every n, as for the
             # multifault sources, otherwise a big fault (HimalayanThrust
             # in CHN) produces slow tasks
-            n = min(-(-self._nr[i] // BLOCKSIZE), self._ncols[i])
+            n = min((self._nr[i] + BLOCKSIZE - 1) // BLOCKSIZE,
+                    self._ncols[i])
             for j in range(n):
                 src = copy.copy(self)
                 src.mfd = mfd.ArbitraryMFD([mag], [rate])
