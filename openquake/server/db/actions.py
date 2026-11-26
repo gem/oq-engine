@@ -591,6 +591,9 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     if 'calculation_mode' in request_get_dict:
         filterdict['j.calculation_mode'] = request_get_dict.get('calculation_mode')
 
+    if 'status' in request_get_dict:
+        filterdict['j.status'] = request_get_dict.get('status')
+
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
         filterdict['j.is_running'] = valid.boolean(is_running)
@@ -634,18 +637,6 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         search_filter = 1
 
-    if request_get_dict.get('calculation_mode'):
-        calc_mode_filter = "j.calculation_mode = ?x"
-        query_params.append(request_get_dict['calculation_mode'])
-    else:
-        calc_mode_filter = 1
-
-    if request_get_dict.get('status'):
-        status_filter = "j.status = ?x"
-        query_params.append(request_get_dict['status'])
-    else:
-        status_filter = 1    
-
     preferred_only = int(request_get_dict.get('preferred_only', 0))
     filter_by_tag = request_get_dict.get('filter_by_tag', 0)
 
@@ -668,8 +659,6 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         where_clause += " OR j.status == 'shared'"
     where_clause += f") AND {time_filter} AND j.status != 'deleted'"
     where_clause += f" AND {search_filter}"
-    where_clause += f" AND {calc_mode_filter}"
-    where_clause += f" AND {status_filter}"
 
     if relevant_only:
         where_clause += " AND j.relevant != 0"

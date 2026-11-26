@@ -361,7 +361,7 @@ var CalculationTable = Backbone.View.extend({
 
     render: function () {
         if (!this.can_be_rendered) return;
-	if (this.calculations.models.length === 0) {
+        if (this.calculations.models.length === 0) {
             this.$el.html(
                 '<div class="alert alert-info">No calculations found</div>'
             );
@@ -466,9 +466,9 @@ function set_calc_list_params() {
 function refresh_tag_column() {
     $.getJSON('/v1/calc/list_tags', function(resp) {
         if (resp.tags.length == 0) {
-            $("#tag-column-table").hide();
+            $(".tag-column-table").hide();
         } else {
-            $("#tag-column-table").show();
+            $(".tag-column-table").show();
         }
     }).fail(function(jqXHR, textStatus, errorThrown) {
         console.error('Error fetching tags:', textStatus, errorThrown);

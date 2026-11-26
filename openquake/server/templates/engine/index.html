@@ -44,7 +44,7 @@
                     <option value="">All tags</option>
                 </select>
             </div>
-	    <div id="search-filters">
+            <div id="search-filters">
                 <span class="filter-item">
                     <label for="search_input">Search by:</label>
                     <input type="text" id="search_input" class="form-control"
@@ -80,7 +80,7 @@
           <th style="width: 100px;">User</th>
           <th style="width: 100px;">Calculation</th>
           <th style="width: 280px;">Description</th>
-          <th id="tag-column-table" style="width: 100px;">Tags</th>
+          <th class="tag-column-table" style="width: 100px;">Tags</th>
           <th style="width: 100px;">Start time</th>
           <th style="width: 70px;">Status</th>
           <th style="width: 150px;">Action</th>
@@ -94,7 +94,7 @@
           <td><%- calc.get('owner') %></td>
           <td><%- calc.get('calculation_mode') %></td>
           <td><%- calc.get('description') %></td>
-          <td id="tag-column-table"><%- calc.get('tags') %></td>
+          <td class="tag-column-table"><%- calc.get('tags') %></td>
           <td><%- calc.get('start_time') %></td>
           <td class="calc-status">
             <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('status') == 'shared' || calc.get('is_running') == true) { %>
