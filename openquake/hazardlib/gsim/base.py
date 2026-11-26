@@ -375,8 +375,8 @@ def check_sites(gsims, sitecol):
                 f'{gsim.__class__.__name__} is calibrated for {vmin} <= '
                 f'Vs30 <= {vmax} m/s, but {bad.sum()} site(s) have Vs30 '
                 f'in the range [{vs30.min()}, {vs30.max()}]; fix the '
-                'site model or set vs30_strict=False to clamp the '
-                'out-of-range values')
+                'site model or set "strict = false" in the job.ini to '
+                'clamp the out-of-range values')
 
 
 def to_distribution_values(vals, imt):
