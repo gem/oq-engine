@@ -114,7 +114,7 @@ def test_thingbaijam2017_average_displacement(style, expected, sigma):
 # stable-continental-region width relations with ``b = 2.5`` and forward
 # form ``m = a + b*log10(W)``; MSR 2 is Thingbaijam et al. (2017) with
 # ``log10(W) = a + b*m``.  This is the "ensure Thingbaijam2017 (and the
-# Leonard 2014 widths) cover Mammarella2024PrimarySR" acceptance check.
+# Leonard 2014 widths) cover MammarellaEtAl2024PrimarySR" acceptance check.
 # ---------------------------------------------------------------------------
 SOF_TO_RAKE = {3: -90.0, 4: 90.0, 5: 0.0}
 MSR_TO_CLASS = {

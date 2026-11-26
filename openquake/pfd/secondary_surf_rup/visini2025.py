@@ -19,7 +19,7 @@
 """
 Module :mod:`openquake.pfd.secondary_surf_rup.visini2025` implements the
 distributed (secondary) rupture occurrence model of Visini et al. (2025) in
-:class:`Visini2025SecondarySR`.
+:class:`VisiniEtAl2025SecondarySR`.
 
 Supported fault styles: normal and reverse (dip-slip).
 
@@ -52,7 +52,7 @@ from openquake.pfd.params import check_choice, check_positive, check_style
 from openquake.pfd.secondary_surf_rup.base import BaseSecondarySurfRup
 
 
-class Visini2025SecondarySR(BaseSecondarySurfRup):
+class VisiniEtAl2025SecondarySR(BaseSecondarySurfRup):
     """
     Distributed (secondary) rupture occurrence model of Visini et al. (2025)
     for normal- and reverse-faulting earthquakes, as a function of magnitude,
@@ -771,3 +771,8 @@ class Visini2025SecondarySR(BaseSecondarySurfRup):
             "cache_size": len(self._mc_cache),
             "cache_keys": list(self._mc_cache)[:10]  # First 10 keys
         }
+
+
+class Visini2025SecondarySR(VisiniEtAl2025SecondarySR):
+    """Deprecated name of :class:`VisiniEtAl2025SecondarySR`."""
+    superseded_by = VisiniEtAl2025SecondarySR

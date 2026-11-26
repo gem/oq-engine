@@ -61,23 +61,23 @@ ALL_FD_CLASSES = PRIMARY_FD_CLASSES + SECONDARY_FD_CLASSES
 # 2025 Table 4 / the model papers themselves).
 EXPECTED_CONTRACT = {
     # primary slot
-    "Youngs2003PrimaryFD": ("principal", "vertical"),
-    "Petersen2011PrimaryFD": ("principal", "lateral"),
+    "YoungsEtAl2003PrimaryFD": ("principal", "vertical"),
+    "PetersenEtAl2011PrimaryFD": ("principal", "lateral"),
     "MossRoss2011PrimaryFD": ("principal", "vertical"),
-    "Moss2022PrimaryFD": ("principal", "vertical"),
-    "Moss2024PrimaryFD": ("principal", "vertical"),
-    "Takao2013PrimaryFD": ("principal", "net"),
-    "Lavrentiadis2023PrimaryFD_aggregate": ("aggregate", "net"),
-    "Lavrentiadis2023PrimaryFD_principal": ("sum-of-principal", "net"),
-    "Kuehn2024PrimaryFD": ("aggregate", "net"),
-    "Chiou2025PrimaryFD": ("sum-of-principal", "net"),
+    "MossEtAl2022PrimaryFD": ("principal", "vertical"),
+    "MossEtAl2024PrimaryFD": ("principal", "vertical"),
+    "TakaoEtAl2013PrimaryFD": ("principal", "net"),
+    "LavrentiadisAbrahamson2023PrimaryFDAggregate": ("aggregate", "net"),
+    "LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal": ("sum-of-principal", "net"),
+    "KuehnEtAl2024PrimaryFD": ("aggregate", "net"),
+    "ChiouEtAl2025PrimaryFD": ("sum-of-principal", "net"),
     # secondary slot
-    "Youngs2003SecondaryFD": ("distributed", "vertical"),
-    "Takao2013SecondaryFD": ("distributed", "net"),
-    "Takao2016SecondaryFD": ("distributed", "net"),
-    "Petersen2011SecondaryFD": ("distributed", "lateral"),
-    "Visini2025SecondaryFD": ("distributed", "vertical"),
-    "Moss2022SecondaryFD": ("distributed", "vertical"),
+    "YoungsEtAl2003SecondaryFD": ("distributed", "vertical"),
+    "TakaoEtAl2013SecondaryFD": ("distributed", "net"),
+    "TakaoEtAl2016SecondaryFD": ("distributed", "net"),
+    "PetersenEtAl2011SecondaryFD": ("distributed", "lateral"),
+    "VisiniEtAl2025SecondaryFD": ("distributed", "vertical"),
+    "MossEtAl2022SecondaryFD": ("distributed", "vertical"),
 }
 
 _ALLOWED_RANGE_KEYS = {
@@ -135,8 +135,8 @@ def test_lavrentiadis_two_classes_static_contracts():
     serves the aggregate variants, the _principal subclass the
     sum-of-principal disp_prnc_prime metric. Contracts are static - no
     parameter can re-route them."""
-    parent = primary_surf_displ.Lavrentiadis2023PrimaryFD_aggregate
-    principal = primary_surf_displ.Lavrentiadis2023PrimaryFD_principal
+    parent = primary_surf_displ.LavrentiadisAbrahamson2023PrimaryFDAggregate
+    principal = primary_surf_displ.LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal
     assert effective_displacement_definition(parent) == "aggregate"
     assert effective_displacement_definition(principal) == "sum-of-principal"
     assert issubclass(principal, parent)
@@ -145,9 +145,9 @@ def test_lavrentiadis_two_classes_static_contracts():
 def test_lavrentiadis_parent_rejects_prnc_output_type():
     """The aggregate class refuses to evaluate the sum-of-principal metric;
     the error names the class to use instead."""
-    model = primary_surf_displ.Lavrentiadis2023PrimaryFD_aggregate()
+    model = primary_surf_displ.LavrentiadisAbrahamson2023PrimaryFDAggregate()
     with pytest.raises(ValueError,
-                       match="Lavrentiadis2023PrimaryFD_principal"):
+                       match="LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal"):
         model.get_prob(d=np.array([0.1]), X_L_ratio=np.array([0.5]),
                        mag=7.0, style="normal",
                        output_type="disp_prnc_prime")
@@ -158,19 +158,19 @@ def test_lavrentiadis_parent_rejects_prnc_output_type():
 def test_lavrentiadis_principal_rejects_any_explicit_output_type(output_type):
     """output_type is fixed by the class choice - even the redundant
     disp_prnc_prime is rejected to keep configurations canonical."""
-    model = primary_surf_displ.Lavrentiadis2023PrimaryFD_principal()
+    model = primary_surf_displ.LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal()
     with pytest.raises(ValueError, match="fixed by the class choice"):
         model.get_prob(d=np.array([0.1]), X_L_ratio=np.array([0.5]),
                        mag=7.0, style="normal", output_type=output_type)
 
 
 def test_lavrentiadis_principal_numerical_identity():
-    """Lavrentiadis2023PrimaryFD_principal.get_prob must reproduce the old
+    """LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal.get_prob must reproduce the old
     single-class disp_prnc_prime evaluation EXACTLY (the IAEA L23 chains
     were converted to the new class on this guarantee). Compared against
     the shared implementation the parent evaluates for its own variants."""
-    parent = primary_surf_displ.Lavrentiadis2023PrimaryFD_aggregate()
-    principal = primary_surf_displ.Lavrentiadis2023PrimaryFD_principal()
+    parent = primary_surf_displ.LavrentiadisAbrahamson2023PrimaryFDAggregate()
+    principal = primary_surf_displ.LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal()
     d = np.array([0.01, 0.1, 0.5, 2.0, 10.0])
     for mag in (6.0, 7.0, 7.8):
         for x_l in (np.array([0.05, 0.25, 0.5]), np.array([0.0, 1.0])):
@@ -196,7 +196,7 @@ def test_lavrentiadis_principal_numerical_identity():
 
 
 def test_kuehn_contract_is_static_aggregate():
-    cls = primary_surf_displ.Kuehn2024PrimaryFD
+    cls = primary_surf_displ.KuehnEtAl2024PrimaryFD
     assert effective_displacement_definition(cls) == "aggregate"
     assert cls.DISPLACEMENT_DEFINITION == "aggregate"
 
@@ -225,15 +225,15 @@ def test_declared_applicability_values():
     """The task-pinned ranges: Petersen distributed data end at 2 km; Visini
     excludes < 5 m and its dataset envelope is HW 10 km / FW 8 km (in its
     own segments-r metric)."""
-    pet = secondary_surf_displ.Petersen2011SecondaryFD.APPLICABILITY_RANGE
+    pet = secondary_surf_displ.PetersenEtAl2011SecondaryFD.APPLICABILITY_RANGE
     assert pet["r_max_km"] == 2.0
 
-    vis = secondary_surf_displ.Visini2025SecondaryFD.APPLICABILITY_RANGE
+    vis = secondary_surf_displ.VisiniEtAl2025SecondaryFD.APPLICABILITY_RANGE
     assert vis["r_min_km"] == 0.005
     assert vis["r_max_hw_km"] == 10.0
     assert vis["r_max_fw_km"] == 8.0
     # Range must be declared in the model's own metric.
-    assert secondary_surf_displ.Visini2025SecondaryFD.\
+    assert secondary_surf_displ.VisiniEtAl2025SecondaryFD.\
         MULTIFAULT_REFERENCE_LINE == "segments"
 
-    assert secondary_surf_displ.Moss2022SecondaryFD.APPLICABILITY_RANGE is None
+    assert secondary_surf_displ.MossEtAl2022SecondaryFD.APPLICABILITY_RANGE is None

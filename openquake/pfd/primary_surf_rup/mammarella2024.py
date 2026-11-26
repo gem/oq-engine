@@ -36,7 +36,7 @@ Notes
 
 API
 ---
-Class: ``Mammarella2024PrimarySR``
+Class: ``MammarellaEtAl2024PrimarySR``
 
 get_prob(mag, MSR, HDD_str, dip_mu, dip_sigma, t_d, Zs_sigma, t_z,
          rake=None, style=None, seismothickness=None, Zs_mu=None) -> float | np.ndarray
@@ -193,7 +193,7 @@ def _resolve_width_model(width_model):
     return width_model
 
 
-class Mammarella2024PrimarySR(BasePrimarySurfRup):
+class MammarellaEtAl2024PrimarySR(BasePrimarySurfRup):
     """
     Probability of principal surface rupture after Mammarella et al. (2024).
 
@@ -489,9 +489,6 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
         return probs.item() if probs.size == 1 else probs
 
 
-class MammarellaEtAl2024PrimarySR(Mammarella2024PrimarySR):
-    """Alias of :class:`Mammarella2024PrimarySR` using the full author naming."""
-
-    pass
-
-
+class Mammarella2024PrimarySR(MammarellaEtAl2024PrimarySR):
+    """Deprecated name of :class:`MammarellaEtAl2024PrimarySR`."""
+    superseded_by = MammarellaEtAl2024PrimarySR

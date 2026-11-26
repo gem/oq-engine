@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.pfd.secondary_surf_displ.youngs2003` implements the
-model of Youngs et al. (2003) in :class:`Youngs2003SecondaryFD`.
+model of Youngs et al. (2003) in :class:`YoungsEtAl2003SecondaryFD`.
 """
 
 import numpy as np
@@ -27,7 +27,7 @@ from openquake.pfd.params import check_choice, check_style
 from openquake.pfd.primary_surf_displ.base import BaseSecondarySurfDispl
 
 
-class Youngs2003SecondaryFD(BaseSecondarySurfDispl):
+class YoungsEtAl2003SecondaryFD(BaseSecondarySurfDispl):
     """Distributed fault-displacement model of Youngs et al. (2003).
 
     Youngs, R.R., et al. (2003). A methodology for probabilistic fault
@@ -221,3 +221,8 @@ class Youngs2003SecondaryFD(BaseSecondarySurfDispl):
         # Calculate probability
         prob_max_displacement = norm.pdf(np.log10(target_md), loc=log_max_disp, scale=sigma)
         return prob_max_displacement / norm_factor
+
+
+class Youngs2003SecondaryFD(YoungsEtAl2003SecondaryFD):
+    """Deprecated name of :class:`YoungsEtAl2003SecondaryFD`."""
+    superseded_by = YoungsEtAl2003SecondaryFD

@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.pfd.primary_surf_displ.kuehn2024.kuehn2024`
-implements the model of Kuehn et al. (2024) in :class:`Kuehn2024PrimaryFD`.
+implements the model of Kuehn et al. (2024) in :class:`KuehnEtAl2024PrimaryFD`.
 
 References
 ----------
@@ -41,7 +41,7 @@ from openquake.pfd.primary_surf_displ.kuehn2024.load_data import DATA as DATA_CO
 MAG_BREAK = 7.0
 DELTA = 0.1
 
-class Kuehn2024PrimaryFD(BasePrimarySurfDispl):
+class KuehnEtAl2024PrimaryFD(BasePrimarySurfDispl):
     """Aggregate fault-displacement model of Kuehn et al. (2024), run in the
     principal (primary_surf_displ) slot.
 
@@ -339,3 +339,8 @@ class Kuehn2024PrimaryFD(BasePrimarySurfDispl):
         x = np.atleast_1d(X_L_ratio).astype(float)
         val = s1 + s2 * (x - term_shape_center) ** 2
         return val
+
+
+class Kuehn2024PrimaryFD(KuehnEtAl2024PrimaryFD):
+    """Deprecated name of :class:`KuehnEtAl2024PrimaryFD`."""
+    superseded_by = KuehnEtAl2024PrimaryFD

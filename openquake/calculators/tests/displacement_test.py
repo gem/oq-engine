@@ -35,7 +35,7 @@ from openquake.calculators.displacement import (
 from openquake.calculators.getters import MapGetter
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.pfd.primary_surf_rup.mammarella2024 import (
-    Mammarella2024PrimarySR)
+    MammarellaEtAl2024PrimarySR)
 from openquake.qa_tests_data.pfd import case_1, case_2, case_3, case_4
 from openquake.qa_tests_data.pfd import case_5, case_6, case_7, case_8
 from openquake.qa_tests_data.pfd import case_9, case_10, case_11
@@ -272,7 +272,7 @@ class DisplacementTestCase(CalculatorTestCase):
             curve50, -numpy.expm1(-50 * annual), rtol=1e-5)
 
     def test_case_5(self):
-        # a heavy CSV-backed model (Kuehn2024PrimaryFD, aggregate definition)
+        # a heavy CSV-backed model (KuehnEtAl2024PrimaryFD, aggregate definition)
         # in the logic tree, on a floating simple fault. The expected rates
         # are the ones of the same job with the source written out position
         # by position (a characteristic fault for each float position at the
@@ -298,7 +298,7 @@ class DisplacementTestCase(CalculatorTestCase):
         self.assertTrue((hcurves > 0).all())
 
     def test_case_6(self):
-        # IAEA Kumamoto: Chiou2025PrimaryFD x WC1993PrimarySR on a
+        # IAEA Kumamoto: ChiouEtAl2025PrimaryFD x WellsCoppersmith1993PrimarySR on a
         # strike-slip characteristicFaultSource; pinned to oq-pfdha's IAEA
         # computed curve
         self.run_calc(case_6.__file__, 'job.ini')
@@ -313,7 +313,7 @@ class DisplacementTestCase(CalculatorTestCase):
         numpy.testing.assert_allclose(rates, expected, rtol=1e-3)
 
     def test_case_7(self):
-        # IAEA Le Teil: Lavrentiadis2023PrimaryFD_principal with a fixed
+        # IAEA Le Teil: LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal with a fixed
         # case-specific P_sr; the last levels underflow to 0 in the stored
         # single-precision poes, hence the tiny atol
         self.run_calc(case_7.__file__, 'job.ini')
@@ -330,7 +330,7 @@ class DisplacementTestCase(CalculatorTestCase):
 
     def test_case_8(self):
         # IAEA Norcia: the combined Visini et al. (2025) distributed
-        # pipeline (Takao2013PrimaryFD + Visini2025SecondarySR/FD, case3);
+        # pipeline (TakaoEtAl2013PrimaryFD + VisiniEtAl2025SecondarySR/FD, case3);
         # the checked-in IAEA computed csv was stale, so the expected
         # values come from a fresh oq-pfdha run of job_distributed_V24
         self.run_calc(case_8.__file__, 'job.ini')
@@ -399,7 +399,7 @@ class DisplacementTestCase(CalculatorTestCase):
         # gets the probability for its own dip and seismogenic depth
         self.run_calc(case_10.__file__, 'job_psr1.ini')
         psr1 = self.by_src()
-        model = Mammarella2024PrimarySR(
+        model = MammarellaEtAl2024PrimarySR(
             MSR=0, HDD_str='AGG_N', style='normal', dip_sigma=5., t_d=2.,
             Zs_sigma=2., t_z=2.)
         p_a = model.get_prob(6.0, dip_mu=60., Zs_mu=12.)
@@ -649,19 +649,19 @@ def test_pinned_geometry():
                 uncertainty_type='fdhaPrimarySRModel', branches=[
                     SimpleNamespace(
                         branch_id='MA', value=(
-                            'Mammarella2024PrimarySR', params)),
+                            'MammarellaEtAl2024PrimarySR', params)),
                     SimpleNamespace(
                         branch_id='YO', value=(
-                            'Youngs2003PrimarySR', {'style': 'all'}))]),
+                            'YoungsEtAl2003PrimarySR', {'style': 'all'}))]),
             SimpleNamespace(
                 uncertainty_type='fdhaPrimaryFDModel', branches=[
                     SimpleNamespace(
                         branch_id='FD', value=(
-                            'Youngs2003PrimaryFD', {'style': 'normal'}))])])
+                            'YoungsEtAl2003PrimaryFD', {'style': 'normal'}))])])
 
     assert pinned_geometry(pfd_lt()) == []
     assert pinned_geometry(pfd_lt(dip_mu=75., seismothickness=15.)) == [
-        ('MA', 'Mammarella2024PrimarySR',
+        ('MA', 'MammarellaEtAl2024PrimarySR',
          {'dip_mu': 75., 'seismothickness': 15.})]
 
 
@@ -674,10 +674,10 @@ def test_visini_branch_segment_sampling_reaches_pipeline():
     def selections(**sr_params):
         return {
             'secondary_surf_rup': SimpleNamespace(
-                class_name='Visini2025SecondarySR',
+                class_name='VisiniEtAl2025SecondarySR',
                 params=dict(style='normal', pixel_size=100, **sr_params)),
             'secondary_surf_displ': SimpleNamespace(
-                class_name='Visini2025SecondaryFD',
+                class_name='VisiniEtAl2025SecondaryFD',
                 params=dict(style='normal', tpfm=1.42, case='case3'))}
 
     adapters, _ = get_adapters(

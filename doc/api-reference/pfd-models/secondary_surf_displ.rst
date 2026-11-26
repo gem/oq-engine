@@ -1,38 +1,38 @@
 Secondary surface displacement models
 =====================================
 
-Moss2022SecondaryFD
--------------------
-
-.. autoclass:: openquake.pfd.secondary_surf_displ.moss2022.Moss2022SecondaryFD
-    :show-inheritance:
-
-Petersen2011SecondaryFD
+MossEtAl2022SecondaryFD
 -----------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_displ.petersen2011.Petersen2011SecondaryFD
+.. autoclass:: openquake.pfd.secondary_surf_displ.moss2022.MossEtAl2022SecondaryFD
     :show-inheritance:
 
-Takao2013SecondaryFD
---------------------
+PetersenEtAl2011SecondaryFD
+---------------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_displ.takao2013.Takao2013SecondaryFD
+.. autoclass:: openquake.pfd.secondary_surf_displ.petersen2011.PetersenEtAl2011SecondaryFD
     :show-inheritance:
 
-Takao2016SecondaryFD
---------------------
+TakaoEtAl2013SecondaryFD
+------------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_displ.takao2016.Takao2016SecondaryFD
+.. autoclass:: openquake.pfd.secondary_surf_displ.takao2013.TakaoEtAl2013SecondaryFD
     :show-inheritance:
 
-Visini2025SecondaryFD
----------------------
+TakaoEtAl2016SecondaryFD
+------------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_displ.visini2025.Visini2025SecondaryFD
+.. autoclass:: openquake.pfd.secondary_surf_displ.takao2016.TakaoEtAl2016SecondaryFD
     :show-inheritance:
 
-Youngs2003SecondaryFD
----------------------
+VisiniEtAl2025SecondaryFD
+-------------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_displ.youngs2003.Youngs2003SecondaryFD
+.. autoclass:: openquake.pfd.secondary_surf_displ.visini2025.VisiniEtAl2025SecondaryFD
+    :show-inheritance:
+
+YoungsEtAl2003SecondaryFD
+-------------------------
+
+.. autoclass:: openquake.pfd.secondary_surf_displ.youngs2003.YoungsEtAl2003SecondaryFD
     :show-inheritance:

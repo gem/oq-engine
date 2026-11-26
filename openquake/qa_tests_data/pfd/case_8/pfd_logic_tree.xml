@@ -13,7 +13,7 @@
   <logicTreeBranchSet branchSetID="bs_2" uncertaintyType="fdhaPrimaryFDModel" applyToBranches="B1_PSR">
     <logicTreeBranch branchID="B2_PFD">
       <uncertaintyModel>
-        [Takao2013PrimaryFD]
+        [TakaoEtAl2013PrimaryFD]
         norm_disp_type = "AD"
         n_sigma = 5.0
       </uncertaintyModel>
@@ -23,7 +23,7 @@
   <logicTreeBranchSet branchSetID="bs_3" uncertaintyType="fdhaSecondarySRModel" applyToBranches="B2_PFD">
     <logicTreeBranch branchID="B3_SSR">
       <uncertaintyModel>
-        [Visini2025SecondarySR]
+        [VisiniEtAl2025SecondarySR]
         pixel_size = 100
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -32,7 +32,7 @@
   <logicTreeBranchSet branchSetID="bs_4" uncertaintyType="fdhaSecondaryFDModel" applyToBranches="B3_SSR">
     <logicTreeBranch branchID="B4_SFD">
       <uncertaintyModel>
-        [Visini2025SecondaryFD]
+        [VisiniEtAl2025SecondaryFD]
         scaling_model = "WC1994"
         case = "case3"
       </uncertaintyModel>

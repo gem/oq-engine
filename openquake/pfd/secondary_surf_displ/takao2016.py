@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.pfd.secondary_surf_displ.takao2016` implements the
-model of Takao et al. (2016) in :class:`Takao2016SecondaryFD`.
+model of Takao et al. (2016) in :class:`TakaoEtAl2016SecondaryFD`.
 
 Supported Fault Styles: Reverse and Strike-slip
 
@@ -32,10 +32,10 @@ Engineering, 16(2), 96-101. https://doi.org/10.5610/jaee.16.2_96
 
 import numpy as np
 from scipy.stats import gamma
-from openquake.pfd.secondary_surf_displ.takao2013 import Takao2013SecondaryFD
+from openquake.pfd.secondary_surf_displ.takao2013 import TakaoEtAl2013SecondaryFD
 
 
-class Takao2016SecondaryFD(Takao2013SecondaryFD):
+class TakaoEtAl2016SecondaryFD(TakaoEtAl2013SecondaryFD):
     """Distributed fault-displacement model of Takao et al. (2016).
 
     Takao et al. (2016) keep the hazard formulation of Takao et al. (2013,
@@ -61,7 +61,7 @@ class Takao2016SecondaryFD(Takao2013SecondaryFD):
     form). Case 2 is the default: it is the set drawn in the paper's Fig. 1
     and compared with Takao et al. (2014) in its Section 3.
 
-    Only a and b differ from :class:`Takao2013SecondaryFD` (Section 3 of the
+    Only a and b differ from :class:`TakaoEtAl2013SecondaryFD` (Section 3 of the
     paper); the magnitude scaling of PAD and its integration are inherited:
 
         log10(PAD) = -4.80 + 0.69 Mw  (sigma 0.36)
@@ -72,7 +72,7 @@ class Takao2016SecondaryFD(Takao2013SecondaryFD):
     Model contract: DISPLACEMENT_DEFINITION = "distributed",
     DISPLACEMENT_COMPONENT = "net" (as Takao et al. 2013). The declared
     applicability, r up to 20 km, is inherited from
-    :class:`Takao2013SecondaryFD`; the 2016 paper states no range and notes
+    :class:`TakaoEtAl2013SecondaryFD`; the 2016 paper states no range and notes
     that the data are sparse beyond about 5 km.
     """
 
@@ -83,7 +83,7 @@ class Takao2016SecondaryFD(Takao2013SecondaryFD):
     }
 
     # PAD scaling inherited from Takao et al. (2013); no PMD model in 2016
-    _COEFFS = {"AD": Takao2013SecondaryFD._COEFFS["AD"]}
+    _COEFFS = {"AD": TakaoEtAl2013SecondaryFD._COEFFS["AD"]}
 
     def __init__(self, n_sigma=3.0, case=2, norm_disp_type=None):
         """
@@ -130,3 +130,8 @@ class Takao2016SecondaryFD(Takao2013SecondaryFD):
 
         return gamma.sf(DD_norm[np.newaxis, :], self._shape,
                         loc=0, scale=b[:, np.newaxis])
+
+
+class Takao2016SecondaryFD(TakaoEtAl2016SecondaryFD):
+    """Deprecated name of :class:`TakaoEtAl2016SecondaryFD`."""
+    superseded_by = TakaoEtAl2016SecondaryFD

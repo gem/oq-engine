@@ -56,8 +56,8 @@ class VisiniSecondaryCalculator(object):
     """
     Compute the combined distributed contribution for one rupture.
 
-    :param sr_model: a :class:`Visini2025SecondarySR` instance
-    :param fd_model: a :class:`Visini2025SecondaryFD` instance
+    :param sr_model: a :class:`VisiniEtAl2025SecondarySR` instance
+    :param fd_model: a :class:`VisiniEtAl2025SecondaryFD` instance
     :param case_label: Visini case ('case1' | 'case2' | 'case3')
     :param pixel_size: across-strike site cell width (m)
     :param near_far_threshold_km: near/far regime threshold (km)

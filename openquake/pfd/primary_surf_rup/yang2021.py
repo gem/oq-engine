@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.pfd.primary_surf_rup.yang2021` implements
-the model of Yang et al. (2021) in :class:`Yang2021PrimarySR`
+the model of Yang et al. (2021) in :class:`YangEtAl2021PrimarySR`
 
 Supported Fault Styles: Reverse only
 
@@ -33,7 +33,7 @@ import numpy as np
 from openquake.pfd.primary_surf_rup.base import BasePrimarySurfRup
 
 
-class Yang2021PrimarySR(BasePrimarySurfRup):
+class YangEtAl2021PrimarySR(BasePrimarySurfRup):
     """
     Model of Yang et al. (2021) for the probability of surface rupture
     for reverse-faulting earthquakes in the Australian stable continental
@@ -66,3 +66,8 @@ class Yang2021PrimarySR(BasePrimarySurfRup):
         fx = -24.59 + 4.0 * m
         prob = np.exp(fx) / (1.0 + np.exp(fx))
         return prob.item() if prob.shape == () else prob
+
+
+class Yang2021PrimarySR(YangEtAl2021PrimarySR):
+    """Deprecated name of :class:`YangEtAl2021PrimarySR`."""
+    superseded_by = YangEtAl2021PrimarySR

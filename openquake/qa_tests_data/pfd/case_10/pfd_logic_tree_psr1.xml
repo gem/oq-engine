@@ -13,7 +13,7 @@
     <logicTreeBranchSet branchSetID="bs_pfd" uncertaintyType="fdhaPrimaryFDModel" applyToBranches="PSR">
       <logicTreeBranch branchID="PFD">
         <uncertaintyModel>
-          [Youngs2003PrimaryFD]
+          [YoungsEtAl2003PrimaryFD]
           style = "normal"
           norm_disp_type = "AD"
         </uncertaintyModel>

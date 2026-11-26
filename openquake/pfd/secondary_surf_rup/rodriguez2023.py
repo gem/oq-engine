@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.pfd.secondary_surf_rup.rodriguez2023` implements
-the model of Rodriguez Padilla and Oskin (2023) in :class:`Rodriguez2023SecondarySR`
+the model of Rodriguez Padilla and Oskin (2023) in :class:`RodriguezPadillaOskin2023SecondarySR`
 
 Supported Fault Styles: Strike-slip only
 
@@ -34,7 +34,7 @@ import numpy as np
 from openquake.pfd.secondary_surf_rup.base import BaseSecondarySurfRup
 
 
-class Rodriguez2023SecondarySR(BaseSecondarySurfRup):
+class RodriguezPadillaOskin2023SecondarySR(BaseSecondarySurfRup):
     """
     Implementation of the Rodriguez Padilla and Oskin (2023) model for strike-slip faults.
     """
@@ -82,3 +82,8 @@ class Rodriguez2023SecondarySR(BaseSecondarySurfRup):
         prob = np.clip(prob, 0.0, 1.0)
 
         return prob.item() if prob.size == 1 else prob
+
+
+class Rodriguez2023SecondarySR(RodriguezPadillaOskin2023SecondarySR):
+    """Deprecated name of :class:`RodriguezPadillaOskin2023SecondarySR`."""
+    superseded_by = RodriguezPadillaOskin2023SecondarySR

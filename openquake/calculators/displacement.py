@@ -57,6 +57,7 @@ from openquake.hazardlib.pfd_lt import (
     CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY, PFD_SLOTS_BY_UTYPE, logical_id,
     source_basename)
 from openquake.pfd.adapter import PFDModelAdapter, style_from_rake
+from openquake.pfd.meta import canonical
 from openquake.pfd.registry import get_available
 from openquake.pfd.visini import VisiniSecondaryCalculator
 from openquake.calculators import base
@@ -146,7 +147,9 @@ def pfd_methods(pfd_lt):
                 continue  # dummy/pseudo branch
             cls = available.get(branch.value[0])
             if cls is not None:
-                method = cls.__dict__.get('MULTIFAULT_REFERENCE_LINE')
+                # a deprecated name inherits the declaration of its model
+                method = canonical(cls).__dict__.get(
+                    'MULTIFAULT_REFERENCE_LINE')
                 if method is not None:
                     methods.add(method)
     return methods

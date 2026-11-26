@@ -19,7 +19,7 @@
 """
 Module :mod:`openquake.pfd.secondary_surf_displ.petersen2011` implements the
 Petersen et al. (2011) model for secondary (distributed) fault displacements
-in :class:`Petersen2011SecondaryFD`.
+in :class:`PetersenEtAl2011SecondaryFD`.
 """
 
 import numpy as np
@@ -27,7 +27,7 @@ from scipy.stats import norm
 from openquake.pfd.params import check_positive
 from openquake.pfd.primary_surf_displ.base import BaseSecondarySurfDispl
 
-class Petersen2011SecondaryFD(BaseSecondarySurfDispl):
+class PetersenEtAl2011SecondaryFD(BaseSecondarySurfDispl):
     """Distributed fault-displacement model of Petersen et al. (2011) for strike-slip faults.
 
     Petersen, M.D., et al. (2011). Fault displacement hazard for strike-slip
@@ -188,3 +188,8 @@ class Petersen2011SecondaryFD(BaseSecondarySurfDispl):
             return prob_exceeding[:, 0]  # Return 1D array for single displacement
         else:
             return prob_exceeding  # Return 2D array
+
+
+class Petersen2011SecondaryFD(PetersenEtAl2011SecondaryFD):
+    """Deprecated name of :class:`PetersenEtAl2011SecondaryFD`."""
+    superseded_by = PetersenEtAl2011SecondaryFD

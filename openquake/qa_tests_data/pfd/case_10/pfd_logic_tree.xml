@@ -4,7 +4,7 @@
     <logicTreeBranchSet branchSetID="bs_psr" uncertaintyType="fdhaPrimarySRModel">
       <logicTreeBranch branchID="PSR">
         <uncertaintyModel>
-          [Mammarella2024PrimarySR]
+          [MammarellaEtAl2024PrimarySR]
           MSR = 0
           HDD_str = "AGG_N"
           style = "normal"
@@ -19,7 +19,7 @@
     <logicTreeBranchSet branchSetID="bs_pfd" uncertaintyType="fdhaPrimaryFDModel" applyToBranches="PSR">
       <logicTreeBranch branchID="PFD">
         <uncertaintyModel>
-          [Youngs2003PrimaryFD]
+          [YoungsEtAl2003PrimaryFD]
           style = "normal"
           norm_disp_type = "AD"
         </uncertaintyModel>

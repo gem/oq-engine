@@ -30,10 +30,10 @@ also serve as the in-engine regression anchor for the coefficient files.
 """
 import unittest
 import numpy as np
-from openquake.pfd.primary_surf_displ.chiou2025 import Chiou2025PrimaryFD
-from openquake.pfd.primary_surf_displ.moss2024 import Moss2024PrimaryFD
+from openquake.pfd.primary_surf_displ.chiou2025 import ChiouEtAl2025PrimaryFD
+from openquake.pfd.primary_surf_displ.moss2024 import MossEtAl2024PrimaryFD
 from openquake.pfd.primary_surf_displ.kuehn2024.kuehn2024 import (
-    Kuehn2024PrimaryFD)
+    KuehnEtAl2024PrimaryFD)
 
 D = np.array([0.01, 0.1, 1.0])
 XL = np.array([0.25])
@@ -44,7 +44,7 @@ class CsvBackedModelsTestCase(unittest.TestCase):
 
     def test_chiou2025_coefficients(self):
         # data/chiou_2025_coefficients.csv (version model7)
-        p = Chiou2025PrimaryFD().get_prob(
+        p = ChiouEtAl2025PrimaryFD().get_prob(
             D, X_L_ratio=XL, mag=MAG, style='strike-slip')
         np.testing.assert_allclose(
             p,
@@ -53,7 +53,7 @@ class CsvBackedModelsTestCase(unittest.TestCase):
 
     def test_moss2024_d_ad_coefficients(self):
         # data/moss_2024_gamma_distribution_parameters_d_ad.csv
-        p = Moss2024PrimaryFD().get_prob(
+        p = MossEtAl2024PrimaryFD().get_prob(
             D, X_L_ratio=XL, mag=MAG, version='AD')
         np.testing.assert_allclose(
             p,
@@ -62,7 +62,7 @@ class CsvBackedModelsTestCase(unittest.TestCase):
 
     def test_moss2024_d_md_coefficients(self):
         # data/moss_2024_gamma_distribution_parameters_d_md.csv
-        p = Moss2024PrimaryFD().get_prob(
+        p = MossEtAl2024PrimaryFD().get_prob(
             D, X_L_ratio=XL, mag=MAG, version='MD')
         np.testing.assert_allclose(
             p,
@@ -71,7 +71,7 @@ class CsvBackedModelsTestCase(unittest.TestCase):
 
     def test_kuehn2024_mean_coefficients(self):
         # kuehn2024/data/coefficients_mean_{NM,REV,SS}_powtr.csv
-        p = Kuehn2024PrimaryFD().get_prob(
+        p = KuehnEtAl2024PrimaryFD().get_prob(
             D, X_L_ratio=XL, mag=MAG, style='normal',
             epistemic_uncertainty=False)
         np.testing.assert_allclose(
@@ -81,7 +81,7 @@ class CsvBackedModelsTestCase(unittest.TestCase):
 
     def test_kuehn2024_posterior_coefficients(self):
         # kuehn2024/data/coefficients_posterior_{NM,REV,SS}_powtr.csv
-        post = Kuehn2024PrimaryFD().get_prob(
+        post = KuehnEtAl2024PrimaryFD().get_prob(
             D, X_L_ratio=XL, mag=MAG, style='normal')
         self.assertEqual(post.shape, (1000, 3))
         np.testing.assert_allclose(

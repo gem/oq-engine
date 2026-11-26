@@ -25,7 +25,7 @@ from openquake.pfd.params import check_choice, check_style
 from openquake.pfd.secondary_surf_rup.base import BaseSecondarySurfRup
 
 
-class Youngs2003SecondarySR(BaseSecondarySurfRup):
+class YoungsEtAl2003SecondarySR(BaseSecondarySurfRup):
     """Distributed surface-rupture probability model of Youngs et al. (2003).
 
     Youngs, R.R., et al. (2003). A methodology for probabilistic fault
@@ -93,3 +93,8 @@ class Youngs2003SecondarySR(BaseSecondarySurfRup):
 
                 average_result = 0.5 * result1 + 0.5 * result2
                 return average_result
+
+
+class Youngs2003SecondarySR(YoungsEtAl2003SecondarySR):
+    """Deprecated name of :class:`YoungsEtAl2003SecondarySR`."""
+    superseded_by = YoungsEtAl2003SecondarySR

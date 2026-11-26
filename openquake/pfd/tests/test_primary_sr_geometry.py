@@ -29,10 +29,10 @@ import pytest
 from openquake.pfd.adapter import PFDModelAdapter, SOURCE_GEOMETRY_PARAMS
 from openquake.pfd.primary_surf_rup.fixed import FixedPrimarySR
 from openquake.pfd.primary_surf_rup.mammarella2024 import (
-    Mammarella2024PrimarySR)
+    MammarellaEtAl2024PrimarySR)
 from openquake.pfd.primary_surf_rup.wells_coppersmith1993 import (
-    WC1993PrimarySR)
-from openquake.pfd.primary_surf_rup.youngs2003 import Youngs2003PrimarySR
+    WellsCoppersmith1993PrimarySR)
+from openquake.pfd.primary_surf_rup.youngs2003 import YoungsEtAl2003PrimarySR
 
 RED = {'method': 'mean'}
 #: a Mammarella branch that leaves the geometry to the sources
@@ -56,11 +56,11 @@ class Ctx:
 
 def adapter(**extra):
     params = dict(PARAMS, **extra)
-    return PFDModelAdapter(Mammarella2024PrimarySR(**params), params)
+    return PFDModelAdapter(MammarellaEtAl2024PrimarySR(**params), params)
 
 
 def direct(mag, dip, depth):
-    return Mammarella2024PrimarySR(**PARAMS).get_prob(
+    return MammarellaEtAl2024PrimarySR(**PARAMS).get_prob(
         mag, dip_mu=dip, Zs_mu=depth)
 
 
@@ -122,8 +122,8 @@ def test_the_unpinned_branch_reports_nothing():
 
 
 @pytest.mark.parametrize('model,params', [
-    (Youngs2003PrimarySR, {'style': 'all'}),
-    (WC1993PrimarySR, {}),
+    (YoungsEtAl2003PrimarySR, {'style': 'all'}),
+    (WellsCoppersmith1993PrimarySR, {}),
     (FixedPrimarySR, {'value': 0.3})])
 def test_empirical_models_ignore_the_geometry(model, params):
     ad = PFDModelAdapter(model(**params), params)

@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Regression tests for the Visini2025SecondaryFD output orientation.
+Regression tests for the VisiniEtAl2025SecondaryFD output orientation.
 
 The exceedance matrix must always be (n_sites, n_displ) with displacement
 thresholds along columns. The orientation must never be inferred from shape
@@ -27,7 +27,7 @@ with threshold i) instead of the full matrix.
 """
 import numpy as np
 
-from openquake.pfd.secondary_surf_displ.visini2025 import Visini2025SecondaryFD
+from openquake.pfd.secondary_surf_displ.visini2025 import VisiniEtAl2025SecondaryFD
 
 
 
@@ -38,7 +38,7 @@ KW = dict(mag=6.5, X_L_ratio=0.5, dip=60.0, style="reverse")
 
 def test_square_case_matches_rectangular_reference():
     """n_sites == n_displ must yield the same rows as the unambiguous case."""
-    fd = Visini2025SecondaryFD()
+    fd = VisiniEtAl2025SecondaryFD()
     p4 = np.asarray(fd.get_prob(d=D3, s=S4, rx=S4, **KW))
     p3 = np.asarray(fd.get_prob(d=D3, s=S4[:3], rx=S4[:3], **KW))
     assert p4.shape == (4, 3)
@@ -47,7 +47,7 @@ def test_square_case_matches_rectangular_reference():
 
 
 def test_rectangular_orientation_is_sites_by_displacements():
-    fd = Visini2025SecondaryFD()
+    fd = VisiniEtAl2025SecondaryFD()
     p = np.asarray(fd.get_prob(d=D3, s=S4, rx=S4, **KW))
     assert p.shape == (4, 3)
     # exceedance decreases with threshold (along columns) at fixed site ...
@@ -60,7 +60,7 @@ def test_scalar_inputs_yield_single_probability():
     # NB: scalar inputs have always produced a squeezable single-element
     # result (get_median_displacement is atleast_1d internally); the shape
     # fix must not change that contract.
-    fd = Visini2025SecondaryFD()
+    fd = VisiniEtAl2025SecondaryFD()
     p = np.squeeze(fd.get_prob(d=0.1, mag=6.5, s=500.0, rx=500.0,
                                X_L_ratio=0.5, dip=60.0, style="normal"))
     assert p.shape == ()
@@ -68,6 +68,6 @@ def test_scalar_inputs_yield_single_probability():
 
 
 def test_single_site_keeps_row_shape():
-    fd = Visini2025SecondaryFD()
+    fd = VisiniEtAl2025SecondaryFD()
     p = np.asarray(fd.get_prob(d=D3, s=S4[:1], rx=S4[:1], **KW))
     assert p.shape == (1, 3)

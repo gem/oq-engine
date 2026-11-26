@@ -18,14 +18,14 @@
 
 """
 Module :mod:`openquake.pfd.primary_surf_rup.wells_coppersmith1993` implements
-the model of Wells and Coppersmith (1993) in :class:`WC1993PrimarySR`
+the model of Wells and Coppersmith (1993) in :class:`WellsCoppersmith1993PrimarySR`
 """
 
 import numpy as np
 from openquake.pfd.params import check_style
 from openquake.pfd.primary_surf_rup.base import BasePrimarySurfRup
 
-class WC1993PrimarySR(BasePrimarySurfRup):
+class WellsCoppersmith1993PrimarySR(BasePrimarySurfRup):
     """Principal surface-rupture probability model of Wells and Coppersmith (1993).
 
     Logistic model of the probability of principal surface rupture as a
@@ -64,3 +64,8 @@ class WC1993PrimarySR(BasePrimarySurfRup):
         prob = np.exp(fx) / (1.0 + np.exp(fx))
         # To handle both single-value and vectorized calls.
         return prob.item() if prob.shape == () else prob
+
+
+class WC1993PrimarySR(WellsCoppersmith1993PrimarySR):
+    """Deprecated name of :class:`WellsCoppersmith1993PrimarySR`."""
+    superseded_by = WellsCoppersmith1993PrimarySR

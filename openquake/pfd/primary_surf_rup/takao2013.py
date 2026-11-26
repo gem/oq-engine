@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.pfd.primary_surf_rup.takao2013` implements
-the model of Takao et al. (2013) in :class:`Takao2013PrimarySR`
+the model of Takao et al. (2013) in :class:`TakaoEtAl2013PrimarySR`
 
 Supported Fault Styles: Reverse & Strike-Slip
 """
@@ -27,7 +27,7 @@ import numpy as np
 from openquake.pfd.params import check_style
 from openquake.pfd.primary_surf_rup.base import BasePrimarySurfRup
 
-class Takao2013PrimarySR(BasePrimarySurfRup):
+class TakaoEtAl2013PrimarySR(BasePrimarySurfRup):
     """Principal surface-rupture probability model of Takao et al. (2013).
 
     Logistic model of the probability of principal surface rupture as a
@@ -68,3 +68,8 @@ class Takao2013PrimarySR(BasePrimarySurfRup):
         prob = np.exp(fx) / (1.0 + np.exp(fx))
 
         return prob.item() if prob.shape == () else prob
+
+
+class Takao2013PrimarySR(TakaoEtAl2013PrimarySR):
+    """Deprecated name of :class:`TakaoEtAl2013PrimarySR`."""
+    superseded_by = TakaoEtAl2013PrimarySR

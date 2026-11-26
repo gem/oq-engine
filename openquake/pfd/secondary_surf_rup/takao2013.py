@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.pfd.secondary_surf_rup.takao2013` implements the
-model of Takao et al. (2013) in :class:`Takao2013SecondarySR`.
+model of Takao et al. (2013) in :class:`TakaoEtAl2013SecondarySR`.
 
 Supported Fault Styles: Reverse and Strike-slip
 
@@ -34,7 +34,7 @@ import numpy as np
 from openquake.pfd.secondary_surf_rup.base import BaseSecondarySurfRup
 
 
-class Takao2013SecondarySR(BaseSecondarySurfRup):
+class TakaoEtAl2013SecondarySR(BaseSecondarySurfRup):
     """
     Implementation of the Takao et al. (2013) model for reverse and strike-slip faults.
     """
@@ -87,3 +87,8 @@ class Takao2013SecondarySR(BaseSecondarySurfRup):
         prob = np.exp(fx) / (1.0 + np.exp(fx))
 
         return prob.item() if prob.size == 1 else prob
+
+
+class Takao2013SecondarySR(TakaoEtAl2013SecondarySR):
+    """Deprecated name of :class:`TakaoEtAl2013SecondarySR`."""
+    superseded_by = TakaoEtAl2013SecondarySR

@@ -60,7 +60,7 @@ GAMMA_GLOBAL = {
 }
 
 
-class Moss2022PrimaryFD(BasePrimarySurfDispl):
+class MossEtAl2022PrimaryFD(BasePrimarySurfDispl):
     """
     Moss et al. (2022) principal surface fault displacement exceedance model
     for reverse faults.
@@ -74,7 +74,7 @@ class Moss2022PrimaryFD(BasePrimarySurfDispl):
     Moss et al. (2024) Table 3 for the implemented complete/all branches. The
     practical differences are that this class exposes report-specific options:
     ``gamma_mode='global'``, the incomplete MD subset, and the ``sigma_type``
-    selector. Use Moss2024PrimaryFD with ``source='EQS'`` when benchmarking the
+    selector. Use MossEtAl2024PrimaryFD with ``source='EQS'`` when benchmarking the
     Earthquake Spectra Table 2 normalized-displacement alpha/beta parameters.
 
     Reference: GIRS-2022-05 (Revised 1/17/2024). DOI: 10.34948/N3F595
@@ -129,7 +129,7 @@ class Moss2022PrimaryFD(BasePrimarySurfDispl):
         if extras:
             unexpected = ", ".join(sorted(extras))
             raise TypeError(
-                f"Moss2022PrimaryFD.get_prob() got unexpected keyword arguments: {unexpected}"
+                f"MossEtAl2022PrimaryFD.get_prob() got unexpected keyword arguments: {unexpected}"
             )
 
         ver = version.upper()
@@ -219,3 +219,8 @@ class Moss2022PrimaryFD(BasePrimarySurfDispl):
         prob = 1.0 - cdf
 
         return prob.squeeze()
+
+
+class Moss2022PrimaryFD(MossEtAl2022PrimaryFD):
+    """Deprecated name of :class:`MossEtAl2022PrimaryFD`."""
+    superseded_by = MossEtAl2022PrimaryFD
