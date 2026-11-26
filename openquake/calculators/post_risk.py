@@ -382,6 +382,13 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     if quantiles:
         for (agg_id, loss_id), (losses, ws) in quantiles.items():
             if oq.calculation_mode == 'scenario_risk':
+                # Missing tag/realization groups contribute zero losses.
+                rlzs = rbe_df.loc[(rbe_df.agg_id == agg_id) &
+                                  (rbe_df.loss_id == loss_id), 'rlz_id']
+                missing = numpy.setdiff1d(numpy.flatnonzero(num_events), rlzs)
+                if len(missing):
+                    losses.append(0.)
+                    ws.append(weights[missing].sum())
                 # Each GMF is one equally weighted simulation within its rlz.
                 order = numpy.argsort(losses)
                 losses = numpy.asarray(losses)[order]
