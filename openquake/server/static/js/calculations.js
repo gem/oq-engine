@@ -394,6 +394,7 @@ function setTimer() {
     refresh_tag_column();
     refresh_calcs = setInterval(function () {
         refresh_tag_selector();
+        populate_filter_dropdowns();
         fetch_calc_page();
     }, 3000);
 }
@@ -523,31 +524,37 @@ $('select#status_selector').change(function() {
     set_calc_list_params();
 });
 
+// Rebuild the options of a filter <select> only if they changed, so that
+// the periodic refresh does not close a dropdown the user is browsing.
+// The current selection is kept even if no longer present in the DB,
+// otherwise the filter would be silently reset to "all".
+function update_filter_select($sel, values) {
+    var selected = $sel.val();
+    if (selected && !values.includes(selected)) {
+        values = values.concat([selected]);
+    }
+    var current = $sel.find('option').map(function() {
+        return this.value;
+    }).get().slice(1);  // skip the "all" option
+    if (current.join('\n') === values.join('\n')) {
+        return;
+    }
+    $sel.empty().append('<option value="">all</option>');
+    $.each(values, function(_, v) {
+        $sel.append($('<option>').val(v).text(v));
+    });
+    $sel.val(selected);
+}
+
 function populate_filter_dropdowns() {
-    $.getJSON(gem_oq_server_url + "/v1/calc/list_filter_values", function(resp) {
-        var $cm = $('select#calc_mode_selector');
-        var $st = $('select#status_selector');
-        var selected_cm = $cm.val();
-        var selected_st = $st.val();
-
-        $cm.empty().append('<option value="">all</option>');
-        $st.empty().append('<option value="">all</option>');
-
-        $.each(resp.calculation_modes, function(_, m) {
-            $cm.append($('<option>').val(m).text(m));
-        });
-        $.each(resp.statuses, function(_, s) {
-            $st.append($('<option>').val(s).text(s));
-        });
-
-        if (selected_cm && resp.calculation_modes.includes(selected_cm)) {
-            $cm.val(selected_cm);
-        }
-        if (selected_st && resp.statuses.includes(selected_st)) {
-            $st.val(selected_st);
-        }
+    $.getJSON(gem_oq_server_url + "/v1/calc/list_filter_values",
+              function(resp) {
+        update_filter_select($('select#calc_mode_selector'),
+                             resp.calculation_modes);
+        update_filter_select($('select#status_selector'), resp.statuses);
     }).fail(function(jqXHR, textStatus, errorThrown) {
-        console.error('Error fetching filter values:', textStatus, errorThrown);
+        console.error('Error fetching filter values:', textStatus,
+                      errorThrown);
     });
 }
 
