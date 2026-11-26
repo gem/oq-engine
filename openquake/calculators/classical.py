@@ -595,17 +595,20 @@ def classical(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
     # this is what repairs the stragglers when the initial split
     # underestimates the cost of a group. The split is not triggered by
     # the tests, since they have few sites; the reference test is
-    # classical/share_small in oq-risk-tests (split_time = 2)
+    # classical/share_small in oq-risk-tests (split_time = 2). NB: as_rmap
+    # is passed explicitly, so that the monitor appended by the Starmap
+    # ends up in the monitor argument; otherwise the performance info of
+    # the subtasks (computing mean_std, get_poes, ...) would be lost
     if dt > 2 * oq.split_time:
         # all the remaining blocks go to subtasks: computing one of them
         # here would double the time of a task with two heavy sources
         # (6280s instead of 3400s for two HimalayanThrust pieces in CHN)
         for blk in blks:
             yield (baseclassical, blk, tilegetter, cmaker, remove_zeros,
-                   gids, dstore)
+                   gids, dstore, as_rmap)
     elif dt > oq.split_time:
         yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
-               remove_zeros, gids, dstore)
+               remove_zeros, gids, dstore, as_rmap)
         rest = sum(blks[2:], [])
         if rest:
             yield baseclassical(
