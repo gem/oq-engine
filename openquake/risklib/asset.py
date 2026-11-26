@@ -1307,12 +1307,13 @@ class Exposure(object):
                 assets_df[name] = self.tagcol.get_tagi(name, assets_df)
 
         assets_df.sort_values(['lon', 'lat'], inplace=True)
-        ll = numpy.zeros((len(assets_df), 2))
-        ll[:, 0] = assets_df['lon']
-        ll[:, 1] = assets_df['lat']
-        ll, sids = numpy.unique(ll, return_inverse=1, axis=0)
-        assets_df['site_id'] = sids
-        mesh = geo.Mesh(ll[:, 0], ll[:, 1])
+        lons = assets_df['lon'].to_numpy()
+        lats = assets_df['lat'].to_numpy()
+        # Equal locations are already contiguous after the sort.
+        first = numpy.ones(len(assets_df), bool)
+        first[1:] = (lons[1:] != lons[:-1]) | (lats[1:] != lats[:-1])
+        assets_df['site_id'] = first.cumsum() - 1
+        mesh = geo.Mesh(lons[first].astype(float), lats[first].astype(float))
         logging.info(
             'Inferred exposure mesh in %.2f seconds', time.time() - t0)
 
