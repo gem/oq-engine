@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Split the magnitudes of the big simple and complex faults in pieces,
+    depending on the number and size of the ruptures, to avoid slow tasks
   * Faster probabilities of exceedance in classical calculations, using a
     tabulated cubic approximation of the normal CDF (more than doubling
     the speed of get_poes)
