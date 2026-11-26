@@ -911,7 +911,12 @@ WHERE id = ?x
 def list_tags(db):
     rows = db("SELECT name FROM tag ORDER BY name")
     tags = [row.name for row in rows]
-    return {'success': 'ok', 'tags': tags}
+    # used by the WebUI to hide the Tags column when no job has a tag
+    any_tagged_job = bool(db(
+        "SELECT EXISTS (SELECT 1 FROM job_tag AS jt "
+        "JOIN job AS j ON j.id = jt.job_id WHERE j.status != 'deleted')",
+        scalar=True))
+    return {'success': 'ok', 'tags': tags, 'any_tagged_job': any_tagged_job}
 
 
 def update_parent_child(db, parent_child):

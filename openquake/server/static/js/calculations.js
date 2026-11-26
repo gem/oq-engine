@@ -18,6 +18,9 @@ var refresh_calcs;
 var calc_page = 0;
 var calc_page_size = window.calc_list_page_size || 10;
 var calc_total = 0;
+// whether any job has a tag; updated by refresh_tag_selector and used
+// by render to hide the Tags column when there is nothing to show
+var any_tagged_job = true;
 
 var Calculation = Backbone.Model.extend({
     defaults: {
@@ -380,6 +383,9 @@ var CalculationTable = Backbone.View.extend({
             this.$el.html(table_html);
             this.table_html = table_html;
         }
+        // the template always draws the Tags column, so re-apply the
+        // visibility after each render
+        this.$el.find('.tag-column-table').toggle(any_tagged_job);
         this.$el.find('.pagination').remove();
         this.render_pagination();
     }
@@ -391,7 +397,6 @@ $(document).on('errorDialog:hidden', function () {
 
 function setTimer() {
     closeTimer();
-    refresh_tag_column();
     refresh_calcs = setInterval(function () {
         refresh_tag_selector();
         populate_filter_dropdowns();
@@ -464,25 +469,11 @@ function set_calc_list_params() {
     fetch_calc_page();
 }
 
-function refresh_tag_column() {
-    $.getJSON(gem_oq_server_url + '/v1/calc/list_tags', function(resp) {
-        if (resp.tags.length == 0) {
-            $(".tag-column-table").hide();
-        } else {
-            $(".tag-column-table").show();
-        }
-    }).fail(function(jqXHR, textStatus, errorThrown) {
-        console.error('Error fetching tags:', textStatus, errorThrown);
-    });
-}
-
 function refresh_tag_selector() {
     $.getJSON(gem_oq_server_url + '/v1/calc/list_tags', function(resp) {
-        if (resp.tags.length == 0) {
-            $("div#tag-filters").hide();
-        } else {
-            $("div#tag-filters").show();
-        }
+        any_tagged_job = resp.any_tagged_job;
+        $("div#tag-filters").toggle(resp.tags.length > 0);
+        $(".tag-column-table").toggle(any_tagged_job);
         const tag_selector = $('#tag_selector');
         const selected_tag = tag_selector.val();
         tag_selector.empty();
