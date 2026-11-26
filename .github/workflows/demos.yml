@@ -55,10 +55,10 @@ jobs:
           if [ -z "$GITHUB_INPUT_REF" ]
           then
               echo "This is not a workflow_dispatch RUN, use: $GITHUB_DEF_BR"
-              python install.py devel --version ${GITHUB_DEF_BR}
+              python install.py devel
           else
               echo "This is a workflow_dispatch RUN, use: $GITHUB_INPUT_REF"
-              python install.py devel --version ${GITHUB_INPUT_REF}
+              python install.py devel
           fi
       - name: Run demos and upload to docs.openquake.org
         # uncomment the line below to avoid running this part when triggering the action manually
