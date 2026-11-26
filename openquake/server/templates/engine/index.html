@@ -70,40 +70,40 @@
       <tbody>
         <% _.each(calculations, function(calc) { %>
         <% if (calc.get('status') == 'deleted' || calc.get('relevant') == 0) { return 0; } %>
-        <tr class="<%= (calc.get('status') == 'created' || calc.get('is_running') == true) ? 'warning' : (calc.get('status') == 'complete' || calc.get('status') == 'shared' ? 'success' : 'error') %>">
-          <td><%= calc.get('id') || 'New' %></td>
-          <td><%= calc.get('owner') %></td>
-          <td><%= calc.get('calculation_mode') %></td>
-          <td><%= calc.get('description') %></td>
-          <td><%= calc.get('tags') %></td>
-          <td><%= calc.get('start_time') %></td>
+        <tr class="<%- (calc.get('status') == 'created' || calc.get('is_running') == true) ? 'warning' : (calc.get('status') == 'complete' || calc.get('status') == 'shared' ? 'success' : 'error') %>">
+          <td><%- calc.get('id') || 'New' %></td>
+          <td><%- calc.get('owner') %></td>
+          <td><%- calc.get('calculation_mode') %></td>
+          <td><%- calc.get('description') %></td>
+          <td><%- calc.get('tags') %></td>
+          <td><%- calc.get('start_time') %></td>
           <td class="calc-status">
             <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('status') == 'shared' || calc.get('is_running') == true) { %>
-              <%= calc.get('status') %>
+              <%- calc.get('status') %>
             <% } else { %>
-              failed<br>( <%= calc.get('status') %> )
+              failed<br>( <%- calc.get('status') %> )
             <% } %>
           </td>
           <td>
             <% if (calc.get('status') != 'created') { %>
-              <a href="#" data-calc-id="<%= calc.get('id') %>" is-running="<%= calc.get('is_running') %>" class="btn btn-sm btn-log calc-list-btn" style="margin: 2px 0 2px 0;">Console</a>
+              <a href="#" data-calc-id="<%- calc.get('id') %>" is-running="<%- calc.get('is_running') %>" class="btn btn-sm btn-log calc-list-btn" style="margin: 2px 0 2px 0;">Console</a>
               <% if (calc.get('is_running') == false) { %>
                 {% if application_mode != 'READ_ONLY' and user_level > 0 %}
-                <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-danger calc-list-btn btn-remove" style="margin: 2px 0 2px 0;">Remove</a>
+                <a href="#" data-calc-id="<%- calc.get('id') %>" data-calc-desc="<%- calc.get('description') %>" class="btn btn-sm btn-danger calc-list-btn btn-remove" style="margin: 2px 0 2px 0;">Remove</a>
                 {% endif %}
                 <% if (calc.get('status') == 'complete' || calc.get('status') == 'shared') { %>
 
                 {% if application_mode != 'READ_ONLY' and lockdown %}
                 <% if (calc.get('can_manage_sharing')) { %>
                   <% if (calc.get('status') == 'complete') { %>
-                    <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-info calc-list-btn btn-share" style="margin: 2px 0 2px 0;">Share</a>
+                    <a href="#" data-calc-id="<%- calc.get('id') %>" data-calc-desc="<%- calc.get('description') %>" class="btn btn-sm btn-info calc-list-btn btn-share" style="margin: 2px 0 2px 0;">Share</a>
                   <% } else if (calc.get('status') == 'shared') { %>
-                    <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-info calc-list-btn btn-unshare" style="margin: 2px 0 2px 0;">Unshare</a>
+                    <a href="#" data-calc-id="<%- calc.get('id') %>" data-calc-desc="<%- calc.get('description') %>" class="btn btn-sm btn-info calc-list-btn btn-unshare" style="margin: 2px 0 2px 0;">Unshare</a>
                   <% } %>
                 <% } %>
                 {% endif %}
 
-                <a href="{% url "index" %}/<%= calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% elif  application_mode == 'IMPACT' %}outputs_impact{% else %}outputs{% endif %}" class="btn btn-sm calc-list-btn" style="margin: 2px 0 2px 0">Outputs</a>
+                <a href="{% url "index" %}/<%- calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% elif  application_mode == 'IMPACT' %}outputs_impact{% else %}outputs{% endif %}" class="btn btn-sm calc-list-btn" style="margin: 2px 0 2px 0">Outputs</a>
                   {% if application_mode != 'AELO' and application_mode != 'IMPACT' and application_mode != 'READ_ONLY' and user_level > 0 %}
                   <form class="calc-form" enctype="multipart/form-data"
                     style="margin: 0; display: inline-block"
@@ -112,15 +112,15 @@
                   <div class="fileinput-new" data-provides="fileinput" style="margin: 2px 0 2px 0">
                     <span class="btn btn-default btn-sm btn-file calc-list-btn"><span class="fileinput-new">Continue</span><input type="file" name="archive"/></span>
                   </div>
-                  <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
+                  <input type="hidden" name="hazard_job_id" value="<%- calc.get('id') %>"/>
                   </form>
                   {% endif %}
                 <% } else { %>
-                  <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback calc-list-btn" style="margin: 2px 0 2px 0;">Traceback</a>
+                  <a href="#" data-calc-id="<%- calc.get('id') %>" class="btn btn-sm btn-traceback calc-list-btn" style="margin: 2px 0 2px 0;">Traceback</a>
                 <% } %>
               <% } else if (calc.get('abortable')) { %>
               {% if application_mode != 'READ_ONLY' and user_level > 0 %}
-              <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-danger calc-list-btn btn-abort" style="margin: 2px 0 2px 0;">Abort</a>
+              <a href="#" data-calc-id="<%- calc.get('id') %>" data-calc-desc="<%- calc.get('description') %>" class="btn btn-sm btn-danger calc-list-btn btn-abort" style="margin: 2px 0 2px 0;">Abort</a>
               {% endif %}
             <% } %>
           <% } %>

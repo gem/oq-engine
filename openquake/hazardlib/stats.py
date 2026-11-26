@@ -237,6 +237,13 @@ def quantile_curve(quantile, curves, weights=None):
     else:
         weights = numpy.array(weights)
         assert len(weights) == R, (len(weights), R)
+    if R == 1:
+        # all the quantiles of a single curve are the curve itself; this is
+        # the case of the calculations with a single realization, as every
+        # ShakeMap-based impact job, where the statistics are not stored
+        # but computed on the fly (for instance in the impact reports): the
+        # loop below would be very slow for many assets
+        return numpy.array(curves[0], float)
     result = numpy.zeros(curves.shape[1:])
     for idx, _ in numpy.ndenumerate(result):
         cw = numpy.zeros(R, cw_dt)  # (curve, weight)

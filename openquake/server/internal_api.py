@@ -191,6 +191,9 @@ def db_action(action, payload):
         result = func(dbapi.db, *args, **kwargs)
     except dbapi.NotFound:
         raise
+    except dbapi.InvalidName as exc:
+        # tested in db_api_test.py: the caller sent a malformed column name
+        raise ApiError(400, str(exc)) from exc
     except Exception as exc:
         logging.exception('Database action failed: %s', action)
         raise ApiError(500, str(exc)) from exc

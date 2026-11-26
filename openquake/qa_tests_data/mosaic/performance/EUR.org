@@ -215,3 +215,15 @@ with OQ_SAMPLE_SITES=.5 on job_vs30.ini (also 127_890 sites).
 | save_rates        | rmap=28.43 GB num_chunks=735 B h5=588 B                 | 588 B     |
 | fast_mean         | pgetter=104.48 MB                                       | 177.61 MB |
 | make_hmap_png     | lons=13.66 MB hmap=6.83 MB                              | 16.41 MB  |
+
+* errors on the UHS, ps_grid_spacing=0 as reference
+
+mean_err and p99_err have one element for each poe, in the order of the UHS poes (0.002105 0.000404).
+
+| version              | mean_err            | p99_err           |
+|----------------------|---------------------|-------------------|
+| 3.23.5               | 0.0003718 0.0006146 | 0.002408 0.004559 |
+| 3.24.1               | 0.005538 0.01292    | 0.09279 0.2008    |
+| 3.25.1               | 0.005538 0.01292    | 0.09279 0.2008    |
+| 3.26.2               | 0.005551 0.01295    | 0.0933 0.2013     |
+| 3.27.0-git11e4d59a1d | 0.0003473 0.0005927 | 0.004278 0.00704  |

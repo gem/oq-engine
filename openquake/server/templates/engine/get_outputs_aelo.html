@@ -90,10 +90,10 @@
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
-        <tr class= <%= ['asce07', 'asce41', 'asce41_sa_final', 'mce_governing'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %> >
-          <td><%= output.get('id') || 'New' %></td>
+        <tr class= <%- ['asce07', 'asce41', 'asce41_sa_final', 'mce_governing'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %> >
+          <td><%- output.get('id') || 'New' %></td>
           <td>
-            <%= output.get('name') %>
+            <%- output.get('name') %>
             <p style="clear:both;"></p>
             {# NOTE: I couldn't easily factorize the two asce cases because of the mixed javascript and django templating syntaxes #}
             <% if (output.get('type') == 'asce07') { %>
@@ -118,7 +118,7 @@
               <%   return; // works like continue in underscore.js %>
               <% }%>
               <tr>
-                <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm">Download <%= outtype %></a></td>
+                <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%- output.get('id') %>?export_type=<%- outtype %>" class="btn btn-sm">Download <%- outtype %></a></td>
               </tr>
             <% }); %>
             </table>

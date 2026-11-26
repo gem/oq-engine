@@ -98,12 +98,14 @@ var CalculationTable = Backbone.View.extend({
 
     confirm_modify_calculation: function (e, action) {
         e.preventDefault();
-        const calc_id = $(e.target).data('calc-id');
-        const calc_desc = $(e.target).data('calc-desc');
+        const calc_id = $(e.target).attr('data-calc-id');
+        // the description is user-provided text: escape it, since the
+        // modal body is set with innerHTML
+        const calc_desc = $(e.target).attr('data-calc-desc');
 
         showConfirmationModal({
             title: capitalizeFirstLetter(action) + ' calculation',
-            body: `Are you sure you want to ${action} calculation ${calc_id}?<br><em>"${calc_desc}"</em>`,
+            body: `Are you sure you want to ${action} calculation ${_.escape(calc_id)}?<br><em>"${_.escape(calc_desc)}"</em>`,
             confirmText: `Yes, ${action}`,
             confirmAction: () => this.modify_calculation(e, action)
         });
@@ -127,14 +129,14 @@ var CalculationTable = Backbone.View.extend({
                             type: "POST",
                             error: function (jqXHR, textStatus, errorThrown) {
                                 if (jqXHR.status == 403) {
-                                    diaerror.show(false, "Error", JSON.parse(jqXHR.responseText).error);
+                                    diaerror.show_text(false, "Error", JSON.parse(jqXHR.responseText).error);
                                 }
                             },
                             success: function (data, textStatus, jqXHR) {
                                 if(data.error) {
-                                    diaerror.show(false, "Error", data.error);
+                                    diaerror.show_text(false, "Error", data.error);
                                 } else {
-                                    diaerror.show(false, "Calculation " + action_ed, 'Calculation ' + calc_id + ' "' + calc_desc + '"</b> has been ' + action_ed);
+                                    diaerror.show(false, "Calculation " + action_ed, 'Calculation ' + _.escape(calc_id) + ' "' + _.escape(calc_desc) + '" has been ' + action_ed);
                                     if (action == 'abort') {
                                         view.calculations.remove([view.calculations.get(calc_id)]);
                                     }
@@ -166,7 +168,7 @@ var CalculationTable = Backbone.View.extend({
                                     for (s in data) {
                                         if (data[s] == "")
                                             continue;
-                                        out += '<p ' + (ct % 2 == 1 ? 'style="background-color: #ffffff;"' : '') + '>' + data[s] + '</p>';
+                                        out += '<p ' + (ct % 2 == 1 ? 'style="background-color: #ffffff;"' : '') + '>' + _.escape(data[s]) + '</p>';
                                         ct++;
                                     }
                                     diaerror.show(true, "Traceback of calculation " + calc_id, out);
@@ -450,8 +452,7 @@ function refresh_tag_selector() {
         tag_selector.empty();
         tag_selector.append('<option value="">All tags</option>');
         $.each(resp.tags, function(_, tag) {
-            const safeTag = $('<div>').text(tag).html(); // escape HTML
-            tag_selector.append(`<option value="${safeTag}">${safeTag}</option>`);
+            tag_selector.append($('<option>').val(tag).text(tag));
         });
         // Try to restore previous selection if still available
         if (selected_tag && resp.tags.includes(selected_tag)) {

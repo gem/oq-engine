@@ -694,8 +694,8 @@ class GsimLogicTree(lt.AbstractLogicTree):
             value = []
             for branch in branches:
                 lt_uid.append(branch.id if branch.effective else '.')
-                for imt in branch.weight.dic:
-                    weight[imti.get(imt, len(imti))] *= branch.weight[imt]
+                for imt, idx in imti.items():
+                    weight[idx] *= branch.weight[imt]
                 value.append(branch.gsim)
             rlzs.append(lt.Realization(
                 tuple(value), weight, ordinal, tuple(lt_uid)))
