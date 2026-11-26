@@ -1294,6 +1294,8 @@ def aelo_run(request):
         a `django.http.HttpRequest` object containing lon, lat, site_name,
         asce_version, site_class, vs30
     """
+    if get_user_level(request) == 0:
+        return HttpResponseForbidden()
     data = drop_email_file_path(request.POST.dict())
     data.update(
         username=utils.get_username(request),
