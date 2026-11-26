@@ -15,15 +15,48 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import collections
+from types import SimpleNamespace
 
 import numpy
 import shapely.geometry
 
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
+from openquake.hazardlib.site import SiteCollection
 
 Point = collections.namedtuple("Point",  'lon lat')
 aac = numpy.testing.assert_allclose
+
+
+class ExposureAssociationTestCase(unittest.TestCase):
+    def test_asset_order_and_discarded_sites(self):
+        lons = numpy.array([0., .01, .02, .06, .15, .2])
+        lats = numpy.zeros_like(lons)
+        mesh = geo.Mesh(lons, lats)
+        site_ids = [0, 1, 1, 2, 3, 4, 5]
+        assets = numpy.zeros(len(site_ids), [
+            ('id', 'S2'), ('lon', float), ('lat', float),
+            ('site_id', numpy.uint32), ('ordinal', numpy.uint32)])
+        assets['id'] = [b'a', b'b1', b'b2', b'c', b'd', b'e', b'f']
+        assets['site_id'] = site_ids
+        assets['lon'] = lons[site_ids]
+        exp = SimpleNamespace(mesh=mesh, assets=assets)
+        sites = SiteCollection.from_points([.15, .01], [0., 0.])
+        objects = utils._GeographicObjects(sites)
+        region = shapely.geometry.box(-.1, -.1, .18, .1)
+
+        with self.assertRaisesRegex(utils.SiteAssociationError,
+                                    'There is nothing closer'):
+            objects.assoc2(exp, 2., region, 'strict')
+        sitecol, discarded = objects.assoc2(exp, 2., region, 'filter')
+        numpy.testing.assert_array_equal(sitecol.sids, [0, 1])
+        numpy.testing.assert_array_equal(
+            exp.assets['id'], [b'e', b'a', b'b1', b'b2', b'c'])
+        numpy.testing.assert_array_equal(
+            exp.assets['site_id'], [0, 1, 1, 1, 1])
+        numpy.testing.assert_array_equal(
+            exp.assets['ordinal'], numpy.arange(5))
+        numpy.testing.assert_array_equal(discarded['asset_ref'], [b'd'])
 
 
 class CleanPointTestCase(unittest.TestCase):
