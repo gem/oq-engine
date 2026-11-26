@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
 import os
-import pickle
 import sys
 import abc
 import json
@@ -1003,6 +1002,14 @@ class HazardCalculator(BaseCalculator):
             if len(self.crmodel.tmap_df):
                 self.datastore.create_df(
                     'taxmap', self.crmodel.tmap_df, 'gzip')
+            # the group is always created, so that a child calculation
+            # never reads the consequences of its parent by mistake
+            consdict = {key: df for key, df in self.crmodel.consdict.items()
+                        if len(df)}
+            group = self.datastore.hdf5.create_group('consdict')
+            group.attrs['keys'] = ' '.join(consdict)
+            for key, df in consdict.items():
+                self.datastore.create_df(f'consdict/{key}', df)
 
     def _plot_assets(self):
         # called by post_risk in IMPACT mode
@@ -1421,26 +1428,34 @@ class HazardCalculator(BaseCalculator):
                 func(self.datastore, **oq.postproc_args)
 
 
-def prepare_risk_worker_data(dstore, crmodel, assetcol=None):
-    """Create the group of prepared inputs shared by risk workers."""
+def prepare_risk_worker_data(dstore, assetcol, oq):
+    """
+    Create the group of the data shared by the risk workers, i.e. the
+    aggregation IDs of the assets; the risk model is read from `crm`
+    """
     if dstore.hdf5.swmr_mode:
         dstore.close()
         dstore.open('a')
     if '_risk_worker' in dstore.hdf5:
         del dstore['_risk_worker']
     worker = dstore.hdf5.create_group('_risk_worker')
-    worker['crmodel'] = numpy.void(
-        pickle.dumps(crmodel, protocol=pickle.HIGHEST_PROTOCOL))
-    if assetcol is not None and crmodel.oqparam.K:
-        aggids, _ = assetcol.build_aggids(crmodel.oqparam.aggregate_by)
+    if oq.K:
+        aggids, _ = assetcol.build_aggids(oq.aggregate_by)
         dtype = numpy.min_scalar_type(aggids.max(initial=0))
         worker['aggids'] = aggids.astype(dtype, copy=False)
     return worker
 
 
-def read_worker_model(h5):
-    """Read the prepared risk model, including runtime settings."""
-    return pickle.loads(h5['_risk_worker/crmodel'][()])
+def read_crmodel(monitor, oq):
+    """
+    Read the risk model stored by .save_crmodel, possibly in the parent
+
+    :param monitor: a Monitor associated to the calculation datastore
+    :param oq: the OqParam instance of the calculation, with runtime
+        attributes set
+    """
+    with datastore.read(monitor.filename) as dstore:
+        return riskmodels.CompositeRiskModel.read(dstore, oq)
 
 
 class RiskCalculator(HazardCalculator):
@@ -1467,6 +1482,10 @@ class RiskCalculator(HazardCalculator):
             taxidx = {taxo: i for i, taxo in enumerate(taxonomies, 1)}
             self.crmodel.tmap_df = readinput.taxonomy_mapping(
                 self.oqparam, taxidx)
+            # the workers read the taxonomy mapping from the datastore
+            if 'taxmap' not in self.datastore.hdf5:
+                self.datastore.create_df(
+                    'taxmap', self.crmodel.tmap_df, 'gzip')
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
@@ -1503,14 +1522,13 @@ class RiskCalculator(HazardCalculator):
             return
         ct = self.oqparam.concurrent_tasks or 1
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
-        prepare_risk_worker_data(self.datastore, self.crmodel)
-        with self.datastore.reopen('r'):
-            smap = parallel.Starmap(
-                self.core_task.__func__, h5=self.datastore, perf='memory')
-            for block in general.block_splitter(
-                    self.riskinputs, maxw, get_weight, sort=True):
-                smap.submit((block, self.oqparam))
-            return smap.reduce()
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(
+            self.core_task.__func__, h5=self.datastore.hdf5)
+        for block in general.block_splitter(
+                self.riskinputs, maxw, get_weight, sort=True):
+            smap.submit((block, self.oqparam))
+        return smap.reduce()
 
 
 def longname(name, columns):

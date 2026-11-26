@@ -1125,14 +1125,13 @@ class Starmap(object):
         return self.perf == 'memory' or self.h5.mode != 'r'
 
     def _loop(self):
-        # Save an append-only snapshot even if the iteration stops early.
+        # the performance info is merged also when the iteration is
+        # stopped early, since the generator is closed in that case
         try:
             yield from self._loop_tasks()
         finally:
             if self.perf == 'memory':
                 self._merge_performance()
-            elif self.save_info():
-                save_task_sent(self.h5, self.sent)
 
     def _loop_tasks(self):
         self.busytime = AccumDict()  # name -> pid -> time
@@ -1218,6 +1217,8 @@ class Starmap(object):
         todo = set(range(self.task_no)) - finished
         logging.debug('%d tasks todo %s', len(todo),
                       shortlist(sorted(todo)))
+        if self.perf != 'memory' and self.save_info():
+            save_task_sent(self.h5, self.sent)
         if self.distribute in ('zmq', 'slurm'):
             mem_gb = 0
             if res.mon.task_no % 10 == 0:

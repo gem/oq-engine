@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib import hdf5
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
 from openquake.calculators import base
@@ -36,8 +35,7 @@ def classical_risk(riskinputs, oqparam, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    with hdf5.File(monitor.filename, 'r') as h5:
-        crmodel = base.read_worker_model(h5)
+    crmodel = base.read_crmodel(monitor, oqparam)
     result = dict(loss_curves=[], stat_curves=[])
     weights = oqparam._weights[:, -1]
     _statnames, stats = zip(*oqparam._stats)
@@ -117,9 +115,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         :param result: aggregated result of the task classical_risk
         """
-        curve_res = {cp.loss_type: cp.curve_resolution
-                     for cp in self.crmodel.curve_params
-                     if cp.user_provided}
+        curve_res = self.crmodel.get_curve_resolutions()
         self.loss_curve_dt = scientific.build_loss_curve_dt(
             curve_res, insurance_losses=False)
         ltypes = self.crmodel.loss_types

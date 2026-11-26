@@ -374,7 +374,8 @@ class RiskModel(object):
         """
         n = len(assets)
         vf = self.risk_functions[peril][loss_type]
-        lratios = self.loss_ratios[loss_type]
+        lratios = self.compositemodel.common_ratios.get(
+            loss_type, self.loss_ratios[loss_type])
         imls = self.hazard_imtls[vf.imt]
         poes = hazard_curve[self.hazard_imtls(vf.imt)]
         if loss_type == 'occupants':
@@ -607,7 +608,6 @@ class CompositeRiskModel(collections.abc.Mapping):
     tmap_df = ()  # to be set
 
     @classmethod
-    # TODO: reading new-style consequences is missing
     def read(cls, dstore, oqparam, country='???'):
         """
         :param dstore: a DataStore instance
@@ -626,17 +626,21 @@ class CompositeRiskModel(collections.abc.Mapping):
             risklist.limit_states = dstore.get_attr(
                 f'crm{region}', 'limit_states')
         df = dstore.read_df(f'crm{region}')
-        for i, (rf_json, lt) in enumerate(
-                zip(df.riskfunc, df.loss_type)):
+        if 'peril' in df.columns:
+            perils = df.peril
+        else:  # in engine < 3.22 the peril was not stored
+            perils = ['groundshaking'] * len(df)
+        for rf_json, lt, peril in zip(df.riskfunc, df.loss_type, perils):
             rf = hdf5.json_to_obj(rf_json)
-            try:
-                rf.peril = df.loc[i].peril
-            except AttributeError:  # in engine < 3.22 the peril was not stored
-                rf.peril = 'groundshaking'
+            rf.peril = peril
             if rf.kind == 'fragility':  # rf is a FragilityFunctionList
                 risklist.append(rf)
             else:  # rf is a vulnerability function
                 rf.init()
+                if getattr(rf, 'retro', False):  # stored as a dict
+                    rf.retro = hdf5.json_to_obj(json.dumps(rf.retro))
+                    rf.retro.init()
+                    rf.retro.loss_type = lt
                 if lt.endswith('_retrofitted'):
                     # strip _retrofitted, since len('_retrofitted') = 12
                     rf.loss_type = lt[:-12]
@@ -645,7 +649,11 @@ class CompositeRiskModel(collections.abc.Mapping):
                     rf.loss_type = lt
                     rf.kind = 'vulnerability'
                 risklist.append(rf)
-        crm = CompositeRiskModel(oqparam, risklist)
+        consdict = {}
+        if 'consdict' in dstore:  # saved by save_crmodel, in order
+            for key in dstore['consdict'].attrs['keys'].split():
+                consdict[key] = dstore.read_df(f'consdict/{key}')
+        crm = CompositeRiskModel(oqparam, risklist, consdict)
         if 'taxmap' in dstore:
             crm.tmap_df = dstore.read_df('taxmap')
         return crm
@@ -808,13 +816,13 @@ class CompositeRiskModel(collections.abc.Mapping):
             for riskid, vfs in self.risklist.groupby_id().items():
                 self._riskmodels[riskid] = get_riskmodel(riskid, oq, vfs)
         self.imtls = oq.imtls
-        self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         # build a sorted list with all the loss_types contained in the model
         ltypes = set()
         for rm in self.values():
             ltypes.update(rm.loss_types)
         self.loss_types = sorted(ltypes)
+        self.lti = {lt: li for li, lt in enumerate(self.loss_types)}
         self.distributions = set()
         for rm in self._riskmodels.values():
             rm.compositemodel = self
@@ -828,7 +836,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 # save the number of nonzero coefficients of variation
                 if hasattr(rf, 'covs') and rf.covs.any():
                     self.covs += 1
-        self.curve_params = self.make_curve_params()
+        self._set_common_ratios()
 
         # possibly set oq.minimum_intensity
         iml = collections.defaultdict(list)
@@ -920,54 +928,31 @@ class CompositeRiskModel(collections.abc.Mapping):
                 arr[a, r] = tuple(lst)
         return arr
 
-    def make_curve_params(self):
-        # the CurveParams are used only in classical_risk, classical_bcr
-        # NB: populate the inner lists .loss_types too
-        cps = []
-        for lti, loss_type in enumerate(self.loss_types):
-            if self.oqparam.calculation_mode in (
-                    'classical', 'classical_risk'):
-                curve_resolutions = set()
-                lines = []
-                allratios = []
-                for taxo in sorted(self):
-                    rm = self[taxo]
-                    rf = rm.risk_functions['groundshaking'][loss_type]
-                    if loss_type in rm.loss_ratios:
-                        ratios = rm.loss_ratios[loss_type]
-                        allratios.append(ratios)
-                        curve_resolutions.add(len(ratios))
-                        lines.append('%s %d' % (rf, len(ratios)))
-                if len(curve_resolutions) > 1:
-                    # number of loss ratios is not the same for all taxonomies:
-                    # then use the longest array; see classical_risk case_5
-                    allratios.sort(key=len)
-                    for rm in self.values():
-                        if rm.loss_ratios[loss_type] != allratios[-1]:
-                            rm.loss_ratios[loss_type] = allratios[-1]
-                            # logging.debug(f'Redefining loss ratios for {rm}')
-                cp = scientific.CurveParams(
-                    lti, loss_type, max(curve_resolutions), allratios[-1], True
-                ) if curve_resolutions else scientific.CurveParams(
-                    lti, loss_type, 0, [], False)
-            else:  # used only to store the association l -> loss_type
-                cp = scientific.CurveParams(lti, loss_type, 0, [], False)
-            cps.append(cp)
-            self.lti[loss_type] = lti
-        return cps
+    def _set_common_ratios(self):
+        # in classical_risk, if the loss ratios of the risk models for a
+        # loss type have different lengths, the longest ones are used for
+        # all taxonomies, since the loss curves are stored in a single array
+        # and averaged when using a taxonomy mapping (case_5, case_lisa);
+        # it is called again by .reduce, to consider only the used taxonomies
+        self.common_ratios = {}
+        for lt in self.loss_types:
+            allratios = [self[taxo].loss_ratios[lt] for taxo in sorted(self)
+                         if lt in getattr(self[taxo], 'loss_ratios', {})]
+            if len({len(ratios) for ratios in allratios}) > 1:
+                allratios.sort(key=len)
+                self.common_ratios[lt] = allratios[-1]
 
-    def get_loss_ratios(self):
+    def get_curve_resolutions(self):
         """
-        :returns: a 1-dimensional composite array with loss ratios by loss type
+        :returns: a dictionary loss_type -> maximum number of loss ratios,
+            used by classical_risk to build the dtype of the loss curves;
+            shorter curves are padded with NaNs
         """
-        lst = [('user_provided', bool)]
-        for cp in self.curve_params:
-            lst.append((cp.loss_type, F32, len(cp.ratios)))
-        loss_ratios = numpy.zeros(1, numpy.dtype(lst))
-        for cp in self.curve_params:
-            loss_ratios['user_provided'] = cp.user_provided
-            loss_ratios[cp.loss_type] = tuple(cp.ratios)
-        return loss_ratios
+        res = AccumDict(accum=0)
+        for rm in self.values():
+            for lt, ratios in getattr(rm, 'loss_ratios', {}).items():
+                res[lt] = max(res[lt], len(ratios))
+        return dict(res)
 
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
@@ -1021,6 +1006,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         new.risklist = copy.copy(self.risklist)
         new.risklist[:] = [
             rf for rf in self.risklist if rf.id in new._riskmodels]
+        new._set_common_ratios()
         return new
 
     def get_attrs(self):
@@ -1030,10 +1016,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         attrs = dict(covs=self.covs, loss_types=loss_types,
                      limit_states=limit_states,
                      consequences=self.get_consequences())
-        rf = next(iter(self.values()))
-        if hasattr(rf, 'loss_ratios'):
-            for lt in self.loss_types:
-                attrs['loss_ratios_' + lt] = rf.loss_ratios[lt]
         return attrs
 
     def to_dframe(self):

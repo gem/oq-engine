@@ -11,6 +11,7 @@ import numpy
 import pandas
 import pytest
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.calculators.event_based_damage import damage_from_gmfs
 from openquake.calculators.event_based_risk import aggreg, build_alt
@@ -56,7 +57,7 @@ def test_variance_independent_of_asset_chunks(correlation, variance):
 
 @pytest.mark.parametrize('number', [0., .5, 1., 10.])
 @pytest.mark.parametrize('realizations', [1, 2])
-def test_compose_peril_damage_counts(number, realizations):
+def test_compose_peril_damage_counts(number, realizations, tmp_path):
     # Compose probabilities, then recover counts; keep per-peril data intact.
     crmodel = SimpleNamespace(
         perils=['groundshaking', 'liquefaction'],
@@ -70,13 +71,16 @@ def test_compose_peril_damage_counts(number, realizations):
     assetcol.__getitem__.return_value = numpy.array([0])
     assetcol.to_dframe.return_value = assets
     monitor = MagicMock()
-    monitor.read.side_effect = {'crmodel': crmodel,
-                                'aggids': numpy.array([[0]])}.__getitem__
+    monitor.filename = str(tmp_path / 'calc.hdf5')
+    with hdf5.File(monitor.filename, 'w') as h5:
+        h5['_risk_worker/aggids'] = numpy.array([[0]])
     oq = SimpleNamespace(R=realizations, L=1, K=1, float_dmg_dist=True)
     gmfs = pandas.DataFrame(dict(sid=[0, 0], eid=[0, 1]))
     dd5 = numpy.array([[[[[0., 1., 3.]], [[.8, .2, 3.]]]],
                        [[[[0., 1., 7.]], [[.5, .5, 7.]]]]]) * number
-    with patch('openquake.risklib.scientific.RiskComputer') as rc:
+    with (patch('openquake.risklib.scientific.RiskComputer') as rc,
+          patch('openquake.calculators.base.read_crmodel',
+                return_value=crmodel)):
         rc.return_value.get_dd5.return_value = dd5
         totals, damages, ords = damage_from_gmfs(
             gmfs, assetcol, oq, numpy.array([0, 1]), monitor)

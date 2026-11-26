@@ -24,22 +24,19 @@ from openquake.baselib.performance import (
     Monitor, init_performance, read_task_sent, save_task_sent)
 
 
-# Starmap._loop updates task_sent as tasks complete. Check migration of the
-# older format and visibility to SWMR readers during those updates.
+# Starmap._task_ended updates task_sent as tasks complete: check that
+# the updates are visible to SWMR readers
 def test_task_sent_swmr(tmp_path):
     path = tmp_path / 'performance.hdf5'
-    before = {'hazard': {'sources': 12}, 'risk': {'assets': 24}}
-    after = {'hazard': {'sources': 35}, 'risk': {'gmfs': 42}}
     with hdf5.File(path, 'w') as writer:
-        writer['task_sent'] = str(before)  # older file format
-        assert read_task_sent(writer) == before
         init_performance(writer, swmr=True)
         with hdf5.File(path, 'r') as reader:
-            assert read_task_sent(reader) == before
-            save_task_sent(writer, {'hazard': after['hazard']})
-            save_task_sent(writer, {'risk': after['risk']})
+            assert read_task_sent(reader) == {}
+            save_task_sent(writer, {'hazard': {'sources': 35}})
+            save_task_sent(writer, {'risk': {'gmfs': 42}})
             reader['task_sent'].refresh()
-            assert read_task_sent(reader) == after
+            assert read_task_sent(reader) == {
+                'hazard': {'sources': 35}, 'risk': {'gmfs': 42}}
 
 
 class MonitorTestCase(unittest.TestCase):
