@@ -18,6 +18,7 @@
 
 import copy
 import time
+import collections
 import warnings
 import operator
 import numpy
@@ -61,11 +62,12 @@ MEA = 0
 STD = 1
 EPS = 1E-3
 
-#: How many (rupture, site) pairs are as expensive as a single surviving
-#: context, i.e. how much a discarded pair costs with respect to a context
-#: on which the GSIMs are actually evaluated. Determined heuristically
-#: from the @slowtask in oq-risk-tests
-PAIR_COST = 20.
+#: number of contexts per source code used to measure the cost of the
+#: GSIMs per context, see ContextMaker.set_weight
+NCTXS_SAMPLE = 20_000
+#: cost per context in seconds, used when it cannot be measured, as for
+#: the sources modified by the uncertainties, which have no contexts
+COST_PER_CTX = 50E-6
 MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
 # max number of (expected) contexts held in memory at the same time when
 # collapsing, see _collapse_by_mag; 5 millions gave workers of over 11 GB
@@ -597,7 +599,8 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
     builder = RecordBuilder(**dd)
     cmaker.siteparams = [par for par in sitecol.array.dtype.names
                          if par in dd]
-    cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
+    cmaker.ruptparams = (cmaker.REQUIRES_RUPTURE_PARAMETERS |
+                         {'occurrence_rate'})
 
     mrate = dict(src.get_annual_occurrence_rates())
     for ks, magi, mag, magdist, planars, sites in _sextets(
@@ -627,7 +630,7 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
         if prec and poissonian and len(ctxt):
             nctxt = len(ctxt)
             ctxt = collapse_ctx(ctxt, cmaker.REQUIRES_RUPTURE_PARAMETERS,
-                                 cmaker.REQUIRES_DISTANCES, prec)
+                                cmaker.REQUIRES_DISTANCES, prec)
             cmaker.cfactor[1] += nctxt - len(ctxt)  # removed by collapsing
         if len(ctxt):
             yield ks, ctxt
@@ -1012,11 +1015,10 @@ class ContextMaker(object):
         """
         Split the ContextMaker by blocks of GSIMs
         """
-        for gsim_idx, wei, gsims in zip(block_splitter(self.gsim_idx,
-                                                       blocksize),
-                                         block_splitter(self.wei, blocksize),
-                                         block_splitter(self.gsims,
-                                                        blocksize)):
+        for gsim_idx, wei, gsims in zip(
+                block_splitter(self.gsim_idx, blocksize),
+                block_splitter(self.wei, blocksize),
+                block_splitter(self.gsims, blocksize)):
             new = copy.copy(self)
             new.gsims = gsims
             new.gsim_idx = gsim_idx
@@ -1572,8 +1574,11 @@ class ContextMaker(object):
                    mean_stdt[1, :, :, slc],
                    mean_stdt[2, :, :, slc],
                    slc)
-        #cs,ms,ps = ctx.nbytes/TWO20, mean_stdt.nbytes/TWO20, poes.nbytes/TWO20
-        #print('C=%.1fM, mean_stds=%.1fM, poes=%.1fM, G=%d' % (cs, ms, ps, G))
+        # cs = ctx.nbytes / TWO20
+        # ms = mean_stdt.nbytes / TWO20
+        # ps = poes.nbytes / TWO20
+        # print('C=%.1fM, mean_stds=%.1fM, poes=%.1fM, G=%d' %
+        #       (cs, ms, ps, G))
 
     def gen_poes(self, ctx):
         """
@@ -1600,7 +1605,8 @@ class ContextMaker(object):
         """
         rup_indep = not rup_mutex
         sids = numpy.unique(ctx.sids)
-        pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
+        pmap = MapArray(
+            sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
         self.tom = tom or PoissonTOM(self.investigation_time)
         self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
@@ -1757,7 +1763,8 @@ class ContextMaker(object):
 
     # check the stddevs and apply the horizontal component conversion
     def _check_conv(self, out, gsim):
-        if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
+        if (self.truncation_level not in (0, 1E-9, 99.) and
+                (out[1] == 0.).any()):
             raise ValueError('Total StdDev is zero for %s' % gsim)
         if self.conv:
             self.apply_horiz_comp_conv(out, gsim)
@@ -1779,11 +1786,14 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, tau),
                 interp1d(ctx.rrup, phi))
 
-    def estimate_weight(self, src, srcfilter):
+    def estimate_weight(self, src, srcfilter, sample=None):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
-        :returns: an estimate of the CPU cost of processing the source
+        :param sample: if given, a dictionary code -> contexts, populated
+            with up to NCTXS_SAMPLE contexts per source code
+        :returns: the estimated number of contexts of the source (EPS if
+            discarded); it also sets src.dt, the time to build them
         """
         t0 = time.time()
         # NB: nsites is set in preclassical by a different criterion for
@@ -1804,46 +1814,68 @@ class ContextMaker(object):
             # realizations with different uncertainties, the cost is
             # proportional to the number of sets
             C = src.num_ruptures * src.nsites * len(src.get_ts_sets())
-        elif src.code in b'pP':  # no subsampling
-            C = sum(len(ctx) for ctx in self.get_ctxs(src, sites))
         else:
-            # the faults reduce the ruptures by about step ** 2, so about
-            # 500 ruptures are sampled for the big ones (step > 5)
-            step = max(5, int(numpy.sqrt(src.num_ruptures / 500)))
-            C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
+            if src.code in b'pP':  # no subsampling
+                ctxs = self.get_ctxs(src, sites)
+            else:
+                # the faults reduce the ruptures by about step ** 2, so
+                # about 500 ruptures are sampled for the big ones (step > 5)
+                step = max(5, int(numpy.sqrt(src.num_ruptures / 500)))
+                ctxs = self.get_ctxs(src, sites, step=step)
+            C = 0  # the contexts are not kept, they can be millions
+            for ctx in ctxs:
+                C += len(ctx)
+                if sample is not None and \
+                        sum(map(len, sample[src.code])) < NCTXS_SAMPLE:
+                    sample[src.code].append(ctx)
+        src.dt = time.time() - t0  # time to build the contexts
+        if C and not src.bysrc_unc and src.code not in b'pP':
             # compensate the subsampling of the ruptures with the actual
             # ratio between all the ruptures and the sampled ones
-            if C:  # then src.num_sampled > 0
-                C *= src.num_ruptures / src.num_sampled
-        src.dt = time.time() - t0
+            C *= src.num_ruptures / src.num_sampled
+            src.dt *= src.num_ruptures / src.num_sampled
         if not C:
             return EPS
-        N = len(srcfilter.sitecol.complete)
         src.nctxs = C * srcfilter.multiplier
         # used to size the tiles in _collapse_by_mag
         src.ctx_frac = min(C / (src.num_ruptures * src.nsites), 1.)
-        # NB: a collapsed point source with thousands of ruptures and
-        # a couple of surviving contexts is much more expensive than
-        # its nctxs suggests. The number of pairs is the relevant
-        # quantity, discounted by PAIR_COST
-        pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
-        # generating the contexts of pointlike sources is fast
-        fac = .333 if src.code in b'pPAM' else 1  # heuristic
-        # the GSIMs of the group are evaluated on all the surviving
-        # contexts, so their number multiplies the cost of the contexts
-        return (fac * src.nctxs * len(self.gsims) +
-                pairs / PAIR_COST) / N
+        return src.nctxs
+
+    # cost in seconds of the GSIMs per context, measured on a sample of
+    # contexts; the first call on a few contexts excludes from the measure
+    # the compilation of the numba functions in a new worker
+    def _cost_per_ctx(self, ctxs):
+        ctx = numpy.concatenate(ctxs).view(numpy.recarray)[:NCTXS_SAMPLE]
+        self.get_rmap(ctx[:10])
+        t0 = time.time()
+        self.get_rmap(ctx)
+        return (time.time() - t0) / len(ctx)
 
     def set_weight(self, sources, srcfilter):
         """
-        Set the weight attribute on each prefiltered source
+        Set the weight attribute on each prefiltered source, an estimate of
+        the seconds needed to compute it: the measured time to build its
+        contexts plus the number of contexts times the cost of the GSIMs
+        per context, measured on a sample of the contexts of the sources
+        with the same code (the cost depends on the GSIMs, the IMTs and
+        the kind of source: in ALS it is 37 microseconds for the
+        collapsed point sources of the slab and 77 for the interface)
         """
         if srcfilter.sitecol is None:
             for src in sources:
                 src.weight = EPS
-        else:
-            for src in sources:
-                src.weight = self.estimate_weight(src, srcfilter)
+            return
+        sample = collections.defaultdict(list)  # code -> contexts
+        nctxs = [self.estimate_weight(src, srcfilter, sample)
+                 for src in sources]
+        cost = {code: self._cost_per_ctx(ctxs)
+                for code, ctxs in sample.items()}
+        for src, n in zip(sources, nctxs):
+            if n <= EPS:  # discarded source
+                src.weight = EPS
+            else:
+                c = cost.get(src.code, COST_PER_CTX)
+                src.weight = src.dt * srcfilter.multiplier + n * c
 
     def __repr__(self):
         rlzs = sum(len(rlzs) for rlzs in self.gsims.values())
@@ -1962,7 +1994,8 @@ def mean_stds(rctx, gsim, imt, idx=[0, 1, 2, 3]):
     :param rctx: a RuptureContext with site and distance information
     :param gsim: a GSIM instance
     :param imt: an IMT string
-    :param idx: index (or list of indices) in the range 0..3 (default [0,1,2,3])
+    :param idx: index (or list of indices) in the range 0..3
+        (default [0,1,2,3])
     :returns: array of shape N or (len(idx), N)
     """
     cmaker = simple_cmaker([gsim], [imt])

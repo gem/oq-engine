@@ -157,8 +157,8 @@ def filter_mag(srcs, min_mag, strict, bysrc=False):
     out = [src for src in srcs
            if src.get_mags()[-1] >= mmag or (bysrc and src.bysrc_unc)]
     for ss in out:
-        if (ss.nsites and ss.num_ruptures > MAX_NUM_RUPTURES and strict and
-            ss.code in b'FSCNXK'):  # only for fault sources
+        if (ss.nsites and ss.num_ruptures > MAX_NUM_RUPTURES and strict
+                and ss.code in b'FSCNXK'):  # only for fault sources
             raise RuntimeError('%s has too many ruptures' % ss)
     return out
 
@@ -396,7 +396,7 @@ def warn_use_rates(oq, num_rlzs):
             logging.warning('You should set number_of_logic_tree_samples')
     else:
         logging.warning('You should set use_rates=true')
-    
+
 
 @base.calculators.add('preclassical')
 class PreClassicalCalculator(base.HazardCalculator):

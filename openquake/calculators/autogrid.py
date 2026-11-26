@@ -43,12 +43,17 @@ from openquake.hazardlib.map_array import compute_hmaps
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.calc.filters import split_source, magdepdist
-from openquake.hazardlib.contexts import PAIR_COST
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.site import SiteCollection
 
-Candidate = namedtuple('Candidate',
+Candidate = namedtuple(
+    'Candidate',
     'ps_grid_spacing pointsource_distance weight mean_err p99_err p99_norm')
+# How many (rupture, site) pairs are as expensive as a single surviving
+# context, i.e. how much a discarded pair costs with respect to a context
+# on which the GSIMs are actually evaluated; used to rank the cost of the
+# candidates. Determined heuristically from the @slowtask in oq-risk-tests
+PAIR_COST = 20.
 
 GRID_SPACINGS = [15., 30., 45.]  # candidate values in km
 PS_DISTANCES = [15., 25., 50., 75.]  # candidate values in km
