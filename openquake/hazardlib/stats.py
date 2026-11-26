@@ -37,7 +37,7 @@ def ndtr(z):
 
 # survival function of the truncated normal distribution for a single
 # value x; the values beyond tmax (see get_tmax) give exactly 0, so erf is
-# not called for them; used in truncnorm_sf and in contexts._set_poes
+# not called for them; used by truncnorm_sf and as the cubic fallback
 @compile("float64(float64, float64, float64)")
 def _truncnorm_sf(phi_b, tmax, x):
     if x > tmax:
@@ -62,6 +62,31 @@ def _truncnorm_sf(phi_b, tmax, x):
     # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
     p = (phi_b - .5 * (1. + math.erf(x * SQRT05))) / z
     return min(max(p, 0.), 1.)
+
+
+# Cubic Taylor coefficients of the normal CDF on [-9, 9]. With 64
+# intervals per unit, the nearest grid point is at most 1/128 away.
+_CDF_GRID = 64
+_CDF_LIMIT = 9
+_CDF_OFFSET = _CDF_LIMIT * _CDF_GRID
+_x = numpy.arange(-_CDF_OFFSET, _CDF_OFFSET + 1) / _CDF_GRID
+_d = numpy.exp(-_x*_x/2) / numpy.sqrt(2*numpy.pi)
+_CDF = numpy.column_stack((ndtr(_x), _d, -_x*_d/2, (_x*_x - 1)*_d/6))
+
+
+@compile("float64(float64, float64, float64, float64)")
+def _truncnorm_sf_cubic(phi_b, tmax, scale, x):
+    # Scale zero selects the exact formula for narrow truncation.
+    if x > tmax:
+        return 0.
+    if scale == 0. or not abs(x) <= _CDF_LIMIT:
+        return _truncnorm_sf(phi_b, tmax, x)
+    i = round(x * _CDF_GRID)
+    dx = x - i / _CDF_GRID
+    row = i + _CDF_OFFSET
+    p = phi_b - _CDF[row, 0]
+    d = _CDF[row, 1] + dx * (_CDF[row, 2] + dx * _CDF[row, 3])
+    return min(max((p - dx*d) * scale, 0.), 1.)
 
 
 @compile(["float64[:,:](float64, float64, float64[:,:])",

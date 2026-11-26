@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Faster probabilities of exceedance in classical calculations, using a
+    tabulated cubic approximation of the normal CDF (more than doubling
+    the speed of get_poes)
   * Internal: removed the calc_XXX_tmp.hdf5 files generated in risk calculations
   * classical_risk: the loss ratios shared by the taxonomies are computed
     only from the risk functions actually used by the exposure; this causes
