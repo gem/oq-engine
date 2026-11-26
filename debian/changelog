@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized mesh construction and site association with large exposures
   * Changed `oq export -e zip job` to return an archive, plus a few fixes
   * Internal: add `oq compare errors` to measure the errors of the
     ps_grid_spacing approximation

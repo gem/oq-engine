@@ -23,7 +23,6 @@ to several geographical primitives and some other low-level spatial operations.
 
 import math
 import logging
-import collections
 
 import numpy
 import numba
@@ -37,7 +36,7 @@ from scipy.spatial.distance import cdist, euclidean
 from shapely import geometry, contains_xy, Point, points
 from shapely.strtree import STRtree
 from openquake.baselib.hdf5 import vstr
-from openquake.baselib.performance import compile, split_array
+from openquake.baselib.performance import compile
 from openquake.hazardlib import geo
 
 U8 = numpy.uint8
@@ -300,58 +299,57 @@ class _GeographicObjects(object):
 
         :param exp: Exposure instance
         :param assoc_dist: the maximum distance for association
-        :param mode: 'strict', 'warn' or 'filter'
+        :param mode: 'strict' or 'filter'
         :returns: filtered site collection, discarded assets
         """
-        assert mode in 'strict filter', mode
+        assert mode in ('strict', 'filter'), mode
         self.objects.filtered  # self.objects must be a SiteCollection
         mesh = exp.mesh
-        assets_by_site = split_array(exp.assets, exp.assets['site_id'])
+        in_region = numpy.ones(len(mesh), bool)
         if region:
-            ps = points(mesh.lons, mesh.lats)
-            out = [i for i, p in enumerate(ps) if not p.within(region)]
-            if out:
-                ok = ~numpy.isin(numpy.arange(len(mesh)), out)
-                if ok.sum() == 0:
+            in_region = contains_xy(region, mesh.lons, mesh.lats)
+            if not in_region.all():
+                if not in_region.any():
                     raise RuntimeError(
                         'Could not find any asset within the region!')
-                mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
-                assets_by_site = [
-                    assets for yes, assets in zip(ok, assets_by_site) if yes]
+                mesh = geo.Mesh(mesh.lons[in_region], mesh.lats[in_region],
+                                mesh.depths[in_region])
                 logging.info('Discarded %d assets outside the region',
-                             len(out))
-        asset_dt = numpy.dtype(
-            [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
-        assets_by_sid = collections.defaultdict(list)
-        discarded = []
+                             (~in_region).sum())
+
         objs, distances = self.get_closest(mesh.lons, mesh.lats)
-        for obj, distance, assets, lon, lat in zip(
-                objs, distances, assets_by_site, mesh.lons, mesh.lats):
-            if distance <= assoc_dist:
-                # keep the assets, otherwise discard them
-                assets_by_sid[obj['sids']].extend(assets)
-            elif mode == 'strict':
-                raise SiteAssociationError(
-                    'There is nothing closer than %s km '
-                    'to site (%s %s)' % (assoc_dist, obj['lon'], obj['lat']))
-            else:
-                discarded.extend(assets)
-        sids = sorted(assets_by_sid)
-        if not sids:
+        near = distances <= assoc_dist
+        if mode == 'strict' and not near.all():
+            obj = objs[near.argmin()]
+            raise SiteAssociationError(
+                'There is nothing closer than %s km '
+                'to site (%s %s)' % (assoc_dist, obj['lon'], obj['lat']))
+        sids = numpy.unique(objs['sids'][near])
+        if not len(sids):
             raise SiteAssociationError(
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % assoc_dist)
-        data = [(asset['id'], asset['lon'], asset['lat'])
-                for asset in discarded]
-        discarded = numpy.array(data, asset_dt)
-        assets = []
-        for sid in sids:
-            for ass in assets_by_sid[sid]:
-                ass['site_id'] = sid
-                assets.append(ass)
+
+        keep = numpy.zeros(len(in_region), bool)
+        keep[in_region] = near
+        asset_sites = exp.assets['site_id']
+        rejected = (in_region & ~keep)[asset_sites]
+        discarded = numpy.empty(rejected.sum(), dtype=[
+            ('asset_ref', vstr), ('lon', F32), ('lat', F32)])
+        for dst, src in [('asset_ref', 'id'), ('lon', 'lon'), ('lat', 'lat')]:
+            discarded[dst] = exp.assets[src][rejected]
+
+        # Preserve asset order when several locations map to the same site.
+        site_ids = numpy.zeros(len(in_region), objs['sids'].dtype)
+        site_ids[in_region] = objs['sids']
+        rows = numpy.flatnonzero(keep[asset_sites])
+        nearest = site_ids[asset_sites[rows]]
+        order = numpy.argsort(nearest, kind='stable')
+        assets = exp.assets[rows[order]]
+        assets['site_id'] = nearest[order]
+        assets['ordinal'] = numpy.arange(len(assets))
         exp.mesh = mesh
-        exp.assets = numpy.array(assets, ass.dtype)
-        exp.assets['ordinal'] = numpy.arange(len(exp.assets))
+        exp.assets = assets
         return self.objects.filtered(sids), discarded
 
 
