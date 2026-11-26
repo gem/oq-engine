@@ -637,7 +637,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 risklist.append(rf)
             else:  # rf is a vulnerability function
                 rf.init()
-                if getattr(rf, 'retro', False):  # stored as a dict
+                if rf.retro:  # classical_bcr, stored as a dict
                     rf.retro = hdf5.json_to_obj(json.dumps(rf.retro))
                     rf.retro.init()
                     rf.retro.loss_type = lt

@@ -326,68 +326,65 @@ def event_based_risk(gmf_df, oq, monitor):
     # NB: the DataStore reads assetcol, events and crm from the parent
     # calculation, if they are not in the current one
     with datastore.read(monitor.filename) as dstore:
-        return _risk_from_gmfs(gmf_df, oq, dstore, monitor)
+        with monitor('reading crmodel', measuremem=True):
+            crmodel = riskmodels.CompositeRiskModel.read(dstore, oq)
+        xtypes = oq.xtypes
+        worker = dstore['_risk_worker']
+        X = len(xtypes)
+        loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+        loss3 = {'aids': [], 'bids': [], 'loss': []}
+        if os.environ.get('OQ_DEBUG_SITE'):
+            print(gmf_df)
 
-
-# Read the worker inputs once per task, then process assets by region.
-def _risk_from_gmfs(gmf_df, oq, dstore, monitor):
-    with monitor('reading crmodel', measuremem=True):
-        crmodel = riskmodels.CompositeRiskModel.read(dstore, oq)
-    xtypes = oq.xtypes
-    worker = dstore['_risk_worker']
-    X = len(xtypes)
-    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
-    loss3 = {'aids': [], 'bids': [], 'loss': []}
-    if os.environ.get('OQ_DEBUG_SITE'):
-        print(gmf_df)
-
-    aggids = worker['aggids'][:] if oq.K else ()
-    if oq.avg_losses and not oq.collect_rlzs:
-        rlz_id = dstore['events'].fields('rlz_id')[:]
-    else:
-        rlz_id = ()
-    areader = AssetReader(dstore, monitor)
-    sids = gmf_df.sid.to_numpy()
-    active = numpy.zeros(len(worker['num_assets']), bool)
-    active[sids[sids < len(active)]] = True
-    items = zip(worker['asset_slices'][:], worker['taxonomy_order'][:])
-    if oq.ignore_master_seed or oq.ignore_covs:
-        rng = None
-    else:
-        rng = MultiEventRNG(oq.master_seed, gmf_df.eid.unique(),
-                            int(oq.asset_correlation))
-    risk_mon = monitor('computing risk', measuremem=False)
-    fil_mon = monitor('filtering GMFs', measuremem=False)
-    agg_mon = monitor('aggregating losses', measuremem=False)
-    try:
-        countries = general.decode(dstore['assetcol/tagcol/ID_0'][:])
-    except KeyError:  # no ID_0 in the exposure
-        countries = ["?"]  # assume a single country
-    for (id01, s0, s1), taxonomies in items:
-        adf_ = areader.read(s0, s1, active)
-        if len(adf_) == 0:
-            continue
-        id0 = id01 // TWO16
-        # The country selects the taxonomy mapping in multi-country impacts.
+        aggids = worker['aggids'][:] if oq.K else ()
+        if oq.avg_losses and not oq.collect_rlzs:
+            rlz_id = dstore['events'].fields('rlz_id')[:]
+        else:
+            rlz_id = ()
+        areader = AssetReader(dstore, monitor)
+        sids = gmf_df.sid.to_numpy()
+        active = numpy.zeros(len(worker['num_assets']), bool)
+        active[sids[sids < len(active)]] = True
+        items = zip(worker['asset_slices'][:], worker['taxonomy_order'][:])
+        if oq.ignore_master_seed or oq.ignore_covs:
+            rng = None
+        else:
+            rng = MultiEventRNG(oq.master_seed, gmf_df.eid.unique(),
+                                int(oq.asset_correlation))
+        risk_mon = monitor('computing risk', measuremem=False)
+        fil_mon = monitor('filtering GMFs', measuremem=False)
+        agg_mon = monitor('aggregating losses', measuremem=False)
         try:
-            country = countries[id0]
-        except IndexError:
-            raise IndexError(f'Index {id0} not in {countries}')
-        with fil_mon:
-            groups = adf_.groupby('taxonomy', sort=False).indices
-        for taxo in taxonomies:
+            countries = general.decode(dstore['assetcol/tagcol/ID_0'][:])
+        except KeyError:  # no ID_0 in the exposure
+            countries = ["?"]  # assume a single country
+        for (id01, s0, s1), taxonomies in items:
+            adf_ = areader.read(s0, s1, active)
+            if len(adf_) == 0:
+                continue
+            id0 = id01 // TWO16
+            # the country selects the taxonomy mapping in multi-country
+            # impacts
+            try:
+                country = countries[id0]
+            except IndexError:
+                raise IndexError(f'Index {id0} not in {countries}')
             with fil_mon:
-                # filtering is *crucial* for the performance of the next step
-                positions = groups.get(taxo)
-                if positions is None:
-                    continue
-                adf = adf_.take(positions)
-                gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id.unique())]
-            with risk_mon:
-                [out] = crmodel.get_outputs(
-                    adf, gdf, oq._sec_losses, rng, country)
-            with agg_mon:
-                aggreg(out, aggids, rlz_id, oq, loss2, loss3)
+                groups = adf_.groupby('taxonomy', sort=False).indices
+            for taxo in taxonomies:
+                with fil_mon:
+                    # filtering is *crucial* for the performance of the
+                    # next step
+                    positions = groups.get(taxo)
+                    if positions is None:
+                        continue
+                    adf = adf_.take(positions)
+                    gdf = gmf_df[numpy.isin(gmf_df.sid, adf.site_id.unique())]
+                with risk_mon:
+                    [out] = crmodel.get_outputs(
+                        adf, gdf, oq._sec_losses, rng, country)
+                with agg_mon:
+                    aggreg(out, aggids, rlz_id, oq, loss2, loss3)
     avg = build_avg(loss3, oq.A, oq.R * X)
     alt = build_alt(loss2, xtypes, int(oq.asset_correlation))
     return dict(avg=avg, alt=alt, gmf_bytes=gmf_df.memory_usage().sum())

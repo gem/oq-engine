@@ -1446,6 +1446,7 @@ def prepare_risk_worker_data(dstore, assetcol, oq):
     return worker
 
 
+# NB: this function is patched in risk_aggregation_test.py
 def read_crmodel(monitor, oq):
     """
     Read the risk model stored by .save_crmodel, possibly in the parent
