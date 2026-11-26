@@ -634,8 +634,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         else:
             search_filter = ("(j.description LIKE ?x COLLATE NOCASE "
                              "OR j.user_name LIKE ?x COLLATE NOCASE)")
-            query_params.append(f'%{search}%')
-            query_params.append(f'%{search}%')
+            query_params.append(f'%{search}%')  # description placeholder
+            query_params.append(f'%{search}%')  # user_name placeholder
     else:
         search_filter = 1
 
