@@ -464,7 +464,7 @@ function set_calc_list_params() {
 }
 
 function refresh_tag_column() {
-    $.getJSON('/v1/calc/list_tags', function(resp) {
+    $.getJSON(gem_oq_server_url + '/v1/calc/list_tags', function(resp) {
         if (resp.tags.length == 0) {
             $(".tag-column-table").hide();
         } else {
@@ -476,7 +476,7 @@ function refresh_tag_column() {
 }
 
 function refresh_tag_selector() {
-    $.getJSON('/v1/calc/list_tags', function(resp) {
+    $.getJSON(gem_oq_server_url + '/v1/calc/list_tags', function(resp) {
         if (resp.tags.length == 0) {
             $("div#tag-filters").hide();
         } else {
