@@ -40,6 +40,7 @@ from openquake.hazardlib.calc.filters import (
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.source import rupture
+from openquake.hazardlib.source.simple_fault import mesh_factor
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
@@ -597,7 +598,8 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
     builder = RecordBuilder(**dd)
     cmaker.siteparams = [par for par in sitecol.array.dtype.names
                          if par in dd]
-    cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
+    cmaker.ruptparams = (cmaker.REQUIRES_RUPTURE_PARAMETERS |
+                         {'occurrence_rate'})
 
     mrate = dict(src.get_annual_occurrence_rates())
     for ks, magi, mag, magdist, planars, sites in _sextets(
@@ -627,7 +629,7 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
         if prec and poissonian and len(ctxt):
             nctxt = len(ctxt)
             ctxt = collapse_ctx(ctxt, cmaker.REQUIRES_RUPTURE_PARAMETERS,
-                                 cmaker.REQUIRES_DISTANCES, prec)
+                                cmaker.REQUIRES_DISTANCES, prec)
             cmaker.cfactor[1] += nctxt - len(ctxt)  # removed by collapsing
         if len(ctxt):
             yield ks, ctxt
@@ -1013,11 +1015,10 @@ class ContextMaker(object):
         """
         Split the ContextMaker by blocks of GSIMs
         """
-        for gsim_idx, wei, gsims in zip(block_splitter(self.gsim_idx,
-                                                       blocksize),
-                                         block_splitter(self.wei, blocksize),
-                                         block_splitter(self.gsims,
-                                                        blocksize)):
+        for gsim_idx, wei, gsims in zip(
+                block_splitter(self.gsim_idx, blocksize),
+                block_splitter(self.wei, blocksize),
+                block_splitter(self.gsims, blocksize)):
             new = copy.copy(self)
             new.gsims = gsims
             new.gsim_idx = gsim_idx
@@ -1573,8 +1574,10 @@ class ContextMaker(object):
                    mean_stdt[1, :, :, slc],
                    mean_stdt[2, :, :, slc],
                    slc)
-        #cs,ms,ps = ctx.nbytes/TWO20, mean_stdt.nbytes/TWO20, poes.nbytes/TWO20
-        #print('C=%.1fM, mean_stds=%.1fM, poes=%.1fM, G=%d' % (cs, ms, ps, G))
+        # cs, ms, ps = (ctx.nbytes / TWO20, mean_stdt.nbytes / TWO20,
+        #               poes.nbytes / TWO20)
+        # print('C=%.1fM, mean_stds=%.1fM, poes=%.1fM, G=%d' %
+        #       (cs, ms, ps, G))
 
     def gen_poes(self, ctx):
         """
@@ -1601,7 +1604,8 @@ class ContextMaker(object):
         """
         rup_indep = not rup_mutex
         sids = numpy.unique(ctx.sids)
-        pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
+        pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(
+            rup_indep)
         self.tom = tom or PoissonTOM(self.investigation_time)
         self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
@@ -1758,7 +1762,8 @@ class ContextMaker(object):
 
     # check the stddevs and apply the horizontal component conversion
     def _check_conv(self, out, gsim):
-        if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
+        if (self.truncation_level not in (0, 1E-9, 99.) and
+                (out[1] == 0.).any()):
             raise ValueError('Total StdDev is zero for %s' % gsim)
         if self.conv:
             self.apply_horiz_comp_conv(out, gsim)
@@ -1832,8 +1837,14 @@ class ContextMaker(object):
         fac = .333 if src.code in b'pPAM' else 1  # heuristic
         # the GSIMs of the group are evaluated on all the surviving
         # contexts, so their number multiplies the cost of the contexts
-        return (fac * src.nctxs * len(self.gsims) +
-                pairs / PAIR_COST) / N
+        weight = (fac * src.nctxs * len(self.gsims) + pairs / PAIR_COST) / N
+        if src.code in b'SC':
+            # big fault ruptures are expensive, see mesh_factor; the split
+            # sources have a single magnitude, so this is exact for them
+            mags = [mag for mag, rate in src.get_annual_occurrence_rates()
+                    if rate]
+            weight *= numpy.mean([mesh_factor(src, mag) for mag in mags])
+        return weight
 
     def set_weight(self, sources, srcfilter):
         """
@@ -1963,7 +1974,8 @@ def mean_stds(rctx, gsim, imt, idx=[0, 1, 2, 3]):
     :param rctx: a RuptureContext with site and distance information
     :param gsim: a GSIM instance
     :param imt: an IMT string
-    :param idx: index (or list of indices) in the range 0..3 (default [0,1,2,3])
+    :param idx: index (or list of indices) in the range 0..3
+                (default [0,1,2,3])
     :returns: array of shape N or (len(idx), N)
     """
     cmaker = simple_cmaker([gsim], [imt])

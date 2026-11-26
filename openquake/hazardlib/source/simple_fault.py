@@ -42,14 +42,22 @@ from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 # i.e. it is about proportional to the number of points of the rupture mesh;
 # in CHN a piece of HimalayanThrust with 879 ruptures of magnitude 9 (17_248
 # points each) was 60 times slower than a piece with 1968 ruptures of
-# magnitude 6 (28 points each). Ruptures with up to 100 points count as one.
+# magnitude 6 (28 points each), with about the same weight. A rupture with
+# N > 300 points costs about N / 300 times more than the weight says.
+def mesh_factor(src, mag):
+    """
+    :returns: the cost of a rupture of the given magnitude, relative to
+              a rupture with up to 300 mesh points
+    """
+    area = src.magnitude_scaling_relationship.get_median_area(mag, src.rake)
+    return max(1, area / src.rupture_mesh_spacing ** 2 / 300)
+
+
 def num_pieces(src, mag, num_ruptures):
     """
     :returns: the number of pieces in which to split a magnitude of a fault
     """
-    area = src.magnitude_scaling_relationship.get_median_area(mag, src.rake)
-    npoints = area / src.rupture_mesh_spacing ** 2
-    return math.ceil(num_ruptures * max(1, npoints / 100) / BLOCKSIZE)
+    return math.ceil(num_ruptures * mesh_factor(src, mag) / BLOCKSIZE)
 
 
 # Grouping all the "extra" hypo depth options to reduce num args in class
