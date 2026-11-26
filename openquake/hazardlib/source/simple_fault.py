@@ -38,6 +38,20 @@ from openquake.hazardlib.mfd.alternative_characteristic_mfd import (
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
 
+# The cost of a big fault rupture is dominated by the distance calculations,
+# i.e. it is about proportional to the number of points of the rupture mesh;
+# in CHN a piece of HimalayanThrust with 879 ruptures of magnitude 9 (17_248
+# points each) was 60 times slower than a piece with 1968 ruptures of
+# magnitude 6 (28 points each). Ruptures with up to 100 points count as one.
+def num_pieces(src, mag, num_ruptures):
+    """
+    :returns: the number of pieces in which to split a magnitude of a fault
+    """
+    area = src.magnitude_scaling_relationship.get_median_area(mag, src.rake)
+    npoints = area / src.rupture_mesh_spacing ** 2
+    return math.ceil(num_ruptures * max(1, npoints / 100) / BLOCKSIZE)
+
+
 # Grouping all the "extra" hypo depth options to reduce num args in class
 HypoData = namedtuple('HypoData', ['hypo_list', 'slip_list', 'depth_list'],
                       defaults=[(), (), ()])
@@ -752,11 +766,11 @@ class SimpleFaultSource(ParametricSeismicSource):
             # `rupture_count` method
             if rate == 0:
                 continue
-            # a magnitude with many ruptures is split in n sources, each
-            # with one position along the strike every n, as for the
+            # a magnitude with many (or big) ruptures is split in n sources,
+            # each with one position along the strike every n, as for the
             # multifault sources, otherwise a big fault (HimalayanThrust
             # in CHN) produces slow tasks
-            n = min(-(-self._nr[i] // BLOCKSIZE), self._ncols[i])
+            n = min(num_pieces(self, mag, self._nr[i]), self._ncols[i])
             for j in range(n):
                 src = copy.copy(self)
                 src.mfd = mfd.ArbitraryMFD([mag], [rate])

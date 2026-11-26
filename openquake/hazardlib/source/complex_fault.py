@@ -25,7 +25,7 @@ from scipy.stats import truncnorm
 from openquake.hazardlib import mfd
 from openquake.hazardlib.codes import COMPLEX_FAULT
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.multi_fault import BLOCKSIZE
+from openquake.hazardlib.source.simple_fault import num_pieces
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
@@ -320,10 +320,10 @@ class ComplexFaultSource(ParametricSeismicSource):
             return
         self.count_ruptures()
         for i, (mag, rate) in enumerate(mag_rates):
-            # a magnitude with many ruptures is split in n sources, each
-            # with one rupture position every n, as for the multifault
+            # a magnitude with many (or big) ruptures is split in n sources,
+            # each with one rupture position every n, as for the multifault
             # sources; the occurrence rates are the ones of the magnitude
-            n = -(-self._nr[i] // BLOCKSIZE)
+            n = min(num_pieces(self, mag, self._nr[i]), self._nr[i])
             for j in range(n):
                 src = copy.copy(self)
                 src.mfd = mfd.ArbitraryMFD([mag], [rate])
