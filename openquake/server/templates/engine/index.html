@@ -26,7 +26,9 @@
           <div id="new-release-box" class="alert alert-warning">
           </div>
           {% if application_mode == 'AELO' %}
+          {% if user_level > 0 %}
           {% include './includes/aelo_form.html' %}
+          {% endif %}
           {% elif application_mode == 'IMPACT' %}
           {% with './includes/impact_form_level_'|addstr:user_level|add:'.html' as template_path %}
           {% include template_path %}

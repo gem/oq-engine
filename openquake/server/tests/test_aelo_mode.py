@@ -32,12 +32,14 @@ import django
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.conf import settings
-from django.test import override_settings
+from django.test import RequestFactory, override_settings
 from openquake.calculators.base import get_aelo_version
 from openquake.commonlib.oqvalidation import OqParam, ASCE_VERSIONS
 from openquake.commonlib.logs import dbcmd
+from openquake.server import views
 from openquake.server.tests.views_test import (
-    EngineServerTestCase, start_webui, stop_webui)
+    EngineServerTestCase, get_or_create_user,
+    start_webui, stop_webui)
 from openquake.server.views import (
     get_disp_val, drop_email_file_path)
 
@@ -72,6 +74,8 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         if created:
             self.user.set_password(self.password)
             self.user.save()
+        self.user.profile.level = 1
+        self.user.profile.save()
         self.c.session.cookies.clear()
         self.c.login(username=self.username, password=self.password)
 
@@ -129,8 +133,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                 self.assertIn(failure_reason, '\n'.join(tb))
             else:
                 results = self.get('%s/results' % job_id)
-                self.assertGreater(
-                    len(results), 0, 'The job produced no outputs!')
+                self.assertTrue(results, 'The job produced no outputs!')
             email_files = os.listdir(email_dir)
             self.assertEqual(
                 len(email_files), 1,
@@ -170,9 +173,66 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         self.c.get(f'/v1/calc/{job_id}/download_png/mce.png')
         self.c.get(
             f'/v1/calc/{job_id}/download_png/disagg_by_src-All-IMTs.png')
+        if not failure_reason:
+            self.check_shared_outputs(job_id)
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError('Unable to remove job %s:\n%s' % (job_id, ret))
+
+    def check_shared_outputs(self, job_id):
+        # Exercise sharing with the real job, datastore and a level 0 user.
+        viewer, password = get_or_create_user(0)
+        results_url = f'/v1/calc/{job_id}/results'
+        plot_url = f'/v1/calc/{job_id}/download_png/hcurves.png'
+        try:
+            self.c.session.cookies.clear()
+            self.assertTrue(self.c.login(
+                username=viewer.username, password=password))
+            self.assertEqual(self.c.get(results_url).status_code, 403)
+            self.assertEqual(self.c.get(plot_url).status_code, 403)
+            self.assertEqual(self.post(f'{job_id}/share').status_code, 403)
+            self.c.session.cookies.clear()
+            self.assertTrue(self.c.login(
+                username=self.username, password=self.password))
+            self.assertEqual(self.post(f'{job_id}/share').status_code, 200)
+            self.c.session.cookies.clear()
+            self.assertTrue(self.c.login(
+                username=viewer.username, password=password))
+            response = self.c.get(results_url)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('hcurves', [r['type'] for r in response.json()])
+            for suffix in ('outputs', 'outputs_aelo'):
+                response = self.c.get(f'/engine/{job_id}/{suffix}')
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(b'CCA SITE', response.content)
+            response = self.c.get(plot_url)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers['Content-Type'], 'image/png')
+            self.assertTrue(response.content.startswith(b'\x89PNG\r\n\x1a\n'))
+            self.c.session.cookies.clear()
+            self.assertTrue(self.c.login(
+                username=self.username, password=self.password))
+            self.assertEqual(self.post(f'{job_id}/unshare').status_code, 200)
+            self.c.session.cookies.clear()
+            self.assertTrue(self.c.login(
+                username=viewer.username, password=password))
+            self.assertEqual(self.c.get(results_url).status_code, 403)
+            self.assertEqual(self.c.get(plot_url).status_code, 403)
+        finally:
+            self.c.session.cookies.clear()
+            self.c.login(username=self.username, password=self.password)
+            viewer.delete()
+
+    def test_aelo_run_without_authentication(self):
+        # Without authentication, submission reaches actual input validation.
+        request = RequestFactory().post('/v1/calc/aelo_run', dict(
+            lon='9', lat='100', vs30='760', site_name='Invalid latitude'),
+            HTTP_HOST='testserver')
+        with override_settings(LOCKDOWN=False):
+            response = views.aelo_run(request)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('latitude 100.0 > 90',
+                      json.loads(response.content)['error_msg'])
 
     def get_tested_lon_lat(self, model):
         test_sites_csv = 'openquake/qa_tests_data/mosaic/test_sites.csv'
@@ -195,6 +255,8 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
             self.assertEqual(drop_email_file_path(dict(data)), data)
 
     def test_aelo_successful_run_CCA_then_remove_calc(self):
+        self.user.profile.level = 2
+        self.user.profile.save()
         lon, lat = self.get_tested_lon_lat('CCA')
         # NOTE: site_name is transformed into description and custom_site_id
         params = dict(

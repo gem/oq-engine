@@ -17,11 +17,61 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 # NB: run these tests with OQ_APPLICATION_MODE=AELO,
+from urllib.parse import urljoin
+
 import pytest
+from django.contrib.auth import get_user_model
+from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.pages.login_page import LoginPage
 from openquake.server.tests.pages.cookie_bar import CookieBar
 from openquake.server.tests.pages.aelo_page import AeloPage
 from playwright.sync_api import expect
+
+
+@pytest.mark.parametrize("user", [0], indirect=True)
+@pytest.mark.parametrize("application_mode", ["AELO"], indirect=True)
+def test_aelo_ui_level_0(application_mode, authenticated_page, user,
+                         client, tmp_path):
+    page = AeloPage(authenticated_page)
+    expect(authenticated_page.locator('#aelo_run_form')).to_have_count(0)
+    expect(authenticated_page.locator('#submit_aelo_calc')).to_have_count(0)
+    response = authenticated_page.request.post(
+        urljoin(authenticated_page.url, '/v1/calc/aelo_run'),
+        form={'lon': '9', 'lat': '45'})
+    assert response.status == 403
+    owner = get_user_model().objects.create_user('aelo-ui-owner')
+    owner.profile.level = 2
+    owner.profile.save()
+    job_ids = []
+    try:
+        for name in ('Private site', 'Shared site'):
+            job_id = dbcmd('create_job', str(tmp_path), 'classical',
+                           f'AELO for {name}', owner.username)
+            job_ids.append(job_id)
+            dbcmd('update_job', job_id,
+                  {'status': 'complete', 'is_running': False})
+        private_id, shared_id = job_ids
+        client.force_login(owner)
+        assert client.post(
+            f'/v1/calc/{shared_id}/share').status_code == 200
+        authenticated_page.reload()
+        shared_row = page.get_job_row(shared_id)
+        expect(shared_row).to_be_visible()
+        expect(page.get_job_row(private_id)).to_have_count(0)
+        outputs_link = shared_row.get_by_role('link', name='Outputs')
+        expect(outputs_link).to_have_attribute(
+            'href', f'/engine/{shared_id}/outputs_aelo')
+        for action in ('Share', 'Unshare', 'Remove', 'Abort'):
+            expect(shared_row.get_by_role(
+                'link', name=action, exact=True)).to_have_count(0)
+        assert client.post(
+            f'/v1/calc/{shared_id}/unshare').status_code == 200
+        authenticated_page.reload()
+        expect(page.get_job_row(shared_id)).to_have_count(0)
+    finally:
+        for job_id in job_ids:
+            dbcmd('del_calc', job_id, owner.username, False)
+        owner.delete()
 
 
 @pytest.mark.parametrize("user", [1, 2], indirect=True)
