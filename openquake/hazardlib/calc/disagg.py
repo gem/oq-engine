@@ -490,7 +490,7 @@ class Disaggregator(object):
             # sources, while the site ID is used for the bin edges and
             # to select the precomputed contexts
             self.sitecol = SiteCollection([site])
-            self.sid = sid = getattr(site, 'id', 0)
+            self.sid = sid = site.id
         else:  # assume a site collection of length 1
             self.sitecol = site
             assert len(site) == 1, site

@@ -192,6 +192,9 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
+    # the site ID; the sites of a SiteCollection get their real ID when
+    # iterating, while a site built by hand is the first site
+    id = 0
 
     def __init__(self, location, vs30=numpy.nan,
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
