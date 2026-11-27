@@ -910,21 +910,11 @@ class GPKG2NRMLTestCase(unittest.TestCase):
 @skipIf(rtgmpy is None, 'Missing rtgmpy')
 class RunSiteTestCase(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.mosaic_dir = os.path.dirname(mosaic.__file__)
+    def setUp(self):
+        self.mosaic_dir = os.path.dirname(mosaic.__file__)
         # the .org files and the exported CSV files are stored here
-        cls.asce_dir = tempfile.mkdtemp()
-
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(cls.asce_dir)
-
-    # the CSV files exported in asce_dir/<model> must be kept
-    def check_exports(self):
-        csvs = [f for _dir, _, fnames in os.walk(self.asce_dir)
-                for f in fnames if f.endswith('.csv')]
-        self.assertTrue(csvs)
+        self.asce_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.enterContext(mock.patch.dict(os.environ, OQ_TEST='1'))
 
     def test_runsite_case1(self):
         # tests when there is a lonlat file without vs30 but its given as
@@ -940,7 +930,6 @@ class RunSiteTestCase(unittest.TestCase):
         dstore = read(calc_id)
         assert dstore['oqparam'].override_vs30 == [vs30]
         assert dstore['oqparam'].asce_version == asce_version
-        self.check_exports()
 
     def test_runsite_case2(self):
         # tests when there is a lonlat file without vs30 but its NOT given as
@@ -953,6 +942,7 @@ class RunSiteTestCase(unittest.TestCase):
         dstore = read(calc_id)
         assert dstore['oqparam'].override_vs30 == [760]
         assert dstore['oqparam'].asce_version == 'ASCE7-16'
+        self.assertFalse(list(self.asce_dir.glob('*/*.csv')))
 
     def test_runsite_case3(self):
         # tests when there is a lonlat file with vs30 and the default asce

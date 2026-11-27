@@ -3,8 +3,6 @@
     tag and realization groups
 
   [Michele Simionato]
-  * `oq mosaic run_site` keeps the CSV files exported in <asce_dir>/<model>,
-    except when OQ_TEST is set
   * Fixed ParkerEtAl2020 applying the epistemic adjustment (sigma_mu_epsilon)
     to PGV, for which it is not defined
   * Improved performance when saving aggregate loss curve statistics
