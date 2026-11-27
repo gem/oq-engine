@@ -379,9 +379,9 @@ jobs:
       - name: Server 'AELO' mode tests
         env:
           OQ_APPLICATION_MODE: AELO
-          WHEELHOUSE_URL="https://wheelhouse.openquake.org/unified/"
-          GEM_WHEELS_URL="https://wheelhouse.openquake.org/gem261118/"
-          URL_STANDALONE="https://wheelhouse.openquake.org/py/standalone/post-inst/"
+          WHEELHOUSE_URL: https://wheelhouse.openquake.org/unified/
+          GEM_WHEELS_URL: https://wheelhouse.openquake.org/gem261118/
+          URL_STANDALONE: https://wheelhouse.openquake.org/py/standalone/post-inst/
 
         run: |
           source ~/openquake/bin/activate
@@ -423,9 +423,9 @@ jobs:
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WHEELHOUSE_URL="https://wheelhouse.openquake.org/unified/"
-          GEM_WHEELS_URL="https://wheelhouse.openquake.org/gem261118/"
-          URL_STANDALONE="https://wheelhouse.openquake.org/py/standalone/post-inst/"
+          WHEELHOUSE_URL: https://wheelhouse.openquake.org/unified/
+          GEM_WHEELS_URL: https://wheelhouse.openquake.org/gem261118/
+          URL_STANDALONE: https://wheelhouse.openquake.org/py/standalone/post-inst/
 
         run: |
           export PIP_DEFAULT_TIMEOUT=100
