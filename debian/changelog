@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Improved performance when saving aggregate loss curve statistics
+
+  [Johnny Kao]
+  * Fixed aggregate loss curve statistics to preserve the weights of
+    realizations with zero losses.
+
+  [Michele Simionato]
+  * Fixed site ID remapping and retained ground motions at sites with no
+    earlier data when merging multiple HDF5 GMFs files
   * Changed `oq export -e zip job` to return an archive, plus a few fixes
   * Internal: add `oq compare errors` to measure the errors of the
     ps_grid_spacing approximation

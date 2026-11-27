@@ -102,14 +102,14 @@ def save_curve_stats(dstore):
         out = numpy.zeros((K + 1, S, P, EP))
         aggdf = aggcurves_df[aggcurves_df.loss_id == loss_id]
         for agg_id, df in aggdf.groupby("agg_id"):
-            for s, stat in enumerate(stats.values()):
-                for p in range(P):
-                    for e, ep_field in enumerate(ep_fields):
-                        dfp = df[df.return_period == periods[p]]
-                        ws = weights[dfp.rlz_id.to_numpy()]
-                        ws /= ws.sum()
-                        out[agg_id, s, p, e] = stat(dfp[ep_field].to_numpy(),
-                                                    ws)
+            for p, period in enumerate(periods):
+                dfp = df[df.return_period == period]
+                for e, ep_field in enumerate(ep_fields):
+                    # Missing realizations have zero losses (calc_stats).
+                    values = numpy.zeros_like(weights)
+                    values[dfp.rlz_id] = dfp[ep_field].to_numpy()
+                    for s, stat in enumerate(stats.values()):
+                        out[agg_id, s, p, e] = stat(values, weights)
         stat = 'agg_curves-stats/' + lt
         dstore.create_dset(stat, F64, (K + 1, S, P, EP))
         dstore.set_shape_descr(stat, agg_id=K+1, stat=list(stats),
