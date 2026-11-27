@@ -273,7 +273,7 @@ def _get_basin_term_factors(C, ctx, theta0, theta1, vmu, vsig, e1, e2, e3,
 
     # If required get the m9 basin adjustment if long period SA
     # for deep basin sites
-    if m9_basin_term and imt != PGV:
+    if m9_basin_term and imt != PGV():
         if imt.period >= 1.9:
             m9_adj = _get_adjusted_m9_basin_term(C, z2pt5)
             btf[z2pt5 >= 6.0] = m9_adj[z2pt5 >= 6.0]
@@ -564,7 +564,7 @@ class ParkerEtAl2020SInter(GMPE):
                 mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
 
             # Assume don't apply to PGV
-            if self.sigma_mu_epsilon and imt != PGV:
+            if self.sigma_mu_epsilon and imt != PGV():
                 # Apply epistemic uncertainty factor
                 sigma_mu_adjust = _get_sigma_mu_adjustment(
                     self.saturation_region, trt, imt, self.epi_adjs_table)
