@@ -590,8 +590,13 @@ def _user(form):
 
 # The IMPACT form sends to the browser the server paths of the files
 # downloaded from the USGS (rupture and station data), and the browser sends
-# them back when the calculation is launched. The paths are signed with the
-# SECRET_KEY, so that only the paths produced by the server are accepted.
+# them back when the calculation is launched. Like any value coming from the
+# client, they can be changed before being sent (e.g. with the developer
+# tools of the browser or with a script using the API), and the server would
+# then read any file chosen by the user, with the permissions of the WebUI:
+# for instance a huge file, exhausting the memory of the server. The paths
+# are signed with the SECRET_KEY, so that only the paths produced by this
+# server are accepted.
 USGS_FILE_SALT = 'openquake.server.services.usgs_file'
 USGS_FILE_MAX_AGE = 24 * 3600  # seconds
 
