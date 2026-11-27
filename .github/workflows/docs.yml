@@ -105,7 +105,7 @@ jobs:
           # install core dependencies from wheelhouse
           # and documentation optional dependencies from pypi
           pip install --no-index --no-cache-dir --find-links $WHEELHOUSE_URL --find-links $GEM_WHEELS_URL --find-links $URL_STANDALONE -e .
-          pip install -e .[doc]
+          pip install .[test,doc]
           python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
       - name: Check consistency between debian/changelog and CONTRIBUTORS.txt
         shell: bash
