@@ -26,13 +26,15 @@ from openquake.baselib.general import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.codes import SIMPLE_FAULT
 from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.multi_fault import BLOCKSIZE
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.mesh import mean_inclination_azimuth
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
-from openquake.hazardlib.mfd.alternative_characteristic_mfd import AlternativeCharacteristicMFD
+from openquake.hazardlib.mfd.alternative_characteristic_mfd import (
+    AlternativeCharacteristicMFD)
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
 
@@ -97,7 +99,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         of specifying the hypocentres within a SimpleFaultSource.
 
         Alternative approach 1 is described by hypo_list and slip_list:
-    
+
             :param hypo_list:
                 Array describing the relative position of the hypocentre on the
                 rupture surface. Each line represents a hypocentral position
@@ -109,9 +111,10 @@ class SimpleFaultSource(ParametricSeismicSource):
                 rupture will be described by the following array[(0.5, 0.5,
                 1.0)]. Example 2: two possible hypocenters are admitted for a
                 rupture. One hypocentre is located along the strike at 1/4 of
-                the fault length and at 1/4 of the fault width along the dip and
-                occurs with a weight of 0.3, the other one is at 3/4 of fault
-                length along strike and at 3/4 of fault width along strike with
+                the fault length and at 1/4 of the fault width along the dip
+                and occurs with a weight of 0.3, the other one is at 3/4 of
+                fault length along strike and at 3/4 of fault width along
+                strike with
                 a weight of 0.7. The numpy array would be entered as
                 numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]).
 
@@ -148,6 +151,9 @@ class SimpleFaultSource(ParametricSeismicSource):
     """
     code = SIMPLE_FAULT
     dip_spacing = 'mesh_spacing'
+    # the floating positions along the strike, sliced when splitting a
+    # magnitude with many ruptures, as for the multifault sources
+    col_slice = slice(None)
     # the dip and the seismogenic depths are scalars, rebound by the
     # modifications and never mutated in place
     shallow_uncertainties = frozenset([
@@ -171,6 +177,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         'set_hypo_depth_dist',
         'set_recurrow',
     }
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship,
@@ -274,7 +281,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             entries = []
             for d_idx, (prob, depth, fdf) in enumerate(self.hypo_depth_list):
                 if top <= depth <= bot:
-                    # Use fixedDipFrac if provided and otherwise compute from depth
+                    # Use fixedDipFrac if provided, otherwise compute it
+                    # from the depth
                     dip_frac = (fdf if fdf is not None
                                 else (depth - top) / rup_depth_range
                                 if rup_depth_range > 0 else 0.0)
@@ -352,7 +360,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         in the same order that _iter_ruptures emits ruptures, or None
         if no float survives the step subsampling.
         """
-        n_cols = len(range(num_rup_along_length)[::step])
+        n_cols = len(range(num_rup_along_length)[self.col_slice][::step])
         parts = []
         for first_row in range(num_rup_along_width)[::step]:
             entries = alloc.get(first_row)
@@ -416,13 +424,17 @@ class SimpleFaultSource(ParametricSeismicSource):
                     yield rates
                 else:
                     n_hypo = len(self.hypo_list) or 1
-                    yield numpy.full(
-                        num_rup * n_hypo * n_slip, occurrence_rate)
+                    ncols = len(range(num_rup_along_length)[self.col_slice])
+                    yield numpy.full(num_rup_along_width * ncols * n_hypo *
+                                     n_slip, occurrence_rate)
                 continue
+            # NB: the occurrence rate is the one of the whole magnitude,
+            # also for a source split along the strike (see col_slice)
+            cols = range(num_rup_along_length)[self.col_slice][::step]
             for first_row in range(num_rup_along_width)[::step]:
                 if self.hypo_depth_list and first_row not in alloc:
                     continue
-                for first_col in range(num_rup_along_length)[::step]:
+                for first_col in cols:
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
                     surface = SimpleFaultSurface(mesh)
@@ -488,6 +500,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                             self.upper_seismogenic_depth) /
                            math.sin(math.radians(self.dip)))
         self._nr = []
+        self._ncols = []  # number of positions along the strike
         n_slip = len(self.slip_list) or 1
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             if mag_occ_rate == 0:
@@ -496,15 +509,18 @@ class SimpleFaultSource(ParametricSeismicSource):
                 fault_length, fault_width, mag)
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
+            self._ncols.append(num_rup_along_length)
+            # the ruptures are the same for each position along the strike
+            ncols = len(range(num_rup_along_length)[self.col_slice])
             if self.hypo_depth_list:
                 alloc = self._hypo_depth_allocation_or_raise(
                     mag, rup_rows, num_rup_along_width,
                     num_rup_along_length)
                 n_hypo_total = sum(len(entries) for entries in alloc.values())
-                self._nr.append(num_rup_along_length * n_hypo_total * n_slip)
+                self._nr.append(ncols * n_hypo_total * n_slip)
             else:
                 n_hypo = len(self.hypo_list) or 1
-                self._nr.append(num_rup_along_length * num_rup_along_width *
+                self._nr.append(ncols * num_rup_along_width *
                                 n_hypo * n_slip)
         counts = sum(self._nr)
         return counts
@@ -661,7 +677,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         # Constants for BC Hydro NVA model
         b_ac = 0.3
         delta_mac = 1.0
-        gamma_eff = 0.9185 # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
+        # corrected gamma_eff from eq 1.2 of the BCHydro AC memo
+        gamma_eff = 0.9185
         # the job parameter width_of_mfd_bin, 0.1 if not set
         bin_width = getattr(self, 'width_of_mfd_bin', 0.1)
 
@@ -705,7 +722,8 @@ class SimpleFaultSource(ParametricSeismicSource):
                 occurrence_rates=occ)
             return
 
-        # Alt2-style: zero rates below Mmax-1, scale rest by fault_frac x rate_frac
+        # Alt2-style: zero rates below Mmax-1, scale the rest by
+        # fault_frac x rate_frac
         scale = fault_frac * rate_frac
         threshold = mmax - 1.0
         bins = parent.get_annual_occurrence_rates()
@@ -734,10 +752,21 @@ class SimpleFaultSource(ParametricSeismicSource):
             # `rupture_count` method
             if rate == 0:
                 continue
-            src = copy.copy(self)
-            src.mfd = mfd.ArbitraryMFD([mag], [rate])
-            src._num_ruptures = self._nr[i]
-            yield src
+            # a magnitude with many ruptures is split in n sources, each
+            # with one position along the strike every n, as for the
+            # multifault sources, otherwise a big fault (HimalayanThrust
+            # in CHN) produces slow tasks
+            n = min((self._nr[i] + BLOCKSIZE - 1) // BLOCKSIZE,
+                    self._ncols[i])
+            for j in range(n):
+                src = copy.copy(self)
+                src.mfd = mfd.ArbitraryMFD([mag], [rate])
+                if n == 1:
+                    src._num_ruptures = self._nr[i]
+                else:
+                    src.col_slice = slice(j, None, n)
+                    src._num_ruptures = 0  # recomputed with col_slice
+                yield src
 
     @property
     def polygon(self):
