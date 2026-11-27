@@ -40,6 +40,7 @@ from openquake.hazardlib.calc.filters import (
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.source import rupture
+from openquake.hazardlib.source.simple_fault import mesh_factor
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
@@ -1832,8 +1833,15 @@ class ContextMaker(object):
         fac = .333 if src.code in b'pPAM' else 1  # heuristic
         # the GSIMs of the group are evaluated on all the surviving
         # contexts, so their number multiplies the cost of the contexts
-        return (fac * src.nctxs * len(self.gsims) +
-                pairs / PAIR_COST) / N
+        weight = (fac * src.nctxs * len(self.gsims) +
+                  pairs / PAIR_COST) / N
+        if src.code in b'SC':
+            # big fault ruptures are expensive, see mesh_factor; the split
+            # sources have a single magnitude, so this is exact for them
+            mags = [mag for mag, rate in src.get_annual_occurrence_rates()
+                    if rate]
+            weight *= numpy.mean([mesh_factor(src, mag) for mag in mags])
+        return weight
 
     def set_weight(self, sources, srcfilter):
         """
