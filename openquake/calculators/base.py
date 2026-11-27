@@ -1737,6 +1737,11 @@ def import_ruptures_hdf5(h5, fnames):
         assert rup_id == rup['id'], (rup_id, rup['id'])
 
 
+# Columns were positional (gmv_0, gmv_1, ...) before v3.24.
+def _gmf_column(col, imts):
+    return imts[int(col[4:])] if col.startswith('gmv_') else col
+
+
 # Keep all GMF rows at sites not covered by any earlier input file.
 def _import_gmf_rows(dstore, fname, conv, covered, event_offset):
     logging.warning('Importing %s', fname)
@@ -1757,8 +1762,7 @@ def _import_gmf_rows(dstore, fname, conv, covered, event_offset):
             df['sid'] = sids.astype(U32)
             df['eid'] += event_offset
             for col in df.columns:
-                # Columns were positional before v3.24.
-                name = imts[int(col[4:])] if col.startswith('gmv_') else col
+                name = _gmf_column(col, imts)
                 hdf5.extend(dstore[f'gmf_data/{name}'], df[col])
     # Sites can recur across chunks of the same file.
     covered |= present
@@ -1811,11 +1815,7 @@ def import_gmfs_hdf5(dstore, oq, sitecol=None, *, source=None):
                     else:
                         grp.attrs[nam] = val
                 for col in f['gmf_data']:
-                    if col.startswith('gmv_'):  # before v3.24
-                        name = imtlist[int(col[4:])]
-                    else:
-                        name = col
-                    f.copy(f'gmf_data/{col}', grp, name)
+                    f.copy(f'gmf_data/{col}', grp, _gmf_column(col, imtlist))
             else:
                 f.copy('gmf_data', h5)
     else:  # merge the sites and the gmfs, tested in scenario/case_33
