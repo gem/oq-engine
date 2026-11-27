@@ -197,7 +197,7 @@ def run_site(lonlat_or_fname, mosaic_dir=None, asce_dir=None,
     sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
     params = get_params_from(
         dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir,
-        config=job_ini)
+        job_ini=job_ini)
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
