@@ -715,8 +715,6 @@ def run(func, oq, rup0, calc):
     allargs = get_allargs(oq, acc, filrups, calc)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
-    if hasattr(calc, 'save_tmp'):
-        calc.save_tmp(smap.monitor)
     task_no = os.environ.get('OQ_TASK_NO', '')
     if task_no:  # debug a single task
         smap.submit(allargs[int(task_no)])

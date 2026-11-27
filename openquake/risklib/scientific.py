@@ -950,15 +950,6 @@ class MultiEventRNG(object):
 
 
 #
-# Event Based
-#
-
-CurveParams = collections.namedtuple(
-    'CurveParams',
-    ['index', 'loss_type', 'curve_resolution', 'ratios', 'user_provided'])
-
-
-#
 # Scenario Damage
 #
 

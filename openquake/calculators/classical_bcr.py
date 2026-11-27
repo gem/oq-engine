@@ -41,7 +41,7 @@ def classical_bcr(riskinputs, param, monitor):
     """
     R = riskinputs[0].hazard_getter.R
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
-    crmodel = monitor.read('crmodel')
+    crmodel = base.read_crmodel(monitor, param)
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
         with mon:

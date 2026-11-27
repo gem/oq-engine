@@ -1004,6 +1004,14 @@ class HazardCalculator(BaseCalculator):
             if len(self.crmodel.tmap_df):
                 self.datastore.create_df(
                     'taxmap', self.crmodel.tmap_df, 'gzip')
+            # the group is always created, so that a child calculation
+            # never reads the consequences of its parent by mistake
+            consdict = {key: df for key, df in self.crmodel.consdict.items()
+                        if len(df)}
+            group = self.datastore.hdf5.create_group('consdict')
+            group.attrs['keys'] = ' '.join(consdict)
+            for key, df in consdict.items():
+                self.datastore.create_df(f'consdict/{key}', df)
 
     def _plot_assets(self):
         # called by post_risk in IMPACT mode
@@ -1411,6 +1419,38 @@ class HazardCalculator(BaseCalculator):
                 func(self.datastore, **oq.postproc_args)
 
 
+def prepare_risk_worker_data(dstore, assetcol, oq):
+    """
+    Create the group of the data shared by the risk workers, i.e. the
+    aggregation IDs of the assets; the risk model is read from `crm`
+    """
+    if dstore.hdf5.swmr_mode:
+        dstore.close()
+        dstore.open('a')
+    worker = dstore.hdf5.create_group('_risk_worker')
+    if oq.K:
+        aggids, _ = assetcol.build_aggids(oq.aggregate_by)
+        dtype = numpy.min_scalar_type(aggids.max(initial=0))
+        worker['aggids'] = aggids.astype(dtype, copy=False)
+    return worker
+
+
+# NB: this function is patched in risk_aggregation_test.py
+def read_crmodel(monitor, oq):
+    """
+    Read the risk model stored by .save_crmodel in the calculation datastore
+
+    :param monitor: a Monitor associated to the calculation datastore
+    :param oq: the OqParam instance of the calculation, with runtime
+        attributes set
+    """
+    # NB: the parent is not opened: it is not needed, since .save_crmodel
+    # stores the risk model in the child too, and it can be still open for
+    # writing, as in the interdependencies postrisk calculator
+    with hdf5.File(monitor.filename, 'r') as h5:
+        return riskmodels.CompositeRiskModel.read(h5, oq)
+
+
 class RiskCalculator(HazardCalculator):
     """
     Base class for all risk calculators. A risk calculator must set the
@@ -1435,6 +1475,8 @@ class RiskCalculator(HazardCalculator):
             taxidx = {taxo: i for i, taxo in enumerate(taxonomies, 1)}
             self.crmodel.tmap_df = readinput.taxonomy_mapping(
                 self.oqparam, taxidx)
+            # the workers read the taxonomy mapping from the datastore
+            self.datastore.create_df('taxmap', self.crmodel.tmap_df, 'gzip')
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
@@ -1465,7 +1507,7 @@ class RiskCalculator(HazardCalculator):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
         Require a `.core_task` to be defined with signature
-        (riskinputs, crmodel, param, monitor).
+        (riskinputs, param, monitor).
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
@@ -1474,7 +1516,6 @@ class RiskCalculator(HazardCalculator):
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
-        smap.monitor.save('crmodel', self.crmodel)
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
             smap.submit((block, self.oqparam))

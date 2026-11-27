@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import ast
 import os
 import time
 import pstats
-import pickle
 import signal
 import logging
 import getpass
@@ -34,10 +34,9 @@ from contextlib import contextmanager
 from decorator import decorator
 import psutil
 import numpy
-import pandas
 import numba
 
-from openquake.baselib.general import humansize
+from openquake.baselib.general import humansize, decode
 from openquake.baselib import hdf5
 
 # NB: one can use vstr fields in extensible datasets, but then reading
@@ -142,6 +141,24 @@ def init_performance(hdf5file, swmr=False):
             raise ValueError('%s: %s' % (hdf5file, exc))
     if fname:
         h5.close()
+
+
+def read_task_sent(h5):
+    """
+    :returns: a dictionary task name -> argument name -> bytes sent
+    """
+    return ast.literal_eval(decode(h5['task_sent'][()]))
+
+
+def save_task_sent(h5, sent):
+    """
+    Update the task_sent dictionary by overwriting the dataset in place,
+    since in SWMR mode the datasets should not be deleted and recreated
+    """
+    if sent:
+        task_sent = read_task_sent(h5)
+        task_sent.update(sent)
+        h5['task_sent'][()] = str(task_sent)
 
 
 def performance_view(dstore):
@@ -422,45 +439,6 @@ class Monitor(object):
                          counts=0, mem=0, duration=0)
         vars(new).update(kw)
         return new
-
-    def save(self, key, obj):
-        """
-        :param key: key in the _tmp.hdf5 file
-        :param obj: big object to store in pickle format
-        :returns: True is saved, False if not because the key was taken
-        """
-        tmp = self.filename[:-5] + '_tmp.hdf5'
-        f = hdf5.File(tmp, 'a') if os.path.exists(tmp) else hdf5.File(tmp, 'w')
-        with f:
-            if key in f:  # already saved
-                return False
-            if isinstance(obj, numpy.ndarray):
-                f[key] = obj
-            elif isinstance(obj, pandas.DataFrame):
-                f.create_df(key, obj)  # no gzip makes read('assets') faster
-            else:
-                f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
-        return True
-
-    def read(self, key, slc=slice(None)):
-        """
-        :param key: key in the _tmp.hdf5 file
-        :param slc: slice to read (default all)
-        :return: unpickled object
-        """
-        tmp = self.filename[:-5] + '_tmp.hdf5'
-        with hdf5.File(tmp, 'r') as f:
-            dset = f[key]
-            if '__pdcolumns__' in dset.attrs:
-                return f.read_df(key, slc=slc)
-            elif dset.shape:
-                return dset[slc]
-            return pickle.loads(dset[()])
-
-    def read_pdcolumns(self, key):
-        tmp = self.filename[:-5] + '_tmp.hdf5'
-        with hdf5.File(tmp, 'r') as f:
-            return f[key].attrs['__pdcolumns__']
 
     def iter(self, genobj, atstop=lambda: None):
         """

@@ -135,7 +135,7 @@ def store_ctxs(dstore, rupdata, grp_id, gid, ratios=()):
     for par in dstore['rup']:
         if par == 'rup_id':
             hdf5.extend(dstore['rup/rup_id'],
-                         I64(rupdata['src_id']) * TWO30 + rupdata['rup_id'])
+                        I64(rupdata['src_id']) * TWO30 + rupdata['rup_id'])
         elif par == 'grp_id':
             hdf5.extend(dstore['rup/grp_id'], numpy.full(nr, grp_id))
         elif par == 'gid':
@@ -592,19 +592,20 @@ def classical(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
     # NB: the tasks generated below are called baseclassical, i.e. they
     # have a different name than the Starmap (classical), but their busy
     # times are summed to the classical ones in the starmap_info dataset;
-    # this is what repairs the stragglers when the initial split underestimates the
-    # cost of a group. The split is not triggered by the tests, since they
-    # have few sites; the reference test is classical/share_small in
-    # oq-risk-tests (split_time = 2). NB: as_rmap is passed explicitly,
-    # so that the monitor appended by the Starmap ends up in the monitor
-    # argument; otherwise the performance info of the subtasks (computing
-    # mean_std, get_poes, ...) would be lost
+    # this is what repairs the stragglers when the initial split
+    # underestimates the cost of a group. The split is not triggered by
+    # the tests, since they have few sites; the reference test is
+    # classical/share_small in oq-risk-tests (split_time = 2). NB: as_rmap
+    # is passed explicitly, so that the monitor appended by the Starmap
+    # ends up in the monitor argument; otherwise the performance info of
+    # the subtasks (computing mean_std, get_poes, ...) would be lost
     if dt > 2 * oq.split_time:
-        for blk in blks[1:]:
+        # all the remaining blocks go to subtasks: computing one of them
+        # here would double the time of a task with two heavy sources
+        # (6280s instead of 3400s for two HimalayanThrust pieces in CHN)
+        for blk in blks:
             yield (baseclassical, blk, tilegetter, cmaker, remove_zeros,
                    gids, dstore, as_rmap)
-        yield baseclassical(
-            blks[0], sites, cmaker, remove_zeros, gids, as_rmap=as_rmap)
     elif dt > oq.split_time:
         yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
                remove_zeros, gids, dstore, as_rmap)

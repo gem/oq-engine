@@ -32,7 +32,7 @@ from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg, fast_agg3, sum_records)
 from openquake.baselib.hdf5 import vstr
-from openquake.baselib.performance import performance_view
+from openquake.baselib.performance import performance_view, read_task_sent
 from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.valid import basename
@@ -245,7 +245,7 @@ def view_job_info(token, dstore):
     """
     data = []
     task_info = dstore['task_info'][()]
-    task_sent = ast.literal_eval(decode(dstore['task_sent'][()]))
+    task_sent = read_task_sent(dstore)
     for task, dic in task_sent.items():
         sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]

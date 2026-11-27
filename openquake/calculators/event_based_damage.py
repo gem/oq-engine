@@ -64,15 +64,19 @@ def _compose_damage_counts(dd5, numbers, D):
 def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
     """
     :param df: a DataFrame of GMFs
-    :param assetcol: DataStore instance from which to read the GMFs
+    :param assetcol: assets on the sites of this GMF tile
     :param oq: OqParam instance
     :param rlzs: E realizations or None
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays, the output of event_based_damage
     """
     with monitor('reading data', measuremem=True):
-        crmodel = monitor.read('crmodel')
-        aggids = monitor.read('aggids')
+        crmodel = base.read_crmodel(monitor, oq)
+        if oq.K:
+            with hdf5.File(monitor.filename, 'r') as h5:
+                aggids = h5['_risk_worker/aggids'][:]
+        else:
+            aggids = ()
 
     dmgcsq = zero_dmgcsq(len(assetcol), oq.R, oq.L, crmodel)
     P, _A, R, L, Dc = dmgcsq.shape
@@ -180,10 +184,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.builder = get_loss_builder(self.datastore, oq)  # check
         self.dmgcsq = zero_dmgcsq(
             len(self.assetcol), self.R, oq.L, self.crmodel)
-        if oq.K:
-            aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
-        else:
-            aggids = 0
+        base.prepare_risk_worker_data(self.datastore, self.assetcol, oq)
         gmf_df = self.datastore.read_df('gmf_data')
         if oq.R > 1:
             # i.e. case_9 in scenario_damage
@@ -194,10 +195,8 @@ class DamageCalculator(EventBasedRiskCalculator):
         sids = self.assetcol['site_id']
         dd_dict = general.AccumDict(accum=0)
         with self.datastore.reopen('r'):  # read-only in the parallel phase
-            smap =  parallel.Starmap(damage_from_gmfs, h5=self.datastore,
-                                     perf='memory')
-            smap.monitor.save('aggids', aggids)
-            smap.monitor.save('crmodel', self.crmodel)
+            smap = parallel.Starmap(damage_from_gmfs, h5=self.datastore,
+                                    perf='memory')
             for t in range(ct):
                 gmf_tile = gmf_df[gmf_df.sid % ct == t]
                 asset_tile = self.assetcol.new(
