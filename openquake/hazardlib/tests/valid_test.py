@@ -167,7 +167,7 @@ class ValidationTestCase(unittest.TestCase):
     def test_full_instantiation(self):
         # test for https://github.com/gem/oq-engine/issues/7363
         abr = valid.gsim("AbrahamsonEtAl2014")
-        self.assertIsNone(abr.region)
+        self.assertEqual(abr.region, '')
 
     def test_gsim(self):
         class FakeGsim(object):

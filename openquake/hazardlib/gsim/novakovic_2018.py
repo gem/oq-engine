@@ -58,7 +58,7 @@ def _stress_param_scaling(C, d_sigma, mag):
 
 def _source_scaling(C, d_sigma, mag, hypo_depth):
     """ Source scaling as per eq. 3 """
-    if d_sigma is None:
+    if isinstance(d_sigma, str) and not d_sigma:
         # Implements eq. 11 in Novokovic et al. 2018
         t1 = 0.097*(hypo_depth-10)
         t2 = 1.329*(mag-5.1)
@@ -163,7 +163,7 @@ class NovakovicEtAl2018(GMPE):
     #: Required distance measures is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
-    def __init__(self, d_sigma=None, region_fle=None, site_term=True,
+    def __init__(self, d_sigma='', region_fle='', site_term=True,
                  **kwargs):
         super().__init__(**kwargs)
         self.d_sigma = d_sigma
@@ -171,7 +171,7 @@ class NovakovicEtAl2018(GMPE):
 
         # Read the file and create the coefficient table for the regional
         # adjustment
-        if region_fle is None:
+        if not region_fle:
             region_fle = os.path.join(
                 TFP, 'novakovic_2018',
                 'novakovic_2018_reg_adj_oklahoma.txt')

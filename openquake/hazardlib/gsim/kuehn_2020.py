@@ -850,7 +850,7 @@ class KuehnEtAl2020SInter(GMPE):
     REQUIRES_ATTRIBUTES = {'region', 'm_b', 'm9_basin_term',
                            'usgs_basin_scaling', 'sigma_mu_epsilon'}
 
-    def __init__(self, region="GLO", m_b=None, m9_basin_term=None,
+    def __init__(self, region="GLO", m_b='', m9_basin_term='',
                  usgs_basin_scaling=False, sigma_mu_epsilon=0.0,
                  ak23_bias_adj=False, ak23_cb14_sig=False):
         # Check that if a region is input that it is one of the ones

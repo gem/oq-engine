@@ -91,6 +91,15 @@ class GsimInstantiationTestCase(unittest.TestCase):
         names = [cls.__name__ for cls in classes
                  if cls.__module__.startswith('openquake.hazardlib.gsim.')]
         self.assertEqual(duplicated(names), [])
+    def test_none_default_is_rejected(self):
+        with self.assertRaisesRegex(TypeError, "option must default to ''"):
+            class NoneDefaultGMPE(TGMPE):
+                def __init__(self, *, option=None):
+                    pass
+
+    def test_explicit_none_is_rejected(self):
+        with self.assertRaisesRegex(TypeError, "option must use ''"):
+            TGMPE(option=None)
 
     def test_deprecated(self):
         # check that a deprecation warning is raised when a deprecated

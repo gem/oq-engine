@@ -212,7 +212,7 @@ def get_sigma_epistemic(trt, region, imt):
     we are using only the global model.  Henec below the coefficients
     are just for the global model.
     """
-    if region is None:
+    if not region:
         if trt == const.TRT.SUBDUCTION_INTRASLAB:
             sigma_epsilon1 = 0.35
             sigma_epsilon2 = 0.22
@@ -297,9 +297,9 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     """
     def __init__(
         self,
-        region=None,
-        saturation_region=None,
-        basin=None,
+        region='',
+        saturation_region='',
+        basin='',
         sigma_mu_epsilon=0.0,
         modified_sigma=False,
     ):

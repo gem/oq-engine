@@ -796,8 +796,7 @@ class GridAdjustedGMPE(GMPE):
 
         # Per-ray path cap (in natural-log units).
         # An empty cap leaves the per-branch total unclipped.
-        self.path_cap = '' if path_cap is None else path_cap
-        if self.path_cap != '' and self.path_cap <= 0:
+        if path_cap != '' and path_cap <= 0:
             raise ValueError(
                 f"path_cap must be positive (natural-log units) or empty, "
                 f"got {path_cap!r}.")

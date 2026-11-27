@@ -179,18 +179,18 @@ class AlAtikSigmaModel(GMPE):
         Choice of model for the inter-event standard deviation (tau), selecting
         from "global" {default}, "cena" or "cena_constant". default is global
     :param tau_quantile:
-        tau quantile used in sigma model. default of None uses the mean.
+        Tau quantile used in the sigma model. An empty string uses the mean.
     :param phi_model:
         Choice of model for the single-station intra-event standard deviation
         (phi_ss), selecting from "global" {default}, "cena" or "cena_constant"
         default is global.
     :param phi_quantile:
-        phi quantile used in sigma model. default of None uses the mean.
+        Phi quantile used in the sigma model. An empty string uses the mean.
     :param phi_s2ss_model:
         Choice of station-term s2ss model. Can be either "cena" or None. When
         None is input then the non-ergodic model is used
     :param phi_s2ss_quantile:
-        s2ss quantile used in sigma model. default of None uses the mean.
+        S2SS quantile used in the sigma model. An empty string uses the mean.
     :param kappa_file:
         tab-delimited file of kappa values per IMT, where first column is
         IMT. includes a header.
@@ -213,9 +213,9 @@ class AlAtikSigmaModel(GMPE):
     extr = True  # always extrapolate, except when debugging
 
     def __init__(self, gmpe_name, tau_model='global', phi_model='global',
-                 tau_quantile=None, phi_ss_quantile=None,
-                 phi_s2ss_quantile=None, phi_s2ss_model=None,
-                 kappa_file=None, kappa_val=None):
+                 tau_quantile='', phi_ss_quantile='',
+                 phi_s2ss_quantile='', phi_s2ss_model='',
+                 kappa_file='', kappa_val=''):
         self.tau_model = tau_model
         self.phi_model = phi_model
         self.phi_s2ss_model = phi_s2ss_model

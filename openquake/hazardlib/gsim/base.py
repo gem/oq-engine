@@ -165,6 +165,13 @@ class MetaGSIM(abc.ABCMeta):
         bad = bad_methods(dic)
         if bad:
             sys.exit('%s cannot contain the methods %s' % (name, bad))
+        if '__init__' in dic:
+            params = inspect.signature(dic['__init__']).parameters
+            for param in params.values():
+                if param.default is None:
+                    raise TypeError(
+                        f"{name}.{param.name} must default to '' "
+                        "instead of None for TOML serialization")
         for k, v in dic.items():
             if (k == 'compute' and v.__annotations__.get("ctx")
                     is not numpy.recarray):
@@ -181,6 +188,11 @@ class MetaGSIM(abc.ABCMeta):
 
     def __call__(cls, **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
+        for name, value in kwargs.items():
+            if value is None:
+                raise TypeError(
+                    f"{cls.__name__}.{name} must use '' instead of None "
+                    "for TOML serialization")
         if 'weight' in kwargs:  # AvgPoeGMPE
             w = kwargs.pop('weight')
             self = type.__call__(cls, **kwargs)

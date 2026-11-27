@@ -577,10 +577,10 @@ class AbrahamsonEtAl2014(GMPE):
     #: Reference rock conditions as defined at page
     DEFINED_FOR_REFERENCE_VELOCITY = 1180
 
-    def __init__(self, sigma_mu_epsilon=0.0, region=None,
+    def __init__(self, sigma_mu_epsilon=0.0, region='',
                  usgs_basin_scaling=False, cybershake_basin_adj=False):
         self.region = region
-        assert self.region in (None, 'CHN', 'JPN', 'TWN'), region
+        assert self.region in ('', 'CHN', 'JPN', 'TWN'), region
         self.sigma_mu_epsilon = sigma_mu_epsilon
         self.usgs_basin_scaling = usgs_basin_scaling
         self.cybershake_basin_adj = cybershake_basin_adj
