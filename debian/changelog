@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fix GSIM branch sharing when model options or adjustment files differ
   * Share ground-motion computations across compatible GSIM logic-tree branches
   * Split the magnitudes of the big simple and complex faults in pieces,
     depending on the number and size of the ruptures, to avoid slow tasks

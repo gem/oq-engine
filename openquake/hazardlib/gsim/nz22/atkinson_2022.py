@@ -28,7 +28,7 @@ from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.backbone import (
-    mean_shift_functions, branch_key)
+    branch_key, compute_without_shift)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.nz22.const import (
     periods_AG20,
@@ -265,7 +265,7 @@ def get_backarc_term(trt, imt, ctx):
 
 
 # Apply the selected epistemic mean shift.
-def _apply_epistemic_shift(gsim, ctx, imts, mean):
+def _apply_epistemic_shift(gsim, ctx, imts, mean, *_stddevs):
     # In her email and slack post Gail mentioned that her
     # upper and lower branches are as 1.28 times of the delta.
     # So as to represent 10th and 90th percentile.
@@ -362,7 +362,7 @@ class Atkinson2022Crust(GMPE):
         if apply_shift:
             _apply_epistemic_shift(self, ctx, imts, mean)
 
-    central_functions = mean_shift_functions(_apply_epistemic_shift)
+    central_functions = (compute_without_shift, _apply_epistemic_shift)
     make_central_key = branch_key(compute, 'epistemic')
 
     # periods given by 1 / 10 ** COEFFS['f']

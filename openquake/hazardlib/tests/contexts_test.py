@@ -49,6 +49,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.gsim import kuehn_2020
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
     CampbellBozorgnia2014)
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
@@ -510,31 +511,39 @@ class SharedGSIMTestCase(unittest.TestCase):
                     for gsim in cm.gsims], axis=1)
                 numpy.testing.assert_array_equal(actual, expected)
 
-    def test_nshmp_preserves_poe_adjustment(self):
+    def test_nshmp_preserves_weighted_poes(self):
         gsims = [
             valid.gsim(f'AbrahamsonEtAl2014NSHMP{suffix}')
             for suffix in ('Lower', 'Mean', 'Upper')]
-        cm = contexts.simple_cmaker(gsims, ['PGA', 'SA(0.5)'])
-        ctx = cm.new_ctx(2)
-        ctx.mag = [5.8, 7.2]
-        ctx.rrup = [7.0, 40.0]
-        ctx.rjb = [5.0, 35.0]
-        ctx.vs30 = [300.0, 900.0]
+        imtls = {'PGA': [0.1, 0.5], 'SA(0.5)': [0.1, 0.5]}
+        cm = contexts.simple_cmaker(gsims, list(imtls), imtls=imtls,
+                                    truncation_level=3.)
+        ctx = cm.new_ctx(120)
+        ctx.mag = 7.2
+        ctx.rrup = numpy.linspace(7., 40., len(ctx))
+        ctx.rjb = ctx.rrup - 2.
+        ctx.vs30 = numpy.linspace(300., 900., len(ctx))
         ctx.dip = 60.0
         ctx.width = 15.0
-        slices = [ctx[:1], ctx[1:]]
         for maker in (cm, cm.copy(gsims=gsims + [gsims[1]])):
             with self.subTest(branches=len(maker.gsims)):
-                expected = numpy.stack([maker.get_4MN(slices, gsim)
-                                        for gsim in maker.gsims], axis=1)
-                adj = [gsim.adj.copy() for gsim in maker.gsims]
+                separate = [maker.get_4MN([ctx], gsim)[:2] for gsim in gsims]
                 with mock.patch.object(maker, '_compute_group',
                                        wraps=maker._compute_group) as grouped:
-                    actual = maker.get_mean_stds(slices, split_by_mag=False)
+                    chunks = list(maker._gen_chunk_poes(ctx))
                 grouped.assert_called_once()
-                numpy.testing.assert_array_equal(actual, expected)
-                for gsim, expected_adj in zip(maker.gsims, adj):
-                    numpy.testing.assert_array_equal(gsim.adj, expected_adj)
+                self.assertGreater(len(chunks), 1)
+                for poes, _mean, _sig, _tau, slc in chunks:
+                    expected = numpy.stack([
+                        contexts._get_poes(ms[:, :, slc],
+                                           maker.loglevels.array, maker.phi_b)
+                        for ms in separate], axis=-1)
+                    expected[..., 1] = numpy.average(
+                        expected, axis=-1, weights=(0.185, 0.63, 0.185))
+                    numpy.testing.assert_array_equal(poes[..., :3], expected)
+                    if len(maker.gsims) == 4:
+                        numpy.testing.assert_array_equal(poes[..., 3],
+                                                         expected[..., 1])
 
     def test_shared_kwargs_preserve_coefficient_overrides(self):
         coeffs = {'PGA': {'c0': -4.}}
@@ -548,6 +557,17 @@ class SharedGSIMTestCase(unittest.TestCase):
         ctx.dip, ctx.ztor, ctx.width, ctx.hypo_depth = 60., 4., 16., 10.
         expected = numpy.stack([cm.get_4MN([ctx], gsim)
                                 for gsim in cm.gsims], axis=1)
+        numpy.testing.assert_array_equal(cm.get_mean_stds([ctx]), expected)
+
+    def test_explicit_none_does_not_use_default_backbone(self):
+        gsims = [BooreEtAl2014(sigma_mu_epsilon=-1.),
+                 BooreEtAl2014(region=None, sigma_mu_epsilon=1.)]
+        cm = contexts.simple_cmaker(gsims, ['SA(1.0)'])
+        ctx = cm.new_ctx(2)
+        ctx.mag, ctx.rjb, ctx.rake, ctx.vs30 = 6.2, 10., 0., 350.
+        ctx.z1pt0 = [80., 1400.]
+        expected = numpy.stack([cm.get_4MN([ctx], gsim) for gsim in gsims],
+                               axis=1)
         numpy.testing.assert_array_equal(cm.get_mean_stds([ctx]), expected)
 
     def test_independent_median_and_sigma_scaling(self):

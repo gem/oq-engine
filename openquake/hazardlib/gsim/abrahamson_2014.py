@@ -26,7 +26,7 @@ import numpy as np
 from scipy import interpolate
 
 from openquake.hazardlib.gsim.backbone import (
-    mean_shift_functions, sigma_mu_key)
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -527,7 +527,7 @@ def get_epistemic_sigma(ctx):
 
 
 # Apply the same epistemic factor to every IMT in a branch.
-def _apply_nshm_shift(gsim, ctx, imts, mean):
+def _apply_nshm_shift(gsim, ctx, imts, mean, *_stddevs):
     if len(imts) and gsim.sigma_mu_epsilon:
         mean[:len(imts)] += gsim.sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
@@ -623,7 +623,7 @@ class AbrahamsonEtAl2014(GMPE):
         if apply_shift:
             _apply_nshm_shift(self, ctx, imts, mean)
 
-    central_functions = mean_shift_functions(_apply_nshm_shift)
+    central_functions = (compute_without_shift, _apply_nshm_shift)
     make_central_key = sigma_mu_key(compute)
 
     #: Coefficient tables as per annex B of Abrahamson et al. (2014)

@@ -30,7 +30,7 @@ from scipy.special import erf
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.backbone import (
-    mean_shift_functions, sigma_mu_key)
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -425,7 +425,7 @@ def get_stddevs(C, rrup, vs30):
 
 
 # Apply the final epistemic mean shift for this branch.
-def _apply_sigma_mu(gsim, ctx, imts, mean):
+def _apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
     if gsim.sigma_mu_epsilon:
         trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
         for m, imt in enumerate(imts):
@@ -583,7 +583,7 @@ class ParkerEtAl2020SInter(GMPE):
         if apply_shift:
             _apply_sigma_mu(self, ctx, imts, mean)
 
-    central_functions = mean_shift_functions(_apply_sigma_mu)
+    central_functions = (compute_without_shift, _apply_sigma_mu)
     make_central_key = sigma_mu_key(compute)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\

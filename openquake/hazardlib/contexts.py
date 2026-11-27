@@ -45,6 +45,7 @@ from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
+from openquake.hazardlib.gsim.nshmp_2014 import nga_west2_epistemic_adjustment
 from openquake.hazardlib.site_amplification import get_poes_site
 
 U8 = numpy.uint8
@@ -1705,7 +1706,8 @@ class ContextMaker(object):
                     f'{gsim} was not instantiated with a '
                     f'ModifiableGMPE, please read {url}')
             # GSIMs opt in with two module-level functions and a key that
-            # identifies the inputs to their shared computation.
+            # identifies the inputs to their shared computation. The branch
+            # callback receives the shared result and the four output arrays.
             central_functions = getattr(gsim, 'central_functions', None)
             key = getattr(gsim, 'central_key', None)
             if not central_functions or key is None:
@@ -1725,7 +1727,6 @@ class ContextMaker(object):
         # Every branch has the same central_key, so use the first GSIM
         # to compute the shared result.
         first, backbone = g_gsim_pairs[0]
-        adjustments = {}
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
@@ -1738,12 +1739,10 @@ class ContextMaker(object):
                 branch = out[:, g, :, slc]
                 if g != first:
                     branch[:] = central
-                adj = apply_branch(gsim, resolved, self.imts, branch)
-                if adj is not None:
-                    adjustments.setdefault(g, []).append(adj)
+                apply_branch(gsim, resolved, self.imts, *branch)
             start = slc.stop
         for g, gsim in g_gsim_pairs:
-            self._finish_mean_stds(out[:, g], gsim, adjustments.get(g))
+            self._check_conv(out[:, g], gsim)
 
     def get_4MN(self, ctxs, gsim):
         """
@@ -1752,21 +1751,17 @@ class ContextMaker(object):
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imts)
         out = numpy.zeros((4, M, N))
-        adjustments = []  # NSHM2014P adjustments
         compute = gsim.__class__.compute
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
-            adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
-            if adj is not None:
-                adjustments.append(adj)
+            compute(gsim, ctx, self.imts, *out[:, :, slc])
             start = slc.stop
-        self._finish_mean_stds(out, gsim, adjustments)
+        self._check_conv(out, gsim)
         return out
 
-    # Collect adjustments for PoEs, check stddevs and convert components.
-    def _finish_mean_stds(self, out, gsim, adjustments):
-        gsim.adj = numpy.concatenate(adjustments) if adjustments else []
+    # Check the stddevs and apply the horizontal component conversion.
+    def _check_conv(self, out, gsim):
         if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
             raise ValueError('Total StdDev is zero for %s' % gsim)
         if self.conv:
@@ -1910,13 +1905,13 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
         An array of shape (2, M, N) with mean and standard deviations
         for the sites and intensity measure types
     :param cmaker:
-        A ContextMaker instance, used only in nhsm_2014
+        The ContextMaker supplying the intensity levels and truncation
     :param ctx:
-        A context array used only in avg_poe_gmpe
+        A context array used by NSHMP2014 and AvgPoeGMPE
     :param out:
         An array of PoEs of shape (N, L) to be filled
     :param slc:
-        A slice object used only in avg_poe_gmpe
+        The slice of context rows matching mean_std and out
     :raises ValueError:
         If truncation level is not ``None`` and neither non-negative
         float number, and if ``imts`` dictionary contain wrong or
@@ -1926,13 +1921,13 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
     phi_b = cmaker.phi_b
     _M, L1 = loglevels.shape
     if hasattr(gsim, 'weights_signs'):  # for nshmp_2014, case_72
-        adj = gsim.adj[slc]
+        ctxt = ctx[slc]
+        adj = nga_west2_epistemic_adjustment(ctxt['mag'], ctxt['rrup'])
         outs = []
         weights, signs = zip(*gsim.weights_signs)
         for s in signs:
             ms = numpy.array(mean_std)  # make a copy
-            for m in range(len(loglevels)):
-                ms[0, m] += s * adj
+            ms[0] += s * adj
             outs.append(_get_poes(ms, loglevels, phi_b))
         out[:] = numpy.average(outs, weights=weights, axis=0)
     elif hasattr(gsim, 'mixture_model'):

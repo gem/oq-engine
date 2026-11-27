@@ -24,7 +24,7 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.backbone import (
-    mean_shift_functions, branch_key)
+    branch_key, compute_without_shift)
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
@@ -129,7 +129,7 @@ def get_stddevs(ergodic, tau_model, TAU, PHI_SS, imt, ctx):
 
 
 # Apply the final epistemic mean shift for this branch.
-def _apply_sigma_mu(gsim, ctx, imts, mean):
+def _apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
     if gsim.epsilon:
         for m, imt in enumerate(imts):
             mean[m] += gsim.epsilon * gsim.COEFFS[imt]["sigma_mu"]
@@ -276,7 +276,7 @@ class ESHM20Craton(GMPE):
         if apply_shift:
             _apply_sigma_mu(self, ctx, imts, mean)
 
-    central_functions = mean_shift_functions(_apply_sigma_mu)
+    central_functions = (compute_without_shift, _apply_sigma_mu)
     make_central_key = branch_key(compute, 'epsilon')
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\

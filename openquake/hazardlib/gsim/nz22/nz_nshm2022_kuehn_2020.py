@@ -314,7 +314,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         if apply_shift:
             _apply_sigma_mu(self, (ctx, {}), imts, mean)
 
-    make_central_key = sigma_mu_key(compute, 'gmpe_table')
+    make_central_key = sigma_mu_key(compute)
 
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):

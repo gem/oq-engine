@@ -37,7 +37,7 @@ from openquake.baselib.general import gen_slices
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import npoints_between, geodetic_distance
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.backbone import mean_shift_functions
+from openquake.hazardlib.gsim.backbone import configuration_key
 
 
 def load_sigma_for_term(grp, term, imt_str, location, sig_action,
@@ -235,7 +235,7 @@ def _grid_digest(path, stamp):
         return hashlib.file_digest(f, 'sha256').digest()
 
 
-def get_residual_grids(hdf5_path):
+def get_residual_grids(hdf5_path, *, with_digest=False):
     """
     Same as load_residual_grids, but identical file contents are loaded
     only once per process, even from different paths. The result is shared
@@ -244,6 +244,8 @@ def get_residual_grids(hdf5_path):
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.
+    :param with_digest:
+        Return the digest and loaded grids as a pair.
     """
     path = os.path.abspath(hdf5_path)
     stat = os.stat(path)
@@ -251,7 +253,8 @@ def get_residual_grids(hdf5_path):
         path, (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size))
     if key not in _GRID_CACHE:
         _GRID_CACHE[key] = load_residual_grids(path)
-    return _GRID_CACHE[key]
+    grids = _GRID_CACHE[key]
+    return (key, grids) if with_digest else grids
 
 
 def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
@@ -633,7 +636,7 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
     return resolved
 
 
-def apply_epsilons(gsim, resolved, imts, mean):
+def apply_epsilons(gsim, resolved, imts, mean, *_stddevs):
     """
     Add this branch's eps * mean_se shift to the central mean.
 
@@ -780,8 +783,7 @@ class GridAdjustedGMPE(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     experimental = True # It's not extensively tested yet
-    central_functions = mean_shift_functions(
-        apply_epsilons, compute_central=compute_central)
+    central_functions = (compute_central, apply_epsilons)
 
     def __init__(self, gmpe_name, grid_hdf5_file, epsilons=None,
                  path_cap=None, **kwargs):
@@ -793,7 +795,8 @@ class GridAdjustedGMPE(GMPE):
         # Load grid-based corrections from the hdf5; they are shared with
         # the other instances reading the same file. Like GMPETable, keep
         # the loaded data when pickling: extracted files may be gone.
-        self.grid_data = get_residual_grids(grid_hdf5_file)
+        digest, self.grid_data = get_residual_grids(
+            grid_hdf5_file, with_digest=True)
 
         # Per-ray path cap (in natural-log units).
         # None = no cap; compute() clips the per-branch total after lookup.
@@ -806,9 +809,9 @@ class GridAdjustedGMPE(GMPE):
         # GridAdjustedGMPEs with the same central_key differ only by
         # epsilons and path_cap, so ContextMaker.get_mean_stds computes
         # their backbone and central grid adjustments only once
-        self.central_key = (
-            os.fspath(grid_hdf5_file), type(self.gmpe).__name__,
-            repr(tuple(self.gmpe.kwargs.items())))
+        backbone = configuration_key(self.gmpe)
+        self.central_key = ((type(self), digest, backbone)
+                            if backbone is not None else None)
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
         self.epsilons = epsilons or {}

@@ -24,8 +24,7 @@ import inspect
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim import base
-from openquake.hazardlib.gsim.backbone import (
-    branch_key, mean_shift_functions)
+from openquake.hazardlib.gsim.backbone import branch_key
 
 
 def nga_west2_epistemic_adjustment(mag, dist):
@@ -55,10 +54,9 @@ def _compute_central(gsim, ctx, imts, mean, sig, tau, phi, gra_mon=None):
     return nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
 
 
-# The mean branch also passes the adjustment to the PoE calculation.
-def _apply_shift(gsim, adjustment, imts, mean):
+# Apply this branch's signed adjustment to every IMT.
+def _apply_shift(gsim, adjustment, imts, mean, *_stddevs):
     mean[:] += gsim.sgn * adjustment
-    return adjustment
 
 
 class NSHMP2014(base.GMPE):
@@ -110,10 +108,10 @@ class NSHMP2014(base.GMPE):
         Compute mean, sig, tau, phi and returns the so called adjustment
         """
         adjustment = _compute_central(self, ctx, imts, mean, sig, tau, phi)
-        return _apply_shift(self, adjustment, imts, mean)
+        _apply_shift(self, adjustment, imts, mean)
+        return adjustment
 
-    central_functions = mean_shift_functions(
-        _apply_shift, compute_central=_compute_central)
+    central_functions = (_compute_central, _apply_shift)
     make_central_key = branch_key(compute, 'sgn')
 
 # populate gsim_aliases

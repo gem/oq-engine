@@ -22,12 +22,15 @@ if author-provided values can be obtained.
 """
 
 import os
+import shutil
 import tempfile
 import unittest
 import h5py
 import numpy as np
 
 from openquake.hazardlib import imt
+from openquake.hazardlib.contexts import simple_cmaker
+from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
 from openquake.hazardlib.gsim.sung_2022 import (
     SungEtAl2022, SungEtAl2022NonErgodic, _load_adjustments,
     _LOADED_ADJUSTMENT_CACHE)
@@ -314,6 +317,26 @@ class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
         self.assertAlmostEqual(c1[1], c2[1], places=6)  # sigma
         self.assertAlmostEqual(c1[2], c2[2], places=6)  # tau
         self.assertAlmostEqual(c1[3], c2[3], places=6)  # phi
+
+    def test_wrapped_backbones_preserve_adjustment_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            modified = os.path.join(tmp, os.path.basename(HDF5))
+            shutil.copyfile(HDF5, modified)
+            with h5py.File(modified, 'r+') as hf:
+                dataset = hf['site1/adj_5hz']
+                rows = dataset[:]
+                rows['mean'] += 0.5
+                dataset[:] = rows
+            gsims = [ModifiableGMPE(
+                gmpe={'SungEtAl2022NonErgodic': {'adjustment_file': path}},
+                set_scale_median_scalar={'scaling_factor': scale})
+                for path, scale in [(os.path.abspath(HDF5), 0.9),
+                                    (modified, 1.1)]]
+            cm = simple_cmaker(gsims, ['EAS(5.0)'])
+            ctx = self._ctx()
+            expected = np.stack([cm.get_4MN([ctx], gsim) for gsim in gsims],
+                                axis=1)
+            np.testing.assert_array_equal(cm.get_mean_stds([ctx]), expected)
 
     def test_site_routing(self):
         # Same rupture (clon, clat), different custom_site_id -> different

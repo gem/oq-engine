@@ -682,10 +682,6 @@ def _apply_modifiers(gsim, ctx, imts, mean, sig, tau, phi, ref=None):
         if name == 'ceus2020_site_term':
             kwargs['ref_pga'] = np.exp(ref)
 
-        # Conditional GMPEs
-        if name == 'conditional_gmpe':
-            kwargs['base_preds'] = gsim.params[name]['base_preds']
-
         modify = globals()[name]
         for m, imt in enumerate(imts):
             modify(ctx, imt, mean[m], sig[m], tau[m], phi[m], **kwargs)
@@ -695,11 +691,6 @@ def _apply_modifiers(gsim, ctx, imts, mean, sig, tau, phi, ref=None):
 def _compute_unmodified(gsim, ctx, imts, mean, sig, tau, phi, gra_mon=None):
     gsim.gmpe.compute(ctx, imts, mean, sig, tau, phi)
     return ctx
-
-
-# Apply the scaling factors to this branch's copy of the predictions.
-def _apply_scaling(gsim, ctx, imts, outputs):
-    _apply_modifiers(gsim, ctx, imts, *outputs)
 
 
 class ModifiableGMPE(GMPE):
@@ -775,14 +766,15 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-    central_functions = (_compute_unmodified, _apply_scaling)
+    central_functions = (_compute_unmodified, _apply_modifiers)
 
     def make_central_key(self):
         """Identify the backbone for branches with independent scaling."""
         if (type(self).compute is ModifiableGMPE.compute
                 and INDEPENDENT_SCALING.issuperset(self.params)):
-            return (type(self), type(self.gmpe),
-                    configuration_key(self.gmpe.kwargs, {'weight'}))
+            backbone = configuration_key(self.gmpe)
+            if backbone is not None:
+                return type(self), backbone
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

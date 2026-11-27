@@ -25,7 +25,7 @@ import os
 import numpy as np
 
 from openquake.hazardlib.gsim.backbone import (
-    mean_shift_functions, sigma_mu_key)
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -547,7 +547,7 @@ def get_epistemic_adjustment(C, rrup):
 
 
 # Apply the final epistemic mean shift for this branch.
-def _apply_sigma_mu(gsim, ctx, imts, mean):
+def _apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
     if gsim.sigma_mu_epsilon:
         for m, imt in enumerate(imts):
             sigma_mu = get_epistemic_adjustment(gsim.COEFFS[imt], ctx.rrup)
@@ -723,7 +723,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
         if apply_shift:
             _apply_sigma_mu(self, ctx, imts, mean)
 
-    central_functions = mean_shift_functions(_apply_sigma_mu)
+    central_functions = (compute_without_shift, _apply_sigma_mu)
     make_central_key = sigma_mu_key(compute)
 
     # Coefficients taken from digital files supplied by Norm Abrahamson

@@ -34,7 +34,7 @@ from shapely.geometry import shape
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.backbone import (
-    mean_shift_functions, sigma_mu_key)
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
@@ -404,7 +404,7 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
 
 
 # Apply the final epistemic mean shift for this branch.
-def _apply_mean_shift(gsim, ctx, imts, mean):
+def _apply_mean_shift(gsim, ctx, imts, mean, *_stddevs):
     if gsim.dl2l:
         # The source-region parameter is specified explicitly.
         for m, imt in enumerate(imts):
@@ -580,7 +580,7 @@ class KothaEtAl2020(GMPE):
         if apply_shift:
             _apply_mean_shift(self, ctx, imts, mean)
 
-    central_functions = mean_shift_functions(_apply_mean_shift)
+    central_functions = (compute_without_shift, _apply_mean_shift)
     make_central_key = sigma_mu_key(compute)
 
     # Coefficients obtained direclty from the regression outputs of

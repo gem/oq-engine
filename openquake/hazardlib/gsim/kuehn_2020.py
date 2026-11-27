@@ -42,7 +42,7 @@ import h5py
 from scipy.interpolate import RegularGridInterpolator
 
 from openquake.hazardlib.gsim.backbone import (
-    compute_without_shift, mean_shift_functions, sigma_mu_key)
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -741,7 +741,7 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
 
 
 # Resolve each IMT on the first branch with a nonzero epsilon.
-def _apply_sigma_mu(gsim, resolved, imts, mean):
+def _apply_sigma_mu(gsim, resolved, imts, mean, *_stddevs):
     ctx, adjustments = resolved
     if gsim.sigma_mu_epsilon:
         for m, imt in enumerate(imts):
@@ -882,7 +882,6 @@ class KuehnEtAl2020SInter(GMPE):
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
         if self.sigma_mu_epsilon:
-            self.gmpe_table = None  # enable split by mag
             self.sigma_mu_model = _retrieve_sigma_mu_data(
                 self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
         else:
@@ -972,10 +971,8 @@ class KuehnEtAl2020SInter(GMPE):
         if apply_shift:
             _apply_sigma_mu(self, (ctx, {}), imts, mean)
 
-    central_functions = mean_shift_functions(
-        _apply_sigma_mu, compute_central=_compute_central)
-    # gmpe_table is a marker for magnitude splitting in shifted branches.
-    make_central_key = sigma_mu_key(compute, 'gmpe_table')
+    central_functions = (_compute_central, _apply_sigma_mu)
+    make_central_key = sigma_mu_key(compute)
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:

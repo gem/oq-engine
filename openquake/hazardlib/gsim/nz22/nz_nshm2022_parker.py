@@ -48,7 +48,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib.gsim.backbone import (
-    mean_shift_functions, sigma_mu_key)
+    compute_without_shift, sigma_mu_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
@@ -282,7 +282,7 @@ def get_backarc_term(trt, imt, ctx):
 
 
 # Apply the final epistemic mean shift for this branch.
-def _apply_sigma_mu(gsim, ctx, imts, mean):
+def _apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
     if gsim.sigma_mu_epsilon:
         trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
         for m, imt in enumerate(imts):
@@ -373,7 +373,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
         if apply_shift:
             _apply_sigma_mu(self, ctx, imts, mean)
 
-    central_functions = mean_shift_functions(_apply_sigma_mu)
+    central_functions = (compute_without_shift, _apply_sigma_mu)
     make_central_key = sigma_mu_key(compute)
 
     # Note that in these set of coefficients (EQS paper) c6 for

@@ -37,7 +37,6 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim.backbone import mean_shift_functions
 from openquake.hazardlib.gsim.bayless_abrahamson_2018 import (
     _path_scaling, _ztor_scaling, _linear_site_response)
 
@@ -292,7 +291,7 @@ def compute_central(gsim, ctx, imts, mean, sigma, tau, phi, **_kw):
     return idx_all, csids
 
 
-def apply_branch_shift(gsim, central, imts, mean):
+def apply_branch_shift(gsim, central, imts, mean, *_stddevs):
     """
     Branch-specific shift: for each unique custom_site_id in the batch,
     add Delta-mu from that site's rlz column into the central mean.
@@ -349,8 +348,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
 
     experimental = True # For now
-    central_functions = mean_shift_functions(
-        apply_branch_shift, compute_central=compute_central)
+    central_functions = (compute_central, apply_branch_shift)
 
     def __init__(self, adjustment_file, rlz_id="mean"):
         self.adjustment_file = adjustment_file
