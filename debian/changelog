@@ -3,6 +3,8 @@
     tag and realization groups
 
   [Michele Simionato]
+  * Fixed ParkerEtAl2020 applying the epistemic adjustment (sigma_mu_epsilon)
+    to PGV, for which it is not defined
   * Improved performance when saving aggregate loss curve statistics
 
   [Johnny Kao]
