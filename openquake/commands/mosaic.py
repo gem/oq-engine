@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import shutil
 import sys
 import time
 import logging
@@ -132,7 +133,11 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
     engine.run_jobs(logctxs, concurrent_jobs)
-    # NB: the CSV files exported in <asce_dir>/<model> are kept
+    # the CSV files exported in <asce_dir>/<model> are kept, except in the
+    # tests with OQ_TEST set, where they are needed only to test the export
+    if os.environ.get('OQ_TEST'):
+        for model in models:
+            shutil.rmtree(os.path.join(asce_dir, model), ignore_errors=True)
     out = []
     count_errors = 0
     asce = {}
