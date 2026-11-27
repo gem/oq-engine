@@ -1669,6 +1669,33 @@ def import_ruptures_hdf5(h5, fnames):
         assert rup_id == rup['id'], (rup_id, rup['id'])
 
 
+# Keep all GMF rows at sites not covered by any earlier input file.
+def _import_gmf_rows(dstore, fname, conv, covered, event_offset):
+    logging.warning('Importing %s', fname)
+    site_ids = pandas.Series(conv, dtype=numpy.int64)
+    present = numpy.zeros_like(covered)
+    with hdf5.File(fname, 'r') as f:
+        imts = f['gmf_data'].attrs['imts'].split()
+        size = len(f['gmf_data/sid'])
+        logging.info('Reading %s rows from %s', format(size, '_'), fname)
+        for slc in general.gen_slices(0, size, 10_000_000):
+            df = f.read_df('gmf_data', slc=slc)
+            sids = df.sid.map(site_ids).to_numpy(numpy.int64, na_value=-1)
+            keep = sids >= 0
+            keep[keep] = ~covered[sids[keep]]
+            sids = sids[keep]
+            present[sids] = True
+            df = df.loc[keep].copy()
+            df['sid'] = sids.astype(U32)
+            df['eid'] += event_offset
+            for col in df.columns:
+                # Columns were positional before v3.24.
+                name = imts[int(col[4:])] if col.startswith('gmv_') else col
+                hdf5.extend(dstore[f'gmf_data/{name}'], df[col])
+    # Sites can recur across chunks of the same file.
+    covered |= present
+
+
 def import_gmfs_hdf5(dstore, oq):
     """
     Import in the datastore a ground motion field HDF5 file.
@@ -1694,7 +1721,6 @@ def import_gmfs_hdf5(dstore, oq):
                     len(fnames), general.humansize(size))
     attrs = _getset_attrs(oq)
     E = sum(attrs['num_events'])
-    rups = []
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
             dstore['sitecol'] = f['sitecol']  # complete by construction
@@ -1719,31 +1745,11 @@ def import_gmfs_hdf5(dstore, oq):
         convs = import_sites_hdf5(dstore, fnames)
         create_gmf_data(dstore, oq.all_imts(), E=E,
                         R=oq.number_of_logic_tree_samples)
-        num_ev_rup_site = []
-        fileno = 0
+        covered = numpy.zeros(len(dstore['sitecol/sids']), bool)
         nE = 0
         for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
-            logging.warning('Importing %s', fname)
-            with hdf5.File(fname, 'r') as f:
-                fileno += 1
-                imtlist = f['gmf_data'].attrs['imts'].split()
-                size = len(f['gmf_data/sid'])
-                logging.info('Reading {:_d} rows from {}'.format(size, fname))
-                sids = numpy.array(list(conv))
-                for slc in general.gen_slices(0, size, 10_000_000):
-                    df = f.read_df('gmf_data', slc=slc)
-                    df = df[numpy.isin(df.sid, sids)]
-                    for sid, idx in conv.items():
-                        df.loc[df.sid == sid, 'sid'] = idx
-                    df['eid'] += nE  # add an offset to the event IDs
-                    for col in df.columns:
-                        if col.startswith('gmv_'):  # before v3.24
-                            name = imtlist[int(col[4:])]
-                        else:
-                            name = col
-                        hdf5.extend(dstore[f'gmf_data/{name}'], df[col])
+            _import_gmf_rows(dstore, fname, conv, covered, nE)
             nE += ne
-            num_ev_rup_site.append((nE, len(rups), len(conv)))
         oq.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     return _store_events(E, oq.number_of_logic_tree_samples, dstore)
