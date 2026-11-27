@@ -1,5 +1,4 @@
   [Michele Simionato]
-  * Use empty strings for optional GSIM settings such as Boore's basin region
   * Share ground-motion computations across compatible GSIM logic-tree branches
   * Reject None in GSIM constructor options and use empty strings as defaults
   * Split the magnitudes of the big simple and complex faults in pieces,
