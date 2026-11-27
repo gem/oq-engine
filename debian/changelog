@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Improved the calibration of ps_grid_spacing=auto: it uses the full
+    maximum distance and the GMPE with the largest weight, and it ignores
+    the errors depending on the cutoff at the maximum distance
   * Faster probabilities of exceedance in classical calculations, using a
     tabulated cubic approximation of the normal CDF (more than doubling
     the speed of get_poes)

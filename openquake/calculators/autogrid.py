@@ -22,14 +22,16 @@ pointsource_distance when the user sets a ps_grid_spacing without a
 pointsource_distance.
 
 The rates of the point sources are computed on a sample of sites evenly
-spread over the region (with a single GMPE per group, two IMTs and a
-maximum distance cut to MAXDIST), both for a reference setting (no
+spread over the region (with a single GMPE per group, two IMTs and the
+maximum distance of the calculation), both for a reference setting (no
 gridding and pointsource_distance = 100 km) and for a set of candidate
 pairs (ps_grid_spacing, pointsource_distance); the cheapest candidate with
 a 99th percentile of the error on the hazard maps, normalized by
 ATOL + RTOL * |reference| (as in numpy.testing.assert_allclose), below 1
 is chosen or, if there is none, the cheapest candidate with an error close
-to the smallest one.
+to the smallest one. The values of the hazard maps depending on the
+ruptures within a grid diagonal from the maximum distance are ignored,
+since there the error depends on the arbitrary cutoff.
 """
 import copy
 import logging
@@ -42,12 +44,13 @@ from openquake.baselib.general import (
 from openquake.hazardlib.map_array import compute_hmaps
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
-from openquake.hazardlib.calc.filters import split_source, magdepdist
+from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.contexts import PAIR_COST
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.site import SiteCollection
 
-Candidate = namedtuple('Candidate',
+Candidate = namedtuple(
+    'Candidate',
     'ps_grid_spacing pointsource_distance weight mean_err p99_err p99_norm')
 
 GRID_SPACINGS = [15., 30., 45.]  # candidate values in km
@@ -71,13 +74,18 @@ MAX_PAIRS = 10_000_000  # target pairs per calibration source batch
 # subtasks, since the number of blocks depends on concurrent_tasks
 MIN_WEIGHT = 1_000_000
 NSITES = 300  # size of the sample of sites
-MAXDIST = 300.  # in km, maximum distance used in the calibration
 # when no candidate is within the tolerance, the candidates with an error
 # up to 10% larger than the smallest one are considered equivalent
 CLOSE = .1
 # the points of a cell are within a diagonal from the location of the
 # collapsed point source, which is inside the cell
 DIAGONAL = numpy.sqrt(2) * max(GRID_SPACINGS)
+# the errors on the hazard map values changing by more than boundary_factor
+# times the tolerance without the ruptures within a DIAGONAL from the
+# maximum distance are ignored (see _boundary_mask); with a factor of 1
+# the far ruptures of the ordinary sources would mask 8% of the values in
+# EUR and 23% in classical/case_43, with 5 only 0.5% in EUR (the sites
+# near the cutoff of the Vrancea deep sources) and none in case_43
 
 
 def calibration(srcs, sites, cmaker, keys, monitor):
@@ -85,7 +93,8 @@ def calibration(srcs, sites, cmaker, keys, monitor):
     :param keys: pairs (ps_grid_spacing, pointsource_distance) with the
                  same spacing, sorted by distance
     :returns: a dictionary key -> AccumDict(rates, weight), with
-              rates of shape (N, L), for Starmap.reduce
+              rates of shape (N, L), for Starmap.reduce; the reference
+              has also the rates near the maximum distance (band)
 
     The weight is computed as in ContextMaker.estimate_weight, from the
     number of contexts and (rupture, site) pairs; unlike the time on the
@@ -104,7 +113,18 @@ def calibration(srcs, sites, cmaker, keys, monitor):
     return out
 
 
-# Build and consume the contexts of one bounded batch of point sources.
+# rates of shape (N, L) of the given contexts, with a single gsim
+def _get_rates(cmaker, ctx, nsites):
+    rates = numpy.zeros((nsites, cmaker.imtls.size))
+    if len(ctx):
+        rmap = cmaker.get_rmap(ctx)
+        rates[rmap.sids] = rmap.array[:, :, 0]
+    return rates
+
+
+# Build and consume the contexts of one bounded batch of point sources;
+# for the reference, also the rates of the ruptures within a DIAGONAL from
+# the maximum distance are returned (as `band`), see _boundary_mask
 def _calibrate_batch(srcs, sites, cmaker, keys):
     psds = [psd for _psgs, psd in keys]
     # the contexts for the different distances are built at once, sharing
@@ -113,12 +133,12 @@ def _calibrate_batch(srcs, sites, cmaker, keys):
     pairs = sum(src.num_ruptures * src.nsites for src in srcs)
     out = {}
     for key, psd in zip(keys, psds):
-        rates = numpy.zeros((len(sites), cmaker.imtls.size))
-        if len(ctxs[psd]):
-            rmap = cmaker.get_rmap(ctxs[psd])
-            rates[rmap.sids] = rmap.array[:, :, 0]  # there is a single gsim
-        out[key] = AccumDict(dict(rates=rates,
-                                  weight=len(ctxs[psd]) + pairs / PAIR_COST))
+        ctx = ctxs[psd]
+        out[key] = AccumDict(dict(rates=_get_rates(cmaker, ctx, len(sites)),
+                                  weight=len(ctx) + pairs / PAIR_COST))
+        if key == REFERENCE:
+            far = ctx.rrup > cmaker.maximum_distance(ctx.mag) - DIAGONAL
+            out[key]['band'] = _get_rates(cmaker, ctx[far], len(sites))
     return out
 
 
@@ -251,16 +271,21 @@ def _calib_imts(oq):
 # ContextMaker with a single GMPE, the given IMTs and one level every
 # LEVEL_STEP: the error of the gridding is geometric and does not depend
 # much on the GMPE, while the cost of the calibration is proportional to
-# the number of GMPEs, IMTs and levels; the maximum distance is cut to
-# MAXDIST, since the cost of each site grows with the area within the
-# maximum distance, while the far sources are far for all the candidates
-# and the reference, so they hardly contribute to the errors
+# the number of GMPEs, IMTs and levels. The GMPE is the one with the
+# largest weight (the first one if the weights are missing): the errors
+# are absolute, so they are underestimated by a GMPE with low ground
+# motions, like the first branch of the ESHM20 backbones in EUR (weight
+# .002). NB: the maximum distance must be the one of the calculation:
+# the gridding moves the points near the maximum distance across it, and
+# in EUR the Vrancea deep sources, at the 500 km of 'Non-Subduction Deep',
+# halve the hazard of sites in Ukraine with ps_grid_spacing=45; with the
+# maximum distance cut to 300 km the calibration could not see that
 def _calib_cmaker(cmaker, imts):
-    md = cmaker.maximum_distance
+    items = list(cmaker.gsims.items())
+    wei = getattr(cmaker, 'wei', None)
+    idx = 0 if wei is None or len(wei) != len(items) else numpy.argmax(wei)
     return cmaker.restrict(imts, LEVEL_STEP).copy(
-        gsims=dict(list(cmaker.gsims.items())[:1]),
-        batch_point_sources=True,
-        maximum_distance=magdepdist(zip(md.x, numpy.minimum(md.y, MAXDIST))))
+        gsims=dict([items[idx]]), batch_point_sources=True)
 
 
 def calibrate(csm, cmakers, sitecol, oq, h5=None):
@@ -340,8 +365,10 @@ def select_candidate(sgs, cmakers, sites, oq, spacings, distances, h5):
         if i == 0:
             if REFERENCE not in results:  # no subtasks were generated
                 return None
-            ref = get_hmaps(results.pop(REFERENCE)['rates'], imtls, oq)
-        rows.extend(_get_rows(results, ref, imtls, oq))
+            refres = results.pop(REFERENCE)
+            ref = get_hmaps(refres['rates'], imtls, oq)
+            keep = _boundary_mask(refres, ref, imtls, oq)
+        rows.extend(_get_rows(results, ref, imtls, oq, keep))
         if any(row.p99_norm <= 1. for row in rows):
             break
     _log_rows(rows, len(sites))
@@ -384,12 +411,33 @@ def get_hmaps(rates, imtls, oq):
     return compute_hmaps(curves, imtls, oq.poes or [.002105])
 
 
-def uhs_errors(hmaps, ref, imts):
+# the values of the reference hazard maps changing by more than
+# boundary_factor times the tolerance when the ruptures within a DIAGONAL
+# from the maximum distance are removed are masked (False); there the
+# gridding moves the points across the maximum distance, so the error
+# depends on the arbitrary cutoff and it is ignored: in EUR the Vrancea
+# deep sources, at the 500 km of 'Non-Subduction Deep', halve the hazard
+# of some sites in Ukraine
+def _boundary_mask(result, ref, imtls, oq, boundary_factor=5):
+    inner = numpy.maximum(result['rates'] - result['band'], 0.)
+    hmaps = get_hmaps(inner, imtls, oq)
+    tol = boundary_factor * (ATOL + RTOL * numpy.abs(ref))
+    keep = numpy.abs(hmaps - ref) <= tol
+    if not keep.all():
+        logging.info('Ignoring the errors on %d hazard map values out of %d '
+                     'depending on the maximum distance',
+                     keep.size - keep.sum(), keep.size)
+    return keep
+
+
+def uhs_errors(hmaps, ref, imts, keep=None):
     """
     :param hmaps: hazard maps in g, with the IMTs along the second axis
     :param ref: reference hazard maps with the same shape
     :param imts: the IMTs; only the uniform hazard spectrum ones (PGA and
         SA) are considered
+    :param keep: if given, a boolean array with the same shape of the
+        hazard maps; the values with keep=False are ignored
     :returns: arrays with one element per poe, the mean and the 99th
         percentile of the absolute errors on the UHS (in g), and the 99th
         percentile over all poes of the errors divided by
@@ -398,20 +446,23 @@ def uhs_errors(hmaps, ref, imts):
     """
     uhs = [m for m, imt in enumerate(imts) if imt.startswith(('PGA', 'SA'))]
     errs = numpy.abs(hmaps[:, uhs] - ref[:, uhs])  # shape (N, U, P)
+    if keep is not None:
+        errs = numpy.where(keep[:, uhs], errs, numpy.nan)
     norm = errs / (ATOL + RTOL * numpy.abs(ref[:, uhs]))
-    return (errs.mean(axis=(0, 1)), numpy.percentile(errs, 99, axis=(0, 1)),
-            numpy.percentile(norm, 99))
+    return (numpy.nanmean(errs, axis=(0, 1)),
+            numpy.nanpercentile(errs, 99, axis=(0, 1)),
+            numpy.nanpercentile(norm, 99))
 
 
 # yield a Candidate with spacing, distance, weight, mean_err, p99_err and
 # p99_norm, see uhs_errors; mean_err and p99_err are the maxima over the
 # poes, only p99_norm is used to choose the candidate
-def _get_rows(results, ref, imtls, oq):
+def _get_rows(results, ref, imtls, oq, keep=None):
     imts = list(imtls)
     # sorted, so that the choice among equal weights does not depend on
     # the order in which the tasks finish
     for key, result in sorted(results.items()):
         hmaps = get_hmaps(result['rates'], imtls, oq)
-        mean_err, p99_err, p99_norm = uhs_errors(hmaps, ref, imts)
+        mean_err, p99_err, p99_norm = uhs_errors(hmaps, ref, imts, keep)
         yield Candidate(*key, result['weight'], mean_err.max(),
                         p99_err.max(), p99_norm)
