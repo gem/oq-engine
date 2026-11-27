@@ -17,18 +17,20 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """Shared computation for GSIM branches with additive mean shifts."""
-import pickle
+import toml
+
+from openquake.hazardlib.gsim.base import fix_toml
 
 
 def configuration_key(options, excluded):
-    """Make a hashable key while preserving the order of model options."""
-    selected = tuple((name, value) for name, value in options
-                     if name not in excluded)
-    try:
-        return pickle.dumps(selected)
-    except (pickle.PicklingError, AttributeError, TypeError):
-        # Some programmatic options cannot be serialized for grouping.
-        return None
+    """
+    Make a key from the TOML representation of the model options, i.e.
+    the same representation used to compare and hash the GSIMs; it
+    cannot fail, since every GSIM is converted to TOML when it is built.
+    """
+    selected = {name: value for name, value in sorted(options.items())
+                if name not in excluded}
+    return toml.dumps(fix_toml(selected))
 
 
 def branch_key(compute, *varying):
@@ -37,9 +39,7 @@ def branch_key(compute, *varying):
     # Subclasses with their own compute implementation must opt in again.
     def key(gsim):
         if type(gsim).compute is compute:
-            config = configuration_key(sorted(gsim.kwargs.items()), excluded)
-            if config is not None:
-                return type(gsim), config
+            return type(gsim), configuration_key(gsim.kwargs, excluded)
     return key
 
 

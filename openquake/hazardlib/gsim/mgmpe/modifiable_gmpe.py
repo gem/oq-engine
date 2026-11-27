@@ -781,10 +781,8 @@ class ModifiableGMPE(GMPE):
         """Identify the backbone for branches with independent scaling."""
         if (type(self).compute is ModifiableGMPE.compute
                 and INDEPENDENT_SCALING.issuperset(self.params)):
-            config = configuration_key(
-                sorted(self.gmpe.kwargs.items()), {'weight'})
-            if config is not None:
-                return type(self), type(self.gmpe), config
+            return (type(self), type(self.gmpe),
+                    configuration_key(self.gmpe.kwargs, {'weight'}))
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
