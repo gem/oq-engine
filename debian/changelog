@@ -2,6 +2,11 @@
   * Fixed site IDs when importing HDF5 ground motion fields and overriding
     Vs30. Fixed average GMF exports and ShakeMap exposure aggregation after
     site filtering.
+  * Split the magnitudes of the big simple and complex faults in pieces,
+    depending on the number and size of the ruptures, to avoid slow tasks
+  * Improved the calibration of ps_grid_spacing=auto: it uses the full
+    maximum distance and the GMPE with the largest weight, and it ignores
+    the errors depending on the cutoff at the maximum distance
   * Faster probabilities of exceedance in classical calculations, using a
     tabulated cubic approximation of the normal CDF (more than doubling
     the speed of get_poes)
@@ -11,6 +16,21 @@
     a minor change in the losses when there are unused risk functions
   * Optimized mesh construction and site association with large exposures
   * Raised the tolerance and refined the ps_grid_spacing approximation (3x speedup)
+
+  [Anirudh Rao]
+  * Fixed scenario risk quantiles to include zero-loss weight from missing
+    tag and realization groups
+
+  [Michele Simionato]
+  * Improved performance when saving aggregate loss curve statistics
+
+  [Johnny Kao]
+  * Fixed aggregate loss curve statistics to preserve the weights of
+    realizations with zero losses.
+
+  [Michele Simionato]
+  * Fixed site ID remapping and retained ground motions at sites with no
+    earlier data when merging multiple HDF5 GMFs files
   * Changed `oq export -e zip job` to return an archive, plus a few fixes
   * Internal: add `oq compare errors` to measure the errors of the
     ps_grid_spacing approximation
