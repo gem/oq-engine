@@ -380,9 +380,9 @@ class GridAdjustedGMPETest(unittest.TestCase):
         self.assertIs(restored[0].grid_data, restored[1].grid_data)
         new = restored[1]
         self.assertEqual(new.central_key, gsims[1].central_key)
-        digest, _ = mod.get_residual_grids(GRID_HDF5, with_digest=True)
+        digest, _ = mod.get_residual_grids(GRID_HDF5)
         self.assertEqual(new.central_key,
-                         (GridAdjustedGMPE, (type(new.gmpe), ()), digest))
+                         ('GridAdjustedGMPE', (BASE_GSIM,), digest))
         cmaker = simple_cmaker([valid.gsim(BASE_GSIM), gsims[1]], IMTS)
         ctx = self._make_ctx(cmaker)
         expected = cmaker.get_mean_stds([ctx])
@@ -391,6 +391,19 @@ class GridAdjustedGMPETest(unittest.TestCase):
             cmaker.get_mean_stds([self._make_ctx(cmaker)]), expected)
 
     ### SHARING OF THE CENTRAL PART TESTS ###
+    def test_subclass_compute_is_used(self):
+        class ShiftedGridGMPE(GridAdjustedGMPE):
+            def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+                super().compute(ctx, imts, mean, sig, tau, phi)
+                mean += 0.5
+
+        kwargs = dict(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
+        base, shifted = GridAdjustedGMPE(**kwargs), ShiftedGridGMPE(**kwargs)
+        self.assertIsNone(shifted.central_key)
+        cmaker = simple_cmaker([base, shifted], ['PGA'])
+        mean = cmaker.get_mean_stds([self._make_ctx(cmaker)])[0]
+        aae(mean[1] - mean[0], 0.5)
+
     @skipIf(sys.platform == 'win32', 'the cache is not working(?)')
     def test_grid_replacement(self):
         # A new instance must use the updated HDF5 at the same path, while

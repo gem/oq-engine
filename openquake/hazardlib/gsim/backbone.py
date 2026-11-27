@@ -40,7 +40,7 @@ def _check_key_option(v):
 
 def backbone_key(gsim, excluded=()):
     """
-    Snapshot the model options used by a shared computation, omitting
+    Key a shared computation by GSIM class name and option values, omitting
     weight and any excluded options. Return None for unsupported options
     so the GSIM is computed independently.
 
@@ -62,26 +62,26 @@ def backbone_key(gsim, excluded=()):
     >>> slow_key = backbone_key(slow, excluded)
     >>> high_key == slow_key
     False
-    >>> slow_key[1]
-    (('c3_epsilon', '1.732051'),)
+    >>> slow_key
+    ('KothaEtAl2020ESHM20', ('c3_epsilon', '1.732051'))
     """
-    pairs = []
+    args = []
     try:
         for name, value in gsim.kwargs.items():
             if name == 'weight' or name in excluded:
                 continue
             _check_key_option(value)
-            pairs.append((name, repr(value)))
+            args.append((name, repr(value)))
     except (TypeError, RecursionError):
         return None
-    return type(gsim), tuple(pairs)
+    return (type(gsim).__name__, *args)
 
 
 def wrapped_key(gsim, *inputs):
     """Identify the wrapped GSIM and any additional hashable inputs."""
     inner = backbone_key(gsim.gmpe)
     if inner is not None:
-        return (type(gsim), inner, *inputs)
+        return (type(gsim).__name__, inner, *inputs)
 
 
 def branch_key(compute, *varying):
@@ -100,8 +100,8 @@ def branch_key(compute, *varying):
     >>> high = ESHM20Craton(epsilon=1.355630, site_epsilon=-1.732051)
     >>> key(low) == key(high) == low.central_key == high.central_key
     True
-    >>> key(high)[1]
-    (('site_epsilon', '-1.732051'),)
+    >>> key(high)
+    ('ESHM20Craton', ('site_epsilon', '-1.732051'))
     """
     # Subclasses with their own compute implementation must opt in again.
     def key(gsim):
@@ -125,8 +125,9 @@ def sigma_mu_key(compute, *excluded):
     >>> high = BCHydroESHM20SInter(sigma_mu_epsilon=1.355630, **taper)
     >>> key(low) == key(high) == low.central_key == high.central_key
     True
-    >>> key(high)[1]
-    (('faba_taper_model', "'SFunc'"), ('a', '-100.0'), ('b', '100.0'))
+    >>> key(high)  # doctest: +NORMALIZE_WHITESPACE
+    ('BCHydroESHM20SInter', ('faba_taper_model', "'SFunc'"),
+     ('a', '-100.0'), ('b', '100.0'))
     """
     return branch_key(compute, 'sigma_mu_epsilon', *excluded)
 

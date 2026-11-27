@@ -235,26 +235,22 @@ def _grid_digest(path, stamp):
         return hashlib.file_digest(f, 'sha256').digest()
 
 
-def get_residual_grids(hdf5_path, *, with_digest=False):
+def get_residual_grids(hdf5_path):
     """
-    Same as load_residual_grids, but identical file contents are loaded
-    only once per process, even from different paths. The result is shared
-    between callers, which must not modify it (except for the lazily filled
-    raytrace_masks).
+    Return the digest and loaded grids. Identical file contents are loaded
+    only once per process, even from different paths. Callers share the grids
+    and must not modify them (except for the lazily filled raytrace_masks).
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.
-    :param with_digest:
-        Return the digest and loaded grids as a pair.
     """
     path = os.path.abspath(hdf5_path)
     stat = os.stat(path)
-    key = _grid_digest(
+    digest = _grid_digest(
         path, (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size))
-    if key not in _GRID_CACHE:
-        _GRID_CACHE[key] = load_residual_grids(path)
-    grids = _GRID_CACHE[key]
-    return (key, grids) if with_digest else grids
+    if digest not in _GRID_CACHE:
+        _GRID_CACHE[digest] = load_residual_grids(path)
+    return digest, _GRID_CACHE[digest]
 
 
 def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
@@ -795,8 +791,8 @@ class GridAdjustedGMPE(GMPE):
         # Load grid-based corrections from the hdf5; they are shared with
         # the other instances reading the same file. Like GMPETable, keep
         # the loaded data when pickling: extracted files may be gone.
-        digest, self.grid_data = get_residual_grids(
-            grid_hdf5_file, with_digest=True)
+        self._grid_digest, self.grid_data = get_residual_grids(
+            grid_hdf5_file)
 
         # Per-ray path cap (in natural-log units).
         # None = no cap; compute() clips the per-branch total after lookup.
@@ -805,11 +801,6 @@ class GridAdjustedGMPE(GMPE):
                 f"path_cap must be positive (natural-log units) or None, "
                 f"got {path_cap!r}.")
         self.path_cap = path_cap
-
-        # GridAdjustedGMPEs with the same central_key differ only by
-        # epsilons and path_cap, so ContextMaker.get_mean_stds computes
-        # their backbone and central grid adjustments only once
-        self.central_key = wrapped_key(self, digest)
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
         self.epsilons = epsilons or {}
@@ -850,6 +841,15 @@ class GridAdjustedGMPE(GMPE):
                     "Adjustments to tau and/or phi have been specified "
                     "but the underlying GSIM does not support "
                     "random-effects residuals.")
+
+    def make_central_key(self):
+        """Key the shared backbone and grid adjustments by grid content."""
+        # Equal keys can share the central calculation across different
+        # epsilons and path caps.
+        # The digest lets grid files with identical contents share the
+        # calculation even when loaded from different paths.
+        if type(self).compute is GridAdjustedGMPE.compute:
+            return wrapped_key(self, self._grid_digest)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

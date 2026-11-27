@@ -20,10 +20,12 @@ import unittest
 import unittest.mock as mock
 import numpy
 
+from openquake.baselib.general import duplicated, gen_subclasses
 from openquake.hazardlib import const, valid
 from openquake.hazardlib.gsim.backbone import backbone_key
 from openquake.hazardlib.gsim.base import (
-    GMPE, gsim_aliases, NotVerifiedWarning, DeprecationWarning)
+    GMPE, GroundShakingIntensityModel, gsim_aliases, NotVerifiedWarning,
+    DeprecationWarning)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.contexts import ContextMaker
 aac = numpy.testing.assert_allclose
@@ -83,6 +85,13 @@ class BackboneOptionsTestCase(unittest.TestCase):
 
 
 class GsimInstantiationTestCase(unittest.TestCase):
+    def test_unique_class_names(self):
+        # The registry can overwrite earlier classes with the same name.
+        classes = gen_subclasses(GroundShakingIntensityModel)
+        names = [cls.__name__ for cls in classes
+                 if cls.__module__.startswith('openquake.hazardlib.gsim.')]
+        self.assertEqual(duplicated(names), [])
+
     def test_deprecated(self):
         # check that a deprecation warning is raised when a deprecated
         # GSIM is instantiated
