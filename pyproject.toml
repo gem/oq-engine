@@ -75,6 +75,19 @@ impact = [
 aelo = [
     "rtgmpy~=1.0.1",
 ]
+
+doc = [
+    "sphinx~=9.2.0",
+    "pydata-sphinx-theme~=0.24.0",
+    "myst-parser~=5.2.0",
+    "pygments-csv-lexer~=0.1.3",
+    "sphinx-copybutton~=0.5.2",
+    "sphinx-design~=0.8.0",
+    "sphinxcontrib-images~=1.0.1",
+    "sphinxcontrib-youtube~=1.5.0",
+    "sphinx-rtd-theme~=3.1.0",
+]
+
 [project.urls]
 Homepage = "https://globalquakemodel.org"
 Repository = "https://github.com/gem/oq-engine"
