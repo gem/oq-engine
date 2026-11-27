@@ -959,9 +959,10 @@ class SiteCollection(object):
     def assoc(self, site_model, assoc_dist, mode, ignore=(),
               station_sids=None):
         """
-        Associate the `site_model` parameters to the sites.
-        Log a warning if the site parameters are more distant than
-        `assoc_dist`.
+        Associate the `site_model` parameters to the sites. A site more
+        distant than `assoc_dist` from the site model raises an error in
+        'strict' mode (unless it is a station) while in 'warn' mode it gets
+        the closest parameters anyway and a warning is logged.
 
         :param station_sids:
             set of site ids that should bypass 'strict' distance checks

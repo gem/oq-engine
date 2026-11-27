@@ -103,8 +103,10 @@ GMPEs are not sensitive to it, so you can usually skip it. For the ``backarc`` p
 default, so you can skip such column. All columns that have defaults or are not needed by the GMPEs you are using can 
 be skipped, while you will get an error if a relevant column is missing.
 
-If the closest available site with soil conditions is at a distance greater than 5 km from the investigation location, a 
-warning is generated.
+If the closest available site with soil conditions is at a distance greater than 8 km from the investigation 
+location, an error is raised. When the sites are generated with ``region_grid_spacing`` the maximum distance is 
+``region_grid_spacing * 1.414`` instead, and the farther sites get the parameters of the closest point anyway, 
+with a warning.
 
 **Note**: For backward-compatibility reasons, the site model file can also be given in XML format. That old format is 
 deprecated but there are no plans to remove it any soon.
