@@ -910,12 +910,11 @@ class GPKG2NRMLTestCase(unittest.TestCase):
 @skipIf(rtgmpy is None, 'Missing rtgmpy')
 class RunSiteTestCase(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.mosaic_dir = os.path.dirname(mosaic.__file__)
-        if not os.path.exists('asce'):
-            # create directory in qa_tests_data/mosaic/asce to store the files
-            os.makedirs('asce')
+    def setUp(self):
+        self.mosaic_dir = os.path.dirname(mosaic.__file__)
+        # the .org files and the exported CSV files are stored here
+        self.asce_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.enterContext(mock.patch.dict(os.environ, OQ_TEST='1'))
 
     def test_runsite_case1(self):
         # tests when there is a lonlat file without vs30 but its given as
@@ -926,7 +925,8 @@ class RunSiteTestCase(unittest.TestCase):
         with Print.patch():
             [calc_id] = sap.runline(
                 f'openquake.commands mosaic run_site {file} '
-                f'{self.mosaic_dir} -v {vs30} -a {asce_version}')
+                f'{self.mosaic_dir} {self.asce_dir} -v {vs30} '
+                f'-a {asce_version}')
         dstore = read(calc_id)
         assert dstore['oqparam'].override_vs30 == [vs30]
         assert dstore['oqparam'].asce_version == asce_version
@@ -937,10 +937,12 @@ class RunSiteTestCase(unittest.TestCase):
         file = os.path.join(DATADIR, 'site_case1.csv')
         with Print.patch():
             [calc_id] = sap.runline(
-                f'openquake.commands mosaic run_site {file} {self.mosaic_dir}')
+                f'openquake.commands mosaic run_site {file} '
+                f'{self.mosaic_dir} {self.asce_dir}')
         dstore = read(calc_id)
         assert dstore['oqparam'].override_vs30 == [760]
         assert dstore['oqparam'].asce_version == 'ASCE7-16'
+        self.assertFalse(list(self.asce_dir.glob('*/*.csv')))
 
     def test_runsite_case3(self):
         # tests when there is a lonlat file with vs30 and the default asce
@@ -948,7 +950,8 @@ class RunSiteTestCase(unittest.TestCase):
         file = os.path.join(DATADIR, 'site_case3.csv')
         with Print.patch():
             [calc_id] = sap.runline(
-                f'openquake.commands mosaic run_site {file} {self.mosaic_dir}')
+                f'openquake.commands mosaic run_site {file} '
+                f'{self.mosaic_dir} {self.asce_dir}')
         dstore = read(calc_id)
         assert dstore['oqparam'].override_vs30 == [222]
         assert dstore['oqparam'].asce_version == 'ASCE7-16'
@@ -960,7 +963,7 @@ class RunSiteTestCase(unittest.TestCase):
         with Print.patch():
             [calc_id] = sap.runline(
                 f'openquake.commands mosaic run_site {file} '
-                f' {self.mosaic_dir} -a ASCE7-22')
+                f'{self.mosaic_dir} {self.asce_dir} -a ASCE7-22')
         dstore = read(calc_id)
         assert dstore['oqparam'].override_vs30 == [260.0, 365.0, 530.0]
 
