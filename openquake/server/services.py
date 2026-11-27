@@ -25,6 +25,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.conf import settings
+from django.core import signing
 from django.core.mail import EmailMessage
 from django.core.mail.backends.filebased import (
     EmailBackend as FileEmailBackend)
@@ -587,6 +588,48 @@ def _user(form):
     return SimpleNamespace(level=level, testdir=None)
 
 
+# The IMPACT form sends to the browser the server paths of the files
+# downloaded from the USGS (rupture and station data), and the browser sends
+# them back when the calculation is launched. Like any value coming from the
+# client, they can be changed before being sent (e.g. with the developer
+# tools of the browser or with a script using the API), and the server would
+# then read any file chosen by the user, with the permissions of the WebUI:
+# for instance a huge file, exhausting the memory of the server. The paths
+# are signed with the SECRET_KEY, so that only the paths produced by this
+# server are accepted.
+USGS_FILE_SALT = 'openquake.server.services.usgs_file'
+USGS_FILE_MAX_AGE = 24 * 3600  # seconds
+
+
+def sign_usgs_file(path):
+    """
+    Sign the server path of a file downloaded from the USGS, before sending
+    it to the client. Empty paths are returned unchanged.
+    """
+    if not path:
+        return path
+    return signing.dumps(str(path), salt=USGS_FILE_SALT)
+
+
+def unsign_usgs_file(value, field):
+    """
+    Return the path signed by :func:`sign_usgs_file`, or '' if the client
+    sent no file. Raise an :class:`ApiError` if the value was not signed by
+    this server or if it is too old.
+    """
+    if not value or value == 'None':
+        return ''
+    try:
+        return signing.loads(
+            value, salt=USGS_FILE_SALT, max_age=USGS_FILE_MAX_AGE)
+    except signing.BadSignature as exc:
+        raise ApiError(400, content={
+            'status': 'failed',
+            'error_msg': ('The data retrieved from the USGS are invalid or'
+                          ' expired: please retrieve them again'),
+            'invalid_inputs': [field]}) from exc
+
+
 def _station(files, post):
     """Return the station data path and its source, if any."""
     station_path = get_uploaded_file_path(files, 'station_data_file')
@@ -622,11 +665,13 @@ def impact_run(form):
     user = _user(form)
     post = {key: value for key, value in fields.items()
             if key not in ('user_level', 'username', 'email', 'base_url')}
+    # the paths of the files downloaded from the USGS come back signed
+    for field in ('rupture_from_usgs', 'station_data_file_from_usgs'):
+        if field in post:
+            post[field] = unsign_usgs_file(post[field], field)
     rupture_path = get_uploaded_file_path(files, 'rupture_file')
     if not rupture_path:
         rupture_path = post.get('rupture_from_usgs') or ''
-    if rupture_path == 'None':
-        rupture_path = ''
     station_path, station_source = _station(files, post)
     _rup, _rupdic, params, err = impact_validate(
         post, user, rupture_path, station_path)
@@ -655,6 +700,12 @@ def impact_get_rupture_data(form):
     rupture_path = get_uploaded_file_path(files, 'rupture_file')
     response_data, status = get_impact_rupture_data(
         post, user, rupture_path)
+    if status == 200:
+        # the browser sends the path back when launching the calculation;
+        # the path of the uploaded rupture is not needed by the browser
+        response_data['rupture_file'] = sign_usgs_file(
+            response_data.get('rupture_file'))
+        response_data.pop('rupture_from_usgs', None)
     return json_response(response_data, status)
 
 
