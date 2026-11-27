@@ -481,7 +481,7 @@ class KothaEtAl2020(GMPE):
     REQUIRES_DISTANCES = {'rjb'}
 
     def __init__(self, sigma_mu_epsilon=0.0, c3_epsilon=0.0, ergodic=True,
-                 dl2l=None, c3=None):
+                 dl2l='', c3=''):
         """
         Instantiate setting the sigma_mu_epsilon and c3 terms
         """
@@ -630,7 +630,7 @@ class KothaEtAl2020regional(KothaEtAl2020):
     kind = "regional"
 
     def __init__(self, delta_l2l_epsilon=0.0, delta_c3_epsilon=0.0,
-                 ergodic=True, c3=None, dl2l=None):
+                 ergodic=True, c3='', dl2l=''):
         """
         Instantiate setting the dl2l and c3 terms.
         """

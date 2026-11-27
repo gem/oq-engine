@@ -153,7 +153,7 @@ def get_tau_at_quantile(mean, stddev, quantile):
     for imt in mean:
         tau_model[imt] = {}
         for key in mean[imt]:
-            if quantile is None:
+            if quantile in (None, ''):
                 tau_model[imt][key] = mean[imt][key]
             else:
                 tau_model[imt][key] = _at_percentile(mean[imt][key],
@@ -288,7 +288,7 @@ def get_phi_ss_at_quantile(phi_model, quantile, logratio=True):
     coeffs = deepcopy(phi_model.sa_coeffs)
     coeffs.update(phi_model.non_sa_coeffs)
     for imt in coeffs:
-        if quantile is None:
+        if quantile in (None, ''):
             coeffs[imt] = {"a": phi_model[imt]["mean_a"],
                            "b": phi_model[imt]["mean_b"]}
         else:
@@ -311,7 +311,7 @@ def get_phi_s2ss_at_quantile(phi_model, quantile):
     coeffs = deepcopy(phi_model.sa_coeffs)
     coeffs.update(phi_model.non_sa_coeffs)
     for imt in coeffs:
-        if quantile is None:
+        if quantile in (None, ''):
             coeffs[imt] = {"phi_s2ss": phi_model[imt]["mean"]}
         else:
             coeffs[imt] = {"phi_s2ss": _at_percentile(phi_model[imt]["mean"],
@@ -686,8 +686,8 @@ class NGAEastGMPE(GMPETable):
         (phi_ss), selecting from "global" {default}, "cena" or "cena_constant"
 
     :param str phi_s2ss_model:
-        Choice of station-term s2ss model. Can be either "cena" or None. When
-        None is input then the non-ergodic model is used
+        Choice of station-term s2ss model. Use "cena" for the station term
+        or "" for the non-ergodic model.
 
     :param TAU:
         Inter-event standard deviation model
@@ -715,8 +715,8 @@ class NGAEastGMPE(GMPETable):
     kind = "nga_east"
 
     def __init__(self, gmpe_table, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, tau_quantile=None, phi_ss_quantile=None,
-                 phi_s2ss_quantile=None, site_epsilon=None):
+                 phi_s2ss_model='', tau_quantile='', phi_ss_quantile='',
+                 phi_s2ss_quantile='', site_epsilon=''):
         """
         Instantiates the class with additional terms controlling which
         type of aleatory uncertainty model is preferred ('global',
@@ -725,18 +725,18 @@ class NGAEastGMPE(GMPETable):
 
         :param float tau_quantile:
             Epistemic uncertainty quantile for the inter-event standard
-            deviation models. Float in the range 0 to 1, or None (mean value
-            used)
+            deviation models. Use a float in the range 0 to 1, or an empty
+            string for the mean value.
 
         :param float phi_ss_quantile:
             Epistemic uncertainty quantile for the intra-event standard
-            deviation models. Float in the range 0 to 1, or None (mean value
-            used)
+            deviation models. Use a float in the range 0 to 1, or an empty
+            string for the mean value.
 
         :param float phi_s2ss_quantile:
             Epistemic uncertainty quantile for the site-to-site standard
-            deviation models. Float in the range 0 to 1, or None (mean value
-            used)
+            deviation models. Use a float in the range 0 to 1, or an empty
+            string for the mean value.
         """
         self.tau_model = tau_model
         self.phi_model = phi_model
@@ -829,7 +829,7 @@ def _get_sigma_at_quantile(self, sigma_quantile):
                                 phi_std[imt][i] ** 2.)
             # The keys swap from tau to sigma
             new_key = key.replace("tau", "sigma")
-            if sigma_quantile is not None:
+            if sigma_quantile != '':
                 sigma[imt][new_key] = _at_percentile(
                     sigma_bar, sigma_std, sigma_quantile)
             else:
@@ -925,9 +925,8 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     def __init__(self, gmpe_table, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, tau_quantile=None, phi_ss_quantile=None,
-                 phi_s2ss_quantile=None, site_epsilon=None,
-                 sigma_quantile=None):
+                 phi_s2ss_model='', tau_quantile='', phi_ss_quantile='',
+                 phi_s2ss_quantile='', site_epsilon='', sigma_quantile=''):
         """
         Instantiates the model call the BaseNGAEastModel to return the
         expected TAU, PHI_SS and PHI_S2SS values then uses these to
@@ -937,8 +936,8 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
 
         :param float sigma_quantile:
             Quantile of the epistemic uncertainty model for the total
-            standard deviation. Should be float between 0 and 1, or None (mean
-            value taken)
+            standard deviation. Use a float between 0 and 1, or an empty
+            string for the mean value.
         """
         super().__init__(gmpe_table, tau_model, phi_model,
                  phi_s2ss_model, tau_quantile, phi_ss_quantile,

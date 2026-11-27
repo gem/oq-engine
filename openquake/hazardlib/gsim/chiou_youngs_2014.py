@@ -694,8 +694,8 @@ class ChiouYoungs2014(GMPE):
         
     def __init__(self, region='CAL', sigma_mu_epsilon=0.0, use_hw=True,
                  add_delta_c1=False, alpha_nm=1.0,
-                 stress_par_host=None, stress_par_target=None,
-                 source_function_tab=None, delta_gamma_tab=None,
+                 stress_par_host='', stress_par_target='',
+                 source_function_tab='', delta_gamma_tab='',
                  usgs_basin_scaling=False, cybershake_basin_adj=False):
 
         # set region
@@ -722,8 +722,8 @@ class ChiouYoungs2014(GMPE):
         # - S2FS            param
         # - S2RS            param
         # - chi             i.e. χFS2RS in equation 6
-        if source_function_tab is not None:
-            assert stress_par_host is not None and stress_par_target is not None
+        if source_function_tab:
+            assert stress_par_host != '' and stress_par_target != ''
             with open(source_function_tab, encoding='utf8') as f:
                 tmp = f.read()
             self.conf['source_function_table'] = CoeffsTable(
@@ -737,7 +737,7 @@ class ChiouYoungs2014(GMPE):
         # - c1              param
         # - c2              param
         # - c3              param
-        if delta_gamma_tab is not None:
+        if delta_gamma_tab:
             with open(delta_gamma_tab, encoding='utf8') as f:
                 tmp = f.read()
             self.conf['delta_gamma_tab'] = CoeffsTable(sa_damping=5, table=tmp)

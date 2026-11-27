@@ -35,7 +35,7 @@ class CampbellBozorgnia2019TestCase(BaseGSIMTestCase):
     STD_TOTAL_FILE = 'CB19/CB2019%s_STD_TOTAL.csv'
 
 
-coeffs = {'': None, '_HIGHQ': coeffs_high, '_LOWQ': coeffs_low}
+coeffs = {'': '', '_HIGHQ': coeffs_high, '_LOWQ': coeffs_low}
 params = [(name, SJ) for name in ['', '_HIGHQ', '_LOWQ'] for SJ in [0, 1]]
 
 

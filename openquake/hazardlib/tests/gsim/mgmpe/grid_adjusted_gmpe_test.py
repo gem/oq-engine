@@ -123,7 +123,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             setattr(ctx, k, v)
         return ctx
 
-    def _get_mean_stds(self, imts, epsilons=None, path_cap=None):
+    def _get_mean_stds(self, imts, epsilons='', path_cap=''):
         # Compute the mean and std devs from grid adjusted GMM and base GMM
         base = valid.gsim(BASE_GSIM)
         adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
@@ -311,14 +311,14 @@ class GridAdjustedGMPETest(unittest.TestCase):
                     decimal=DP)
 
     def test_path_cap_is_a_noop_when_non_binding(self):
-        # None, or any cap above the largest uncapped total, must leave
+        # An empty cap or a cap above the largest uncapped total must leave
         # the mean identical to the uncapped run
         eps_dict = {"dL2L": 0.0, "dS2S": 0.0, "adj_per_km": 1.732}
         mea_ref, *_ = self._get_mean_stds(IMTS, epsilons=eps_dict)
-        for cap in (None, 10.0):
+        for cap in ('', 10.0):
             mea, *_ = self._get_mean_stds(
                 IMTS, epsilons=eps_dict, path_cap=cap)
-            # cap != None takes a different arithmetic path (adds
+            # A numeric cap takes a different arithmetic path (adds
             # capped_total - mean_adj) so rounding differs at ~1e-16
             np.testing.assert_array_almost_equal(mea, mea_ref, decimal=14)
 

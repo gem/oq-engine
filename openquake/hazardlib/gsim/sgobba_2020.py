@@ -56,7 +56,7 @@ def _get_cluster_correction(dat, C, ctx, imt):
     """
     Get cluster correction. The use can specify various options through
     the cluster parameter. The available options are:
-    - cluster = None
+    - cluster = ''
         In this case the code finds the most appropriate correction using
         the rupture position
     - cluster = 0
@@ -78,7 +78,7 @@ def _get_cluster_correction(dat, C, ctx, imt):
         phi_P2P = C['phi_P2P']
         return correction, tau_L2L, Bp_model, phi_P2P
     # the code finds the most appropriate correction
-    if cluster is None:
+    if cluster == '':
         mesh = Mesh(np.array([ctx.hypo_lon]), np.array([ctx.hypo_lat]))
         # midp = ctx.surface.get_middle_point()
         # mesh = Mesh(np.array([midp.longitude]),np.array([midp.latitude]))
@@ -92,7 +92,7 @@ def _get_cluster_correction(dat, C, ctx, imt):
                 cluster = int(key)
                 break
     # if OUT clusters do not apply corrections
-    if cluster is None:
+    if cluster == '':
         tau_L2L = C['tau_L2L']
         phi_P2P = C['phi_P2P']
         return correction, tau_L2L, Bp_model, phi_P2P
@@ -184,12 +184,11 @@ class SgobbaEtAl2020(GMPE):
     it is meant for scenario calculations.
 
     :param event_id:
-        A string identifying an event amongst the ones comprised in the
-        list available in the file `event.csv`
+        An event ID from `event.csv`. Use an empty string for no event.
     :param directionality:
         A boolean
     :param cluster:
-        If set to 'None', the OQ Engine finds the corresponding cluster
+        If empty, the OQ Engine finds the corresponding cluster
         using the rupture epicentral location.
         If cluster=0, no cluster correction applied.
         Otherwise, if an integer ID is provided, that
@@ -224,7 +223,7 @@ class SgobbaEtAl2020(GMPE):
 
     PERIODS = np.array([0, 0.2, 0.50251256281407, 1.0, 2.0])
 
-    def __init__(self, event_id=None, directionality=False, cluster=None,
+    def __init__(self, event_id='', directionality=False, cluster='',
                  site=False, bedrock=False):
         self.event_id = event_id
         self.directionality = directionality
@@ -239,8 +238,7 @@ class SgobbaEtAl2020(GMPE):
         self.kdt = cKDTree(coo)
 
         # Load the table with the between event coefficients
-        if event_id is not None:
-            self.event_id = event_id
+        if self.event_id:
             fname = os.path.join(DATA_FOLDER, 'event.csv')
             # Create dataframe with events
             df = pd.read_csv(fname, dtype={'id': str})
@@ -261,7 +259,7 @@ class SgobbaEtAl2020(GMPE):
             # Ergodic coeffs
             C = self.COEFFS[imt]
             # between-event
-            if self.event_id is not None:
+            if self.event_id:
                 label = "dBe_{:s}".format(str(imt))
                 self.be = self.df.loc[self.event_id][label]
                 self.be_std = 0.0

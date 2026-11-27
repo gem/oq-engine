@@ -43,7 +43,7 @@ class NGAEastTotalSigmaTestCase(BaseGSIMTestCase):
 
 # add tests dynamically
 phi_models = ["global", "cena_constant", "cena"]
-phi_s2ss_models = ["cena", None]
+phi_s2ss_models = ["cena", ""]
 quantiles = [.05, .50, .95]
 SUFFIX = {.05: "LOW", .50: "CENTRAL", .95: "HIGH"}
 for phi_model, phi_s2ss_model, quantile in itertools.product(

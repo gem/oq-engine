@@ -310,7 +310,7 @@ class YenierAtkinson2015BSSA(GMPE):
 
     adapted = False
 
-    def __init__(self, focal_depth=None, region='CENA'):
+    def __init__(self, focal_depth='', region='CENA'):
         self.focal_depth = focal_depth
         self.region = region
         self.gmpe = BooreEtAl2014()
@@ -322,7 +322,7 @@ class YenierAtkinson2015BSSA(GMPE):
             C4 = self.COEFFS_TAB4[imt]
 
             # Compute focal depth if not set at the initialization level
-            if self.focal_depth is None:
+            if isinstance(self.focal_depth, str) and not self.focal_depth:
                 focal_depth = ctx.hypo_depth
             else:
                 focal_depth = np.full_like(ctx.hypo_depth, self.focal_depth)
