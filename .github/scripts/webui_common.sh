@@ -31,6 +31,7 @@ webui_setup() {
 import os
 
 APPLICATION_MODE = "RESTRICTED"
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 WEBUI_ACCESS_LOG_DIR = os.environ["WEBUI_ACCESS_LOG_DIR"]
 EOF

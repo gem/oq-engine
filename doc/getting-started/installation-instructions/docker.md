@@ -152,6 +152,10 @@ The Openquake image uses several environment variables:
 
 This optional variable overrides the WebUI `APPLICATION_MODE` (_PUBLIC_ by default, running the WebUI without authentication). If it is set to _RESTRICTED_, the authentication infrastructure will be enabled, restricting the access to authorized users.
 
+`OQ_ALLOWED_HOSTS`
+
+The comma-separated host names used to reach the WebUI (e.g. `example.org,localhost,127.0.0.1`). It is required when `OQ_APPLICATION_MODE` is _RESTRICTED_: with authentication enabled the WebUI refuses to start without it, since the links sent by email, e.g. to reset a password, are built from the host of the request.
+
 `OQ_ADMIN_USERNAME`
 
 This variable defines the superuser admin username in the WebUI
@@ -205,6 +209,7 @@ To define all the environment variables, you can use a `.env` file with the foll
 
 ```bash
 OQ_APPLICATION_MODE=RESTRICTED
+OQ_ALLOWED_HOSTS=localhost,127.0.0.1
 OQ_ADMIN_USERNAME=example
 OQ_ADMIN_PASSWORD=example
 OQ_ADMIN_EMAIL=login@example.com

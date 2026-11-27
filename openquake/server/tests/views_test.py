@@ -74,13 +74,14 @@ class WebuiClient:
         return self.session.head(self._url(path))
 
 
-def start_webui():
+def start_webui(environ=None):
     """
     Start a temporary WebUI server, using the Django development server, in
     a separate process for integration tests. Keeping the server out of the
     test process ensures the engine's ``fork()`` calls do not interact with
     Playwright's greenlet-based event loop, which would otherwise hang the
     test session. The database is upgraded when the WSGI application loads.
+    The given environment variables are added to those of the server.
     """
     sock = socket.socket()
     sock.bind(('127.0.0.1', 0))
@@ -91,7 +92,7 @@ def start_webui():
     proc = subprocess.Popen([
         sys.executable, '-m', 'openquake.server.manage', 'runserver',
         '127.0.0.1:%d' % port, '--noreload', '--nothreading'],
-        env=dict(os.environ, OQ_TEST='1'))
+        env=dict(os.environ, OQ_TEST='1', **(environ or {})))
     client = WebuiClient('http://127.0.0.1:%d' % port)
     for _ in range(200):
         if proc.poll() is not None:

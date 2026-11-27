@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 # NB: run these tests with OQ_APPLICATION_MODE=RESTRICTED (not verified yet for this file),
+import os
 import sys
 import zlib
 import json
@@ -25,6 +26,8 @@ import random
 import tempfile
 from unittest import mock, skipIf
 import django
+from django.core.exceptions import ImproperlyConfigured
+from django.test import override_settings
 from django.urls import reverse
 from datetime import datetime, timedelta
 from openquake.baselib import config
@@ -36,6 +39,8 @@ from openquake.commonlib.auth import API_KEY
 from openquake.commonlib.dbapi import db
 from openquake.engine import engine as engine_mod
 from openquake.engine.engine import create_jobs
+from openquake.server.apps import check_allowed_hosts
+from openquake.server.settings import hosts_from_env
 from openquake.server.tests.views_test import (
     get_or_create_user, random_string, start_webui, stop_webui)
 
@@ -84,6 +89,26 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         if ret.status_code != 200:
             raise RuntimeError(
                 'Unable to remove job %s:\n%s' % (calc_id, ret))
+
+    def test_allowed_hosts(self):
+        # with authentication '*' is refused, since the links sent by email
+        # (e.g. to reset a password) are built from the Host of the request
+        with override_settings(ALLOWED_HOSTS=['*']):
+            with self.assertRaises(ImproperlyConfigured):
+                check_allowed_hosts()
+        with override_settings(ALLOWED_HOSTS=['example.org', 'localhost']):
+            check_allowed_hosts()
+        with override_settings(LOCKDOWN=False, ALLOWED_HOSTS=['*']):
+            check_allowed_hosts()  # no authentication, no emails
+        with mock.patch.dict(
+                os.environ, {'OQ_ALLOWED_HOSTS': ' example.org, ,localhost '}):
+            self.assertEqual(hosts_from_env(), ['example.org', 'localhost'])
+        # a request for another host is refused, so the password reset
+        # cannot be requested with a forged Host
+        url = self.c.base_url + reverse('reset_password')
+        resp = self.c.session.get(url, headers={'Host': 'attacker.example'})
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(self.c.session.get(url).status_code, 200)
 
     def test_authentication_status(self):
         response = self.c.get('/v1/authentication/status')

@@ -10,7 +10,9 @@ from openquake.server.tests.views_test import start_webui, stop_webui
 
 @pytest.fixture(scope='module')
 def api_client():
-    server, thread, client = start_webui()
+    # the server accepts only the host name used by the client, so that
+    # requests using another name can be refused
+    server, thread, client = start_webui({'OQ_ALLOWED_HOSTS': '127.0.0.1'})
     try:
         yield client
     finally:
@@ -102,6 +104,24 @@ def test_dbcmd_uses_explicit_write_transaction(api_client, monkeypatch):
         config.webapi.server = old_server
     assert 'success' in created
     assert 'success' in deleted
+
+
+def test_dbcmd_explains_unknown_host(api_client, monkeypatch):
+    # a request using a host name not in ALLOWED_HOSTS gets an HTML 400
+    # page from Django; the error must point to ALLOWED_HOSTS
+    monkeypatch.setattr(logs, 'use_server', lambda: True)
+    server = api_client.base_url.replace('127.0.0.1', 'localhost')
+    monkeypatch.setenv('OQ_WEBAPI_SERVER', server)
+    for action, args in [('engine_version', ()), ('workers_status', ())]:
+        with pytest.raises(RuntimeError, match='"localhost" is listed in '
+                           'its ALLOWED_HOSTS'):
+            logs.dbcmd(action, *args)
+    # the errors of the internal API itself do not mention it
+    monkeypatch.setenv('OQ_WEBAPI_SERVER', api_client.base_url)
+    with pytest.raises(RuntimeError) as ctx:
+        logs.dbcmd('workers_status', {'host_cores': '127.0.0.1 -1'})
+    assert '400' in str(ctx.value)
+    assert 'ALLOWED_HOSTS' not in str(ctx.value)
 
 
 # the column names passed with ?S, ?D, ?A and ?O are inserted in the SQL

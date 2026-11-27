@@ -105,6 +105,7 @@ jobs:
           echo "▶ Starting WebUI"
           cat > ./.env << EOF
           OQ_APPLICATION_MODE=RESTRICTED
+          OQ_ALLOWED_HOSTS=localhost,127.0.0.1
           OQ_ADMIN_USERNAME=user
           OQ_ADMIN_PASSWORD=login
           OQ_ADMIN_EMAIL=user@login.input

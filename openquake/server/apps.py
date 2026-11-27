@@ -20,6 +20,7 @@ import os
 import importlib
 from django.apps import AppConfig
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from openquake.baselib import config
 from openquake.commonlib import dbapi
 from openquake.server.db import actions
@@ -35,6 +36,21 @@ IMPACT_DEPENDENCIES = [
 ]
 
 oqdir = os.path.dirname(os.path.dirname(__file__))
+
+
+def check_allowed_hosts():
+    """
+    With authentication enabled, ALLOWED_HOSTS must list the host names of
+    the server: the links sent by email, e.g. to reset a password, are built
+    from the Host of the request, which Django checks against ALLOWED_HOSTS.
+    """
+    if settings.LOCKDOWN and '*' in settings.ALLOWED_HOSTS:
+        raise ImproperlyConfigured(
+            'Authentication is enabled, so ALLOWED_HOSTS must list the host '
+            'names of the server instead of "*": set it in local_settings.py '
+            '(e.g. ALLOWED_HOSTS = ["example.org", "localhost"]) or with the '
+            'OQ_ALLOWED_HOSTS environment variable (e.g. '
+            'OQ_ALLOWED_HOSTS=example.org,localhost)')
 
 
 class ServerConfig(AppConfig):
@@ -64,6 +80,7 @@ class ServerConfig(AppConfig):
             raise ValueError(
                 f'Invalid application mode: "{settings.APPLICATION_MODE}".'
                 f' It must be one of {settings.APPLICATION_MODES}')
+        check_allowed_hosts()
         if settings.APPLICATION_MODE == 'IMPACT':
             for module, package, purpose in IMPACT_DEPENDENCIES:
                 try:

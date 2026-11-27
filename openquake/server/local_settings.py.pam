@@ -15,6 +15,9 @@ from openquake.server.settings import INSTALLED_APPS, AUTHENTICATION_BACKENDS
 
 # Enable authentication
 APPLICATION_MODE = 'RESTRICTED'
+# The host names of the server (required with authentication): the links
+# sent by email, e.g. to reset a password, can only point to these hosts
+ALLOWED_HOSTS = ['<domain_name_of_the_server>', 'localhost', '127.0.0.1']
 # Disable sharing of results across users (default True)
 # ACL_ON = True
 
