@@ -57,7 +57,7 @@ jobs:
 
   install:
     needs: plan
-    name: ${{ matrix.kind }} Python 3.11
+    name: ${{ matrix.kind }} Python 3.14
     runs-on: ubuntu-24.04
     env:
       MPLCONFIGDIR: /tmp  # matplotlib cache outside the home
@@ -66,10 +66,10 @@ jobs:
       matrix:
         kind: ${{ fromJSON(needs.plan.outputs.kinds) }}
     steps:
-      - name: Set up Python  3.11
+      - name: Set up Python  3.14
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.14"
       - name: Checkout the code to test
         # the scripts of this repository (webui_checks.sh) and the test
         # archives are taken from here; the code installed is below
@@ -96,7 +96,7 @@ jobs:
       - name: Actualize 'default' templates for email notifications (server)
         if: matrix.kind == 'server'
         run: |
-          SITE_PKG="/opt/openquake/venv/lib/python3.11/site-packages/"
+          SITE_PKG="/opt/openquake/venv/lib/python3.14/site-packages/"
           cd ${SITE_PKG}
           for file in openquake/server/templates/registration/*.default.tmpl; do
              echo ' cp -- "$file" "${file%.default.tmpl}" '
@@ -152,7 +152,7 @@ jobs:
           runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db'
           oq --version
           #
-          SITE_PKG="/opt/openquake/venv/lib/python3.11/site-packages/"
+          SITE_PKG="/opt/openquake/venv/lib/python3.14/site-packages/"
           # the settings of the WebUI and the users of the tests, from the
           # scripts of this repository (see the scripts for the details)
           SCRIPTS="${{ github.workspace }}/.github/scripts"

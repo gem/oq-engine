@@ -94,11 +94,18 @@ jobs:
       - name: Upgrade pip and install requirements
         run: |
           pip install -U pip wheel
-          pip install -r ./requirements-py313-linux64.txt
-          pip install -r ./doc/requirements.txt
+          # FIXME: requirement management must be removed
+          # pip install -r ./requirements-py313-linux64.txt
+          # pip install -r ./doc/requirements.txt
       - name: Install oq engine
         run: |
-          pip install -e .
+          WHEELHOUSE_URL="https://wheelhouse.openquake.org/unified/"
+          GEM_WHEELS_URL="https://wheelhouse.openquake.org/gem261118/"
+          URL_STANDALONE="https://wheelhouse.openquake.org/py/standalone/post-inst/"
+          # install core dependencies from wheelhouse
+          # and documentation optional dependencies from pypi
+          pip install --no-index --no-cache-dir --find-links $WHEELHOUSE_URL --find-links $GEM_WHEELS_URL --find-links $URL_STANDALONE -e .
+          pip install .[test,doc]
           python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
       - name: Check consistency between debian/changelog and CONTRIBUTORS.txt
         shell: bash
