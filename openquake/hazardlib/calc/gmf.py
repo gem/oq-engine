@@ -309,7 +309,7 @@ class GmfComputer(object):
         [self.ctx] = ctxs
         self.N = len(self.ctx)
         if within_event_model:  # store the filtered sitecol
-            self.sites = sitecol.complete.filtered(self.ctx.sids)
+            self.sites = sitecol.select_sids(self.ctx.sids)
             within_event_model.validate_imts(self.imts)
         self.between_event_model = between_event_model or NoCrossCorrelation(
             cmaker.truncation_level_between)

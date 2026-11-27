@@ -1229,7 +1229,7 @@ class HazardCalculator(BaseCalculator):
             # AELO may also associate distant parameters.
             mode = 'warn' if oq.region_grid_spacing or oq.siteid else 'strict'
             complete.assoc(sm, dist, mode, station_sids=station_sids)
-        self.sitecol = complete.filtered(sitecol.sids)
+        self.sitecol = sitecol.select_sids(sitecol.sids)
 
     # A single override can change the parameters without changing site IDs.
     def _override_vs30(self):
@@ -1254,7 +1254,7 @@ class HazardCalculator(BaseCalculator):
             updated.calculate_z1pt0()
         if 'z2pt5' in updated.names:
             updated.calculate_z2pt5()
-        self.sitecol = (updated.filtered(sites.sids) if len(values) == 1
+        self.sitecol = (updated.select_sids(sites.sids) if len(values) == 1
                         else updated)
 
     def _read_risk3(self):
@@ -1355,7 +1355,7 @@ class HazardCalculator(BaseCalculator):
         for sp in self.sec_perils:
             added += sp.prepare(complete) or 0  # add columns as needed
         if added:
-            self.sitecol = complete.filtered(sites.sids)
+            self.sitecol = sites.select_sids(sites.sids)
             self.datastore.store_sitecol(self.sitecol)
 
     def store_rlz_info(self, rel_ruptures):
@@ -1591,39 +1591,27 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
         lname = longname(name, arr.dtype.names)
         arr[name[4:] if name.startswith('gmv_') else lname] = array[name]
 
+    complete = sitecol.complete
     if 'sid' not in names:
         # there is a custom_site_id instead
-        customs = sitecol.complete.custom_site_id
-        to_sid = {csi: sid for sid, csi in enumerate(customs)}
-        for csi in numpy.unique(array['custom_site_id']):
-            ok = array['custom_site_id'] == csi
-            arr['sid'][ok] = to_sid[csi]
+        to_sid = dict(zip(complete.custom_site_id, complete.sids))
+        arr['sid'] = numpy.fromiter(
+            map(to_sid.__getitem__, array['custom_site_id']), U32, len(arr))
 
     n = len(numpy.unique(arr[['sid', 'eid']]))
     if n != len(array):
         raise ValueError('Duplicated site_id, event_id in %s' % fname)
-    # store the events
     eids = numpy.unique(array['eid'])
-    eids.sort()
     if eids[0] != 0:
         raise ValueError('The event_id must start from zero in %s' % fname)
+    data = arr[numpy.isin(arr['sid'], complete.sids)]
+    if not len(data):
+        raise ValueError('No GMFs in %s match the site collection' % fname)
+    data.sort(order=('eid', 'sid'))
     store_events(dstore, eids)
     logging.info('Storing %d events, all relevant', len(eids))
-    # store the GMFs
-    dic = general.group_array(arr, 'sid')
-    offset = 0
-    gmvlst = []
-    for sid in sitecol.complete.sids:
-        n = len(dic.get(sid, []))
-        if n:
-            offset += n
-            gmvs = dic[sid]
-            gmvlst.append(gmvs)
-    data = numpy.concatenate(gmvlst)
-    data.sort(order='eid')
     create_gmf_data(dstore, oqparam.get_primary_imtls(),
-                    oqparam.sec_imts, data=data, N=len(sitecol.complete))
-    dstore['weights'] = numpy.ones(1)
+                    oqparam.sec_imts, data=data, N=len(complete))
     return eids
 
 
@@ -2218,7 +2206,7 @@ def read_parent_sitecol(oq, dstore):
                 'ampcode' not in haz_sitecol.array.dtype.names):
             complete = haz_sitecol.complete
             complete.add_col('ampcode', site.ampcode_dt)
-            haz_sitecol = complete.filtered(haz_sitecol.sids)
+            haz_sitecol = haz_sitecol.select_sids(haz_sitecol.sids)
     return haz_sitecol
 
 

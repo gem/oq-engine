@@ -367,8 +367,9 @@ class SiteCollection(object):
     In a complete collection, each site ID is its row position. A
     filtered collection keeps those IDs and a reference to the complete
     collection, which can also contain sites without assets and stations.
-    Use `filtered` to select rows and `reindexed` to start a new set of
-    IDs. Any data keyed by the old IDs must be remapped when reindexing.
+    Use `filtered` for row positions, `select_sids` for site IDs, and
+    `reindexed` to start a new set of IDs. Any data keyed by the old IDs
+    must be remapped when reindexing.
 
     .. note::
 
@@ -560,6 +561,12 @@ class SiteCollection(object):
         new.array = self.array[indices]
         new.complete = self.complete
         return new
+
+    def select_sids(self, sids):
+        """
+        Select site IDs from the complete collection in the requested order.
+        """
+        return self.complete.filtered(sids)
 
     def reindexed(self):
         """

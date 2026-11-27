@@ -219,6 +219,9 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
 
     def test_reorder_and_reindex(self):
         subset = self.SITES.filtered([1, 3])
+        selected = subset.select_sids([3, 0])
+        assert_eq(selected.sids, [3, 0])
+        assert selected.complete is self.SITES
         reordered = subset.filtered([1, 0])
         assert_eq(reordered.sids, [3, 1])
         assert_eq(reordered.lons, [1, 11])

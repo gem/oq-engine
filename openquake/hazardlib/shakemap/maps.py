@@ -178,9 +178,8 @@ def apply_bounding_box(sitecol, bbox):
     :param bbox: Bounding Box (lon.min, lat.min, lon.max, lat.max)
     :raises RuntimeError: if no sites are found within the Bounding Box
     """
-    indices = sitecol.within_bbox(bbox)
-
-    if len(indices) == 0:
+    sids = sitecol.within_bbox(bbox)
+    if len(sids) == 0:
         raise RuntimeError('There are no sites within '
                            'the bounding box %s' % str(bbox))
-    return sitecol.complete.filtered(indices)
+    return sitecol.select_sids(sids)

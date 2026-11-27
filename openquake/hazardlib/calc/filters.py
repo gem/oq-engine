@@ -505,7 +505,7 @@ class SourceFilter(object):
         """
         sids = self.close_sids(source, trt)
         if len(sids):
-            return self.sitecol.complete.filtered(sids)
+            return self.sitecol.select_sids(sids)
 
     def split(self, sources):
         """

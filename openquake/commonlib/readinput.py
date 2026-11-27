@@ -842,7 +842,7 @@ def debug_site(oqparam, haz_sitecol):
             oqparam, haz_sitecol, duplicates_strategy='avg')
         sids = numpy.union1d(sids, sdata.site_id.to_numpy())
     oqparam.concurrent_tasks = 0
-    return haz_sitecol.complete.filtered(sids)
+    return haz_sitecol.select_sids(sids)
 
 
 def _vs30(dic):
@@ -936,7 +936,7 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
     if any(x in oqparam.calculation_mode
            for x in ('scenario', 'event_based', 'risk', 'damage')):
         sitecol.complete.ensure_custom_site_id(size=8)
-        sitecol = sitecol.complete.filtered(sitecol.sids)
+        sitecol = sitecol.select_sids(sitecol.sids)
     elif oqparam.postproc_func == 'compute_rtgm.main':
         # add custom_site_id if missing
         if 'custom_site_id' not in sitecol.array.dtype.names:

@@ -192,7 +192,7 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
             observed_imts = sorted(conditionable_imts(
                 imt.from_string(imt_str) for imt_str in oq.observed_imts))
             return ConditionedGmfComputer(
-                ebr, sites, sites.complete.filtered(station_sids),
+                ebr, sites, sites.select_sids(station_sids),
                 station_data.loc[station_sids],
                 observed_imts, cmaker,
                 oq.get_within_event_correlation_model(),
@@ -300,8 +300,7 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
     umon = monitor('updating gmfs', measuremem=False)
     with smon:
         with dstore:
-            complete = dstore.read_sitecol().complete
-        sites = complete.filtered(sids)
+            sites = dstore.read_sitecol().select_sids(sids)
     kdt = KDTree(sites.xyz)  # instantiated once per task
     for rups, cmaker in zip(allrups, cmakers):
         if not hasattr(cmaker, 'gmf_mon'):  # not already initialized
