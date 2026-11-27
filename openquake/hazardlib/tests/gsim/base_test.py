@@ -21,6 +21,7 @@ import unittest.mock as mock
 import numpy
 
 from openquake.hazardlib import const, valid
+from openquake.hazardlib.gsim.backbone import backbone_key
 from openquake.hazardlib.gsim.base import (
     GMPE, gsim_aliases, NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.imt import PGA
@@ -64,6 +65,21 @@ class TGMPE(GMPE):
     REQUIRES_SITES_PARAMETERS = ()
     REQUIRES_RUPTURE_PARAMETERS = ()
     REQUIRES_DISTANCES = ()
+
+
+class BackboneOptionsTestCase(unittest.TestCase):
+    def test_options_preserve_values_and_order(self):
+        gsim = TGMPE()
+        values = [[1], (1,), None, 'None', '/first/table', '/second/table']
+        keys = set()
+        for value in values:
+            gsim.kwargs = {'option': value}
+            keys.add(backbone_key(gsim))
+        self.assertEqual(len(keys), len(values))
+        gsim.kwargs = {'first': 1, 'second': 2}
+        key = backbone_key(gsim)
+        gsim.kwargs = {'second': 2, 'first': 1}
+        self.assertNotEqual(backbone_key(gsim), key)
 
 
 class GsimInstantiationTestCase(unittest.TestCase):

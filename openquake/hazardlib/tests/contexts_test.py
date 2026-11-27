@@ -587,8 +587,8 @@ class SharedGSIMTestCase(unittest.TestCase):
             actual = cm.get_mean_stds([ctx])
         backbone.assert_called_once()
         self.assertEqual(lower.central_key, upper.central_key)
-        self.assertEqual(repr(lower.central_key),
-                         'ModifiableGMPE(gmpe=AkkarEtAlRjb2014())')
+        self.assertEqual(lower.central_key,
+                         (ModifiableGMPE, (type(lower.gmpe), ())))
         expected = numpy.stack([cm.get_4MN([ctx], gsim)
                                 for gsim in cm.gsims], axis=1)
         numpy.testing.assert_array_equal(actual, expected)

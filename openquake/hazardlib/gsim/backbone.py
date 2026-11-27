@@ -17,69 +17,71 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """Shared computation for GSIM branches with additive mean shifts."""
-from typing import NamedTuple
-
-import toml
-
-from openquake.hazardlib.gsim.base import fix_toml
+import math
 
 
-class BackboneKey(NamedTuple):
-    """A model and its serialized options, displayed as a model call."""
+# Check exact types before encoding an option as a Python literal.
+def _check_key_option(v):
+    kind = type(v)
+    if kind in (type(None), bool, int, str, bytes):
+        return
+    if kind is float and math.isfinite(v):
+        return
+    if kind in (list, tuple):
+        for value in v:
+            _check_key_option(value)
+    elif kind is dict:
+        for key, value in v.items():
+            _check_key_option(key)
+            _check_key_option(value)
+    else:
+        raise TypeError(f'Unsupported key option {kind.__name__}')
 
-    model: type
-    options: str
-    gmpe: 'BackboneKey | None' = None
 
-    @classmethod
-    def from_options(cls, model, options, *, gmpe=None):
-        """Build a key from a model class and a dictionary of options."""
-        # Use an array of pairs so that the order survives TOML encoding.
-        pairs = [[name, fix_toml(value, for_key=True)]
-                 for name, value in options.items()]
-        return cls(model, toml.dumps({'options': pairs}).strip(), gmpe)
+def backbone_key(gsim, excluded=()):
+    """
+    Snapshot the model options used by a shared computation, omitting
+    weight and any excluded options. Return None for unsupported options
+    so the GSIM is computed independently.
 
-    @classmethod
-    def from_gsim(cls, gsim, excluded=()):
-        """
-        Snapshot the model options used by a shared computation, omitting
-        weight and any excluded options. Return None for unsupported options
-        so the GSIM is computed independently.
+    The EUR Shallow Default branches vary stress and attenuation.
+    Excluding ``sigma_mu_epsilon`` groups branches at fixed attenuation.
 
-        The EUR Shallow Default branches vary stress and attenuation.
-        Excluding ``sigma_mu_epsilon`` groups branches at fixed attenuation.
+    >>> from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
+    >>> low = KothaEtAl2020ESHM20(sigma_mu_epsilon=-1.355630)
+    >>> high = KothaEtAl2020ESHM20(sigma_mu_epsilon=1.355630)
+    >>> backbone_key(low) == backbone_key(high)
+    False
+    >>> excluded = ('sigma_mu_epsilon',)
+    >>> low_key = backbone_key(low, excluded)
+    >>> high_key = backbone_key(high, excluded)
+    >>> low_key == high_key
+    True
+    >>> slow = KothaEtAl2020ESHM20(sigma_mu_epsilon=1.355630,
+    ...                            c3_epsilon=1.732051)
+    >>> slow_key = backbone_key(slow, excluded)
+    >>> high_key == slow_key
+    False
+    >>> slow_key[1]
+    (('c3_epsilon', '1.732051'),)
+    """
+    pairs = []
+    try:
+        for name, value in gsim.kwargs.items():
+            if name == 'weight' or name in excluded:
+                continue
+            _check_key_option(value)
+            pairs.append((name, repr(value)))
+    except (TypeError, RecursionError):
+        return None
+    return type(gsim), tuple(pairs)
 
-        >>> from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
-        >>> low = KothaEtAl2020ESHM20(sigma_mu_epsilon=-1.355630)
-        >>> high = KothaEtAl2020ESHM20(sigma_mu_epsilon=1.355630)
-        >>> BackboneKey.from_gsim(low) == BackboneKey.from_gsim(high)
-        False
-        >>> excluded = ('sigma_mu_epsilon',)
-        >>> low_key = BackboneKey.from_gsim(low, excluded)
-        >>> high_key = BackboneKey.from_gsim(high, excluded)
-        >>> low_key == high_key
-        True
-        >>> slow = KothaEtAl2020ESHM20(sigma_mu_epsilon=1.355630,
-        ...                            c3_epsilon=1.732051)
-        >>> slow_key = BackboneKey.from_gsim(slow, excluded)
-        >>> high_key == slow_key
-        False
-        >>> slow_key
-        KothaEtAl2020ESHM20(c3_epsilon=1.732051)
-        """
-        options = {name: value for name, value in gsim.kwargs.items()
-                   if name != 'weight' and name not in excluded}
-        try:
-            return cls.from_options(type(gsim), options)
-        except (TypeError, RecursionError):
-            return None
 
-    def __repr__(self):
-        args = [f'{name}={value}' for name, value in
-                toml.loads(self.options)['options']]
-        if self.gmpe is not None:
-            args.insert(0, f'gmpe={self.gmpe!r}')
-        return f'{self.model.__name__}({", ".join(args)})'
+def wrapped_key(gsim, *inputs):
+    """Identify the wrapped GSIM and any additional hashable inputs."""
+    inner = backbone_key(gsim.gmpe)
+    if inner is not None:
+        return (type(gsim), inner, *inputs)
 
 
 def branch_key(compute, *varying):
@@ -98,13 +100,13 @@ def branch_key(compute, *varying):
     >>> high = ESHM20Craton(epsilon=1.355630, site_epsilon=-1.732051)
     >>> key(low) == key(high) == low.central_key == high.central_key
     True
-    >>> key(high)
-    ESHM20Craton(site_epsilon=-1.732051)
+    >>> key(high)[1]
+    (('site_epsilon', '-1.732051'),)
     """
     # Subclasses with their own compute implementation must opt in again.
     def key(gsim):
         if type(gsim).compute is compute:
-            return BackboneKey.from_gsim(gsim, varying)
+            return backbone_key(gsim, varying)
     return key
 
 
@@ -123,8 +125,8 @@ def sigma_mu_key(compute, *excluded):
     >>> high = BCHydroESHM20SInter(sigma_mu_epsilon=1.355630, **taper)
     >>> key(low) == key(high) == low.central_key == high.central_key
     True
-    >>> key(high)
-    BCHydroESHM20SInter(faba_taper_model='SFunc', a=-100.0, b=100.0)
+    >>> key(high)[1]
+    (('faba_taper_model', "'SFunc'"), ('a', '-100.0'), ('b', '100.0'))
     """
     return branch_key(compute, 'sigma_mu_epsilon', *excluded)
 

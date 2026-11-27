@@ -27,7 +27,6 @@ import tempfile
 import itertools
 from dataclasses import dataclass
 from collections import defaultdict
-import toml
 import numpy
 
 from openquake.baselib import hdf5
@@ -38,7 +37,8 @@ from openquake.baselib.general import (
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.lt import fix_bytes
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import (
+    GMPE, CoeffsTable, GSIM_NONE, dump_gsim_toml, load_gsim_toml)
 from openquake.hazardlib.imt import from_string
 
 U32 = numpy.uint32
@@ -405,7 +405,7 @@ class GsimLogicTree(lt.AbstractLogicTree):
             dic['filename'] = self.filename
             for gsims in self.values.values():
                 for gsim in gsims:
-                    kw = toml.loads(gsim._toml)[gsim.__class__.__name__]
+                    _, kw = load_gsim_toml(gsim._toml)
                     # i.e. kw = {'gmpe_table': 'Wcrust_low_rhypo.hdf5'}
                     # notice that fix_toml ensure relative path names
                     for k, v in kw.items():
@@ -505,7 +505,7 @@ class GsimLogicTree(lt.AbstractLogicTree):
                     kw = gsim.kwargs.copy()
                     kw['weight'] = weight.dic['weight']
                     kwargs[brid] = {gsim.__class__.__name__: kw}
-                _toml = toml.dumps({'AvgPoeGMPE': kwargs})
+                _toml = dump_gsim_toml('AvgPoeGMPE', kwargs)
                 gsim = AvgPoeGMPE(**kwargs)
                 gsim._toml = _toml
                 br_id = 'gA' + str(trti)
@@ -718,7 +718,9 @@ def rel_paths(toml):
             pass
         else:
             if name.rstrip().endswith(('_file', '_table')):
-                paths.append(ast.literal_eval(path.strip()))
+                fname = ast.literal_eval(path.strip())
+                if fname != GSIM_NONE:
+                    paths.append(fname)
     return paths
 
 

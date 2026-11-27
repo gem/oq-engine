@@ -380,9 +380,9 @@ class GridAdjustedGMPETest(unittest.TestCase):
         self.assertIs(restored[0].grid_data, restored[1].grid_data)
         new = restored[1]
         self.assertEqual(new.central_key, gsims[1].central_key)
-        self.assertRegex(
-            repr(new.central_key), r"^GridAdjustedGMPE\(gmpe=AkkarEtAlRjb2014"
-            r"\(\), grid_digest='[0-9a-f]{64}'\)$")
+        digest, _ = mod.get_residual_grids(GRID_HDF5, with_digest=True)
+        self.assertEqual(new.central_key,
+                         (GridAdjustedGMPE, (type(new.gmpe), ()), digest))
         cmaker = simple_cmaker([valid.gsim(BASE_GSIM), gsims[1]], IMTS)
         ctx = self._make_ctx(cmaker)
         expected = cmaker.get_mean_stds([ctx])

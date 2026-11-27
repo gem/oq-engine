@@ -19,6 +19,8 @@
 import unittest
 from openquake.hazardlib import imt, valid
 from openquake.hazardlib.gsim import registry
+from openquake.hazardlib.gsim.base import dump_gsim_toml, load_gsim_toml
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 
 
 class ValidationTestCase(unittest.TestCase):
@@ -185,6 +187,41 @@ class ValidationTestCase(unittest.TestCase):
             self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
         finally:
             del registry['FakeGsim']
+
+    def test_gsim_explicit_none(self):
+        default = BooreEtAl2014()
+        explicit = BooreEtAl2014(region=None)
+        restored = valid.gsim(repr(explicit))
+        self.assertIsNone(restored.region)
+        self.assertEqual(restored, explicit)
+        self.assertEqual(hash(restored), hash(explicit))
+        self.assertEqual(len({default, explicit, restored}), 2)
+        self.assertEqual(explicit._toml,
+                         '[BooreEtAl2014]\nregion = "__None__"')
+        for region in ('', 'prefix__None__'):
+            model = valid.gsim(f'[BooreEtAl2014]\nregion = "{region}"')
+            self.assertEqual(valid.gsim(repr(model)).region, region)
+            self.assertNotEqual(model, explicit)
+        with self.assertRaisesRegex(ValueError, '__None__.*reserved'):
+            BooreEtAl2014(region='__None__')
+
+    def test_gsim_explicit_none_nested(self):
+        name = 'TestGSIM'
+        options = {'entries': [None, 'ordinary', None],
+                   'nested': [{'unset': None, 'empty': ''}]}
+        serialized = dump_gsim_toml(name, options)
+        self.assertEqual(load_gsim_toml(serialized), (name, options))
+        self.assertEqual(dump_gsim_toml(*load_gsim_toml(serialized)),
+                         serialized)
+
+    def test_modifiable_gmpe_explicit_none(self):
+        base = BooreEtAl2014(region=None)
+        gmpe = valid.modified_gsim(
+            base, set_scale_median_scalar={'scaling_factor': 1.1})
+        restored = valid.gsim(repr(gmpe))
+        self.assertIsNone(restored.gmpe.region)
+        self.assertIsNone(valid.gsim(repr(restored.gmpe)).region)
+        self.assertEqual(restored, gmpe)
 
     def test_modifiable_gmpe(self):
         gsim = valid.gsim('Lin2011foot')

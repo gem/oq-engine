@@ -1813,6 +1813,19 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
 
 class GsimLogicTreeTestCase(unittest.TestCase):
+    def test_null_file_option(self):
+        model = valid.registry['ZhaoEtAl2016Asc'](volc_arc_file=None)
+        tree = gsim_lt.GsimLogicTree.from_(model)
+        with TemporaryDirectory() as tmp:
+            filename = os.path.join(tmp, 'gsim.xml')
+            with open(filename, 'wb') as f:
+                nrml.write([tree.to_node()], f)
+            self.assertEqual(gsim_lt.collect_files(filename), [])
+            tree = gsim_lt.GsimLogicTree(filename, ['*'])
+            restored = object.__new__(gsim_lt.GsimLogicTree)
+            restored.__fromh5__(*tree.__toh5__())
+        self.assertEqual(restored.branches[0].gsim, model)
+
     def parse_invalid(self, xml, errorclass, errormessage=None):
         if hasattr(xml, 'encode'):
             xml = xml.encode('utf8')
