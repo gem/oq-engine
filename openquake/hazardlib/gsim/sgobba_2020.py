@@ -184,8 +184,7 @@ class SgobbaEtAl2020(GMPE):
     it is meant for scenario calculations.
 
     :param event_id:
-        A string identifying an event amongst the ones comprised in the
-        list available in the file `event.csv`
+        An event ID from `event.csv`. Use an empty string for no event.
     :param directionality:
         A boolean
     :param cluster:
@@ -224,9 +223,9 @@ class SgobbaEtAl2020(GMPE):
 
     PERIODS = np.array([0, 0.2, 0.50251256281407, 1.0, 2.0])
 
-    def __init__(self, event_id=None, directionality=False, cluster=None,
+    def __init__(self, event_id='', directionality=False, cluster=None,
                  site=False, bedrock=False):
-        self.event_id = event_id
+        self.event_id = event_id or ''
         self.directionality = directionality
         self.cluster = cluster
         self.site = site
@@ -239,8 +238,7 @@ class SgobbaEtAl2020(GMPE):
         self.kdt = cKDTree(coo)
 
         # Load the table with the between event coefficients
-        if event_id is not None:
-            self.event_id = event_id
+        if self.event_id:
             fname = os.path.join(DATA_FOLDER, 'event.csv')
             # Create dataframe with events
             df = pd.read_csv(fname, dtype={'id': str})
@@ -261,7 +259,7 @@ class SgobbaEtAl2020(GMPE):
             # Ergodic coeffs
             C = self.COEFFS[imt]
             # between-event
-            if self.event_id is not None:
+            if self.event_id:
                 label = "dBe_{:s}".format(str(imt))
                 self.be = self.df.loc[self.event_id][label]
                 self.be_std = 0.0

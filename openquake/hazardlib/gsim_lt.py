@@ -27,6 +27,7 @@ import tempfile
 import itertools
 from dataclasses import dataclass
 from collections import defaultdict
+import toml
 import numpy
 
 from openquake.baselib import hdf5
@@ -37,8 +38,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.lt import fix_bytes
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
-from openquake.hazardlib.gsim.base import (
-    GMPE, CoeffsTable, GSIM_NONE, dump_gsim_toml, load_gsim_toml)
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import from_string
 
 U32 = numpy.uint32
@@ -405,17 +405,15 @@ class GsimLogicTree(lt.AbstractLogicTree):
             dic['filename'] = self.filename
             for gsims in self.values.values():
                 for gsim in gsims:
-                    _, kw = load_gsim_toml(gsim._toml)
+                    kw = toml.loads(gsim._toml)[gsim.__class__.__name__]
                     # i.e. kw = {'gmpe_table': 'Wcrust_low_rhypo.hdf5'}
                     # notice that fix_toml ensure relative path names
                     for k, v in kw.items():
-                        if k.endswith(('_file', '_table')):
-                            if v is None:  # if volc_arc_file is None
-                                pass
-                            else:
-                                # store the data files as attributes
-                                with open(gsim.kwargs[k], 'rb') as f:
-                                    dic[f'{k}:{v}'] = f.read()
+                        # Optional files such as volc_arc_file can be empty.
+                        if v and k.endswith(('_file', '_table')):
+                            # store the data files as attributes
+                            with open(gsim.kwargs[k], 'rb') as f:
+                                dic[f'{k}:{v}'] = f.read()
         return numpy.array(branches, dt), dic
 
     def __fromh5__(self, array, dic):
@@ -505,7 +503,7 @@ class GsimLogicTree(lt.AbstractLogicTree):
                     kw = gsim.kwargs.copy()
                     kw['weight'] = weight.dic['weight']
                     kwargs[brid] = {gsim.__class__.__name__: kw}
-                _toml = dump_gsim_toml('AvgPoeGMPE', kwargs)
+                _toml = toml.dumps({'AvgPoeGMPE': kwargs})
                 gsim = AvgPoeGMPE(**kwargs)
                 gsim._toml = _toml
                 br_id = 'gA' + str(trti)
@@ -719,7 +717,7 @@ def rel_paths(toml):
         else:
             if name.rstrip().endswith(('_file', '_table')):
                 fname = ast.literal_eval(path.strip())
-                if fname != GSIM_NONE:
+                if fname:
                     paths.append(fname)
     return paths
 

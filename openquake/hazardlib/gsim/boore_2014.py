@@ -336,6 +336,8 @@ class BooreEtAl2014(GMPE):
 
     def __init__(self, region='nobasin', sof=True, sigma_mu_epsilon=0.0,
                  usgs_basin_scaling=False, cybershake_basin_adj=False):
+        if region is None:
+            raise ValueError("Use region='' for the California basin term")
         self.region = region
         self.sof = sof
         self.sigma_mu_epsilon = sigma_mu_epsilon

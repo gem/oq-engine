@@ -559,9 +559,9 @@ class SharedGSIMTestCase(unittest.TestCase):
                                 for gsim in cm.gsims], axis=1)
         numpy.testing.assert_array_equal(cm.get_mean_stds([ctx]), expected)
 
-    def test_explicit_none_does_not_use_default_backbone(self):
+    def test_empty_region_does_not_use_default_backbone(self):
         gsims = [BooreEtAl2014(sigma_mu_epsilon=-1.),
-                 BooreEtAl2014(region=None, sigma_mu_epsilon=1.)]
+                 BooreEtAl2014(region='', sigma_mu_epsilon=1.)]
         cm = contexts.simple_cmaker(gsims, ['SA(1.0)'])
         ctx = cm.new_ctx(2)
         ctx.mag, ctx.rjb, ctx.rake, ctx.vs30 = 6.2, 10., 0., 350.

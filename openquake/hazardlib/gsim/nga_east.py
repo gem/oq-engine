@@ -686,8 +686,8 @@ class NGAEastGMPE(GMPETable):
         (phi_ss), selecting from "global" {default}, "cena" or "cena_constant"
 
     :param str phi_s2ss_model:
-        Choice of station-term s2ss model. Can be either "cena" or None. When
-        None is input then the non-ergodic model is used
+        Choice of station-term s2ss model. Use "cena" for the station term
+        or "" for the non-ergodic model.
 
     :param TAU:
         Inter-event standard deviation model
@@ -715,7 +715,7 @@ class NGAEastGMPE(GMPETable):
     kind = "nga_east"
 
     def __init__(self, gmpe_table, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, tau_quantile=None, phi_ss_quantile=None,
+                 phi_s2ss_model='', tau_quantile=None, phi_ss_quantile=None,
                  phi_s2ss_quantile=None, site_epsilon=None):
         """
         Instantiates the class with additional terms controlling which
@@ -740,7 +740,7 @@ class NGAEastGMPE(GMPETable):
         """
         self.tau_model = tau_model
         self.phi_model = phi_model
-        self.phi_s2ss_model = phi_s2ss_model
+        self.phi_s2ss_model = phi_s2ss_model or ''
         self.TAU = None
         self.PHI_SS = None
         self.PHI_S2SS = None
@@ -925,7 +925,7 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     def __init__(self, gmpe_table, tau_model="global", phi_model="global",
-                 phi_s2ss_model=None, tau_quantile=None, phi_ss_quantile=None,
+                 phi_s2ss_model='', tau_quantile=None, phi_ss_quantile=None,
                  phi_s2ss_quantile=None, site_epsilon=None,
                  sigma_quantile=None):
         """

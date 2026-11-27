@@ -49,44 +49,15 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
 
 F32 = numpy.float32
 F64 = numpy.float64
-GSIM_NONE = '__None__'
 registry = {}  # GSIM name -> GSIM class
 gsim_aliases = {}  # GSIM alias -> TOML representation
-
-
-# TOML has no null value. Reserve a string for explicit None options.
-def _gsim_nulls(value, *, decode):
-    if isinstance(value, str) and value == GSIM_NONE:
-        if decode:
-            return None
-        raise ValueError(f'{GSIM_NONE!r} is reserved for None in GSIM TOML')
-    if value is None:
-        return None if decode else GSIM_NONE
-    if isinstance(value, dict):
-        return {key: _gsim_nulls(item, decode=decode)
-                for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        items = [_gsim_nulls(item, decode=decode) for item in value]
-        return tuple(items) if isinstance(value, tuple) else items
-    return value
-
-
-def dump_gsim_toml(name, options):
-    """Serialize GSIM options, recording explicit None values if present."""
-    return toml.dumps({name: _gsim_nulls(options, decode=False)})
-
-
-def load_gsim_toml(value):
-    """Read the GSIM name and options, restoring any explicit None values."""
-    [(name, options)] = toml.loads(value).items()
-    return name, _gsim_nulls(options, decode=True)
 
 
 def add_alias(name, cls, **kw):
     """
     Add a GSIM alias to both gsim_aliases and the registry.
     """
-    gsim_aliases[name] = dump_gsim_toml(cls.__name__, kw)
+    gsim_aliases[name] = toml.dumps({cls.__name__: kw})
     registry[name] = lambda: cls(**kw)
 
 
@@ -217,7 +188,7 @@ class MetaGSIM(abc.ABCMeta):
         else:
             self = type.__call__(cls, **kwargs)
         self.kwargs = kwargs
-        self._toml = dump_gsim_toml(cls.__name__, fix_toml(kwargs)).strip()
+        self._toml = toml.dumps({cls.__name__: fix_toml(kwargs)}).strip()
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             self.kwargs['gmpe_table'] = self.gmpe_table

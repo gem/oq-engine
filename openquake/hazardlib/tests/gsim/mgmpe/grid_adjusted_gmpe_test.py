@@ -123,7 +123,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             setattr(ctx, k, v)
         return ctx
 
-    def _get_mean_stds(self, imts, epsilons=None, path_cap=None):
+    def _get_mean_stds(self, imts, epsilons='', path_cap=''):
         # Compute the mean and std devs from grid adjusted GMM and base GMM
         base = valid.gsim(BASE_GSIM)
         adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,

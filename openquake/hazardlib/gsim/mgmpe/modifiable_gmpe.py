@@ -20,10 +20,10 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
 
+import toml
 import numpy as np
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.gsim.base import (
-    GMPE, registry, CoeffsTable, dump_gsim_toml)
+from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.gsim.backbone import wrapped_key
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
@@ -710,8 +710,8 @@ class ModifiableGMPE(GMPE):
 
     def __init__(self, **kwargs):
         # Create the original GMPE
+        _toml = toml.dumps(kwargs['gmpe'])
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
-        _toml = dump_gsim_toml(gmpe_name, kw)
         self.params = kwargs  # non-gmpe parameters
         g = globals()
         for k in self.params:

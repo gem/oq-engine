@@ -37,8 +37,7 @@ from openquake.hazardlib import imt, gsim, pmf, site, tom
 from openquake.hazardlib.codes import SOURCE_CODES
 from openquake.hazardlib.scalerel import (
     SCALEREL as SCALEREL, mag_scale_rel as mag_scale_rel)
-from openquake.hazardlib.gsim.base import (
-    registry, gsim_aliases, dump_gsim_toml, fix_toml, load_gsim_toml)
+from openquake.hazardlib.gsim.base import registry, gsim_aliases, fix_toml
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
@@ -179,10 +178,10 @@ def gsim(value, basedir=''):
     [BooreAtkinson2011]
     """
     value = to_toml(value)  # convert to TOML
-    gsim_name, kwargs = load_gsim_toml(value)
+    [(gsim_name, kwargs)] = toml.loads(value).items()
     kwargs = fix_toml(kwargs)
     for k, v in kwargs.items():
-        if v is not None and k.endswith(('_file', '_table')):
+        if k.endswith(('_file', '_table')) and v != '':
             kwargs[k] = os.path.normpath(os.path.join(basedir, v))
     if gsim_name == 'FromFile':
         return FromFile()
@@ -204,9 +203,9 @@ def modified_gsim(gmpe, **kwargs):
 
     mgs = modified_gsim(gsim, add_between_within_stds={'with_betw_ratio':1.5})
     """
-    inner_name, inner_kw = load_gsim_toml(gmpe._toml)
+    [(inner_name, inner_kw)] = toml.loads(gmpe._toml).items()
     options = {'gmpe': {inner_name: inner_kw}, **kwargs}
-    return gsim(dump_gsim_toml('ModifiableGMPE', options))
+    return gsim(toml.dumps({'ModifiableGMPE': options}))
 
 
 def occurrence_model(value):

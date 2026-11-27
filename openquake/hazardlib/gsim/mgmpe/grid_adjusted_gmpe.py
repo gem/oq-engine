@@ -654,7 +654,7 @@ def apply_epsilons(gsim, resolved, imts, mean, *_stddevs):
                 f"IMT '{imts[m]}'.")
         shift = eps * se_adj if eps != 0.0 else 0.0
         cfg = gsim.grid_data["res_terms"][term]
-        if cfg["location"] == "path" and gsim.path_cap is not None:
+        if cfg["location"] == "path" and gsim.path_cap:
             # mean_adj was already added uncapped in compute_central;
             # replace it with the capped (central + eps*SE) total
             shift = np.clip(mean_adj + shift,
@@ -762,7 +762,7 @@ class GridAdjustedGMPE(GMPE):
     :param path_cap:
         Optional per-branch cap (nat-log units) on the stacked per-ray path
         term (central + eps * SE) only, clipped to [-path_cap, +path_cap].
-        Hypo/site terms (dL2L, dS2S) are unaffected. Default None = no cap.
+        Hypo/site terms (dL2L, dS2S) are unaffected. Use "" for no cap.
         A value of ln(2) ~ 0.693 bounds the multiplicative path factor at
         [0.5, 2.0] on every LT realisation. Useful for constraining long
         rays crossing many weakly-constrained cells, where the per-km
@@ -781,8 +781,8 @@ class GridAdjustedGMPE(GMPE):
     experimental = True # It's not extensively tested yet
     central_functions = (compute_central, apply_epsilons)
 
-    def __init__(self, gmpe_name, grid_hdf5_file, epsilons=None,
-                 path_cap=None, **kwargs):
+    def __init__(self, gmpe_name, grid_hdf5_file, epsilons='',
+                 path_cap='', **kwargs):
 
         # Instantiate the underlying GMM
         self.gmpe = registry[gmpe_name](**kwargs)
@@ -795,12 +795,12 @@ class GridAdjustedGMPE(GMPE):
             grid_hdf5_file)
 
         # Per-ray path cap (in natural-log units).
-        # None = no cap; compute() clips the per-branch total after lookup.
-        if path_cap is not None and path_cap <= 0:
+        # An empty cap leaves the per-branch total unclipped.
+        self.path_cap = '' if path_cap is None else path_cap
+        if self.path_cap != '' and self.path_cap <= 0:
             raise ValueError(
-                f"path_cap must be positive (natural-log units) or None, "
+                f"path_cap must be positive (natural-log units) or empty, "
                 f"got {path_cap!r}.")
-        self.path_cap = path_cap
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
         self.epsilons = epsilons or {}
