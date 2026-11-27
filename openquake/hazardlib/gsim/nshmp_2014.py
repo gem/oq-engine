@@ -112,7 +112,8 @@ class NSHMP2014(base.GMPE):
         adjustment = _compute_central(self, ctx, imts, mean, sig, tau, phi)
         return _apply_shift(self, adjustment, imts, mean)
 
-    central_functions = mean_shift_functions(_apply_shift, _compute_central)
+    central_functions = mean_shift_functions(
+        _apply_shift, compute_central=_compute_central)
     make_central_key = branch_key(compute, 'sgn')
 
 # populate gsim_aliases

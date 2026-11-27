@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2026 GEM Foundation
+# Copyright (C) 2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -54,8 +54,14 @@ def compute_without_shift(gsim, ctx, imts, mean, sig, tau, phi, gra_mon=None):
     return ctx
 
 
-def mean_shift_functions(apply_shift, compute_central=compute_without_shift):
-    """Pair shared computation with a callback that updates only the mean."""
+def mean_shift_functions(apply_shift, *,
+                         compute_central=compute_without_shift):
+    """
+    Pair shared computation with a callback that updates only the mean.
+    Return the pair (compute_central, apply_branch) expected by
+    ContextMaker; `compute_central` is keyword-only, to avoid confusing
+    the order of the arguments with the order of the result.
+    """
     def apply_branch(gsim, resolved, imts, outputs):
         return apply_shift(gsim, resolved, imts, outputs[0])
     return compute_central, apply_branch

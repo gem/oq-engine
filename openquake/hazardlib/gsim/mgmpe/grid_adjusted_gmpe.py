@@ -780,7 +780,8 @@ class GridAdjustedGMPE(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     experimental = True # It's not extensively tested yet
-    central_functions = mean_shift_functions(apply_epsilons, compute_central)
+    central_functions = mean_shift_functions(
+        apply_epsilons, compute_central=compute_central)
 
     def __init__(self, gmpe_name, grid_hdf5_file, epsilons=None,
                  path_cap=None, **kwargs):

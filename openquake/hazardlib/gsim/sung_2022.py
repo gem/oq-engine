@@ -349,8 +349,8 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
 
     experimental = True # For now
-    central_functions = mean_shift_functions(apply_branch_shift,
-                                             compute_central)
+    central_functions = mean_shift_functions(
+        apply_branch_shift, compute_central=compute_central)
 
     def __init__(self, adjustment_file, rlz_id="mean"):
         self.adjustment_file = adjustment_file

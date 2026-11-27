@@ -194,6 +194,10 @@ class MetaGSIM(abc.ABCMeta):
             self.kwargs['gmpe_table'] = self.gmpe_table
         if hasattr(self, 'make_central_key'):
             # Snapshot constructor options before callers can reuse them.
+            # NB: the key is computed once, at construction time, so a
+            # GSIM must not be modified after it is built, otherwise
+            # branches with different predictions could share the same
+            # computation in ContextMaker.get_mean_stds.
             self.central_key = self.make_central_key()
         if mixture_model is not None:
             self.mixture_model = mixture_model

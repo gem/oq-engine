@@ -972,7 +972,8 @@ class KuehnEtAl2020SInter(GMPE):
         if apply_shift:
             _apply_sigma_mu(self, (ctx, {}), imts, mean)
 
-    central_functions = mean_shift_functions(_apply_sigma_mu, _compute_central)
+    central_functions = mean_shift_functions(
+        _apply_sigma_mu, compute_central=_compute_central)
     # gmpe_table is a marker for magnitude splitting in shifted branches.
     make_central_key = sigma_mu_key(compute, 'gmpe_table')
 
