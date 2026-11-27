@@ -378,6 +378,14 @@ taxonomies and exposure chunks.
 Average losses are now assigned to the correct realization, and exceeding
 `avg_losses_max` with `collect_rlzs=false` raises an error as expected.
 
+Aggregate loss curve statistics now preserve the weights of realizations
+with zero losses, producing correct weighted quantiles. Contributed by
+[Johnny Kao](https://github.com/Johnny-Kao).
+
+Scenario risk quantiles now give realizations their full weight at zero
+loss when they have no recorded losses for a given aggregation group
+and loss type.
+
 Classical risk handles assets of different taxonomies at the same site
 without misplacing their loss curves or average losses.
 

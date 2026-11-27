@@ -91,3 +91,31 @@ def test_compose_peril_damage_counts(number, realizations, tmp_path):
             totals[1, agg_id], [[.4 * number, .6 * number, 7. * number]])
     numpy.testing.assert_allclose(damages.sum(axis=2), dd5.sum(axis=2))
     numpy.testing.assert_equal(ords, [0])
+
+
+@pytest.mark.parametrize('missing_rlz', [0, 1])
+def test_scenario_quantiles_missing_realization(missing_rlz):
+    # A missing tag/realization contributes its full weight at zero loss.
+    oq = SimpleNamespace(number_of_logic_tree_samples=0,
+                         investigation_time=None, quantiles=[0., .05, .5,
+                                                             .95, 1.],
+                         calculation_mode='scenario_risk')
+    weights = numpy.array([.75, .25])
+    num_events = numpy.array([2, 4])
+    rlzs = numpy.repeat([0, 1], num_events)
+    ws = weights[rlzs] / num_events[rlzs]
+    rows = [(tag, rlz, 3, eid, float(10 * (eid + 1)))
+            for tag in (0, 1) for eid, rlz in enumerate(rlzs)
+            if tag == 1 or rlz != missing_rlz]
+    df = pandas.DataFrame(rows, columns=[
+        'agg_id', 'rlz_id', 'loss_id', 'event_id', 'loss'])
+    _, quantiles, _, _ = compute_aggrisk(
+        {'weights': weights}, oq, df, num_events, [0, 1])
+    for tag in (0, 1):
+        losses = numpy.zeros(len(rlzs))
+        part = df[df.agg_id == tag]
+        losses[part.event_id] = part.loss
+        expected = numpy.quantile(losses, oq.quantiles, weights=ws,
+                                  method='inverted_cdf')
+        [row] = quantiles[quantiles.agg_id == tag].values
+        numpy.testing.assert_allclose(row[2:], expected)

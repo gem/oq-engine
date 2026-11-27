@@ -102,14 +102,14 @@ def save_curve_stats(dstore):
         out = numpy.zeros((K + 1, S, P, EP))
         aggdf = aggcurves_df[aggcurves_df.loss_id == loss_id]
         for agg_id, df in aggdf.groupby("agg_id"):
-            for s, stat in enumerate(stats.values()):
-                for p in range(P):
-                    for e, ep_field in enumerate(ep_fields):
-                        dfp = df[df.return_period == periods[p]]
-                        ws = weights[dfp.rlz_id.to_numpy()]
-                        ws /= ws.sum()
-                        out[agg_id, s, p, e] = stat(dfp[ep_field].to_numpy(),
-                                                    ws)
+            for p, period in enumerate(periods):
+                dfp = df[df.return_period == period]
+                for e, ep_field in enumerate(ep_fields):
+                    # Missing realizations have zero losses (calc_stats).
+                    values = numpy.zeros_like(weights)
+                    values[dfp.rlz_id] = dfp[ep_field].to_numpy()
+                    for s, stat in enumerate(stats.values()):
+                        out[agg_id, s, p, e] = stat(values, weights)
         stat = 'agg_curves-stats/' + lt
         dstore.create_dset(stat, F64, (K + 1, S, P, EP))
         dstore.set_shape_descr(stat, agg_id=K+1, stat=list(stats),
@@ -382,6 +382,13 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     if quantiles:
         for (agg_id, loss_id), (losses, ws) in quantiles.items():
             if oq.calculation_mode == 'scenario_risk':
+                # Missing tag/realization groups contribute zero losses.
+                rlzs = rbe_df.loc[(rbe_df.agg_id == agg_id) &
+                                  (rbe_df.loss_id == loss_id), 'rlz_id']
+                missing = numpy.setdiff1d(numpy.flatnonzero(num_events), rlzs)
+                if len(missing):
+                    losses.append(0.)
+                    ws.append(weights[missing].sum())
                 # Each GMF is one equally weighted simulation within its rlz.
                 order = numpy.argsort(losses)
                 losses = numpy.asarray(losses)[order]

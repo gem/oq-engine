@@ -28,7 +28,8 @@ from openquake.qa_tests_data.scenario import (
     case_34, case_35, case_36, case_37)
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib import InvalidFile, nrml
+from openquake.commonlib import readinput
+from openquake.hazardlib import InvalidFile, nrml, site
 from openquake.calculators import base, getters
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -48,6 +49,38 @@ def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
     return sum((lower_bound <= v1 <= upper_bound) and
                (lower_bound <= v2 <= upper_bound)
                for v1, v2 in zip(gmvs_site_one, gmvs_site_two))
+
+
+def test_merge_gmfs_with_sparse_sites(tmp_path):
+    files = []
+    inputs = [
+        ([0, 1], [0], [0]),
+        ([1, 2, 3, 4], [0, 1, 2, 3, 0], [0, 0, 0, 0, 1]),
+        ([4, 5, 6], [0, 1, 2], [0, 0, 0])]
+    for i, (lons, sids, eids) in enumerate(inputs):
+        path = str(tmp_path / f'gmf-{i}.hdf5')
+        files.append(path)
+        sites = site.SiteCollection.from_points(lons, numpy.zeros(len(lons)))
+        sites.ensure_custom_site_id(8)
+        with hdf5.File(path, 'w') as h5:
+            h5['sitecol'] = sites
+            h5.create_df(
+                'gmf_data',
+                [('sid', numpy.array(sids, 'u4')),
+                 ('eid', numpy.array(eids, 'u4')),
+                 ('PGA', (10 * i + sites.lons[sids]).astype('f4'))],
+                num_events=max(eids) + 1, imts='PGA', effective_time=0,
+                investigation_time=0)
+
+    ini = os.path.join(os.path.dirname(case_33.__file__), 'job1.ini')
+    oq = readinput.get_oqparam(ini)
+    oq.inputs['gmfs'] = files
+    with hdf5.File(str(tmp_path / 'merged.hdf5'), 'w') as h5:
+        base.import_gmfs_hdf5(h5, oq)
+        df = h5.read_df('gmf_data')
+        aae(df.eid, [0, 1, 1, 1, 1, 2, 3, 3])
+        aae(h5['sitecol'].lons[df.sid], [0, 1, 2, 3, 4, 1, 5, 6])
+        aae(df.PGA, [0, 11, 12, 13, 14, 11, 25, 26])
 
 
 class ScenarioTestCase(CalculatorTestCase):
