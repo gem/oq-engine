@@ -24,6 +24,7 @@ different kinds of :class:`ground shaking intensity models
 import os
 import sys
 import abc
+import ast
 import pathlib
 import inspect
 import warnings
@@ -135,8 +136,47 @@ def fix_toml(v):
     return v
 
 
-OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters',
-              'make_central_key')
+def get_central_key(gsim):
+    """
+    GSIMs with ``central_functions`` list in ``shifted_options`` the
+    options which only shift the central computation; branches differing
+    only in such options share the same key, so that
+    ContextMaker.get_mean_stds performs the central computation once.
+
+    :returns:
+        (class name, repr of the other options) or None if the GSIM cannot
+        share the central computation, i.e. if a subclass overrides
+        ``compute`` without redeclaring ``shifted_options`` or if some
+        option is not a Python literal
+
+    >>> from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
+    >>> low = KothaEtAl2020ESHM20(sigma_mu_epsilon=-1.35563)
+    >>> high = KothaEtAl2020ESHM20(sigma_mu_epsilon=1.35563)
+    >>> get_central_key(low) == get_central_key(high)
+    True
+    >>> get_central_key(KothaEtAl2020ESHM20(c3_epsilon=1.732051))
+    ('KothaEtAl2020ESHM20', "(('c3_epsilon', 1.732051),)")
+    """
+    for cls in type(gsim).__mro__:
+        if 'shifted_options' in cls.__dict__:
+            break
+        elif 'compute' in cls.__dict__:
+            # the central functions would bypass this compute
+            return None
+    else:  # no shifted_options
+        return None
+    options = tuple((name, value) for name, value in gsim.kwargs.items()
+                    if name != 'weight' and name not in gsim.shifted_options)
+    key = repr(options)
+    try:
+        # only Python literals have a faithful representation
+        if ast.literal_eval(key) == options:
+            return type(gsim).__name__, key
+    except (ValueError, SyntaxError, RecursionError):
+        pass
+
+
+OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
 
 
 def bad_methods(clsdict):
@@ -204,13 +244,13 @@ class MetaGSIM(abc.ABCMeta):
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             self.kwargs['gmpe_table'] = self.gmpe_table
-        if hasattr(self, 'make_central_key'):
+        if getattr(self, 'central_functions', None):
             # Snapshot constructor options before callers can reuse them.
             # NB: the key is computed once, at construction time, so a
             # GSIM must not be modified after it is built, otherwise
             # branches with different predictions could share the same
             # computation in ContextMaker.get_mean_stds.
-            self.central_key = self.make_central_key()
+            self.central_key = get_central_key(self)
         if mixture_model is not None:
             self.mixture_model = mixture_model
 

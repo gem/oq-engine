@@ -27,8 +27,7 @@ import numpy as np
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import _apply_nshm_shift
-from openquake.hazardlib.gsim.backbone import (
-    compute_without_shift, sigma_mu_key)
+from openquake.hazardlib.gsim.backbone import compute_without_shift
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -798,7 +797,7 @@ class ChiouYoungs2014(GMPE):
             _apply_nshm_shift(self, ctx, imts, mean)
 
     central_functions = (compute_without_shift, _apply_nshm_shift)
-    make_central_key = sigma_mu_key(compute)
+    shifted_options = ('sigma_mu_epsilon',)
 
     #: Coefficient tables are constructed from values in tables 1 - 5
     COEFFS = CoeffsTable(sa_damping=5, table="""\

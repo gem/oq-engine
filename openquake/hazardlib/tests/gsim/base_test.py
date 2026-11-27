@@ -22,10 +22,9 @@ import numpy
 
 from openquake.baselib.general import duplicated, gen_subclasses
 from openquake.hazardlib import const, valid
-from openquake.hazardlib.gsim.backbone import backbone_key
 from openquake.hazardlib.gsim.base import (
     GMPE, GroundShakingIntensityModel, gsim_aliases, NotVerifiedWarning,
-    DeprecationWarning)
+    DeprecationWarning, get_central_key)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.contexts import ContextMaker
 aac = numpy.testing.assert_allclose
@@ -69,19 +68,36 @@ class TGMPE(GMPE):
     REQUIRES_DISTANCES = ()
 
 
-class BackboneOptionsTestCase(unittest.TestCase):
+class ShiftedGMPE(TGMPE):
+    shifted_options = ('shift',)
+
+
+class CentralKeyTestCase(unittest.TestCase):
     def test_options_preserve_values_and_order(self):
-        gsim = TGMPE()
+        gsim = ShiftedGMPE()
         values = [[1], (1,), None, 'None', '/first/table', '/second/table']
         keys = set()
         for value in values:
             gsim.kwargs = {'option': value}
-            keys.add(backbone_key(gsim))
+            keys.add(get_central_key(gsim))
         self.assertEqual(len(keys), len(values))
         gsim.kwargs = {'first': 1, 'second': 2}
-        key = backbone_key(gsim)
+        key = get_central_key(gsim)
         gsim.kwargs = {'second': 2, 'first': 1}
-        self.assertNotEqual(backbone_key(gsim), key)
+        self.assertNotEqual(get_central_key(gsim), key)
+
+    def test_shifted_options_are_excluded(self):
+        gsim = ShiftedGMPE()
+        gsim.kwargs = {'option': 1, 'shift': -1.}
+        key = get_central_key(gsim)
+        gsim.kwargs = {'option': 1, 'shift': 1.}
+        self.assertEqual(get_central_key(gsim), key)
+
+    def test_non_literal_options_are_not_shared(self):
+        # the repr of a large array is truncated
+        gsim = ShiftedGMPE()
+        gsim.kwargs = {'option': numpy.zeros(2000)}
+        self.assertIsNone(get_central_key(gsim))
 
 
 class GsimInstantiationTestCase(unittest.TestCase):

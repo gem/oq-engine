@@ -23,8 +23,7 @@ import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.backbone import (
-    branch_key, compute_without_shift)
+from openquake.hazardlib.gsim.backbone import compute_without_shift
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
@@ -277,7 +276,7 @@ class ESHM20Craton(GMPE):
             _apply_sigma_mu(self, ctx, imts, mean)
 
     central_functions = (compute_without_shift, _apply_sigma_mu)
-    make_central_key = branch_key(compute, 'epsilon')
+    shifted_options = ('epsilon',)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                    e1                 b1                    b2                  b3                  c1                   c2                    c3            sigma_mu

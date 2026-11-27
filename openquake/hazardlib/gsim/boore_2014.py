@@ -26,8 +26,7 @@ import numpy as np
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import _apply_nshm_shift
-from openquake.hazardlib.gsim.backbone import (
-    compute_without_shift, sigma_mu_key)
+from openquake.hazardlib.gsim.backbone import compute_without_shift
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -376,7 +375,7 @@ class BooreEtAl2014(GMPE):
             _apply_nshm_shift(self, ctx, imts, mean)
 
     central_functions = (compute_without_shift, _apply_nshm_shift)
-    make_central_key = sigma_mu_key(compute)
+    shifted_options = ('sigma_mu_epsilon',)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2       tau1       tau2

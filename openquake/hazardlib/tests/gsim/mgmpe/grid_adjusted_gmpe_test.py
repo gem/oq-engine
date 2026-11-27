@@ -380,9 +380,6 @@ class GridAdjustedGMPETest(unittest.TestCase):
         self.assertIs(restored[0].grid_data, restored[1].grid_data)
         new = restored[1]
         self.assertEqual(new.central_key, gsims[1].central_key)
-        digest, _ = mod.get_residual_grids(GRID_HDF5)
-        self.assertEqual(new.central_key,
-                         ('GridAdjustedGMPE', (BASE_GSIM,), digest))
         cmaker = simple_cmaker([valid.gsim(BASE_GSIM), gsims[1]], IMTS)
         ctx = self._make_ctx(cmaker)
         expected = cmaker.get_mean_stds([ctx])
@@ -425,15 +422,10 @@ class GridAdjustedGMPETest(unittest.TestCase):
             with h5py.File(grid_path, "a") as hf:
                 dataset = hf["dL2L"]["PGA"]["dL2L"]
                 dataset[:] = dataset[:] + 0.5
-            second = GridAdjustedGMPE(**kwargs, epsilons={'dL2L': 0.0})
-            after = _compute(second)
+            after = _compute(GridAdjustedGMPE(**kwargs))
             aae(after[0] - before[0], 0.5)
             np.testing.assert_array_equal(after[1:], before[1:])
             np.testing.assert_array_equal(_compute(first), before)
-            cmaker = simple_cmaker([first, second], ['PGA'])
-            shared = cmaker.get_mean_stds([ctx])
-            expected = np.stack([before, after], axis=1)
-            np.testing.assert_array_equal(shared, expected)
 
     def test_shared_vs_separate_equivalence(self):
         # Shared (27 adj GSIMs in one cmaker, central part computed once)

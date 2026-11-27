@@ -24,7 +24,6 @@ import inspect
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim import base
-from openquake.hazardlib.gsim.backbone import branch_key
 
 
 def nga_west2_epistemic_adjustment(mag, dist):
@@ -112,7 +111,7 @@ class NSHMP2014(base.GMPE):
         return adjustment
 
     central_functions = (_compute_central, _apply_shift)
-    make_central_key = branch_key(compute, 'sgn')
+    shifted_options = ('sgn',)
 
 # populate gsim_aliases
 # for instance "AbrahamsonEtAl2014NSHMPMean" is associated to the TOML string

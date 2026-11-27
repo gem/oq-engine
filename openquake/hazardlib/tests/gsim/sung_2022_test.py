@@ -360,6 +360,8 @@ class SungEtAl2022BehaviouralTestCase(unittest.TestCase):
         a = SungEtAl2022NonErgodic(adjustment_file=HDF5, rlz_id="mean")
         b = SungEtAl2022NonErgodic(adjustment_file=HDF5, rlz_id=5)
         self.assertEqual(a.central_key, b.central_key)
-        c = SungEtAl2022NonErgodic(adjustment_file=HDF5, rlz_id="mean")
-        c.adjustment_file = c.adjustment_file + ".other"
+        with tempfile.TemporaryDirectory() as tmp:
+            other = os.path.join(tmp, 'other.hdf5')
+            shutil.copy(HDF5, other)
+            c = SungEtAl2022NonErgodic(adjustment_file=other, rlz_id="mean")
         self.assertNotEqual(a.central_key, c.central_key)

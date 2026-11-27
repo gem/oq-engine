@@ -37,7 +37,6 @@ from openquake.baselib.general import gen_slices
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import npoints_between, geodetic_distance
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.backbone import wrapped_key
 
 
 def load_sigma_for_term(grp, term, imt_str, location, sig_action,
@@ -237,20 +236,21 @@ def _grid_digest(path, stamp):
 
 def get_residual_grids(hdf5_path):
     """
-    Return the digest and loaded grids. Identical file contents are loaded
-    only once per process, even from different paths. Callers share the grids
-    and must not modify them (except for the lazily filled raytrace_masks).
+    Same as load_residual_grids, but identical file contents are loaded
+    only once per process, even from different paths. The result is shared
+    between callers, which must not modify it (except for the lazily filled
+    raytrace_masks).
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.
     """
     path = os.path.abspath(hdf5_path)
     stat = os.stat(path)
-    digest = _grid_digest(
+    key = _grid_digest(
         path, (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size))
-    if digest not in _GRID_CACHE:
-        _GRID_CACHE[digest] = load_residual_grids(path)
-    return digest, _GRID_CACHE[digest]
+    if key not in _GRID_CACHE:
+        _GRID_CACHE[key] = load_residual_grids(path)
+    return _GRID_CACHE[key]
 
 
 def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
@@ -780,6 +780,7 @@ class GridAdjustedGMPE(GMPE):
 
     experimental = True # It's not extensively tested yet
     central_functions = (compute_central, apply_epsilons)
+    shifted_options = ('epsilons', 'path_cap')
 
     def __init__(self, gmpe_name, grid_hdf5_file, epsilons='',
                  path_cap='', **kwargs):
@@ -791,8 +792,7 @@ class GridAdjustedGMPE(GMPE):
         # Load grid-based corrections from the hdf5; they are shared with
         # the other instances reading the same file. Like GMPETable, keep
         # the loaded data when pickling: extracted files may be gone.
-        self._grid_digest, self.grid_data = get_residual_grids(
-            grid_hdf5_file)
+        self.grid_data = get_residual_grids(grid_hdf5_file)
 
         # Per-ray path cap (in natural-log units).
         # An empty cap leaves the per-branch total unclipped.
@@ -841,15 +841,6 @@ class GridAdjustedGMPE(GMPE):
                     "Adjustments to tau and/or phi have been specified "
                     "but the underlying GSIM does not support "
                     "random-effects residuals.")
-
-    def make_central_key(self):
-        """Key the shared backbone and grid adjustments by grid content."""
-        # Equal keys can share the central calculation across different
-        # epsilons and path caps.
-        # The digest lets grid files with identical contents share the
-        # calculation even when loaded from different paths.
-        if type(self).compute is GridAdjustedGMPE.compute:
-            return wrapped_key(self, self._grid_digest)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

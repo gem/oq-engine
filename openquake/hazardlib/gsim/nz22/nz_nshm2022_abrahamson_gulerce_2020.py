@@ -44,8 +44,7 @@ Module exports :class:`NZNSHM2022_AbrahamsonGulerce2020SInter`
 import numpy as np
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib.gsim.backbone import (
-    compute_without_shift, sigma_mu_key)
+from openquake.hazardlib.gsim.backbone import compute_without_shift
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import add_alias
@@ -170,7 +169,7 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
 
 
     central_functions = (compute_without_shift, _apply_sigma_mu)
-    make_central_key = sigma_mu_key(compute)
+    shifted_options = ('sigma_mu_epsilon',)
 
 class NZNSHM2022_AbrahamsonGulerce2020SSlab(
     NZNSHM2022_AbrahamsonGulerce2020SInter

@@ -349,6 +349,9 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
 
     experimental = True # For now
     central_functions = (compute_central, apply_branch_shift)
+    # branches with the same adjustment hdf5 share the same backbone and
+    # the same nearest-neighbour lookup
+    shifted_options = ('rlz_id',)
 
     def __init__(self, adjustment_file, rlz_id="mean"):
         self.adjustment_file = adjustment_file
@@ -372,16 +375,6 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         self._n_lat = p['n_lat']
         self._lon_fast = p['lon_fast']
         self.off_grid_tol = p['off_grid_tol']
-
-    @property
-    def central_key(self):
-        """
-        Branches with the same adjustment hdf5 share the same backbone and
-        the same nearest-neighbour lookup. ContextMaker computes those once
-        per batch and reuses the result across every branch returning the
-        same key (see contexts.py:get_mean_stds).
-        """
-        return (self.adjustment_file,)
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         """

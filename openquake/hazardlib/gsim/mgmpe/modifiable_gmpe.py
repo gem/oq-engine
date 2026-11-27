@@ -24,7 +24,6 @@ import toml
 import numpy as np
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.gsim.backbone import wrapped_key
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 
@@ -717,6 +716,9 @@ class ModifiableGMPE(GMPE):
         for k in self.params:
             if k not in g:
                 raise ValueError('Unknown %r in ModifiableGMPE' % k)
+        if not INDEPENDENT_SCALING.issuperset(self.params):
+            # the central functions would ignore the other modifiers
+            self.central_functions = ()
         self.gmpe = registry[gmpe_name](**kw)
         self.gmpe._toml = _toml
         if hasattr(self.gmpe, 'gmpe_table'):
@@ -767,12 +769,7 @@ class ModifiableGMPE(GMPE):
                             self.params[key][subkey], subkey)
 
     central_functions = (_compute_unmodified, _apply_modifiers)
-
-    def make_central_key(self):
-        """Identify the backbone for branches with independent scaling."""
-        if (type(self).compute is ModifiableGMPE.compute
-                and INDEPENDENT_SCALING.issuperset(self.params)):
-            return wrapped_key(self)
+    shifted_options = INDEPENDENT_SCALING
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

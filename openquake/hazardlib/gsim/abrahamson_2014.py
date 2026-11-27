@@ -25,8 +25,7 @@ Module exports :class:`AbrahamsonEtAl2014`
 import numpy as np
 from scipy import interpolate
 
-from openquake.hazardlib.gsim.backbone import (
-    compute_without_shift, sigma_mu_key)
+from openquake.hazardlib.gsim.backbone import compute_without_shift
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -624,7 +623,7 @@ class AbrahamsonEtAl2014(GMPE):
             _apply_nshm_shift(self, ctx, imts, mean)
 
     central_functions = (compute_without_shift, _apply_nshm_shift)
-    make_central_key = sigma_mu_key(compute)
+    shifted_options = ('sigma_mu_epsilon',)
 
     #: Coefficient tables as per annex B of Abrahamson et al. (2014)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

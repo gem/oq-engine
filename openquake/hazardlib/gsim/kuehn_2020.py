@@ -41,8 +41,7 @@ import os
 import h5py
 from scipy.interpolate import RegularGridInterpolator
 
-from openquake.hazardlib.gsim.backbone import (
-    compute_without_shift, sigma_mu_key)
+from openquake.hazardlib.gsim.backbone import compute_without_shift
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -972,7 +971,7 @@ class KuehnEtAl2020SInter(GMPE):
             _apply_sigma_mu(self, (ctx, {}), imts, mean)
 
     central_functions = (_compute_central, _apply_sigma_mu)
-    make_central_key = sigma_mu_key(compute)
+    shifted_options = ('sigma_mu_epsilon',)
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:

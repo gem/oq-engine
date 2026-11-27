@@ -24,8 +24,7 @@ Module exports :class:`AbrahamsonGulerce2020SInter`,
 import os
 import numpy as np
 
-from openquake.hazardlib.gsim.backbone import (
-    compute_without_shift, sigma_mu_key)
+from openquake.hazardlib.gsim.backbone import compute_without_shift
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -724,7 +723,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
             _apply_sigma_mu(self, ctx, imts, mean)
 
     central_functions = (compute_without_shift, _apply_sigma_mu)
-    make_central_key = sigma_mu_key(compute)
+    shifted_options = ('sigma_mu_epsilon',)
 
     # Coefficients taken from digital files supplied by Norm Abrahamson
     COEFFS = CoeffsTable(sa_damping=5, table="""\

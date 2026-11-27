@@ -46,7 +46,6 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.gsim.backbone import sigma_mu_key
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.kuehn_2020 import (
     _get_ln_z_ref,
@@ -314,7 +313,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         if apply_shift:
             _apply_sigma_mu(self, (ctx, {}), imts, mean)
 
-    make_central_key = sigma_mu_key(compute)
+    shifted_options = ('sigma_mu_epsilon',)
 
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):

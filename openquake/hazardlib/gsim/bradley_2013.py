@@ -34,8 +34,7 @@ import shapely
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2014 import _apply_nshm_shift
-from openquake.hazardlib.gsim.backbone import (
-    compute_without_shift, sigma_mu_key)
+from openquake.hazardlib.gsim.backbone import compute_without_shift
 from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -472,7 +471,7 @@ class Bradley2013(GMPE):
             _apply_nshm_shift(self, ctx, imts, mean)
 
     central_functions = (compute_without_shift, _apply_nshm_shift)
-    make_central_key = sigma_mu_key(compute)
+    shifted_options = ('sigma_mu_epsilon',)
 
     #: Coefficient tables are constructed from values in tables 1, 2 and 3
     #: (pages 197, 198 and 199) in Chiou & Youngs,2008. Only Coefficients c1,
