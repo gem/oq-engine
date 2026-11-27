@@ -80,9 +80,9 @@ class TaperedGRMFD(BaseMFD):
         self.SMALL_MO_MAG: float = 4.
         self.TAPERED_LARGE_MAG: float = 9.05
 
-        self.min_mo = mag_to_mo(self.SMALL_MO_MAG)
-        self.large_mo = mag_to_mo(self.TAPERED_LARGE_MAG)
-        self.corner_mo = mag_to_mo(corner_mag)
+        self.min_mo = mag_to_mo(self.SMALL_MO_MAG, c=self.c_val)
+        self.large_mo = mag_to_mo(self.TAPERED_LARGE_MAG, c=self.c_val)
+        self.corner_mo = mag_to_mo(corner_mag, c=self.c_val)
 
         # This class uses a Double Truncated GR distribution, and the
         # rates are modified per the tapering.
@@ -237,7 +237,8 @@ class TaperedGRMFD(BaseMFD):
                     b_val: float,
                     moment_rate: float,
                     c_val: float = 9.05):
-        self = cls(min_mag, max_mag, corner_mag, bin_width, 0.0, b_val)
+        self = cls(min_mag, max_mag, corner_mag, bin_width, 0.0, b_val,
+                   c_val=c_val)
         self._set_a(moment_rate)
         return self
 
