@@ -6,7 +6,7 @@ date in terms of new capabilities, performance improvements, and bug fixes.
 
 The complete set of changes is listed in the changelog:
 
-https://github.com/gem/oq-engine/blob/engine-3.27/debian/changelog
+https://github.com/gem/oq-engine/blob/master/debian/changelog
 
 Users who do not need the latest features and models may want to stay with
 the LTS release, currently at version 3.23.5.
@@ -21,11 +21,11 @@ and probabilistic fault displacement logic trees
 (by [Yen-Shin Chen](https://github.com/vup1120)).
 
 Site amplification logic trees are documented in
-[Site model inputs](https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/inputs/site-model-inputs.html#amplification-logic-trees).
+[Site model inputs](https://docs.openquake.org/oq-engine/master/manual/user-guide/inputs/site-model-inputs.html#amplification-logic-trees).
 Test cases 26 and 27 in `qa_tests_data/logictree` demonstrate their use.
 
 Probabilistic fault displacement logic trees are documented in
-[Probabilistic fault displacement](https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/advanced/probabilistic-fault-displacement.html).
+[Probabilistic fault displacement](https://docs.openquake.org/oq-engine/master/manual/user-guide/advanced/probabilistic-fault-displacement.html).
 The `demos/hazard/DisplacementPSHA` demo exercises the new probabilistic
 fault-displacement calculator. Use it with
 `calculation_mode = displacement` and the required
@@ -59,7 +59,7 @@ realizations (approximately more than 60,000 realizations).
 
 The internals of the classical calculator and the logic tree
 management are now documented in [Management of the uncertainties](
-https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/advanced/classical-internals.html#management-of-the-uncertainties).
+https://docs.openquake.org/oq-engine/master/manual/user-guide/advanced/classical-internals.html#management-of-the-uncertainties).
 
 The engine is able to detect models where variant sources are
 treated inefficiently and issue a warning. The warning suggests running
@@ -88,9 +88,8 @@ A new command, `oq engine --calibrate job.ini`, automatically determines
 the best combination of `ps_grid_spacing` and `pointsource_distance`.
 We also introduced an experimental `collapse_precision` approximation to
 reduce the number of contexts evaluated for Poissonian sources.
-A new section in the documentation explains the performance
-approximations:
-https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/advanced/performance-approximations.html
+A new section in the documentation explains the
+[performance approximations](https://docs.openquake.org/oq-engine/master/manual/user-guide/advanced/performance-approximations.html).
 
 We introduced a few job parameters useful for debugging and performance work:
 
