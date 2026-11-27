@@ -80,13 +80,12 @@ CLOSE = .1
 # the points of a cell are within a diagonal from the location of the
 # collapsed point source, which is inside the cell
 DIAGONAL = numpy.sqrt(2) * max(GRID_SPACINGS)
-# the errors on the hazard map values changing by more than BOUNDARY_FACTOR
+# the errors on the hazard map values changing by more than boundary_factor
 # times the tolerance without the ruptures within a DIAGONAL from the
 # maximum distance are ignored (see _boundary_mask); with a factor of 1
 # the far ruptures of the ordinary sources would mask 8% of the values in
 # EUR and 23% in classical/case_43, with 5 only 0.5% in EUR (the sites
 # near the cutoff of the Vrancea deep sources) and none in case_43
-BOUNDARY_FACTOR = 5
 
 
 def calibration(srcs, sites, cmaker, keys, monitor):
@@ -413,16 +412,16 @@ def get_hmaps(rates, imtls, oq):
 
 
 # the values of the reference hazard maps changing by more than
-# BOUNDARY_FACTOR times the tolerance when the ruptures within a DIAGONAL
+# boundary_factor times the tolerance when the ruptures within a DIAGONAL
 # from the maximum distance are removed are masked (False); there the
 # gridding moves the points across the maximum distance, so the error
 # depends on the arbitrary cutoff and it is ignored: in EUR the Vrancea
 # deep sources, at the 500 km of 'Non-Subduction Deep', halve the hazard
 # of some sites in Ukraine
-def _boundary_mask(result, ref, imtls, oq):
+def _boundary_mask(result, ref, imtls, oq, boundary_factor=5):
     inner = numpy.maximum(result['rates'] - result['band'], 0.)
     hmaps = get_hmaps(inner, imtls, oq)
-    tol = BOUNDARY_FACTOR * (ATOL + RTOL * numpy.abs(ref))
+    tol = boundary_factor * (ATOL + RTOL * numpy.abs(ref))
     keep = numpy.abs(hmaps - ref) <= tol
     if not keep.all():
         logging.info('Ignoring the errors on %d hazard map values out of %d '
