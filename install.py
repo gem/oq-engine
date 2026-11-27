@@ -329,6 +329,10 @@ def check_venv(inst, args, usage):
     """
     Checks on the virtual environment and on the user running the script.
     """
+    if inst in (devel, devel_server) and args.version is not None:
+        sys.exit("Error: --version is not supported for devel installs; "
+                 "the local repository is used")
+
     if args.novenv and args.venv:
         sys.exit("Error: --novenv and --venv are mutually exclusive")
 
@@ -372,11 +376,6 @@ def check_venv(inst, args, usage):
             raise RuntimeError('install.py must be called from the engine '
                                f'repository, not from {os.getcwd()}')
         print(f'Devel install on branch {branch}')
-        if args.version:
-            print(f'WARNING: ignoring version flag for devel install on '
-                  f'branch {branch}')
-        # use version consistent with the branch, even if --version flag
-        args.version = branch
 
 
 def check_packages(inst):

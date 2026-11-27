@@ -165,3 +165,14 @@ now with p99_err=0.0022 g instead of 0.0037 g. The split_time is 763 s.
 | save_rates        | rmap=49.52 GB num_chunks=420 B h5=336 B              | 336 B     |
 | fast_mean         | pgetter=41.61 MB                                     | 167.12 MB |
 | make_hmap_png     | lons=12.86 MB hmap=6.43 MB                           | 16.41 MB  |
+
+* errors on the UHS, ps_grid_spacing=0 as reference
+
+mean_err and p99_err have one element for each poe, in the order of the UHS poes (0.002105 0.000404).
+
+| version              | mean_err            | p99_err           |
+|----------------------|---------------------|-------------------|
+| 3.24.1               | 0.002261 0.004574   | 0.04632 0.07609   |
+| 3.25.1               | 0.002261 0.004574   | 0.04632 0.07609   |
+| 3.26.2               | 0.002261 0.004576   | 0.04633 0.07574   |
+| 3.27.0-git11e4d59a1d | 0.0002126 0.0003586 | 0.001647 0.002352 |

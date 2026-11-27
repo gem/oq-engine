@@ -926,15 +926,14 @@ def _get_gsim_lt(dstore, oq, inputs):
             df, gmf_fname, comment=dstore.metadata)
         inputs['gmfs'] = gmf_fname
         oq.ground_motion_fields = True
-        if not oq.shakemap_uri:
-            oq.shakemap_uri = {'kind': 'usgs_id',
-                               'id': oq.rupture_dict['usgs_id']}
-            oq.rupture_dict = {
-                k: v for k, v in oq.rupture_dict.items()
-                if k not in ('rupture_file', 'mmi_file')}
-            oq.inputs = {
-                k: v for k, v in oq.inputs.items()
-                if k not in ('rupture', 'mmi')}
+        # The exported GMFs replace the original ShakeMap and hazard inputs.
+        vars(oq).pop('shakemap_uri', None)
+        oq.inputs = {
+            k: v for k, v in oq.inputs.items()
+            if k not in ('rupture_model', 'mmi', 'station_data')}
+        oq.rupture_dict = {
+            k: v for k, v in oq.rupture_dict.items()
+            if k not in ('rupture_file', 'mmi_file', 'rupture_from_usgs')}
         return None  # from shakemap
     elif 'ruptures' in dstore and len(dstore['ruptures']) > 0:
         model = dstore['ruptures'][0]['model'].decode('ascii')
@@ -967,6 +966,23 @@ def _export_taxmap_and_consequences(dstore, oq, ddic, inputs):
             writer.save(df, dest)
             dic[name_by_key] = dest
         inputs['consequence'] = dic
+
+
+def export_job_archive(dstore, export_dir):
+    """
+    Bundle the generated job files and return the path to the archive.
+    """
+    archive = dstore.export_path('job.zip', export_dir)
+    original_dir = dstore.export_dir
+    with tempfile.TemporaryDirectory(dir=export_dir) as tmpdir:
+        dstore.export_dir = tmpdir
+        try:
+            files = export_job_zip(('job', 'zip'), dstore)
+            staged = general.zipfiles(files, os.path.join(tmpdir, 'job.zip'))
+            os.replace(staged, archive)
+        finally:
+            dstore.export_dir = original_dir
+    return archive
 
 
 # tested in impact_test[1]

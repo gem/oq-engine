@@ -44,7 +44,7 @@ from django.utils.html import urlize
 import numpy
 
 from openquake.baselib import hdf5, config
-from openquake.baselib.general import groupby, gettemp, zipfiles, mp, decode
+from openquake.baselib.general import groupby, gettemp, mp, decode
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
@@ -61,6 +61,7 @@ from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
     EXPOSED_VALUE_EXPLANATION, REPORTED_VALUE_EXPLANATION,
     EXPOSURE_FIELD_DESCRIPTION)
+from openquake.calculators.export.risk import export_job_archive
 from openquake.calculators.extract import extract as _extract
 from openquake.risklib.scientific import TIME_EVENTS, TIME_LOSSES
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
@@ -1042,6 +1043,19 @@ def impact_get_nodal_planes_and_info(request):
     return JsonResponse(response_data)
 
 
+def drop_email_file_path(data):
+    """
+    Remove ``email_file_path`` from the data sent by the client, unless
+    running the tests. The field makes the notification emails be written
+    into the given directory instead of being sent: the tests use it to
+    collect the emails of each job, since they cannot change the settings
+    of the WebUI process.
+    """
+    if not settings.TEST:
+        data.pop('email_file_path', None)
+    return data
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -1061,7 +1075,7 @@ def impact_run(request):
     """
     if request.user.level == 0:
         return HttpResponseForbidden()
-    data = request.POST.dict()
+    data = drop_email_file_path(request.POST.dict())
     data.update(
         user_level=str(request.user.level),
         username=utils.get_username(request),
@@ -1105,6 +1119,7 @@ def impact_run_with_shakemap(request):
     for field in ('make_impact_reports', 'notes', 'email_file_path'):
         if field in request.POST:
             post[field] = request.POST[field]
+    drop_email_file_path(post)
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
@@ -1279,7 +1294,7 @@ def aelo_run(request):
         a `django.http.HttpRequest` object containing lon, lat, site_name,
         asce_version, site_class, vs30
     """
-    data = request.POST.dict()
+    data = drop_email_file_path(request.POST.dict())
     data.update(
         username=utils.get_username(request),
         email=getattr(getattr(request, 'user', None), 'email', ''),
@@ -1712,21 +1727,19 @@ def calc_zip(request, job_id):
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    tmpdir = tempfile.mkdtemp(dir=temp_dir)
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            exported = export(('job', 'zip'), ds)
+            archive = export_job_archive(ds, tmpdir)
     except Exception as exc:
+        shutil.rmtree(tmpdir, ignore_errors=True)
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'job_zip', tb),
             content_type='text/plain', status=400)
-    # zipping the files
-    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
-    tmpdir = tempfile.mkdtemp(dir=temp_dir)
-    archname = f'job_{job_id}.zip'
-    zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
-    return stream_response(os.path.join(tmpdir, archname), ZIP)
+    return stream_response(archive, ZIP, f'job_{job_id}.zip')
 
 
 def web_engine(request, **kwargs):
@@ -2441,7 +2454,7 @@ def on_same_fs(request):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_create_tag(request, tag_name):
     """
     Create a tag named `tag_name`
@@ -2452,7 +2465,7 @@ def calc_create_tag(request, tag_name):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_delete_tag(request, tag_name):
     """
     Delete a tag named `tag_name`
@@ -2463,7 +2476,7 @@ def calc_delete_tag(request, tag_name):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_add_tag(request, calc_id, tag_name):
     """
     Assign to the calculation of given `calc_id` a tag named `tag_name`
@@ -2474,7 +2487,7 @@ def calc_add_tag(request, calc_id, tag_name):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_remove_tag(request, calc_id, tag_name):
     """
     Remove the tag named `tag_name` from the calculation of given `calc_id`
@@ -2485,7 +2498,7 @@ def calc_remove_tag(request, calc_id, tag_name):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_set_preferred_job_for_tag(request, calc_id, tag_name):
     """
     Set the calculation of given `calc_id` as the preferred one for tag
@@ -2497,7 +2510,7 @@ def calc_set_preferred_job_for_tag(request, calc_id, tag_name):
 
 @csrf_exempt
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['POST'])
 def calc_unset_preferred_job_for_tag(request, tag_name):
     """
     Unset the preferred job for tag `tag_name`

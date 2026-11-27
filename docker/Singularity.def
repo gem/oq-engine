@@ -19,7 +19,7 @@
 # Remember to change if needed
 
 Bootstrap: docker
-From: python:3.10-slim
+From: python:3.13.16-slim
 Stage: compile-build
 
 %labels

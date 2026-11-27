@@ -126,9 +126,12 @@ jobs:
           OQ_APPLICATION_MODE=PUBLIC pytest -vx openquake/server/tests/test_public_mode.py
           OQ_APPLICATION_MODE=RESTRICTED pytest -vx openquake/server/tests/test_restricted_mode.py
           OQ_APPLICATION_MODE=READ_ONLY pytest -vx openquake/server/tests/test_read_only_mode.py
-          OQ_APPLICATION_MODE=IMPACT pytest -vx openquake/server/tests/test_impact_mode.py
+          OQ_APPLICATION_MODE=IMPACT pytest -vx openquake/server/tests/test_impact_mode.py \
+            openquake/server/tests/test_impact_mode_api_client.py
           OQ_APPLICATION_MODE=AELO pytest -vx openquake/server/tests/test_aelo_mode.py
-          pytest -vx openquake/server/tests/db
+          # all the server tests not tied to an application mode (the
+          # test_<mode>_mode*.py files run above or in the server_UI job)
+          pytest -vx openquake/server/tests --ignore-glob='*_mode*.py'
           pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{commands,engine}  # _unc moved to nightly tests
 
   server_UI:

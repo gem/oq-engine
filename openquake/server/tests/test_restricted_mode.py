@@ -111,6 +111,28 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertIn('/accounts/login/', resp['Location'])
 
+    def test_login_redirects_to_the_requested_page(self):
+        # use the in-process client, which skips the CSRF checks
+        client = django.test.Client()
+        resp = client.get('/engine/')
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(resp['Location'].endswith(
+            '/accounts/login/?next=/engine/'), resp['Location'])
+        resp = client.get(resp['Location'])
+        self.assertContains(resp, 'name="next" value="/engine/"')
+        credentials = dict(username=self.user0.username,
+                           password=self.password0)
+        resp = client.post('/accounts/login/', dict(credentials,
+                                                    next='/engine/'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp['Location'], '/engine/')
+        # pages of other sites are not accepted
+        client.logout()
+        resp = client.post('/accounts/login/', dict(
+            credentials, next='https://example.com/'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertNotIn('example.com', resp['Location'])
+
     def test_share_complete_job(self):
         job_dic = dict(calculation_mode='event_based',
                        description='test_share_complete_job')
@@ -316,7 +338,7 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
 
         # try to add a tag with a blank name
         tag_name = ''
-        ret = self.get(f'{jobs[0].calc_id}/add_tag/{tag_name}')
+        ret = self.post(f'{jobs[0].calc_id}/add_tag/{tag_name}')
         self.assertEqual(ret.status_code, 404)
         ret = logs.dbcmd('add_tag_to_job', jobs[0].calc_id, tag_name)
         self.assertIn('error', ret)
@@ -328,12 +350,13 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         for job in jobs:
             for tag in [first_tag, second_tag]:
                 # add the same tag to the two jobs
-                ret = self.get(f'{job.calc_id}/add_tag/{tag}')
+                ret = self.post(f'{job.calc_id}/add_tag/{tag}')
                 self.assertEqual(ret.status_code, 200)
                 self.assertIn(f'The tag {tag} was added to job {job.calc_id}',
                               ret.content.decode('utf8'))
                 # set the first job as preferred
-                ret = self.get(f'{job.calc_id}/set_preferred_job_for_tag/{tag}')
+                ret = self.post(
+                    f'{job.calc_id}/set_preferred_job_for_tag/{tag}')
                 self.assertEqual(ret.status_code, 200)
                 # when setting the second job as preferred, the preferred flag should
                 # be reset for all jobs sharing that tag and the flag should be set to
@@ -373,20 +396,20 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         self.assertEqual(len(returned_jobs), len(expected_jobs))
 
         # unset the preferred job for the first tag
-        ret = self.get(f'unset_preferred_job_for_tag/{first_tag}')
+        ret = self.post(f'unset_preferred_job_for_tag/{first_tag}')
         self.assertEqual(ret.status_code, 200)
         self.assertIn('success', ret.json())
         self.assertIn(f'Tag {first_tag} has no preferred job now',
                       ret.json()['success'])
 
         # try to re-add the same first_tag to the second job
-        ret = self.get(f'{jobs[1].calc_id}/add_tag/{first_tag}')
+        ret = self.post(f'{jobs[1].calc_id}/add_tag/{first_tag}')
         self.assertEqual(ret.status_code, 403)
         self.assertIn('error', ret.json())
         self.assertIn("UNIQUE constraint failed", ret.json()['error'])
 
         # remove the first_tag from the second job
-        ret = self.get(f'{jobs[1].calc_id}/remove_tag/{first_tag}')
+        ret = self.post(f'{jobs[1].calc_id}/remove_tag/{first_tag}')
         self.assertEqual(ret.status_code, 200)
         self.assertIn(f'Tag {first_tag} was removed from job {jobs[1].calc_id}',
                       ret.content.decode('utf8'))
@@ -402,18 +425,27 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
 
         # delete the tags
         for tag in [first_tag, second_tag]:
-            ret = self.get(f'delete_tag/{tag}')
+            ret = self.post(f'delete_tag/{tag}')
             self.assertEqual(ret.status_code, 200)
             self.assertIn('success', ret.json())
             self.assertIn(f'Tag {tag} was deleted', ret.json()['success'])
 
-        # create and delete a tag
+        # the actions changing the tags do not accept GET requests
         tag_name = random_string(10)
-        ret = self.get(f'create_tag/{tag_name}')
+        for path in [f'create_tag/{tag_name}', f'delete_tag/{tag_name}',
+                     f'{jobs[0].calc_id}/add_tag/{tag_name}',
+                     f'{jobs[0].calc_id}/remove_tag/{tag_name}',
+                     f'{jobs[0].calc_id}/set_preferred_job_for_tag/{tag_name}',
+                     f'unset_preferred_job_for_tag/{tag_name}']:
+            self.assertEqual(self.get(path).status_code, 405, path)
+        self.assertNotIn(tag_name, self.get('list_tags').json()['tags'])
+
+        # create and delete a tag
+        ret = self.post(f'create_tag/{tag_name}')
         self.assertEqual(ret.status_code, 200)
         self.assertIn('success', ret.json())
         self.assertIn(f'Tag {tag_name} was created', ret.json()['success'])
-        ret = self.get(f'delete_tag/{tag_name}')
+        ret = self.post(f'delete_tag/{tag_name}')
         self.assertEqual(ret.status_code, 200)
         self.assertIn('success', ret.json())
         self.assertIn(f'Tag {tag_name} was deleted', ret.json()['success'])

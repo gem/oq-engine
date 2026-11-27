@@ -207,6 +207,11 @@ def test_shakemap():
         'structural_vulnerability.xml', 'taxonomy_mapping.csv',
         'sites.csv', 'assetcol.csv']
     try:
+        with open(fnames[1], encoding='utf8') as inp:
+            job_ini = inp.read()
+        assert 'shakemap_uri' not in job_ini
+        assert 'mmi_file' not in job_ini
+        assert 'rupture_file' not in job_ini
         run_calc(fnames[1])
     finally:
         # with open(fnames[1]) as f:

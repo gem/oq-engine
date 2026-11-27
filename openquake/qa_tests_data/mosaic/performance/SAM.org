@@ -207,3 +207,14 @@ precise. The preclassical is faster (160 s instead of 443 s).
 | save_rates        | rmap=3.12 GB num_chunks=175 B h5=140 B                | 140 B     |
 | fast_mean         | pgetter=99.99 MB                                      | 357.51 MB |
 | make_hmap_png     | lons=27.5 MB hmap=13.75 MB                            | 16.41 MB  |
+
+* errors on the UHS, ps_grid_spacing=0 as reference
+
+mean_err and p99_err have one element for each poe, in the order of the UHS poes (0.002105 0.000404).
+
+| version              | mean_err           | p99_err          |
+|----------------------|--------------------|------------------|
+| 3.24.1               | 0.001448 0.003163  | 0.01912 0.03628  |
+| 3.25.1               | 0.001448 0.003162  | 0.01912 0.03628  |
+| 3.26.2               | 0.00144 0.003151   | 0.01898 0.03589  |
+| 3.27.0-gitf3c01f687c | 0.0002295 0.000389 | 0.002583 0.00338 |
