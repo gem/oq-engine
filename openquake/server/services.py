@@ -143,8 +143,17 @@ def store(request_files, ini, calc_id):
 
     :returns: full path of the ini file
     """
-    calc_dir = parallel.calc_dir(calc_id)
-    input_files = request_files.getlist('archive')
+    return store_in(request_files, 'archive', ini, parallel.calc_dir(calc_id))
+
+
+def store_in(request_files, field, ini, dirname):
+    """
+    Store the files uploaded in the given field (unzipping the .zip archive,
+    if any) in dirname and select the job file by looking at the extension.
+
+    :returns: full path of the ini file
+    """
+    input_files = request_files.getlist(field)
     named_files = [
         (input_file, getattr(input_file, 'name', None) or
          getattr(input_file, 'filename', ''))
@@ -153,18 +162,18 @@ def store(request_files, ini, calc_id):
         (input_file for input_file, name in named_files
          if name.endswith('.zip')), None)
     if zip_file is None:
-        # move each file to calc_dir using the upload file names
+        # move each file to dirname using the upload file names
         inifiles = []
         for input_file, name in named_files:
             # input_file is a Django UploadedFile, whose .file is a file object
-            new_path = os.path.join(calc_dir, name)
+            new_path = os.path.join(dirname, name)
             with open(new_path, 'wb') as target:
                 shutil.copyfileobj(input_file.file, target)
             if name.endswith(ini):
                 inifiles.append(new_path)
-    else:  # extract the files from the archive into calc_dir
+    else:  # extract the files from the archive into dirname
         source = getattr(zip_file, 'file', zip_file)
-        inifiles = readinput.extract_from_zip(source, ini, calc_dir)
+        inifiles = readinput.extract_from_zip(source, ini, dirname)
     if not inifiles:
         raise NotFound('There are no %s files in the archive' % ini)
     return inifiles[0]
@@ -190,10 +199,14 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
     try:
         job_ini = (store(request_files, ini, job.calc_id)
                    if request_files else ini)
+        # the input files of an upload must be among the uploaded files
+        allowed_dir = (parallel.calc_dir(job.calc_id)
+                       if request_files else None)
         job.oqparam = oq = readinput.get_oqparam(
             job_ini, kw={'hazard_calculation_id': hc_id,
                          'export_dir': (config.directory.custom_tmp or
-                                        tempfile.gettempdir())})
+                                        tempfile.gettempdir())},
+            allowed_dir=allowed_dir)
         logs.dbcmd('update_job', job.calc_id, dict(
             calculation_mode=oq.calculation_mode, description=oq.description,
             hazard_calculation_id=hc_id))
@@ -455,10 +468,13 @@ def get_uploaded_file_path(files, filename):
         return gettemp(content, suffix=suffix)
 
 
-def validate_job(job_file):
-    """Validate a calculation input and return its JSON-compatible result."""
+def validate_job(job_file, allowed_dir=None):
+    """
+    Validate a calculation input and return its JSON-compatible result.
+    If `allowed_dir` is given, the input files must be inside it.
+    """
     try:
-        oq = readinput.get_oqparam(job_file)
+        oq = readinput.get_oqparam(job_file, allowed_dir=allowed_dir)
         with patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
             base.calculators(oq, calc_id=None).run()
     except Exception as exc:
@@ -470,9 +486,16 @@ def validate_upload(form, field, missing_message):
     """Validate the calculation file stored under the given field."""
     fields, files = _split(form)
     if field in files:
-        path = get_uploaded_file_path(files, field)
-    else:
-        path = fields.get(field)
+        # store the upload in a new directory, which must contain all the
+        # input files, and remove it after the validation
+        with tempfile.TemporaryDirectory(
+                dir=config.directory.custom_tmp or None) as tmpdir:
+            try:
+                path = store_in(files, field, '.ini', tmpdir)
+            except NotFound as exc:
+                return dict(error_msg=str(exc), error_line=None, valid=False)
+            return validate_job(path, tmpdir)
+    path = fields.get(field)
     if not path:
         raise ApiError(400, missing_message)
     return validate_job(path)

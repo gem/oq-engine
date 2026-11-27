@@ -68,7 +68,8 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.geo.regular_grid import regular_grid
-from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
+from openquake.hazardlib.shakemap.parsers import (
+    convert_to_oq_xml, SHAKEMAP_SERVICES)
 from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.pfd.gsim import get_pfd_gsim_lt
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
@@ -264,18 +265,62 @@ def unzip_rename(zpath, name):
     return xpath
 
 
-def normpath(fnames, base_path):
+def check_inside(fname, allowed_dir):
+    """
+    Raise a ValueError if `allowed_dir` is given and the file is not inside
+    it. Used for the jobs submitted via the WebUI, whose input files must be
+    among the uploaded files.
+    """
+    if allowed_dir is None:
+        return
+    real = os.path.realpath(fname)
+    root = os.path.realpath(allowed_dir)
+    try:
+        if os.path.commonpath([real, root]) == root:
+            return
+    except ValueError:  # paths on different drives
+        pass
+    raise ValueError('Invalid path %s: the input files must be among the '
+                     'uploaded files' % os.path.relpath(fname, allowed_dir))
+
+
+def check_shakemap_uri(oqparam):
+    """
+    Raise a ValueError unless the ShakeMap files of the job are among its
+    input files or are downloaded from one of the SHAKEMAP_SERVICES. Used
+    for the jobs submitted via the WebUI.
+    """
+    uri = oqparam.shakemap_uri
+    if not isinstance(uri, dict):
+        return
+    for key, val in uri.items():
+        if not (key == 'fname' or key.endswith('_url')):
+            continue
+        if val in oqparam._input_files:  # local file, see get_input_files
+            continue
+        # the trailing slash makes sure that the host is the service host
+        if any(val.startswith(service.rstrip('/') + '/')
+               for service in SHAKEMAP_SERVICES):
+            continue
+        raise ValueError('Invalid shakemap_uri %s=%s: the ShakeMap files must '
+                         'be among the uploaded files or come from %s'
+                         % (key, val, ', '.join(SHAKEMAP_SERVICES)))
+
+
+def normpath(fnames, base_path, allowed_dir=None):
     vals = []
     for fname in fnames:
         val = os.path.normpath(os.path.join(base_path, fname))
+        check_inside(val, allowed_dir)
         if not os.path.exists(val):
             raise OSError('No such file: %s' % val)
         vals.append(val)
     return vals
 
 
-def _normalize(key, fnames, base_path):
-    # returns (input_type, filenames)
+def _normalize(key, fnames, base_path, allowed_dir=None):
+    # returns (input_type, filenames); if allowed_dir is given, the files
+    # must be inside it (see check_inside)
 
     # check that all the fnames have the same extension
     # NB: for consequences fnames is a list of lists
@@ -290,11 +335,12 @@ def _normalize(key, fnames, base_path):
     filenames = []
     for val in fnames:
         if isinstance(val, list):
-            val = normpath(val, base_path)
+            val = normpath(val, base_path, allowed_dir)
         elif os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
         elif val.endswith('.zip'):
             zpath = os.path.normpath(os.path.join(base_path, val))
+            check_inside(zpath, allowed_dir)  # before unzipping
             if key == 'exposure_file':
                 name = 'exposure.xml'
             elif key == 'source_model_logic_tree_file':
@@ -313,34 +359,40 @@ def _normalize(key, fnames, base_path):
                 continue
         else:
             val = os.path.normpath(os.path.join(base_path, val))
-        if isinstance(val, str) and not os.path.exists(val):
-            # tested in archive_err_2
-            raise OSError('No such file: %s' % val)
+        if isinstance(val, str):
+            check_inside(val, allowed_dir)
+            if not os.path.exists(val):
+                # tested in archive_err_2
+                raise OSError('No such file: %s' % val)
         filenames.append(val)
     return input_type, filenames
 
 
-def update(params, items, base_path):
+def update(params, items, base_path, allowed_dir=None):
     """
     Update a dictionary of string parameters with new parameters. Manages
-    correctly file parameters.
+    correctly file parameters; if `allowed_dir` is given, the files must be
+    inside it.
     """
     for key, value in items:
         if key in ('hazard_curves_csv', 'hazard_curves_file',
                    'gmfs_csv', 'gmfs_file',
                    'site_model_csv', 'site_model_file', 'source_model_file',
                    'exposure_csv', 'exposure_file'):
-            input_type, fnames = _normalize(key, value.split(), base_path)
+            input_type, fnames = _normalize(
+                key, value.split(), base_path, allowed_dir)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
             if value.startswith('{'):
                 dic = ast.literal_eval(value)  # name -> relpath
-                input_type, fnames = _normalize(key, dic.values(), base_path)
+                input_type, fnames = _normalize(
+                    key, dic.values(), base_path, allowed_dir)
                 params['inputs'][input_type] = dict(
                     zip(dic, fnames, strict=True))
                 params[input_type] = ' '.join(dic)
             elif value:
-                input_type, fnames = _normalize(key, [value], base_path)
+                input_type, fnames = _normalize(
+                    key, [value], base_path, allowed_dir)
                 assert len(fnames) in (0, 1)
                 for fname in fnames:
                     params['inputs'][input_type] = fname
@@ -355,6 +407,7 @@ def update(params, items, base_path):
                             'adv-manual/equivalent-distance-app for the new '
                             'syntax')
             fname = os.path.normpath(os.path.join(base_path, value))
+            check_inside(fname, allowed_dir)
             try:
                 reqv = params['inputs']['reqv']
             except KeyError:
@@ -392,7 +445,7 @@ def get_model(job_ini):
 
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
-def get_params(job_ini, kw={}):
+def get_params(job_ini, kw={}, allowed_dir=None):
     """
     Parse a .ini file or a .zip archive
 
@@ -400,6 +453,8 @@ def get_params(job_ini, kw={}):
         Configuration file | zip archive | URL
     :param kw:
         Optionally override some parameters
+    :param allowed_dir:
+        If given, the input files must be inside it
     :returns:
         A dictionary of parameters
     """
@@ -428,9 +483,10 @@ def get_params(job_ini, kw={}):
     cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     check_params(cp, job_ini)
-    params = _params_from_cp(cp, base_path, job_ini)
+    params = _params_from_cp(cp, base_path, job_ini, allowed_dir)
     try:
-        update(params, kw.items(), base_path)  # override on demand
+        # override on demand
+        update(params, kw.items(), base_path, allowed_dir)
     except Exception:
         print(f'Error in {job_ini}', file=sys.stderr)
         raise
@@ -439,7 +495,7 @@ def get_params(job_ini, kw={}):
     return params
 
 
-def _params_from_cp(cp, base_path, job_ini):
+def _params_from_cp(cp, base_path, job_ini, allowed_dir=None):
     """
     Build a parameters dictionary from an already parsed .ini file,
     converting the ``<name>_file`` keys into the ``inputs`` subdictionary
@@ -462,7 +518,7 @@ def _params_from_cp(cp, base_path, job_ini):
         items = dic.items()
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     try:
-        update(params, items, base_path)
+        update(params, items, base_path, allowed_dir)
     except Exception:
         print(f'Error in {job_ini}', file=sys.stderr)
         raise
@@ -509,7 +565,7 @@ def is_fake_hc(oq):
     return isinstance(hc, str) and hc.endswith('<fake>.ini')
 
 
-def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
+def get_oqparam(job_ini, pkg=None, kw={}, validate=True, allowed_dir=None):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -520,6 +576,9 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         Python package where to find the configuration file (optional)
     :param kw:
         Dictionary of strings to override the job parameters
+    :param allowed_dir:
+        If given, all the input files must be inside it;
+        used for the jobs submitted via the WebUI
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validated and casted parameters/values parsed from
@@ -529,7 +588,8 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     """
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
-        job_ini = get_params(os.path.join(basedir, job_ini), kw)
+        job_ini = get_params(
+            os.path.join(basedir, job_ini), kw, allowed_dir)
 
     if os.environ.get('OQ_CHECK_INPUT'):
         cmode = job_ini['calculation_mode']
@@ -556,6 +616,13 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
                 {imt: imtls[imt]})
     oqparam = oqvalidation.OqParam(**oqdict(job_ini))
     oqparam._input_files = get_input_files(oqparam)
+    if allowed_dir is not None:
+        # check also the files referenced by other files, like the source
+        # models in the logic tree, before reading them
+        for fname in oqparam._input_files:
+            if fname != '<in-memory>':
+                check_inside(fname, allowed_dir)
+        check_shakemap_uri(oqparam)
     if validate:  # always true except from oqzip
         oqparam.validate()
     return oqparam

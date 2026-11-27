@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 # NB: run these tests with OQ_APPLICATION_MODE unset (empty),
+import io
 import os
 import re
 import sys
@@ -25,6 +26,7 @@ import pprint
 import numpy
 import gzip
 import logging
+import zipfile
 import django
 from django.test import LiveServerTestCase, override_settings
 from threading import Event
@@ -277,6 +279,40 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         logging.disable(logging.NOTSET)
         self.assertIn('There are no .ini files in the archive', resp['tb_str'])
         self.post('%s/remove' % resp['job_id'])
+
+    def archive_with_path_outside(self):
+        # an archive whose job.ini refers to a file which is not in it
+        dirname = os.path.dirname(case_01.__file__)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as z:
+            for name in ('source_model.xml', 'source_model_logic_tree.xml',
+                         'gsim_logic_tree.xml'):
+                z.write(os.path.join(dirname, name), name)
+            with open(os.path.join(dirname, 'job.ini')) as f:
+                ini = f.read()
+            z.writestr('job.ini', ini + '\n[extra]\n'
+                       'site_model_file = ../site_model.csv\n')
+        buf.seek(0)
+        buf.name = 'archive.zip'
+        return buf
+
+    def test_run_path_outside_the_archive(self):
+        logging.disable(logging.CRITICAL)
+        resp = self.post('run', dict(archive=self.archive_with_path_outside()))
+        logging.disable(logging.NOTSET)
+        self.assertEqual(resp.status_code, 500)
+        js = resp.json()
+        self.assertIn('must be among the uploaded files',
+                      '\n'.join(js['traceback']))
+        self.post('%s/remove' % js['job_id'])
+
+    def test_validate_path_outside_the_archive(self):
+        resp = self.post('validate_zip',
+                         dict(archive=self.archive_with_path_outside()))
+        self.assertEqual(resp.status_code, 200)
+        dic = resp.json()
+        self.assertFalse(dic['valid'])
+        self.assertIn('must be among the uploaded files', dic['error_msg'])
 
     def test_run_ini(self):
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')

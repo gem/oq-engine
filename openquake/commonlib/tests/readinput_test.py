@@ -17,7 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import shutil
 import tempfile
+import zipfile
 import unittest.mock as mock
 from types import SimpleNamespace
 import unittest
@@ -37,7 +39,8 @@ from openquake.commonlib.readinput import (
     get_close_mosaic_models, get_close_countries, get_country_or_model)
 from openquake.qa_tests_data.logictree import (
     case_02, case_15, case_21, case_25)
-from openquake.qa_tests_data.classical import case_34, case_36, case_65
+from openquake.qa_tests_data.classical import (
+    case_01, case_34, case_36, case_65)
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (
     case_02 as ebr2, case_caracas)
@@ -945,3 +948,128 @@ class GetPfdLtTestCase(unittest.TestCase):
             with self.assertRaises(LogicTreeError) as ctx:
                 readinput.get_pfd_lt(oq)
             self.assertIn('fdhaCalcRSigma', str(ctx.exception))
+
+
+class AllowedDirTestCase(unittest.TestCase):
+    # the jobs submitted via the WebUI can only use the uploaded files
+
+    def setUp(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        self.upload = os.path.join(tmp, 'upload')
+        self.outside = os.path.join(tmp, 'outside')
+        shutil.copytree(os.path.dirname(case_01.__file__), self.upload,
+                        ignore=shutil.ignore_patterns(
+                            '__pycache__', 'expected', '*.py'))
+        os.mkdir(self.outside)
+        self.job_ini = os.path.join(self.upload, 'job.ini')
+
+    def add_to_job_ini(self, line):
+        with open(self.job_ini, 'a') as f:
+            f.write('\n[extra]\n%s\n' % line)
+
+    def assert_refused(self, job_ini=None):
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_oqparam(job_ini or self.job_ini, validate=False,
+                                  allowed_dir=self.upload)
+        self.assertIn('must be among the uploaded files', str(ctx.exception))
+
+    def test_relative_path_outside(self):
+        csv = os.path.join(self.outside, 'site_model.csv')
+        with open(csv, 'w') as f:
+            f.write('lon,lat,vs30\n0,0,800\n')
+        self.add_to_job_ini('site_model_file = ../outside/site_model.csv')
+        self.assert_refused()
+        # the command line is not restricted
+        params = readinput.get_params(self.job_ini)
+        self.assertEqual(params['inputs']['site_model'], [csv])
+
+    def test_missing_file_outside(self):
+        # the error does not say whether the file exists
+        self.add_to_job_ini('site_model_file = ../outside/missing.csv')
+        self.assert_refused()
+
+    def test_file_referenced_by_the_logic_tree(self):
+        shutil.move(os.path.join(self.upload, 'source_model.xml'),
+                    self.outside)
+        smlt = os.path.join(self.upload, 'source_model_logic_tree.xml')
+        with open(smlt) as f:
+            xml = f.read()
+        with open(smlt, 'w') as f:
+            f.write(xml.replace('>source_model.xml<',
+                                '>../outside/source_model.xml<'))
+        self.assert_refused()
+        readinput.get_oqparam(self.job_ini, validate=False)  # command line
+
+    def test_zip_outside_is_not_extracted(self):
+        with zipfile.ZipFile(
+                os.path.join(self.outside, 'exposure.zip'), 'w') as z:
+            z.writestr('exposure.xml', '<nrml/>')
+        self.add_to_job_ini('exposure_file = ../outside/exposure.zip')
+        self.assert_refused()
+        self.assertEqual(os.listdir(self.outside), ['exposure.zip'])
+
+    def check_shakemap_uri(self, uri):
+        # return the error raised for an uploaded job with the given
+        # shakemap_uri, or None if it is accepted
+        with open(self.job_ini) as f:
+            ini = f.read()
+        job_ini = os.path.join(self.upload, 'job_shakemap.ini')
+        with open(job_ini, 'w') as f:
+            f.write(ini + '\n[shakemap]\nshakemap_uri = %s\n' % uri)
+        try:
+            readinput.get_oqparam(
+                job_ini, validate=False, allowed_dir=self.upload)
+        except ValueError as exc:
+            return str(exc)
+
+    def test_shakemap_uri(self):
+        # the ShakeMap files must be uploaded or downloaded from the USGS
+        grid = os.path.join(self.outside, 'grid.xml')
+        with open(grid, 'w') as f:
+            f.write('<shakemap_grid/>')
+        usgs = 'https://earthquake.usgs.gov/product/shakemap/x/grid.xml'
+        self.assertIsNone(self.check_shakemap_uri(
+            '{"kind": "usgs_xml", "grid_url": "%s"}' % usgs))
+        self.assertIsNone(self.check_shakemap_uri(
+            '{"kind": "usgs_id", "id": "us7000abcd"}'))
+        npy = os.path.join(self.upload, 'shakemap.npy')
+        with open(npy, 'wb') as f:
+            f.write(b'')
+        self.assertIsNone(self.check_shakemap_uri(
+            '{"kind": "file_npy", "fname": "shakemap.npy"}'))
+        for url in ['https://example.com/grid.xml',
+                    'http://localhost:8800/grid.xml',
+                    'https://earthquake.usgs.gov.example.com/grid.xml',
+                    'https://earthquake.usgs.gov@example.com/grid.xml',
+                    'http://earthquake.usgs.gov/grid.xml',
+                    # forward slashes, so that the job.ini can be parsed
+                    # also on Windows (backslashes are escape characters)
+                    'file:' + grid.replace('\\', '/'),
+                    'ftp://earthquake.usgs.gov/grid.xml']:
+            err = self.check_shakemap_uri(
+                '{"kind": "usgs_xml", "grid_url": "%s"}' % url)
+            self.assertIn('must be among the uploaded files or come from',
+                          err or 'accepted: %s' % url)
+        # the command line is not restricted
+        oq = readinput.get_oqparam(
+            os.path.join(self.upload, 'job_shakemap.ini'), validate=False)
+        self.assertEqual(oq.shakemap_uri['grid_url'],
+                         'ftp://earthquake.usgs.gov/grid.xml')
+
+    def test_subdirectories_of_the_upload(self):
+        # a job.ini in a subdirectory can use the other uploaded files
+        sub = os.path.join(self.upload, 'sub')
+        os.mkdir(sub)
+        with open(self.job_ini) as f:
+            ini = f.read()
+        job_ini = os.path.join(sub, 'job.ini')
+        with open(job_ini, 'w') as f:
+            f.write(ini.replace(' = source_model_logic_tree.xml',
+                                ' = ../source_model_logic_tree.xml')
+                       .replace(' = gsim_logic_tree.xml',
+                                ' = ../gsim_logic_tree.xml'))
+        oq = readinput.get_oqparam(
+            job_ini, validate=False, allowed_dir=self.upload)
+        self.assertEqual(oq.inputs['gsim_logic_tree'],
+                         os.path.join(self.upload, 'gsim_logic_tree.xml'))
