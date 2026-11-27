@@ -270,6 +270,14 @@ When the reverse proxy is configured, add the following to `openquake/server/loc
 USE_REVERSE_PROXY = True
 ```
 
+### Security headers
+
+The WebUI sends with every response the headers telling the browsers not to show it inside a frame of any site (`X-Frame-Options: DENY`), to use the declared content type of the files, not to send its URLs to the external sites linked by its pages, and to isolate its windows from the ones of other sites. The defaults are set in `openquake/server/settings.py` and can be changed in `openquake/server/local_settings.py`. For instance, to let the pages of the WebUI itself (but no other site) show the WebUI inside a frame:
+```python
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+```
+`X_FRAME_OPTIONS` can only be `'DENY'` or `'SAMEORIGIN'`; with any other value the WebUI does not start. The other settings are `SECURE_CONTENT_TYPE_NOSNIFF`, `SECURE_REFERRER_POLICY` and `SECURE_CROSS_ORIGIN_OPENER_POLICY` (see the Django documentation).
+
 ***
 
 ## Getting help
