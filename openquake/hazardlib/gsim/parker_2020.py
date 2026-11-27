@@ -34,12 +34,12 @@ from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
 
-REGIONS = [None, "AK", "CAM", "Cascadia", "JP", "SA", "TW"]
+REGIONS = ["", "AK", "CAM", "Cascadia", "JP", "SA", "TW"]
 
-SAT_REGIONS = [None, "Aleutian", "CAM_N", "CAM_S", "SA_N",
+SAT_REGIONS = ["", "Aleutian", "CAM_N", "CAM_S", "SA_N",
                "SA_S", "TW_E", "TW_W", "JP_Pac", "JP_Phi"]
 
-BASINS = [None, "out", "Seattle"]
+BASINS = ["", "out", "Seattle"]
 
 EPI_ADJS = os.path.join(os.path.dirname(__file__), "parker_2020",
                         "parker_2020_epi_adj_table.csv")
@@ -83,7 +83,7 @@ def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
     electronic supplement for PGA and SA (not PGV) for each saturation regions.
     """
     # Map region to those within the adjustment table
-    if sat_region is None:
+    if not sat_region:
         e_reg = 'Global'
     elif sat_region in ['TW_N', 'TW_S']:
         e_reg = 'Taiwan'
@@ -119,7 +119,7 @@ def _a0_1(trt, region, basin, C, C_PGA):
     """
     Regional anelastic coefficient, a0
     """
-    if region is None or region == "Cascadia":
+    if not region or region == "Cascadia":
         a0 = C["a0"]
         a0_pga = C_PGA["a0"]
     else:
@@ -134,7 +134,7 @@ def _a0_2(trt, region, basin, C, C_PGA):
     """
     Regional anelastic coefficient for subduction slab, a0
     """
-    if region is None:
+    if not region:
         return C["a0slab"], C_PGA["a0slab"]
     return C[region + "_a0slab"], C_PGA[region + "_a0slab"]
 
@@ -155,7 +155,7 @@ def _get_basin_term(C, ctx, region, imt, basin, m9_basin_term=False,
                                        usgs_basin_scaling)
 
     elif region == "Cascadia":
-        if basin is None:
+        if not basin:
             return _get_basin_term_factors(C, ctx, 3.94, -0.42, 200, 0.2,
                                            C["C_e1"], C["C_e2"],
                                            C["C_e3"], imt,
@@ -189,7 +189,7 @@ def _c0_1(trt, region, saturation_region, C, C_PGA):
     """
     c0 factor.
     """
-    if saturation_region is None:
+    if not saturation_region:
         c0_col = "c0"
     else:
         c0_col = saturation_region + "_c0"
@@ -201,7 +201,7 @@ def _c0_2(trt, region, saturation_region, C, C_PGA):
     """
     c0 factor.
     """
-    if saturation_region is None:
+    if not saturation_region:
         c0_col = "c0slab"
     elif region in ["AK", "SA"]:
         c0_col = saturation_region + "_c0slab"
@@ -293,7 +293,7 @@ def _linear_amplification(region, C, vs30):
     # site coefficients
     v1 = CONSTANTS["V1"]
     vref = CONSTANTS["vref"]
-    if region is None or region == "CAM":
+    if not region or region == "CAM":
         s2 = C["s2"]
         s1 = s2
     elif region == "TW" or region == "JP":
@@ -469,7 +469,7 @@ class ParkerEtAl2020SInter(GMPE):
                            'm9_basin_term' 'usgs_basin_scaling',
                            'sigma_mu_epsilon'}
 
-    def __init__(self, region=None, saturation_region=None, basin=None,
+    def __init__(self, region='', saturation_region='', basin='',
                  m9_basin_term=False, usgs_basin_scaling=False,
                  sigma_mu_epsilon=0.0, ak23_bias_adj=False):
         """
@@ -483,10 +483,7 @@ class ParkerEtAl2020SInter(GMPE):
 
         # Assign them
         self.region = region
-        if saturation_region is None:
-            self.saturation_region = region
-        else:
-            self.saturation_region = saturation_region
+        self.saturation_region = saturation_region or region
         self.basin = basin
 
         # US23 basin params

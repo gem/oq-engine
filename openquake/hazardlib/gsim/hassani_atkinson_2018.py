@@ -207,13 +207,13 @@ class HassaniAtkinson2018(GMPE):
     #: Required distance measures is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
-    def __init__(self, d_sigma, kappa0, gamma_fle=None):
+    def __init__(self, d_sigma, kappa0, gamma_fle=''):
         self.d_sigma = d_sigma
         self.kappa0 = kappa0
 
         # Read the file and create the coefficient table for the anelastic
         # attenuation term
-        if gamma_fle is not None:
+        if gamma_fle:
             with open(gamma_fle, 'rb') as fle:
                 data = fle.read().decode('utf-8')
                 self.CAE = CoeffsTable(sa_damping=5, table=data)

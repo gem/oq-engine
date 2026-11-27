@@ -601,8 +601,8 @@ class ZhaoEtAl2016Asc(GMPE):
     #: Required distance measure is Rrup and Rvolc
     REQUIRES_DISTANCES = {'rrup', 'rvolc'}
 
-    def __init__(self, volc_arc_file=None):
-        if volc_arc_file is not None:
+    def __init__(self, volc_arc_file=''):
+        if volc_arc_file:
             with open(volc_arc_file, 'rb') as fle:
                 volc_arcs = fle.read().decode('utf-8')
             self.volc_pgns = get_volc_zones(volc_arcs)

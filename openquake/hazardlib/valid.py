@@ -181,7 +181,7 @@ def gsim(value, basedir=''):
     [(gsim_name, kwargs)] = toml.loads(value).items()
     kwargs = fix_toml(kwargs)
     for k, v in kwargs.items():
-        if k.endswith(('_file', '_table')):
+        if k.endswith(('_file', '_table')) and v != '':
             kwargs[k] = os.path.normpath(os.path.join(basedir, v))
     if gsim_name == 'FromFile':
         return FromFile()

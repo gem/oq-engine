@@ -94,7 +94,7 @@ def gen_data(df):
                 idx2 = idx2[0]
                 ev_id = df2['id'][idx2]
             else:
-                ev_id = None
+                ev_id = ''
             print('event_id: %s' % ev_id)
             print('flag_bedrock: %s' % i)
             gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)

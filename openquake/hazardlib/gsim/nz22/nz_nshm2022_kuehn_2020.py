@@ -219,7 +219,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
     def __init__(
         self,
         region="GLO",
-        m_b=None,
+        m_b='',
         sigma_mu_epsilon=0.0,
         modified_sigma=False,
     ):

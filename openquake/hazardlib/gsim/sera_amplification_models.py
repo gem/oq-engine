@@ -253,7 +253,7 @@ class PitilakisEtAl2018(GMPE):
     #: Defined reference velocity is 800 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 800.0
 
-    def __init__(self, gmpe_name, reference_velocity=None, **extra_args):
+    def __init__(self, gmpe_name, reference_velocity='', **extra_args):
         if isinstance(gmpe_name, str):
             self.gsim = registry[gmpe_name](**extra_args)
         else:
@@ -537,8 +537,8 @@ class SandikkayaDinsever2018(GMPE):
     #: Defined reference velocity is 800 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 760.0
 
-    def __init__(self, gmpe_name, reference_velocity=760., region=None,
-                 phi_0=None, **kwargs):
+    def __init__(self, gmpe_name, reference_velocity=760., region='',
+                 phi_0='', **kwargs):
         super().__init__(**kwargs)
         if isinstance(gmpe_name, str):
             self.gsim = registry[gmpe_name](**kwargs)
@@ -569,7 +569,7 @@ class SandikkayaDinsever2018(GMPE):
         # Regionalisation of the linear site term is possible
         # check if region is in the set of supported terms and
         # raise error otherwise
-        if region is not None:
+        if region:
             if region in REGION_SET:
                 self.region = "ck{:s}".format(region)
             else:

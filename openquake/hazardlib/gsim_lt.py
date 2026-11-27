@@ -409,13 +409,11 @@ class GsimLogicTree(lt.AbstractLogicTree):
                     # i.e. kw = {'gmpe_table': 'Wcrust_low_rhypo.hdf5'}
                     # notice that fix_toml ensure relative path names
                     for k, v in kw.items():
-                        if k.endswith(('_file', '_table')):
-                            if v is None:  # if volc_arc_file is None
-                                pass
-                            else:
-                                # store the data files as attributes
-                                with open(gsim.kwargs[k], 'rb') as f:
-                                    dic[f'{k}:{v}'] = f.read()
+                        # Optional files such as volc_arc_file can be empty.
+                        if v and k.endswith(('_file', '_table')):
+                            # store the data files as attributes
+                            with open(gsim.kwargs[k], 'rb') as f:
+                                dic[f'{k}:{v}'] = f.read()
         return numpy.array(branches, dt), dic
 
     def __fromh5__(self, array, dic):
@@ -718,7 +716,9 @@ def rel_paths(toml):
             pass
         else:
             if name.rstrip().endswith(('_file', '_table')):
-                paths.append(ast.literal_eval(path.strip()))
+                fname = ast.literal_eval(path.strip())
+                if fname:
+                    paths.append(fname)
     return paths
 
 

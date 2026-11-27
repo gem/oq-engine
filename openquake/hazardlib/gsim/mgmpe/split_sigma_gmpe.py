@@ -40,7 +40,7 @@ def _get_stddvs(between_absolute, within_absolute, total):
     """
     # Compute missing standard deviations
     new_stds = {'total': total}
-    if np.isscalar(between_absolute):
+    if np.isscalar(between_absolute) and between_absolute != '':
         between = np.full_like(
             total, between_absolute,
             dtype=np.result_type(total, between_absolute))
@@ -49,7 +49,7 @@ def _get_stddvs(between_absolute, within_absolute, total):
         within = np.sqrt(total**2 - between**2)
         new_stds['between'] = between
         new_stds['within'] = within
-    elif np.isscalar(within_absolute):
+    elif np.isscalar(within_absolute) and within_absolute != '':
         within = np.full_like(
             total, within_absolute,
             dtype=np.result_type(total, within_absolute))
@@ -84,8 +84,8 @@ class SplitSigmaGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name, within_absolute=None,
-                 between_absolute=None, **kwargs):
+    def __init__(self, gmpe_name, within_absolute='',
+                 between_absolute='', **kwargs):
         # Create the original GMPE
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()

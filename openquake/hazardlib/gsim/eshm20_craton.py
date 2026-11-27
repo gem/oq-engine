@@ -166,13 +166,13 @@ class ESHM20Craton(GMPE):
 
     :param float tau_quantile:
         Epistemic uncertainty quantile for the inter-event standard
-        deviation models. Float in the range 0 to 1, or None (mean value
-        used)
+        deviation models. Use a float in the range 0 to 1, or an empty
+        string for the mean value.
 
     :param float phi_ss_quantile:
         Epistemic uncertainty quantile for the intra-event standard
-        deviation models. Float in the range 0 to 1, or None (mean value
-        used)
+        deviation models. Use a float in the range 0 to 1, or an empty
+        string for the mean value.
 
     :param float phi_s2ss_quantile:
         Epistemic uncertainty quantile for the site-to-site standard
@@ -212,13 +212,13 @@ class ESHM20Craton(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 3000.0
 
     def __init__(self, epsilon=0, tau_model="global", phi_model="global",
-                 ergodic=True, tau_quantile=None, phi_ss_quantile=None,
+                 ergodic=True, tau_quantile='', phi_ss_quantile='',
                  site_epsilon=0.):
         """
         Instantiates the class with additional terms controlling both the
         epistemic uncertainty in the median and the preferred aleatory
         uncertainty model ('global', 'cena_constant', 'cena'), and the quantile
-        of the epistemic uncertainty model (float in the range 0 to 1, or None)
+        of the epistemic uncertainty model. An empty string selects the mean.
         """
         self.epsilon = epsilon
         self.tau_model = tau_model
