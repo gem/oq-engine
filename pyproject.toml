@@ -56,7 +56,9 @@ dependencies = [
 
 [project.optional-dependencies]
 # needed only by Server Installation method (see doc/getting-started/installation-instructions/server.md)
-server = ["gunicorn>=26.2"]
+server = ["gunicorn~=26.2.0"]
+test = ["pytest~=9.0.3"]
+
 
 [project.urls]
 Homepage = "https://globalquakemodel.org"

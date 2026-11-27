@@ -546,7 +546,7 @@ def install_engine(inst, pycmd, version, noupgrade):
                                "--find-links", WHEELHOUSE_URL,
                                "--find-links", GEM_WHEELS_URL,
                                "--find-links", URL_STANDALONE,
-                               "-e", CDIR])
+                               "-e", CDIR + "[test]"])
     elif version is None:  # install the stable version
         # FIXME, missing dependencies management for this case!
         os.exit(1)
