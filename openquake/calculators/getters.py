@@ -22,6 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib import general, hdf5
+from openquake.hazardlib import site
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.rmap_maker import get_unique_inverse, read_unc_ts_sets
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
@@ -144,7 +145,7 @@ def get_rmap_gb(dstore, full_lt=None):
     """
     :returns: (size_of_the_global_RateMap_in_GB, trt_rlzs, trt_smrs)
     """
-    N = len(dstore['sitecol/sids'])
+    N = len(site.read_sids(dstore))
     L = dstore['oqparam'].imtls.size
     full_lt = full_lt or dstore['full_lt'].init()
     # Classical rates belong to sets sharing the same uncertainties,
@@ -175,7 +176,7 @@ def get_num_chunks(dstore, full_lt=None):
     oq = dstore['oqparam']
     if 'hazard_curves' in oq.inputs:
         return 1
-    N = len(dstore['sitecol/sids'])
+    N = len(site.read_sids(dstore))
     ct2 = oq.concurrent_tasks // 2 or 1
     if N < ct2 or oq.calculation_mode == 'disaggregation':
         return N  # one chunk per site
@@ -238,7 +239,7 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
             if f.endswith('.hdf5'):
                 fnames.append(os.path.join(calc_dir, f))
     out = []
-    sids = dstore['sitecol/sids'][:]
+    sids = site.read_sids(dstore)
     for chunk in range(n):
         tile = sids[sids % n == chunk]
         getter = MapGetter(fnames, chunk, trt_rlzs, tile, R, oq)

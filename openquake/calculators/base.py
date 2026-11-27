@@ -1626,11 +1626,16 @@ def _gmf_event_counts(fnames):
     return num_events
 
 
-# Read the input grid and, for multiple files, the site ID mappings.
+# Read the input grid and the site ID mappings. A single file with site IDs
+# 0..N-1 needs no mapping; files written by older versions of the engine
+# can have gaps in the site IDs and are renumbered like multiple files.
 def _read_sites_hdf5(fnames, mosaic_model='', check_gmfs=False):
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
-            return site.read_sitecol(f), []
+            sitecol = site.read_sitecol(f)
+        complete = sitecol.complete
+        if numpy.array_equal(complete.sids, numpy.arange(len(complete))):
+            return sitecol, []
     return site.merge_sitecols(fnames, mosaic_model, check_gmfs=check_gmfs)
 
 
@@ -1803,7 +1808,7 @@ def import_gmfs_hdf5(dstore, oq, sitecol=None, *, source=None):
     if sitecol is not None:
         sites = sitecol
     site.store_sitecol(h5, sites)
-    if len(fnames) == 1:
+    if not convs:  # a single file with site IDs 0..N-1
         with hdf5.File(fnames[0], 'r') as f:
             if 'gmv_0' in f['gmf_data']:  # old format <= v3.23
                 imts = f['gmf_data'].attrs['imts']
@@ -1818,7 +1823,7 @@ def import_gmfs_hdf5(dstore, oq, sitecol=None, *, source=None):
                     f.copy(f'gmf_data/{col}', grp, _gmf_column(col, imtlist))
             else:
                 f.copy('gmf_data', h5)
-    else:  # merge the sites and the gmfs, tested in scenario/case_33
+    else:  # renumber or merge the sites, tested in scenario/case_33
         create_gmf_data(dstore, oq.all_imts(), E=E,
                         R=oq.number_of_logic_tree_samples)
         covered = numpy.zeros(len(sites.complete), bool)

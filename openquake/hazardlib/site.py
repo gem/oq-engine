@@ -803,17 +803,27 @@ class SiteCollection(object):
 
     def __toh5__(self):
         self.check()  # every stored site collection must be consistent
-        names = self.array.dtype.names
-        cols = ' '.join(names)
-        return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}
+        # a filtered collection is stored as its complete collection plus
+        # the IDs of the active sites, so that no site is stored twice
+        complete = self.complete
+        names = complete.array.dtype.names
+        dic = {n: complete.array[n] for n in names}
+        if self is not complete:
+            dic['active'] = self.sids
+        return dic, {'__pdcolumns__': ' '.join(names)}
 
     def __fromh5__(self, dic, attrs):
         params = attrs['__pdcolumns__'].split()
         dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
-        self.array = numpy.zeros(len(dic['sids']), dtype)
-        for p in dic:
-            self.array[p] = dic[p][()]
-        self.complete = self
+        array = numpy.zeros(len(dic['sids']), dtype)
+        for p in params:
+            array[p] = dic[p][()]
+        if 'active' in dic:  # filtered collection
+            self.array = array[dic['active'][()]]
+            self.complete = self.__class__.from_(array)
+        else:
+            self.array = array
+            self.complete = self
 
     @property
     def names(self):
@@ -1197,27 +1207,33 @@ def merge_without_dupl(array1, array2, uniquefield):
     return array, dupl
 
 
+def read_sids(h5):
+    """
+    Read the IDs of the active sites without reading the site parameters.
+    """
+    grp = h5.getitem('sitecol')
+    return grp['active' if 'active' in grp else 'sids'][()]
+
+
 def read_sitecol(h5):
     """
-    Read the active and complete site collections from one HDF5 file.
+    Read the site collection from one HDF5 file, including the files
+    written by older versions of the engine, where a filtered collection
+    was stored in `sitecol` and the complete one in `complete`.
     """
     sitecol = h5['sitecol']
-    if 'complete' in h5:
+    if sitecol is sitecol.complete and 'complete' in h5:
         sitecol.complete = h5['complete']
     return sitecol
 
 
 def store_sitecol(h5, sitecol):
     """
-    Replace the active and optional complete site collection in one file.
+    Replace the site collection in one file.
     """
-    sitecol.check()
-    for key in ('sitecol', 'complete'):
-        if key in h5:
-            del h5[key]
+    if 'sitecol' in h5:
+        del h5['sitecol']
     h5['sitecol'] = sitecol
-    if sitecol is not sitecol.complete:
-        h5['complete'] = sitecol.complete
 
 
 def merge_sitecols(hdf5fnames, mosaic_model='', check_gmfs=False):
@@ -1236,29 +1252,29 @@ def merge_sitecols(hdf5fnames, mosaic_model='', check_gmfs=False):
             sitecols.append(sitecol.complete if check_gmfs else sitecol)
             if check_gmfs:
                 attrs.append(dict(f['gmf_data'].attrs))
+    # a single file is renumbered too, since files written by older
+    # versions of the engine can have gaps in the site IDs
     sitecol = sitecols[0]
     converters = [{sid: i for i, sid in enumerate(sitecol.sids)}]
-    if len(sitecols) == 1:
-        return sitecol, converters
-
-    if attrs:
-        check_all_equal(mosaic_model, attrs, '__pdcolumns__', 'effective_time',
-                        'investigation_time')
-
     array = sitecol.array
-    merged_ids = {}
-    for sid, custom_id in enumerate(sitecol.custom_site_id):
-        merged_ids.setdefault(custom_id, sid)
-    for sc in sitecols[1:]:
-        offset = len(array)
-        array, dupl = merge_without_dupl(array, sc.array, 'custom_site_id')
-        conv = {sid: merged_ids[custom_id] for sid, custom_id in
-                zip(sc.sids[dupl], sc.custom_site_id[dupl])}
-        for sid, (local_id, custom_id) in enumerate(
-                zip(sc.sids[~dupl], sc.custom_site_id[~dupl]), offset):
-            conv[local_id] = sid
+    if len(sitecols) > 1:
+        if attrs:
+            check_all_equal(mosaic_model, attrs, '__pdcolumns__',
+                            'effective_time', 'investigation_time')
+        merged_ids = {}
+        for sid, custom_id in enumerate(sitecol.custom_site_id):
             merged_ids.setdefault(custom_id, sid)
-        converters.append(conv)
+        for sc in sitecols[1:]:
+            offset = len(array)
+            array, dupl = merge_without_dupl(
+                array, sc.array, 'custom_site_id')
+            conv = {sid: merged_ids[custom_id] for sid, custom_id in
+                    zip(sc.sids[dupl], sc.custom_site_id[dupl])}
+            for sid, (local_id, custom_id) in enumerate(
+                    zip(sc.sids[~dupl], sc.custom_site_id[~dupl]), offset):
+                conv[local_id] = sid
+                merged_ids.setdefault(custom_id, sid)
+            converters.append(conv)
     new = sitecol.from_(array)
     new.make_complete()
     return new, converters

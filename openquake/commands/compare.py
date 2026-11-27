@@ -286,7 +286,10 @@ def _read_hmaps(calc):
         dset = f['hmaps-stats']  # shape (N, S, M, P)
         info = json.loads(dset.attrs['json'])
         hmaps = dset[:, info['stat'].index('mean')]  # shape (N, M, P)
-        lonlats = zip(f['sitecol/lon'][:], f['sitecol/lat'][:])
+        # recent datastores store the complete sites plus the active IDs
+        sites = f['sitecol']
+        idx = sites['active'][:] if 'active' in sites else slice(None)
+        lonlats = zip(sites['lon'][:][idx], sites['lat'][:][idx])
         return dict(name=calc, version=f.attrs['engine_version'],
                     imts=info['imt'], poes=info['poe'], hmaps=hmaps,
                     idx={ll: i for i, ll in enumerate(lonlats)})

@@ -84,6 +84,50 @@ def test_merge_gmf_site_ids(tmp_path):
         aae(df.PGA, [.0, .11, .12, .13, .14, .11, .25, .26])
 
 
+# write a GMF file as done by older versions of the engine, with the active
+# sites in `sitecol` and, for calculation files, the complete ones in
+# `complete`; the active sites have gaps in the site IDs
+def _write_legacy_gmfs(path, sites, active, with_complete):
+    with hdf5.File(path, 'w') as h5:
+        for key, sc in [('sitecol', active), ('complete', sites)]:
+            if key == 'complete' and not with_complete:
+                continue
+            names = sc.array.dtype.names
+            for name in names:
+                h5[f'{key}/{name}'] = sc.array[name]
+            h5.save_attrs(key, {'__pdcolumns__': ' '.join(names)},
+                          __pyclass__=hdf5.cls2dotname(SiteCollection))
+        h5.create_df(
+            'gmf_data',
+            [('sid', numpy.array([1, 3, 3], 'u4')),
+             ('eid', numpy.array([0, 0, 1], 'u4')),
+             ('PGA', numpy.array([.1, .3, .4], 'f4'))],
+            num_events=2, imts='PGA', effective_time=0, investigation_time=0)
+
+
+def test_import_legacy_gmfs(tmp_path):
+    sites = SiteCollection.from_points([0, 1, 2, 3], numpy.zeros(4))
+    active = sites.filtered([1, 3])
+    job_ini = os.path.join(os.path.dirname(case_33.__file__), 'job1.ini')
+    for with_complete in (False, True):
+        path = str(tmp_path / f'legacy-{with_complete}.hdf5')
+        _write_legacy_gmfs(path, sites, active, with_complete)
+        oq = readinput.get_oqparam(job_ini)
+        oq.inputs['gmfs'] = [path]
+        with hdf5.File(str(tmp_path / 'imported.hdf5'), 'w') as h5:
+            base.import_gmfs_hdf5(h5, oq)
+            sitecol = h5['sitecol']
+            df = h5.read_df('gmf_data')
+        if with_complete:  # the GMFs refer to the complete site IDs
+            aae(sitecol.complete.lons, [0, 1, 2, 3])
+            aae(df.sid, [1, 3, 3])
+        else:  # the sites without a complete collection are renumbered
+            aae(sitecol.complete.lons, [1, 3])
+            aae(df.sid, [0, 1, 1])
+        aae(sitecol.complete.lons[df.sid], [1, 3, 3])
+        aae(df.PGA, [.1, .3, .4])
+
+
 class ScenarioTestCase(CalculatorTestCase):
 
     def frequencies(self, case, fst_value, snd_value):

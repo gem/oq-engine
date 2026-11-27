@@ -395,7 +395,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # the GMFs are computed with the default site parameters
         self.run_calc(case_12.__file__, 'job_grid.ini')
         sitecol = self.calc.datastore['sitecol']
-        complete = self.calc.datastore['complete'].array[sitecol.sids]
+        assert sitecol is not sitecol.complete
+        assert 'complete' not in self.calc.datastore  # stored in sitecol
+        complete = sitecol.complete.array[sitecol.sids]
         for name in sitecol.array.dtype.names:
             arr = sitecol.array[name]
             nan = arr.dtype.kind == 'f'

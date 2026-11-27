@@ -398,7 +398,7 @@ def read_cmaker_rups(oq, rup_acc, dstore):
     """
     :returns: dictionary {model: [(cmaker, rups), ...]}
     """
-    siteparams = list(dstore.getitem('sitecol'))
+    siteparams = dstore.getitem('sitecol').attrs['__pdcolumns__'].split()
     trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
     rlzs_by_gsim = {}
     for model, full_lt in get_model_lts(dstore):

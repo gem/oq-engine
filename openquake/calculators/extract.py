@@ -34,7 +34,7 @@ from scipy.cluster.vq import kmeans2
 from openquake.baselib import config, hdf5, general, performance, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import encode, decode
-from openquake.hazardlib import logictree, InvalidFile
+from openquake.hazardlib import logictree, site, InvalidFile
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.rmap_maker import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.calc import disagg, stochastic, filters
@@ -1286,7 +1286,7 @@ def check_gmf_sites(dstore, gmf_sids, complete):
         raise ValueError(msg % (dstore.filename, 'gmf_data'))
     if 'assetcol' in dstore:
         asset_sids = dstore['assetcol/array']['site_id']
-        sids = dstore['sitecol/sids'][:]
+        sids = site.read_sids(dstore)
         if len(asset_sids) == 0 or len(sids) == 0:
             return
         # check that the asset site IDs are a subset of the sitecol site

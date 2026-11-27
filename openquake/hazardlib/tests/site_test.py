@@ -22,7 +22,8 @@ import numpy
 from shapely import wkt
 
 from openquake.baselib import hdf5
-from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.site import (
+    Site, SiteCollection, read_sids, read_sitecol, store_sitecol)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh
 
@@ -392,3 +393,59 @@ class SitePickleTestCase(unittest.TestCase):
         site1 = Site(point, 760.0, 100.0, 5.0)
         site2 = pickle.loads(pickle.dumps(site1))
         self.assertEqual(site1, site2)
+
+
+# write the columns of a site collection as done by older versions of
+# the engine, i.e. without the IDs of the active sites
+def _write_legacy(h5, key, sitecol):
+    names = sitecol.array.dtype.names
+    for name in names:
+        h5[f'{key}/{name}'] = sitecol.array[name]
+    h5.save_attrs(key, {'__pdcolumns__': ' '.join(names)},
+                  __pyclass__=hdf5.cls2dotname(SiteCollection))
+
+
+def test_store_filtered_sitecol(tmp_path):
+    sites = SiteCollection.from_points([0, 1, 2, 3], [0, 0, 0, 0])
+    active = sites.filtered([1, 3])
+    path = str(tmp_path / 'sites.hdf5')
+    with hdf5.File(path, 'w') as h5:
+        store_sitecol(h5, active)
+    with hdf5.File(path, 'r') as h5:
+        # the complete collection is stored once, with the active IDs
+        assert list(h5['sitecol/lon'][()]) == [0, 1, 2, 3]
+        assert list(h5['sitecol/active'][()]) == [1, 3]
+        assert 'complete' not in h5
+        assert list(read_sids(h5)) == [1, 3]
+        sitecol = h5['sitecol']
+    assert sitecol == active
+    assert sitecol.complete == sites
+    sitecol.check()
+
+
+def test_store_complete_sitecol(tmp_path):
+    sites = SiteCollection.from_points([0, 1, 2], [0, 0, 0])
+    path = str(tmp_path / 'sites.hdf5')
+    with hdf5.File(path, 'w') as h5:
+        store_sitecol(h5, sites)
+    with hdf5.File(path, 'r') as h5:
+        assert 'active' not in h5.getitem('sitecol')
+        assert list(read_sids(h5)) == [0, 1, 2]
+        sitecol = h5['sitecol']
+    assert sitecol == sites
+    assert sitecol.complete is sitecol
+
+
+def test_read_legacy_sitecol(tmp_path):
+    # older versions of the engine stored the active sites in `sitecol`
+    # and the complete collection in `complete`
+    sites = SiteCollection.from_points([0, 1, 2], [0, 0, 0])
+    path = str(tmp_path / 'legacy.hdf5')
+    with hdf5.File(path, 'w') as h5:
+        _write_legacy(h5, 'sitecol', sites.filtered([0, 2]))
+        _write_legacy(h5, 'complete', sites)
+    with hdf5.File(path, 'r') as h5:
+        sitecol = read_sitecol(h5)
+    assert list(sitecol.sids) == [0, 2]
+    assert sitecol.complete == sites
+    sitecol.check()
