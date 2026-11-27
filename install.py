@@ -239,6 +239,7 @@ STANDALONE_APP_INFO = [
     {"pkg": "django-gem-taxonomy", "name": "django_gem_taxonomy",
      "ver": "~=1.5.1"}]
 WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
+GEM_WHEELS_URL = "https://wheelhouse.openquake.org/gem261118/"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
 
 
@@ -252,6 +253,7 @@ def install_standalone(pycmd, apps=STANDALONE_APP_INFO):
                 [pycmd, "-m", "pip", "install",
                  "--no-index", "--no-cache-dir",
                  "--find-links", WHEELHOUSE_URL,
+                 "--find-links", GEM_WHEELS_URL,
                  "--find-links", URL_STANDALONE,
                  app["pkg"] + app["ver"]])
             subprocess.check_call([pycmd, "-m", "pip", "check"])
@@ -539,16 +541,27 @@ def install_engine(inst, pycmd, version, noupgrade):
     """
     upgrade = [] if noupgrade else ["--upgrade"]
     if inst in (devel, devel_server):  # install from the local repo
-        subprocess.check_call([pycmd, "-m", "pip", "install", "-e", CDIR])
+        subprocess.check_call([pycmd, "-m", "pip", "install",
+                               "--no-index", "--no-cache-dir",
+                               "--find-links", WHEELHOUSE_URL,
+                               "--find-links", GEM_WHEELS_URL,
+                               "--find-links", URL_STANDALONE,
+                               "-e", CDIR])
     elif version is None:  # install the stable version
+        # FIXME, missing dependencies management for this case!
+        os.exit(1)
         subprocess.check_call(
             [pycmd, "-m", "pip", "install"] + upgrade
             + ["openquake.engine"])
     elif re.match(r"\d+(\.\d+)+", version):  # install an official version
+        # FIXME, missing dependencies management for this case!
+        os.exit(1)
         subprocess.check_call(
             [pycmd, "-m", "pip", "install"] + upgrade
             + [f"openquake.engine{normalize_version(version)}"])
     else:  # install a branch from github (only for user or server)
+        # FIXME, missing dependencies management for this case!
+        os.exit(1)
         commit = latest_commit(version)
         print("Installing commit", commit)
         with tempfile.TemporaryDirectory() as tmp:
@@ -714,7 +727,8 @@ def install(inst, version, from_fork, noupgrade):
     pycmd = python_exe(inst)
 
     upgrade_pip(pycmd, noupgrade)
-    install_requirements(inst, pycmd, version, from_fork)
+    # fully resolved by pyproject.toml file
+    # install_requirements(inst, pycmd, version, from_fork)
     install_engine(inst, pycmd, version, noupgrade)
 
     errors = install_standalone(pycmd)
