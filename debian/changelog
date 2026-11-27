@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Internal: a filtered site collection is now stored together with its
+    complete collection in the `sitecol` dataset, without duplicating the
+    sites; HDF5 GMF files produced by previous versions can still be imported
   * Fixed site IDs when importing HDF5 ground motion fields and overriding
     Vs30. Fixed average GMF exports and ShakeMap exposure aggregation after
     site filtering.

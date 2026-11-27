@@ -486,13 +486,15 @@ class Disaggregator(object):
     def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges,
                  gid_by_rlz=None):
         if isinstance(site, Site):
-            if not hasattr(site, 'id'):
-                site.id = 0
+            # the collection is used to compute the contexts from the
+            # sources, while the site ID is used for the bin edges and
+            # to select the precomputed contexts
             self.sitecol = SiteCollection([site])
+            self.sid = sid = getattr(site, 'id', 0)
         else:  # assume a site collection of length 1
             self.sitecol = site
             assert len(site) == 1, site
-        self.sid = sid = self.sitecol.sids[0]
+            self.sid = sid = self.sitecol.sids[0]
 
         self.cmaker = cmaker
         self.gid_by_rlz = gid_by_rlz
@@ -928,7 +930,6 @@ def gen_disagg_source(groups, site, edges_shapedic, oq, full_lt):
     :param full_lt: a FullLogicTree instance
     :returns: generators of (Disaggregator, src_mutex) pairs, one per group
     """
-    sitecol = SiteCollection([site])
     edges, s = edges_shapedic
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
@@ -941,7 +942,7 @@ def gen_disagg_source(groups, site, edges_shapedic, oq, full_lt):
     all_trt_smrs = [sg[0].trt_smrs for sg in groups]
     cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
     for group, cmaker in zip(groups, cmakers.to_array()):
-        dis = Disaggregator(group, sitecol, cmaker, edges)
+        dis = Disaggregator(group, site, cmaker, edges)
         yield dis, src_mutex
 
 

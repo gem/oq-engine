@@ -782,9 +782,10 @@ class SiteCollection(object):
         dtlist = [(p, site_param_dt[p])
                   for p in ('sids', 'lon', 'lat', 'depth')] + extra
         self.array = arr = numpy.zeros(len(sites), dtlist)
+        # a complete collection has site IDs 0..N-1, whatever the site.id
+        arr['sids'] = numpy.arange(len(sites))
         self.complete = self
         for i, site in enumerate(sites):
-            arr['sids'][i] = getattr(site, 'id', i)
             arr['lon'][i] = site.location.longitude
             arr['lat'][i] = site.location.latitude
             arr['depth'][i] = site.location.depth
