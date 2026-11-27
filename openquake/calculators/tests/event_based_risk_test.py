@@ -17,15 +17,17 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
+from functools import partial
+from types import SimpleNamespace
 from unittest import mock, SkipTest
 import numpy
 import pandas
 
 from openquake.baselib import config
-from openquake.baselib.general import gettemp
+from openquake.baselib.general import decode, gettemp
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.writers import CsvWriter, FIVEDIGITS
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import InvalidFile, stats
 from openquake.risklib import scientific
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.commonlib import logs, readinput
@@ -34,7 +36,8 @@ from openquake.calculators.event_based_risk import update
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.post_risk import PostRiskCalculator
+from openquake.calculators.post_risk import (
+    PostRiskCalculator, save_curve_stats)
 from openquake.qa_tests_data.event_based_risk import (
     case_01, case_02, case_03, case_04, case_4a, case_05, case_6c, case_master,
     case_miriam, occupants, case_1f, case_1g, case_7a, case_08, case_09,
@@ -62,6 +65,36 @@ def test_update_single_realization():
     numpy.testing.assert_equal(loss3['bids'][0], [2, 2])  # rlz*X + lti
 
 
+def test_sparse_curve_statistics():
+    # Missing rows are zeros; explicit NaNs are not missing rows.
+    weights = numpy.array([.25, .75], numpy.float32)
+    funcs = dict(mean=stats.mean_curve, std=stats.std_curve,
+                 median=partial(stats.quantile_curve, .5))
+    lid = scientific.LOSSID['structural']
+    df = pandas.DataFrame(dict(
+        agg_id=[0, 0, 0, 0], loss_id=[lid] * 4,
+        return_period=[10, 20, 20, 30], rlz_id=[1, 0, 1, 1],
+        loss=numpy.array([80, 20, 80, numpy.nan], numpy.float32)))
+    oq = SimpleNamespace(
+        loss_types=['structural'], ext_loss_types=['structural'],
+        number_of_logic_tree_samples=0, hazard_stats=lambda: funcs)
+    ds = mock.MagicMock()
+    datasets = {'oqparam': oq, 'weights': weights,
+                'exposure': mock.Mock()}
+    ds.__getitem__.side_effect = datasets.__getitem__
+    ds.read_df.return_value = df
+
+    def create(name, dtype, shape):
+        datasets[name] = numpy.zeros(shape, dtype)
+
+    ds.create_dset.side_effect = create
+    save_curve_stats(ds)
+    out = datasets['agg_curves-stats/structural'][0, :, :, 0]
+    aac(out[:, :2], [[60, 65], [numpy.sqrt(1200), numpy.sqrt(675)],
+                    [80 / 3, 40]], rtol=1e-6)
+    assert numpy.isnan(out[:, 2]).all()
+
+
 class EventBasedRiskTestCase(CalculatorTestCase):
 
     def assert_stats_ok(self, pkg, job_ini):
@@ -82,6 +115,30 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in all_csv:
             self.assertEqualFiles(
                 'expected/%s' % strip_calc_id(fname), fname)
+
+    def test_sparse_realization_curve_stats(self):
+        self.run_calc(case_01.__file__, 'job_ins.ini',
+                      collect_rlzs='false', concurrent_tasks='1')
+        ds = self.calc.datastore
+        weights = ds['weights'][:]
+        aac(weights, [.5, .5])
+        counts = numpy.bincount(ds['events']['rlz_id'], minlength=2)
+        self.assertTrue((counts > 0).all())
+        agg_id = list(decode(ds['agg_keys'][:])).index('A\tRM')
+        curves = ds.read_df('aggcurves')
+        periods = curves.return_period.unique()
+        # Both realizations have events, but only realization 0 has losses
+        # for these two loss types in this aggregation group.
+        for lt in ('nonstructural', 'structural+nonstructural_ins'):
+            lid = scientific.LOSSID[lt]
+            df = curves[(curves.agg_id == agg_id) &
+                        (curves.loss_id == lid)]
+            self.assertEqual(set(df.rlz_id), {0})
+            losses = df.set_index('return_period').loc[periods, 'loss']
+            self.assertTrue((losses > 0).any())
+            expected = weights[0] * losses.to_numpy()
+            stored = ds['agg_curves-stats/' + lt][agg_id, 0, :, 0]
+            aac(stored, expected, rtol=1e-6)
 
     def test_case_01(self):
         self.run_calc(case_01.__file__, 'job.ini')

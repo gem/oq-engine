@@ -1,3 +1,7 @@
+  [Johnny Kao]
+  * Fixed aggregate loss curve statistics to preserve the weights of
+    realizations with zero losses.
+
   [Michele Simionato]
   * Fixed site ID remapping and retained ground motions at sites with no
     earlier data when merging multiple HDF5 GMFs files
