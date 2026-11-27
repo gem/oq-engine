@@ -14,6 +14,17 @@
   * Optimized mesh construction and site association with large exposures
   * Raised the tolerance and refined the ps_grid_spacing approximation (3x speedup)
 
+  [Anirudh Rao]
+  * Fixed scenario risk quantiles to include zero-loss weight from missing
+    tag and realization groups
+
+  [Michele Simionato]
+  * Improved performance when saving aggregate loss curve statistics
+
+  [Johnny Kao]
+  * Fixed aggregate loss curve statistics to preserve the weights of
+    realizations with zero losses.
+
   [Michele Simionato]
   * Fixed site ID remapping and retained ground motions at sites with no
     earlier data when merging multiple HDF5 GMFs files
@@ -5285,17 +5296,6 @@ python3-oq-engine (2.8.0-0~precise01) precise; urgency=low
   * Fixed the precedence order when reading openquake.cfd
 
  -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 29 Nov 2017 14:33:05 +0100
-
-  [Rao Anirudh]
-  * Fixed scenario risk quantiles to include zero-loss weight from missing
-    tag and realization groups
-
-  [Michele Simionato]
-  * Improved performance when saving aggregate loss curve statistics
-
-  [Johnny Kao]
-  * Fixed aggregate loss curve statistics to preserve the weights of
-    realizations with zero losses.
 
 python-oq-engine (2.7.0-0~precise01) precise; urgency=low
 
