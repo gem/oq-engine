@@ -20,13 +20,25 @@
 Package :mod:`openquake.pfd.primary_surf_displ` contains implementations of different
 fault displacement prediction models
 """
-from openquake.pfd.primary_surf_displ.youngs2003 import Youngs2003PrimaryFD  # noqa: F401
-from openquake.pfd.primary_surf_displ.petersen2011 import Petersen2011PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.youngs2003 import YoungsEtAl2003PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.petersen2011 import PetersenEtAl2011PrimaryFD  # noqa: F401
 from openquake.pfd.primary_surf_displ.moss_ross2011 import MossRoss2011PrimaryFD  # noqa: F401
-from openquake.pfd.primary_surf_displ.moss2024 import Moss2024PrimaryFD  # noqa: F401
-from openquake.pfd.primary_surf_displ.moss2022 import Moss2022PrimaryFD  # noqa: F401
-from openquake.pfd.primary_surf_displ.takao2013 import Takao2013PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.moss2024 import MossEtAl2024PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.moss2022 import MossEtAl2022PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.takao2013 import TakaoEtAl2013PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.lavrentiadis2023 import LavrentiadisAbrahamson2023PrimaryFDAggregate  # noqa: F401
+from openquake.pfd.primary_surf_displ.lavrentiadis2023 import LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal  # noqa: F401
+from openquake.pfd.primary_surf_displ.kuehn2024.kuehn2024 import KuehnEtAl2024PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.chiou2025 import ChiouEtAl2025PrimaryFD  # noqa: F401
+
+# former names, deprecated: they will be removed in a future version
+# (see openquake.pfd.meta)
+from openquake.pfd.primary_surf_displ.chiou2025 import Chiou2025PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.kuehn2024.kuehn2024 import Kuehn2024PrimaryFD  # noqa: F401
 from openquake.pfd.primary_surf_displ.lavrentiadis2023 import Lavrentiadis2023PrimaryFD_aggregate  # noqa: F401
 from openquake.pfd.primary_surf_displ.lavrentiadis2023 import Lavrentiadis2023PrimaryFD_principal  # noqa: F401
-from openquake.pfd.primary_surf_displ.kuehn2024.kuehn2024 import Kuehn2024PrimaryFD  # noqa: F401
-from openquake.pfd.primary_surf_displ.chiou2025 import Chiou2025PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.moss2022 import Moss2022PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.moss2024 import Moss2024PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.petersen2011 import Petersen2011PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.takao2013 import Takao2013PrimaryFD  # noqa: F401
+from openquake.pfd.primary_surf_displ.youngs2003 import Youngs2003PrimaryFD  # noqa: F401

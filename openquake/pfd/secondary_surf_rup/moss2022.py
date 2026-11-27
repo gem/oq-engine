@@ -64,7 +64,7 @@ def _mag_bin(mag):
     return None
 
 
-class Moss2022SecondarySR(BaseSecondarySurfRup):
+class MossEtAl2022SecondarySR(BaseSecondarySurfRup):
     """
     P(d > 0) for distributed displacement on reverse faults.
 
@@ -139,3 +139,8 @@ class Moss2022SecondarySR(BaseSecondarySurfRup):
                 f"Invalid method '{method}'. Accept: simple, biexp")
 
         return prob.squeeze()
+
+
+class Moss2022SecondarySR(MossEtAl2022SecondarySR):
+    """Deprecated name of :class:`MossEtAl2022SecondarySR`."""
+    superseded_by = MossEtAl2022SecondarySR

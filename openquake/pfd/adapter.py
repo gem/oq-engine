@@ -35,6 +35,7 @@ import inspect
 import logging
 from typing import Any, Dict
 
+from openquake.pfd.meta import canonical
 from openquake.pfd.probability import _reduce_mc, _to_sites_x_displ
 
 logger = logging.getLogger(__name__)
@@ -55,8 +56,8 @@ def effective_displacement_definition(model):
     displacement definition as the ``DISPLACEMENT_DEFINITION`` class
     attribute. The contract is STATIC -- the class choice IS the definition
     (papers publishing several definitions expose one class per definition,
-    e.g. ``Lavrentiadis2023PrimaryFD_aggregate`` vs
-    ``Lavrentiadis2023PrimaryFD_principal``); no model parameter may change
+    e.g. ``LavrentiadisAbrahamson2023PrimaryFDAggregate`` vs
+    ``LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal``); no model parameter may change
     it. This helper is the single lookup point used by the hazard kernel
     (single-bucket routing of aggregate models), by the calculator
     configuration guard, and by the logic-tree validators.
@@ -66,6 +67,21 @@ def effective_displacement_definition(model):
         or ``None`` when the model declares no contract (non-FD stubs).
     """
     return getattr(model, 'DISPLACEMENT_DEFINITION', None)
+
+
+#: branch parameters of the primary surface-rupture models that describe
+#: the geometry of the fault. When a branch pins one of them, the same value
+#: is used for every source the branch applies to, instead of the dip and
+#: the seismogenic depth of each source.
+SOURCE_GEOMETRY_PARAMS = ('dip_mu', 'Zs_mu', 'seismothickness')
+
+
+def _field(ctx, name):
+    """The field ``name`` of a context, or None if the context lacks it."""
+    names = getattr(getattr(ctx, 'dtype', None), 'names', None)
+    if names is not None:  # engine context array
+        return ctx[name] if name in names else None
+    return getattr(ctx, name, None)
 
 
 def style_from_rake(rake):
@@ -121,6 +137,21 @@ class PFDModelAdapter:
             self.model_type = 'unknown'
             logger.warning("Could not determine model type for: %s", class_name)
 
+    def pinned_geometry_params(self) -> Dict[str, Any]:
+        """
+        The fault-geometry parameters that the branch pins for a primary
+        surface-rupture model which would otherwise take them from each
+        source (``SOURCE_GEOMETRY_PARAMS``), as a dictionary name -> value;
+        empty for the models that do not depend on the geometry.
+        """
+        if self.model_type != 'primary_sr':
+            return {}
+        accepted = self._get_method_params('get_prob')
+        return {name: self.model_params[name]
+                for name in SOURCE_GEOMETRY_PARAMS
+                if name in accepted
+                and self.model_params.get(name) is not None}
+
     def _resolve_style(self, ctx: 'Any', ini_section: str) -> str:
         """Resolve the faulting style for a model call.
 
@@ -138,8 +169,10 @@ class PFDModelAdapter:
                 style = style_from_rake(ctx.rake[0])
             else:
                 style = style_arr[0]
-        model_name = self.model.__class__.__name__
-        if 'Youngs2003' in model_name and style not in ('all', 'normal'):
+        # the current name also for a deprecated one (openquake.pfd.meta)
+        model_name = canonical(type(self.model)).__name__
+        if model_name.startswith('YoungsEtAl2003') and \
+                style not in ('all', 'normal'):
             raise ValueError(
                 f"Model {model_name} only supports style='all' or style='normal', "
                 f"but got '{style}' (derived from rake={ctx.rake[0]}). "
@@ -265,7 +298,7 @@ class PFDModelAdapter:
         # Build kwargs; vs30 comes from the site collection (with NaN for
         # sites lacking a value and no reference_vs30_value configured).
         # NaN is converted to None so that models requiring vs30 (e.g.
-        # Moss2013PrimarySR) reject the job with their own clear message
+        # MossEtAl2013PrimarySR) reject the job with their own clear message
         # instead of silently misclassifying the site (NaN fails every
         # comparison, which would have meant "soft soil").
         _vs30_0 = float(ctx.vs30[0])
@@ -273,11 +306,23 @@ class PFDModelAdapter:
             'mag': float(ctx.mag[0]),
             'dip': float(ctx.dip[0]),
             'dip_mu': float(ctx.dip[0]),
-            'seismothickness': self.model_params.get('seismothickness', 15.0),
             'vs30': _vs30_0 if np.isfinite(_vs30_0) else None,
             'style': style,
-            **{k: v for k, v in self.model_params.items() if k != 'style'},
         }
+        # Geometry-based models (Mammarella et al. 2024) are evaluated with
+        # the dip and the seismogenic depth of the fault that hosts the
+        # rupture: ctx.dip and ctx.zbot, which the calculator sets to the
+        # bottom of the source for the floating ruptures. There is no
+        # default depth: a context without zbot leaves the model to ask for
+        # it. Values pinned in the logic-tree branch still win (see
+        # SOURCE_GEOMETRY_PARAMS and pinned_geometry_params).
+        # A NaN zbot counts as missing: a model that needs the depth then
+        # raises its own error instead of failing on NaN arithmetic.
+        zbot = _field(ctx, 'zbot')
+        if zbot is not None and np.isfinite(zbot[0]):
+            kwargs['seismothickness'] = float(zbot[0])
+        kwargs.update(
+            {k: v for k, v in self.model_params.items() if k != 'style'})
 
         def _reduced_scalar(res):
             res_red = _reduce_mc(
@@ -331,32 +376,33 @@ class PFDModelAdapter:
         D = len(displacements)
 
         style = self._resolve_style(ctx, 'primary_surf_displ')
-        model_name = self.model.__class__.__name__
+        model_name = canonical(type(self.model)).__name__
 
         # Wrong-class output_type misconfiguration (C4 contract): raise here
         # with a configuration-level message before the model call (same
-        # pre-call pattern as the Youngs2003 style check above). The class
-        # choice IS the displacement definition - Lavrentiadis2023PrimaryFD_aggregate
-        # serves only the aggregate variants; the sum-of-principal
-        # disp_prnc_prime metric lives in Lavrentiadis2023PrimaryFD_principal
-        # (which in turn accepts no explicit output_type at all). Logic-tree
-        # jobs are already rejected at validation time.
+        # pre-call pattern as the Youngs style check above). The class
+        # choice IS the displacement definition: the Aggregate class serves
+        # only the aggregate variants; the sum-of-principal disp_prnc_prime
+        # metric lives in the SumOfPrincipal class (which in turn accepts
+        # no explicit output_type at all). Logic-tree jobs are already
+        # rejected at validation time.
         _output_type = self.model_params.get('output_type')
-        if model_name == 'Lavrentiadis2023PrimaryFD_aggregate' \
+        la23 = 'LavrentiadisAbrahamson2023PrimaryFD'
+        if model_name == la23 + 'Aggregate' \
                 and str(_output_type) == 'disp_prnc_prime':
             raise ValueError(
-                "Lavrentiadis2023PrimaryFD_aggregate is the AGGREGATE-definition model; "
-                "output_type = disp_prnc_prime (sum-of-principal) is served "
-                "by the Lavrentiadis2023PrimaryFD_principal model class. "
+                f"{la23}Aggregate is the AGGREGATE-definition model; "
+                "output_type = disp_prnc_prime (sum-of-principal) is "
+                f"served by the {la23}SumOfPrincipal model class. "
                 "Select that class instead of passing output_type."
             )
-        if model_name == 'Lavrentiadis2023PrimaryFD_principal' \
+        if model_name == la23 + 'SumOfPrincipal' \
                 and _output_type is not None:
             raise ValueError(
-                "Lavrentiadis2023PrimaryFD_principal evaluates the "
-                "disp_prnc_prime (sum-of-principal) metric; output_type is "
-                f"fixed by the class choice (got '{_output_type}'). Remove "
-                "the output_type parameter."
+                f"{la23}SumOfPrincipal evaluates the disp_prnc_prime "
+                "(sum-of-principal) metric; output_type is fixed by the "
+                f"class choice (got '{_output_type}'). Remove the "
+                "output_type parameter."
             )
 
         # Build kwargs with vectorized arrays; x_L follows the model's
@@ -431,7 +477,7 @@ class PFDModelAdapter:
             **{k: v for k, v in self.model_params.items() if k != 'style'},
         }
 
-        # Ensure version is string if present (Youngs2003SecondarySR expects string)
+        # Ensure version is string if present (YoungsEtAl2003SecondarySR expects string)
         if 'version' in kwargs:
             kwargs['version'] = str(kwargs['version'])
 
@@ -543,7 +589,7 @@ class PFDModelAdapter:
             **{k: v for k, v in self.model_params.items() if k != 'style'},
         }
 
-        # Ensure percentile is string if present (Youngs2003SecondaryFD expects string)
+        # Ensure percentile is string if present (YoungsEtAl2003SecondaryFD expects string)
         if 'percentile' in kwargs:
             kwargs['percentile'] = str(kwargs['percentile'])
 

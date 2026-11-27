@@ -13,50 +13,44 @@ FixedSecondarySR
 .. autoclass:: openquake.pfd.secondary_surf_rup.fixed.FixedSecondarySR
     :show-inheritance:
 
-Moss2022SecondarySR
--------------------
-
-.. autoclass:: openquake.pfd.secondary_surf_rup.moss2022.Moss2022SecondarySR
-    :show-inheritance:
-
-Petersen2011SecondarySR
+MossEtAl2022SecondarySR
 -----------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_rup.petersen2011.Petersen2011SecondarySR
+.. autoclass:: openquake.pfd.secondary_surf_rup.moss2022.MossEtAl2022SecondarySR
     :show-inheritance:
 
-Petersen2011SecondarySR_default
--------------------------------
+PetersenEtAl2011SecondarySR
+---------------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_rup.petersen2011.Petersen2011SecondarySR_default
+.. autoclass:: openquake.pfd.secondary_surf_rup.petersen2011.PetersenEtAl2011SecondarySR
     :show-inheritance:
 
-Rodriguez2023SecondarySR
+RodriguezPadillaOskin2023SecondarySR
+------------------------------------
+
+.. autoclass:: openquake.pfd.secondary_surf_rup.rodriguez2023.RodriguezPadillaOskin2023SecondarySR
+    :show-inheritance:
+
+TakaoEtAl2013SecondarySR
 ------------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_rup.rodriguez2023.Rodriguez2023SecondarySR
+.. autoclass:: openquake.pfd.secondary_surf_rup.takao2013.TakaoEtAl2013SecondarySR
     :show-inheritance:
 
-Takao2013SecondarySR
---------------------
+TakaoEtAl2014SecondarySR
+------------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_rup.takao2013.Takao2013SecondarySR
+.. autoclass:: openquake.pfd.secondary_surf_rup.takao2014.TakaoEtAl2014SecondarySR
     :show-inheritance:
 
-Takao2014SecondarySR
---------------------
+VisiniEtAl2025SecondarySR
+-------------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_rup.takao2014.Takao2014SecondarySR
+.. autoclass:: openquake.pfd.secondary_surf_rup.visini2025.VisiniEtAl2025SecondarySR
     :show-inheritance:
 
-Visini2025SecondarySR
----------------------
+YoungsEtAl2003SecondarySR
+-------------------------
 
-.. autoclass:: openquake.pfd.secondary_surf_rup.visini2025.Visini2025SecondarySR
-    :show-inheritance:
-
-Youngs2003SecondarySR
----------------------
-
-.. autoclass:: openquake.pfd.secondary_surf_rup.youngs2003.Youngs2003SecondarySR
+.. autoclass:: openquake.pfd.secondary_surf_rup.youngs2003.YoungsEtAl2003SecondarySR
     :show-inheritance:

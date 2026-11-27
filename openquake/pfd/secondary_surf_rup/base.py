@@ -23,8 +23,10 @@ classes for :class:`BaseSecondarySurfRup` and :class:`BaseSecondarySurfDispl`
 
 import abc
 
+from openquake.pfd.meta import MetaPFDModel
 
-class BaseSecondarySurfRup(metaclass=abc.ABCMeta):
+
+class BaseSecondarySurfRup(metaclass=MetaPFDModel):
     """Abstract base class for distributed (secondary) surface-rupture models.
 
     Subclasses implement :meth:`get_prob`, returning the probability of
@@ -66,7 +68,7 @@ class BaseSecondarySurfRup(metaclass=abc.ABCMeta):
         return "<%s>" % self.__class__.__name__
 
 
-class BaseSecondarySurfDispl(metaclass=abc.ABCMeta):
+class BaseSecondarySurfDispl(metaclass=MetaPFDModel):
     """Abstract base class for distributed (secondary) surface-displacement models.
 
     Subclasses implement :meth:`get_prob`, returning the probability that the

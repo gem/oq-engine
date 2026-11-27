@@ -19,9 +19,8 @@ How it works
 -------------
 
 The engine reads a standard fault source model (simple, complex or
-multi-fault sources). For each rupture whose top edge reaches within
-``surface_rupture_depth_tolerance_km`` of the surface, and for each
-hazard site, it computes annual exceedance rates of displacement:
+multi-fault sources). For each rupture and for each hazard site it
+computes annual exceedance rates of displacement:
 
 - the *principal* rate, for displacement on the fault trace itself,
   ``lambda_p = rate * P(SR) * P(D > d | SR) * W_p(r)``;
@@ -32,7 +31,40 @@ hazard site, it computes annual exceedance rates of displacement:
 conditional probability of exceeding the displacement level ``d``,
 ``W_p(r)`` a rupture-location weight that accounts for the uncertainty
 on the actual surface trace, and ``G(r)`` the distributed-rupture
-weight. The faulting style (normal, reverse or strike-slip) of each
+weight.
+
+``P(SR)`` is the only probability that a rupture of magnitude ``m``
+breaks the surface, and it comes from the primary surface-rupture model
+of the logic-tree branch. Simple, complex and kite fault sources float
+their ruptures along strike and down dip, giving each position the same
+share of the rate of the magnitude; the fraction of positions that
+touch the surface depends on the mesh spacing and is not a probability.
+So the engine sums the rate of each magnitude over the down-dip
+positions and assigns it to the positions whose top edge is within
+``surface_rupture_depth_tolerance_km`` of the surface, which provide the
+geometry (trace, length, position along strike): for these sources
+``lambda(m) * P(SR | m)`` is the rate of surface rupture, for any mesh.
+The sum is done for each position along strike, so the distribution of
+the rate along strike is kept also on complex and kite faults whose
+width changes along strike; where no position at the surface exists
+along strike, the rate there is discarded as blind (see below).
+The ruptures of characteristic, multi-fault and non-parametric sources
+are given one by one: one with a buried top edge is a blind rupture and
+is skipped. A rupture given with the probabilities :math:`p(k)` of
+:math:`k` occurrences in the investigation time (multi-fault sources with
+``infer_occur_rates = false``, non-parametric sources) contributes, as in
+the classical calculator, :math:`-\ln \sum_k p(k)\,(1 - q)^k` to the rate
+over the investigation time, where :math:`q` is the probability that one
+occurrence exceeds the displacement (the :math:`p(k)` are normalized to
+sum to 1; for a negative binomial TOM the series is summed exactly).
+With ``infer_occur_rates = true`` the rate of a multi-fault rupture is
+:math:`-\ln p(0) / T`: the probabilities of a source model refer to its
+investigation time, which must be the one of the job. A floating source
+with no position at the surface for a
+magnitude (i.e. an upper seismogenic depth below the tolerance) is blind
+as well: the engine logs a warning with the discarded rate.
+
+The faulting style (normal, reverse or strike-slip) of each
 rupture is derived from its rake: normal for -150 <= rake <= -30,
 reverse for 30 <= rake <= 150, strike-slip otherwise, and it is used
 to select the models that apply to the source.
@@ -72,9 +104,11 @@ The PFD-specific parameters are:
 - ``near_far_threshold_km``: distance (km) below which a site is in
   the Visini et al. (2025) distributed-faulting 'near' regime.
   Default: 0.2.
-- ``surface_rupture_depth_tolerance_km``: a rupture contributes to
-  the hazard only if its top edge reaches within this depth (km);
-  deeper (buried) ruptures are skipped. Default: 0.01.
+- ``surface_rupture_depth_tolerance_km``: a rupture is at the surface
+  if its top edge reaches within this depth (km). The floating sources
+  use it to select the positions that carry the hazard (see above), not
+  to reduce the rate; the buried ruptures of the other sources are
+  skipped. Default: 0.01.
 
 The standard statistics parameters work as in the classical
 calculator: ``mean``, ``std``, ``max``, ``quantile_hazard_curves``,
@@ -105,7 +139,7 @@ followed by a TOML block of parameters, e.g.::
 
     <logicTreeBranch branchID="B2_PRIMARY_SURF_DISPL">
       <uncertaintyModel>
-        [Youngs2003PrimaryFD]
+        [YoungsEtAl2003PrimaryFD]
         style = "normal"
         norm_disp_type = "AD"
       </uncertaintyModel>
@@ -119,7 +153,13 @@ The PFD logic tree is also *source-oriented*: a
 branch set can carry the attributes ``applyToSources`` (a
 space-separated list of source IDs) and ``applyToStyle`` (normal,
 reverse or strike-slip), so that different model combinations can be
-applied to different sources or faulting styles. The total number of
+applied to different sources or faulting styles. As in the source model
+logic tree, ``applyToSources`` names sources of the source models, and a
+source that does not exist is an error. By the colon convention of the
+engine, sources with IDs ``fault:17`` and ``fault:18`` are fragments of
+the source ``fault``, which is the name to use; the blocks of a split
+multi-fault source belong to the source as well.
+The total number of
 realizations of a displacement calculation is the product of the
 number of source model realizations and the number of paths of the
 PFD logic tree.
@@ -159,7 +199,7 @@ and the PFD logic tree selects one model per slot::
       <logicTreeBranchSet branchSetID="bs_1" uncertaintyType="fdhaPrimarySRModel">
         <logicTreeBranch branchID="B1">
           <uncertaintyModel>
-            [Youngs2003PrimarySR]
+            [YoungsEtAl2003PrimarySR]
             style = "all"
           </uncertaintyModel>
           <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -169,7 +209,7 @@ and the PFD logic tree selects one model per slot::
                           applyToBranches="B1">
         <logicTreeBranch branchID="B2">
           <uncertaintyModel>
-            [Youngs2003PrimaryFD]
+            [YoungsEtAl2003PrimaryFD]
             style = "normal"
             norm_disp_type = "AD"
           </uncertaintyModel>
@@ -180,7 +220,7 @@ and the PFD logic tree selects one model per slot::
                           applyToBranches="B2">
         <logicTreeBranch branchID="B3">
           <uncertaintyModel>
-            [Youngs2003SecondarySR]
+            [YoungsEtAl2003SecondarySR]
             version = 3
             style = "all"
           </uncertaintyModel>
@@ -191,7 +231,7 @@ and the PFD logic tree selects one model per slot::
                           applyToBranches="B3">
         <logicTreeBranch branchID="B4">
           <uncertaintyModel>
-            [Youngs2003SecondaryFD]
+            [YoungsEtAl2003SecondaryFD]
             style = "normal"
           </uncertaintyModel>
           <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -232,32 +272,45 @@ measure levels:
   each probability of exceedence; the export key is ``hmaps``
 - per-source rates: the mean annual rate contributed by each source,
   as ``mean_rates_by_src`` (the export key is ``mean_rates_by_src``),
-  useful to see which fault drives the hazard at a site
+  useful to see which fault drives the hazard at a site; as in the
+  classical calculator, the fragments of a source (``fault:17``,
+  ``fault:18``) are added together under its name (``fault``)
 - source information: ``source_info`` and ``source_data`` tables with
   the number of contexts, ruptures and the computation time per
   source
 
-The rates are annual rates of exceedence: with
-``investigation_time = 1.0`` they can be used directly; with a
-different investigation time the engine divides by it, as in the
-classical calculator.
+As in the classical calculator, the hazard curves are probabilities of
+exceedence in the investigation time, :math:`1 - \exp(-\lambda\,T)`
+with :math:`\lambda` the annual rate and :math:`T` the
+``investigation_time``, and the hazard maps refer to the ``poes`` in
+that time (or to the ``return_periods``). With
+``investigation_time = 1.0`` the curves are close to the annual rates
+where these are small. ``mean_rates_by_src`` always contains annual
+rates.
 
 Caveats
 --------
 
-- only ruptures that break (almost) the surface contribute to the
-  hazard: ruptures with a top edge deeper than
-  ``surface_rupture_depth_tolerance_km`` are ignored, so the
-  calculator is meant for active, shallow faulting sources
+- only sources that reach (almost) the surface contribute to the
+  hazard: a source with no rupture having the top edge within
+  ``surface_rupture_depth_tolerance_km`` is blind and is ignored, so
+  the calculator is meant for active, shallow faulting sources
+- groups of mutually exclusive sources or ruptures
+  (``src_interdep="mutex"`` or ``rup_interdep="mutex"``) and clusters of
+  sources (``cluster="true"``) are not supported and are rejected
+- the probability of surface rupture is the business of the primary
+  surface-rupture model alone: do not correct the magnitude-frequency
+  distribution of a floating source for the buried float positions,
+  the engine already assigns their rate to the positions at the surface
 - the displacement models are empirical regressions calibrated on
   specific datasets and faulting styles (see the tables below); a
   model should be applied only to sources with a compatible
   faulting style
 - aggregate-definition primary displacement models (e.g.
-  ``Lavrentiadis2023PrimaryFD_aggregate``) already include the
+  ``LavrentiadisAbrahamson2023PrimaryFDAggregate``) already include the
   distributed contribution in the principal term, so the distributed
   bucket is not added on top of them
-- some models (e.g. ``Chiou2025PrimaryFD``) require the fault trace
+- some models (e.g. ``ChiouEtAl2025PrimaryFD``) require the fault trace
   to be smoothed with an expensive reference-line algorithm (ECS);
   the engine builds the smoothed line only if at least one model in
   the logic tree declares it, and uses the raw fault segments
@@ -280,6 +333,18 @@ displacement including distributed faulting, and *distributed* is
 the off-trace displacement. For class-level implementation details
 and parameters, see the :ref:`PFD model API reference <openquake-pfd-api>`.
 
+The class names follow the naming of the GSIMs: ``<Surname><Year>`` for
+one author, ``<Surname1><Surname2><Year>`` for two authors and
+``<FirstSurname>EtAl<Year>`` for three or more, followed by the
+component (``PrimarySR``, ``PrimaryFD``, ``SecondarySR`` or
+``SecondaryFD``). The names used in earlier versions (for instance
+``Youngs2003PrimarySR``, ``WC1993PrimarySR``,
+``Lavrentiadis2023PrimaryFD_aggregate``) are still accepted, with a
+deprecation warning, during a transition period: they will be removed in a
+future version, so new inputs should use the new names only.
+``Petersen2011SecondarySR_default`` is replaced by
+``PetersenEtAl2011SecondarySR``, whose default ``version`` is the same.
+
 fdhaPrimarySRModel
 ******************
 
@@ -293,11 +358,11 @@ Models of the probability of principal surface rupture P(SR | M).
      - Reference
      - Faulting style
      - Notes
-   * - ``WC1993PrimarySR``
+   * - ``WellsCoppersmith1993PrimarySR``
      - Wells & Coppersmith (1993), SRL 64(1), 54
      - all
      - magnitude-only logistic model
-   * - ``Youngs2003PrimarySR``
+   * - ``YoungsEtAl2003PrimarySR``
      - Youngs et al. (2003), Earthq. Spectra 19(1)
      - ``style = "normal"`` or ``"all"``
      - normal-faulting subset or worldwide dataset
@@ -305,30 +370,29 @@ Models of the probability of principal surface rupture P(SR | M).
      - Moss & Ross (2011), BSSA 101(4)
      - reverse
      - 
-   * - ``Moss2013PrimarySR``
+   * - ``MossEtAl2013PrimarySR``
      - Moss et al. (2013), SRL 84(3)
      - all
      - depends on the site vs30
-   * - ``Takao2013PrimarySR``
+   * - ``TakaoEtAl2013PrimarySR``
      - Takao et al. (2013), JJAEE 9(2)
      - reverse, strike-slip
      - calibrated on Japanese earthquakes
-   * - ``Pizza2023PrimarySR``
+   * - ``PizzaEtAl2023PrimarySR``
      - Pizza et al. (2023), BSSA 113(5)
      - all
      - coefficients per faulting style
-   * - ``Yang2021PrimarySR``
+   * - ``YangEtAl2021PrimarySR``
      - Yang et al. (2021)
      - reverse
      - Australian stable continental region, 4 <= Mw <= 6.6
-   * - ``Mammarella2024PrimarySR``
-     - Mammarella et al. (2024)
-     - all (from the rake)
-     - uses the seismogenic thickness and a magnitude-scaling relation
    * - ``MammarellaEtAl2024PrimarySR``
      - Mammarella et al. (2024)
-     - all
-     - alias of ``Mammarella2024PrimarySR``
+     - all (from the rake)
+     - evaluated with the dip and the lower seismogenic depth of each
+       source, and a magnitude-scaling relation; ``dip_mu``,
+       ``seismothickness`` or ``Zs_mu`` in the branch override the
+       sources (with a warning)
    * - ``FixedPrimarySR``
      - n/a
      - all
@@ -348,7 +412,7 @@ threshold P(D > d | SR, M, x/L).
      - Reference
      - Faulting style
      - Notes
-   * - ``Youngs2003PrimaryFD``
+   * - ``YoungsEtAl2003PrimaryFD``
      - Youngs et al. (2003), Earthq. Spectra 19(1)
      - normal
      - vertical component; parameter ``norm_disp_type`` = AD or MD
@@ -356,35 +420,35 @@ threshold P(D > d | SR, M, x/L).
      - Moss & Ross (2011), BSSA 101(4)
      - reverse
      - principal
-   * - ``Takao2013PrimaryFD``
+   * - ``TakaoEtAl2013PrimaryFD``
      - Takao et al. (2013), JJAEE 9(2)
      - reverse, strike-slip
      - principal; lognormal, parameter ``n_sigma``
-   * - ``Petersen2011PrimaryFD``
+   * - ``PetersenEtAl2011PrimaryFD``
      - Petersen et al. (2011), BSSA 101(2)
      - strike-slip
      - principal, lateral component
-   * - ``Moss2022PrimaryFD``
+   * - ``MossEtAl2022PrimaryFD``
      - Moss et al. (2022)
      - reverse
      - principal; AD or MD scaling
-   * - ``Moss2024PrimaryFD``
+   * - ``MossEtAl2024PrimaryFD``
      - Moss et al. (2024)
      - reverse
      - principal; parameter ``source`` (e.g. GIRS)
-   * - ``Lavrentiadis2023PrimaryFD_principal``
+   * - ``LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal``
      - Lavrentiadis & Abrahamson (2023), Earthq. Spectra 41(4)
      - normal, reverse, strike-slip
      - sum-of-principal
-   * - ``Lavrentiadis2023PrimaryFD_aggregate``
+   * - ``LavrentiadisAbrahamson2023PrimaryFDAggregate``
      - Lavrentiadis & Abrahamson (2023), Earthq. Spectra 41(4)
      - normal, reverse, strike-slip
      - aggregate: includes the distributed contribution
-   * - ``Kuehn2024PrimaryFD``
+   * - ``KuehnEtAl2024PrimaryFD``
      - Kuehn et al. (2024)
      - normal, reverse, strike-slip
      - aggregate; optional epistemic sampling
-   * - ``Chiou2025PrimaryFD``
+   * - ``ChiouEtAl2025PrimaryFD``
      - Chiou et al. (2025)
      - strike-slip
      - sum-of-principal; requires the smoothed (ECS) reference line
@@ -403,23 +467,19 @@ distributed displacement greater than zero) P(D > 0 | M, r).
      - Reference
      - Faulting style
      - Notes
-   * - ``Youngs2003SecondarySR``
+   * - ``YoungsEtAl2003SecondarySR``
      - Youngs et al. (2003), Earthq. Spectra 19(1)
      - all
      - parameter ``version``
-   * - ``Petersen2011SecondarySR``
+   * - ``PetersenEtAl2011SecondarySR``
      - Petersen et al. (2011), BSSA 101(2)
      - strike-slip
      - parameter ``pixel_size`` (m)
-   * - ``Petersen2011SecondarySR_default``
-     - Petersen et al. (2011), BSSA 101(2)
-     - strike-slip
-     - default pixel size
-   * - ``Takao2013SecondarySR``
+   * - ``TakaoEtAl2013SecondarySR``
      - Takao et al. (2013), JJAEE 9(2)
      - reverse, strike-slip
      - 
-   * - ``Takao2014SecondarySR``
+   * - ``TakaoEtAl2014SecondarySR``
      - Takao et al. (2014)
      - reverse, strike-slip
      - 
@@ -427,18 +487,18 @@ distributed displacement greater than zero) P(D > 0 | M, r).
      - Ferrario & Livio (2021)
      - normal
      - 
-   * - ``Rodriguez2023SecondarySR``
+   * - ``RodriguezPadillaOskin2023SecondarySR``
      - Rodriguez Padilla & Oskin (2023)
      - strike-slip
      - 
-   * - ``Moss2022SecondarySR``
+   * - ``MossEtAl2022SecondarySR``
      - Moss et al. (2022)
      - reverse
      - parameter ``method``
-   * - ``Visini2025SecondarySR``
+   * - ``VisiniEtAl2025SecondarySR``
      - Visini et al. (2025)
      - normal, reverse
-     - combined A/B/C pipeline with ``Visini2025SecondaryFD``
+     - combined A/B/C pipeline with ``VisiniEtAl2025SecondaryFD``
    * - ``FixedSecondarySR``
      - n/a
      - all
@@ -458,26 +518,30 @@ threshold P(D > d | M, r).
      - Reference
      - Faulting style
      - Notes
-   * - ``Youngs2003SecondaryFD``
+   * - ``YoungsEtAl2003SecondaryFD``
      - Youngs et al. (2003), Earthq. Spectra 19(1)
      - normal
      - vertical component
-   * - ``Petersen2011SecondaryFD``
+   * - ``PetersenEtAl2011SecondaryFD``
      - Petersen et al. (2011), BSSA 101(2)
      - strike-slip
      - lateral component
-   * - ``Takao2013SecondaryFD``
+   * - ``TakaoEtAl2013SecondaryFD``
      - Takao et al. (2013), JJAEE 9(2)
      - reverse, strike-slip
      - 
-   * - ``Moss2022SecondaryFD``
+   * - ``TakaoEtAl2016SecondaryFD``
+     - Takao et al. (2016), JJAEE 16(2)
+     - reverse, strike-slip
+     - parameter ``case`` (1 or 2, Table 1)
+   * - ``MossEtAl2022SecondaryFD``
      - Moss et al. (2022)
      - reverse
      - parameter ``method``
-   * - ``Visini2025SecondaryFD``
+   * - ``VisiniEtAl2025SecondaryFD``
      - Visini et al. (2025)
      - normal, reverse
-     - combined A/B/C pipeline with ``Visini2025SecondarySR``
+     - combined A/B/C pipeline with ``VisiniEtAl2025SecondarySR``
 
 fdhaCalcRSigma
 **************

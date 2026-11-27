@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.pfd.primary_surf_displ.takao2013` implements the
-model of Takao et al. (2013) in :class:`Takao2013PrimaryFD`.
+model of Takao et al. (2013) in :class:`TakaoEtAl2013PrimaryFD`.
 """
 
 import numpy as np
@@ -28,7 +28,7 @@ from openquake.pfd.primary_surf_displ.base import BasePrimarySurfDispl
 
 
 
-class Takao2013PrimaryFD(BasePrimarySurfDispl):
+class TakaoEtAl2013PrimaryFD(BasePrimarySurfDispl):
     """Principal fault-displacement model of Takao et al. (2013).
 
     Model of principal (reverse-faulting) fault displacement as a function of
@@ -40,7 +40,7 @@ class Takao2013PrimaryFD(BasePrimarySurfDispl):
     The conditional AD/MD log10-normal distribution is integrated over a
     truncation range of ``mean ± n_sigma·sigma`` (in log10 space). The
     truncation level ``n_sigma`` defaults to 3 and may be overridden from the
-    logic tree via ``[Takao2013PrimaryFD] n_sigma = <value>``.
+    logic tree via ``[TakaoEtAl2013PrimaryFD] n_sigma = <value>``.
 
     Model contract: DISPLACEMENT_DEFINITION = "principal",
     DISPLACEMENT_COMPONENT = "net" -- Takao et al. (2013, JAEE 13) model
@@ -121,7 +121,7 @@ class Takao2013PrimaryFD(BasePrimarySurfDispl):
         # get_prob_D_MD are defined against (see the X_L_ratio docstring). Without
         # this fold the gamma mean would grow monotonically toward x/L = 1,
         # producing an unphysical along-strike ramp instead of a symmetric,
-        # centre-peaked displacement profile. Mirrors Youngs2003PrimaryFD.
+        # centre-peaked displacement profile. Mirrors YoungsEtAl2003PrimaryFD.
         r = X_L_ratio - np.floor(X_L_ratio)
         X_L_ratio = 0.5 - np.abs(r - 0.5)
 
@@ -150,18 +150,30 @@ class Takao2013PrimaryFD(BasePrimarySurfDispl):
         n_sites = len(X_L_ratio)
         prob_exceeding_d = np.zeros((n_displacements, n_sites))
 
+        # Trapezoid-rule weights: half weight at the two ends of the
+        # truncation range, renormalised. Full end weights over-weight the
+        # upper truncation edge, which controls the far tail (+2.0 % at
+        # P ~ 1e-5 for D/MD with n_sigma = 3).
+        if norm_disp_type == "AD":
+            weights = self.get_prob_avg_displacement(logspace_vals, mag)
+        else:
+            weights = self.get_prob_max_displacement(logspace_vals, mag)
+        weights = np.array(weights, dtype=float)
+        weights[[0, -1]] *= 0.5
+        weights /= weights.sum()
+
         # Vectorized integration over displacement values
-        for disp in logspace_vals:
+        for disp, weight in zip(logspace_vals, weights):
             D_NormD = d / disp  # Shape (n_displacements,)
             # Reshape for broadcasting: (n_displacements, 1) and (1, n_sites)
             D_NormD_reshaped = D_NormD[:, np.newaxis]  # Shape (n_displacements, 1)
             X_L_reshaped = X_L_ratio[np.newaxis, :]  # Shape (1, n_sites)
 
             if norm_disp_type == "AD":
-                p3 = self.get_prob_D_AD(D_NormD_reshaped, X_L_reshaped, srl) * self.get_prob_avg_displacement(disp, mag)
+                p3 = self.get_prob_D_AD(D_NormD_reshaped, X_L_reshaped, srl) * weight
                 prob_exceeding_d += p3
             elif norm_disp_type == "MD":
-                p3 = self.get_prob_D_MD(D_NormD_reshaped, X_L_reshaped, srl) * self.get_prob_max_displacement(disp, mag)
+                p3 = self.get_prob_D_MD(D_NormD_reshaped, X_L_reshaped, srl) * weight
                 prob_exceeding_d += p3
 
         return prob_exceeding_d
@@ -272,3 +284,8 @@ class Takao2013PrimaryFD(BasePrimarySurfDispl):
         normalization_factor = sum(prob)
 
         return prob_max_displacement / normalization_factor
+
+
+class Takao2013PrimaryFD(TakaoEtAl2013PrimaryFD):
+    """Deprecated name of :class:`TakaoEtAl2013PrimaryFD`."""
+    superseded_by = TakaoEtAl2013PrimaryFD

@@ -264,8 +264,21 @@ def to_surface(pairs):
 
     if len(surfaces) > 1:
         return geo.MultiSurface(surfaces)
-    else:
-        return surfaces[0]
+    # a single surface keeps the declared geometry, as when the source
+    # model gives it (see SourceConverter.convert_characteristicFaultSource)
+    [(tag, extra)] = pairs
+    surface = surfaces[0]
+    if tag == 'simpleFaultGeometry':
+        coords, usd, lsd, dip, spacing = extra
+        surface.original_dip = float(dip)
+        surface.original_zbot = float(lsd)
+        surface.original_tor = numpy.array([p[:2] for p in coords], float)
+    elif tag == 'complexFaultGeometry':
+        all_coords, spacing = extra
+        surface.original_zbot = float(max(p[2] for p in all_coords[-1]))
+        surface.original_tor = numpy.array(
+            [p[:2] for p in all_coords[0]], float)
+    return surface
 
 
 @parse_uncertainty.add('characteristicFaultGeometryAbsolute')

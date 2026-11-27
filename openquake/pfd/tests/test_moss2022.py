@@ -33,7 +33,7 @@ from scipy import stats
 # Primary FD
 # =====================================================================
 from openquake.pfd.primary_surf_displ.moss2022 import (
-    Moss2022PrimaryFD, SCALING, GAMMA_REGRESSION, GAMMA_GLOBAL,
+    MossEtAl2022PrimaryFD, SCALING, GAMMA_REGRESSION, GAMMA_GLOBAL,
 )
 
 
@@ -97,10 +97,12 @@ class TestMoss2022PrimaryFDProduction:
 
 
     def setup_method(self):
-        self.model = Moss2022PrimaryFD()
+        self.model = MossEtAl2022PrimaryFD()
 
     def test_md_regression_reference_values(self):
-        """Regression anchor for P(D > d | M, x/L), MD/regression branch."""
+        """Regression anchor for P(D > d | M, x/L), MD/regression branch.
+        Re-frozen when the D/MD truncation changed to the clipping of the
+        report's Appendix C code."""
         p = np.asarray(self.model.get_prob(
             d=[0.01, 0.1, 1.0],
             X_L_ratio=[0.0, 0.25, 0.5],
@@ -111,9 +113,9 @@ class TestMoss2022PrimaryFDProduction:
             sigma_type="recommended",
         ))
         expected = np.array([
-            [0.99943149, 0.99985097, 0.99995734],
-            [0.96597570, 0.98071276, 0.98820701],
-            [0.35814380, 0.39659952, 0.41930456],
+            [0.99944996, 0.99985588, 0.99995858],
+            [0.96708126, 0.98134827, 0.98854999],
+            [0.37830182, 0.41577370, 0.43556828],
         ])
         assert p.shape == (3, 3)
         assert np.allclose(p, expected, rtol=1e-7, atol=1e-10)
@@ -184,14 +186,14 @@ class TestMoss2022PrimaryFDProduction:
 # =====================================================================
 # Secondary SR
 # =====================================================================
-from openquake.pfd.secondary_surf_rup.moss2022 import Moss2022SecondarySR
+from openquake.pfd.secondary_surf_rup.moss2022 import MossEtAl2022SecondarySR
 
 
 class TestMoss2022SecondarySR:
     """Equation 5.5 / Table 5.3 analytical values."""
 
     def setup_method(self):
-        self.model = Moss2022SecondarySR()
+        self.model = MossEtAl2022SecondarySR()
 
     @pytest.mark.parametrize("r_km, expected_hw, expected_fw", [
         (0.0, 1.0, 1.0),
@@ -239,7 +241,7 @@ class TestMoss2022SecondarySR:
 # Secondary FD
 # =====================================================================
 from openquake.pfd.secondary_surf_displ.moss2022 import (
-    Moss2022SecondaryFD, ENVELOPE_50, ENVELOPE_85,
+    MossEtAl2022SecondaryFD, ENVELOPE_50, ENVELOPE_85,
 )
 
 
@@ -284,7 +286,7 @@ class TestMoss2022SecondaryFDBasic:
     """Smoke tests for the secondary FD model."""
 
     def setup_method(self):
-        self.model = Moss2022SecondaryFD()
+        self.model = MossEtAl2022SecondaryFD()
 
     def test_gamma_method_returns_valid_prob(self):
         d = np.array([0.001, 0.01, 0.1, 1.0])
@@ -479,7 +481,7 @@ class TestHazardCurveReference:
         ])
     def test_table_5_3_hw_pd0_reference_values(self, r_km, expected):
         """Eq. 5.5 / Table 5.3 hanging-wall P(d > 0) values."""
-        ssr = Moss2022SecondarySR()
+        ssr = MossEtAl2022SecondarySR()
         assert float(ssr.get_prob(r=r_km, rx=0.1)) == pytest.approx(
             expected, abs=1e-6)
 
@@ -491,7 +493,7 @@ class TestHazardCurveReference:
         ])
     def test_table_5_3_fw_pd0_reference_values(self, r_km, expected):
         """Eq. 5.5 / Table 5.3 footwall P(d > 0) values."""
-        ssr = Moss2022SecondarySR()
+        ssr = MossEtAl2022SecondarySR()
         assert float(ssr.get_prob(r=r_km, rx=-0.1)) == pytest.approx(
             expected, abs=1e-6)
 

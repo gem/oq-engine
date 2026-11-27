@@ -44,7 +44,10 @@ class PFDGMPE(DummyGMPE):
     contexts directly and never calls ``get_mean_and_stddevs``.
     """
     REQUIRES_DISTANCES = {'rtor', 'x_l', 'rx'}
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'dip', 'rake', 'length', 'ztor'}
+    # zbot (with dip) is the geometry of the fault for the primary
+    # surface-rupture models that depend on it (Mammarella et al. 2024)
+    REQUIRES_RUPTURE_PARAMETERS = {
+        'mag', 'dip', 'rake', 'length', 'ztor', 'zbot'}
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
 

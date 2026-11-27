@@ -57,9 +57,11 @@ def _iter_modules(pkgpath):
             yield modname
 
 
-def _get_available_class(slot):
+def _get_available_class(slot, superseded=True):
     """
     :param slot: one of ``SLOTS``
+    :param superseded: if False, leave out the deprecated names of renamed
+        models (classes with ``superseded_by``, see :mod:`openquake.pfd.meta`)
     :returns: dict class_name -> class, sorted by name
     """
     base, pkg = SLOTS[slot]
@@ -73,7 +75,8 @@ def _get_available_class(slot):
         for cls in vars(mod).values():
             if (inspect.isclass(cls) and issubclass(cls, base)
                     and cls is not base and not inspect.isabstract(cls)
-                    and cls.__module__.startswith('openquake.pfd.' + pkg)):
+                    and cls.__module__.startswith('openquake.pfd.' + pkg)
+                    and (superseded or not cls.superseded_by)):
                 classes[cls.__name__] = cls
     return {k: classes[k] for k in sorted(classes)}
 
@@ -94,12 +97,15 @@ def get_available_secondary_surf_displ():
     return _get_available_class('secondary_surf_displ')
 
 
-def get_available(slot):
+def get_available(slot, superseded=True):
     """
     :param slot: slot package name (see ``SLOTS``)
+    :param superseded: if False, leave out the deprecated names of renamed
+        models; they are included by default so that input files using
+        them still work
     :returns: dict class_name -> class
     """
     if slot not in SLOTS:
         raise KeyError('unknown PFD model slot %r; expected one of %s'
                        % (slot, ', '.join(sorted(SLOTS))))
-    return _get_available_class(slot)
+    return _get_available_class(slot, superseded)

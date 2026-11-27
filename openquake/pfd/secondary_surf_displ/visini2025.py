@@ -18,7 +18,7 @@
 """
 Module :mod:`openquake.pfd.secondary_surf_displ.visini2025` implements
 the distributed (secondary) fault displacement model of Visini et al. (2025)
-in :class:`Visini2025SecondaryFD`.
+in :class:`VisiniEtAl2025SecondaryFD`.
 
 References
 ----------
@@ -48,7 +48,7 @@ _SCALERS = {
 }
 
 
-class Visini2025SecondaryFD(BaseSecondarySurfDispl):
+class VisiniEtAl2025SecondaryFD(BaseSecondarySurfDispl):
     """
     Distributed (secondary) displacement exceedance model (Visini et al., 2025).
 
@@ -217,7 +217,7 @@ class Visini2025SecondaryFD(BaseSecondarySurfDispl):
             if xlr_min < 0.0 or xlr_max > 1.0:
                 n_invalid = int(np.sum((xlr_b < 0.0) | (xlr_b > 1.0)))
                 warnings.warn(
-                    f"Visini2025SecondaryFD.get_prob: X_L_ratio has {n_invalid} values outside [0, 1]. "
+                    f"VisiniEtAl2025SecondaryFD.get_prob: X_L_ratio has {n_invalid} values outside [0, 1]. "
                     f"Range: [{xlr_min:.6f}, {xlr_max:.6f}]. "
                     f"This indicates upstream calculation error in rupture_distance.py. "
                     f"Clamping to [0, 1] to prevent NaN.",
@@ -400,7 +400,7 @@ class Visini2025SecondaryFD(BaseSecondarySurfDispl):
             # DIAGNOSTIC: Check for NaN r (could happen if L_km is NaN)
             if np.isnan(r):
                 warnings.warn(
-                    f"Visini2025SecondaryFD: r is NaN! L_km={L_km}, distance={distance}. "
+                    f"VisiniEtAl2025SecondaryFD: r is NaN! L_km={L_km}, distance={distance}. "
                     f"Check scaling relation {model} for this magnitude.",
                     RuntimeWarning
                 )
@@ -421,7 +421,7 @@ class Visini2025SecondaryFD(BaseSecondarySurfDispl):
         # DIAGNOSTIC: Check for invalid norm_pos values and warn (not silently clamp)
         if norm_pos < 0.0 or norm_pos > 1.0:
             warnings.warn(
-                f"Visini2025SecondaryFD: norm_pos={norm_pos:.6f} is outside [0, 1]. "
+                f"VisiniEtAl2025SecondaryFD: norm_pos={norm_pos:.6f} is outside [0, 1]. "
                 f"This indicates upstream X_L_ratio computation is incorrect. "
                 f"Check rupture_distance.py calculate_x_l_ratios(). "
                 f"Parameters: mag={mag}, style={style}, distance_km={distance:.4f}, r={r:.6f}. "
@@ -464,3 +464,8 @@ def _get_L_km(sr, mag, style):
     else:
         L_km = None
     return L_km
+
+
+class Visini2025SecondaryFD(VisiniEtAl2025SecondaryFD):
+    """Deprecated name of :class:`VisiniEtAl2025SecondaryFD`."""
+    superseded_by = VisiniEtAl2025SecondaryFD

@@ -24,6 +24,8 @@ classes for :class:`BasePrimarySurfDispl <BasePrimarySurfDispl>` and
 
 import abc
 
+from openquake.pfd.meta import MetaPFDModel
+
 
 #: Recognised displacement *definitions* (which ruptures participate in the
 #: displacement a model predicts), after the taxonomy of Sarmiento et al.
@@ -56,7 +58,7 @@ DISPLACEMENT_DEFINITIONS = ("principal", "sum-of-principal", "aggregate",
 DISPLACEMENT_COMPONENTS = ("vertical", "lateral", "net")
 
 
-class BasePrimarySurfDispl(metaclass=abc.ABCMeta):
+class BasePrimarySurfDispl(metaclass=MetaPFDModel):
     """Abstract base class for principal (primary) fault-displacement models.
 
     Subclasses implement :meth:`get_prob`, returning the probability that the
@@ -74,8 +76,8 @@ class BasePrimarySurfDispl(metaclass=abc.ABCMeta):
     #: Displacement definition this model was calibrated for; one of
     #: :data:`DISPLACEMENT_DEFINITIONS`. STATIC -- the class choice IS the
     #: definition: papers that publish several definitions get one model
-    #: class per definition (e.g. ``Lavrentiadis2023PrimaryFD_aggregate`` [aggregate]
-    #: vs ``Lavrentiadis2023PrimaryFD_principal`` [sum-of-principal],
+    #: class per definition (e.g. ``LavrentiadisAbrahamson2023PrimaryFDAggregate`` [aggregate]
+    #: vs ``LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal`` [sum-of-principal],
     #: following the ``Petersen2011PrimaryFD_*`` variant idiom); no model
     #: parameter may change it. The default is ``"principal"`` (the classic
     #: single-strand principal-fault definition); every concrete model
@@ -111,7 +113,7 @@ class BasePrimarySurfDispl(metaclass=abc.ABCMeta):
         return "<%s>" % self.__class__.__name__
 
 
-class BaseSecondarySurfDispl(metaclass=abc.ABCMeta):
+class BaseSecondarySurfDispl(metaclass=MetaPFDModel):
     """Abstract base class for distributed (secondary) fault-displacement models.
 
     Subclasses implement :meth:`get_prob`, returning the probability that the

@@ -67,7 +67,7 @@ def _load_coefficients() -> np.recarray:
     return arr
 
 
-class Chiou2025PrimaryFD(BasePrimarySurfDispl):
+class ChiouEtAl2025PrimaryFD(BasePrimarySurfDispl):
     """
     Chiou et al. (2025) primary surface displacement exceedance model
     for sum-of-principal displacement on strike-slip faults.
@@ -154,13 +154,13 @@ class Chiou2025PrimaryFD(BasePrimarySurfDispl):
         # Validate style
         style_str = str(style).strip().lower()
         if style_str not in {"strike-slip", "strikeslip", "ss"}:
-            raise ValueError("Chiou2025PrimaryFD only supports style='strike-slip'.")
+            raise ValueError("ChiouEtAl2025PrimaryFD only supports style='strike-slip'.")
 
         # Magnitude check
         m = float(mag)
         if not (6.0 < m < 8.3):
             _LOGGER.warning(
-                "Chiou2025PrimaryFD: magnitude %.3f is outside recommended range (6.0, 8.3)",
+                "ChiouEtAl2025PrimaryFD: magnitude %.3f is outside recommended range (6.0, 8.3)",
                 m,
             )
 
@@ -231,4 +231,6 @@ class Chiou2025PrimaryFD(BasePrimarySurfDispl):
         return prob_exceed.squeeze()
 
 
-
+class Chiou2025PrimaryFD(ChiouEtAl2025PrimaryFD):
+    """Deprecated name of :class:`ChiouEtAl2025PrimaryFD`."""
+    superseded_by = ChiouEtAl2025PrimaryFD

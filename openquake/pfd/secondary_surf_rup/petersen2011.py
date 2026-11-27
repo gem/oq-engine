@@ -25,7 +25,7 @@ from openquake.pfd.params import check_choice, check_positive, check_style
 from openquake.pfd.secondary_surf_rup.base import BaseSecondarySurfRup
 
 
-class Petersen2011SecondarySR(BaseSecondarySurfRup):
+class PetersenEtAl2011SecondarySR(BaseSecondarySurfRup):
     """
     Implementation of the Petersen et al. (2011) model for strike-slip faults
     with different pixel sizes
@@ -188,10 +188,19 @@ class Petersen2011SecondarySR(BaseSecondarySurfRup):
             return P_rupture
 
 
-class Petersen2011SecondarySR_default(Petersen2011SecondarySR):
-    """Petersen et al. (2011) distributed-rupture model fixed to the 'default' variant."""
+class Petersen2011SecondarySR_default(PetersenEtAl2011SecondarySR):
+    """
+    Deprecated: use :class:`PetersenEtAl2011SecondarySR`, whose default
+    ``version`` is 'default'. This class fixes that variant.
+    """
+    superseded_by = PetersenEtAl2011SecondarySR
 
     def get_prob(self, r, pixel_size=25, version="default", cell_size=None):
         """Return distributed surface-rupture probability using the 'default' variant."""
         return super().get_prob(r=r, pixel_size=pixel_size,
                                 cell_size=cell_size, version="default")
+
+
+class Petersen2011SecondarySR(PetersenEtAl2011SecondarySR):
+    """Deprecated name of :class:`PetersenEtAl2011SecondarySR`."""
+    superseded_by = PetersenEtAl2011SecondarySR

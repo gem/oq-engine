@@ -25,7 +25,7 @@ Tests the x/L folding symmetry in Youngs2003 model.
 import numpy as np
 import math
 
-from openquake.pfd.primary_surf_displ.youngs2003 import Youngs2003PrimaryFD
+from openquake.pfd.primary_surf_displ.youngs2003 import YoungsEtAl2003PrimaryFD
 
 
 
@@ -40,7 +40,7 @@ def _fold(model, x):
 
 
 def test_folding_invariant_under_x_to_1_minus_x():
-    model = Youngs2003PrimaryFD()
+    model = YoungsEtAl2003PrimaryFD()
     # Pick several values; folding should make x and 1-x identical
     for x in [0.0, 0.1, 0.25, 0.49]:
         p1 = _fold(model, x)
@@ -50,7 +50,7 @@ def test_folding_invariant_under_x_to_1_minus_x():
 
 
 def test_folding_handles_1_plus_eps_and_minus_eps():
-    model = Youngs2003PrimaryFD()
+    model = YoungsEtAl2003PrimaryFD()
     eps = 1e-15
     p1 = _fold(model, 1.0 + eps)
     p2 = _fold(model, -eps)
@@ -62,7 +62,7 @@ def test_folding_handles_1_plus_eps_and_minus_eps():
 
 
 def test_values_at_boundaries_ad_and_md():
-    model = Youngs2003PrimaryFD()
+    model = YoungsEtAl2003PrimaryFD()
     d = np.array([0.01])
     mag = 6.5
     for x in [0.0, 0.5]:

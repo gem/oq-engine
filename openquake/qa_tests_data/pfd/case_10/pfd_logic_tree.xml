@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt_pfd_case_10">
+    <logicTreeBranchSet branchSetID="bs_psr" uncertaintyType="fdhaPrimarySRModel">
+      <logicTreeBranch branchID="PSR">
+        <uncertaintyModel>
+          [MammarellaEtAl2024PrimarySR]
+          MSR = 0
+          HDD_str = "AGG_N"
+          style = "normal"
+          dip_sigma = 5.0
+          t_d = 2.0
+          Zs_sigma = 2.0
+          t_z = 2.0
+        </uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="bs_pfd" uncertaintyType="fdhaPrimaryFDModel" applyToBranches="PSR">
+      <logicTreeBranch branchID="PFD">
+        <uncertaintyModel>
+          [YoungsEtAl2003PrimaryFD]
+          style = "normal"
+          norm_disp_type = "AD"
+        </uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

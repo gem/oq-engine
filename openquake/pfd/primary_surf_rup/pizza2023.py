@@ -25,7 +25,7 @@ from openquake.pfd.params import check_style
 from openquake.pfd.primary_surf_rup.base import BasePrimarySurfRup
 
 
-class Pizza2023PrimarySR(BasePrimarySurfRup):
+class PizzaEtAl2023PrimarySR(BasePrimarySurfRup):
     """Principal surface-rupture probability model of Pizza et al. (2023).
 
     Logistic model of the probability of principal surface rupture as a
@@ -113,3 +113,8 @@ class Pizza2023PrimarySR(BasePrimarySurfRup):
         prob = np.exp(fx) / (1.0 + np.exp(fx))
 
         return prob.item() if prob.shape == () else prob
+
+
+class Pizza2023PrimarySR(PizzaEtAl2023PrimarySR):
+    """Deprecated name of :class:`PizzaEtAl2023PrimarySR`."""
+    superseded_by = PizzaEtAl2023PrimarySR

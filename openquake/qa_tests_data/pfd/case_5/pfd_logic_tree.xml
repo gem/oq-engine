@@ -4,7 +4,7 @@
   <logicTreeBranchSet branchSetID="bs_1_primary_surf_rup" uncertaintyType="fdhaPrimarySRModel">
     <logicTreeBranch branchID="B1_PRIMARY_SURF_RUP">
       <uncertaintyModel>
-        [Youngs2003PrimarySR]
+        [YoungsEtAl2003PrimarySR]
         style = "all"
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -13,7 +13,7 @@
   <logicTreeBranchSet branchSetID="bs_2_primary_surf_displ" uncertaintyType="fdhaPrimaryFDModel" applyToBranches="B1_PRIMARY_SURF_RUP">
     <logicTreeBranch branchID="B2_PRIMARY_SURF_DISPL">
       <uncertaintyModel>
-        [Kuehn2024PrimaryFD]
+        [KuehnEtAl2024PrimaryFD]
         style = "normal"
         epistemic_uncertainty = true
       </uncertaintyModel>

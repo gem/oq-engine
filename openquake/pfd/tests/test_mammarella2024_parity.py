@@ -20,7 +20,7 @@
 """
 Unit tests: Mammarella2024 analytical parity
 
-Analytical parity tests for Mammarella2024PrimarySR.
+Analytical parity tests for MammarellaEtAl2024PrimarySR.
 
 Purpose
 -------
@@ -39,7 +39,7 @@ import pytest
 
 
 from openquake.pfd.primary_surf_rup.mammarella2024 import (
-    Mammarella2024PrimarySR,
+    MammarellaEtAl2024PrimarySR,
     TAB1,
     TAB2,
 )
@@ -182,7 +182,7 @@ def cpsr_reference(
 )
 
 def test_parity_against_cpsr_like(Mw, MSR, style, HDD):
-    model = Mammarella2024PrimarySR()
+    model = MammarellaEtAl2024PrimarySR()
     # Common parameters similar to authors' typical ranges
     params = dict(
         dip_mu=45.0,
@@ -230,7 +230,7 @@ def test_width_model_instance_matches_msr(msr, cls_name, style):
     the TAB1/MSR width rows exactly (consumers take scalerel instances,
     resolved via mag_scale_rel, instead of integer MSR codes)."""
 
-    model = Mammarella2024PrimarySR()
+    model = MammarellaEtAl2024PrimarySR()
     params = dict(
         HDD_str="AGG_R",
         dip_mu=45.0,

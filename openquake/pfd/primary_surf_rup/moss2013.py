@@ -25,7 +25,7 @@ from openquake.pfd.params import check_style
 from openquake.pfd.primary_surf_rup.base import BasePrimarySurfRup
 
 
-class Moss2013PrimarySR(BasePrimarySurfRup):
+class MossEtAl2013PrimarySR(BasePrimarySurfRup):
     """Principal surface-rupture probability model of Moss et al. (2013).
 
     Logistic model of the probability of principal surface rupture as a
@@ -92,7 +92,7 @@ class Moss2013PrimarySR(BasePrimarySurfRup):
 
         :example:
             # Example usage
-            model = Moss2013PrimarySR()
+            model = MossEtAl2013PrimarySR()
             probability = model.get_prob(mag=7.5, style="reverse", vs30=500)
             print(f"Probability of surface rupture: {probability}")
         """
@@ -113,7 +113,7 @@ class Moss2013PrimarySR(BasePrimarySurfRup):
             )
         if vs30 is None:
             raise ValueError(
-                "Moss2013PrimarySR requires vs30, either from the site "
+                "MossEtAl2013PrimarySR requires vs30, either from the site "
                 "collection or pinned in the logic-tree branch")
 
         m = np.asarray(mag, dtype=float)
@@ -132,3 +132,8 @@ class Moss2013PrimarySR(BasePrimarySurfRup):
                 a, b = 12.2908, 1.9520
                 prob = 1.0 / (1.0 + np.exp(a - b * m))
         return prob.item() if prob.shape == () else prob
+
+
+class Moss2013PrimarySR(MossEtAl2013PrimarySR):
+    """Deprecated name of :class:`MossEtAl2013PrimarySR`."""
+    superseded_by = MossEtAl2013PrimarySR

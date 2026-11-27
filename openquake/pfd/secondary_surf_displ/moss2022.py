@@ -50,7 +50,7 @@ ENVELOPE_85 = {
 }
 
 
-class Moss2022SecondaryFD(BaseSecondarySurfDispl):
+class MossEtAl2022SecondaryFD(BaseSecondarySurfDispl):
     """
     Distributed (secondary) displacement exceedance model for reverse faults.
 
@@ -129,7 +129,7 @@ class Moss2022SecondaryFD(BaseSecondarySurfDispl):
         if kwargs:
             unexpected = ", ".join(sorted(kwargs))
             raise TypeError(
-                f"Moss2022SecondaryFD.get_prob() got unexpected keyword arguments: {unexpected}"
+                f"MossEtAl2022SecondaryFD.get_prob() got unexpected keyword arguments: {unexpected}"
             )
 
         ver = version.upper()
@@ -243,3 +243,8 @@ class Moss2022SecondaryFD(BaseSecondarySurfDispl):
         prob = 1.0 - stats.norm.cdf(
             (required_log_md - mu) / sigma)
         return np.clip(prob, 0.0, 1.0).squeeze()
+
+
+class Moss2022SecondaryFD(MossEtAl2022SecondaryFD):
+    """Deprecated name of :class:`MossEtAl2022SecondaryFD`."""
+    superseded_by = MossEtAl2022SecondaryFD

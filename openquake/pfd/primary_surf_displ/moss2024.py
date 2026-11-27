@@ -35,7 +35,7 @@ from scipy.interpolate import make_interp_spline
 from openquake.pfd.params import check_choice, check_style
 from openquake.pfd.primary_surf_displ.base import BasePrimarySurfDispl
 
-class Moss2024PrimaryFD(BasePrimarySurfDispl):
+class MossEtAl2024PrimaryFD(BasePrimarySurfDispl):
     """
     Model of Moss et al. (2024) for the probability of exceeding
     principal surface fault displacement thresholds [m] on reverse faults.
@@ -45,13 +45,13 @@ class Moss2024PrimaryFD(BasePrimarySurfDispl):
     GIRS-2022-05 Figures 4.3-4.4 gamma-parameter regressions instead. Both
     branches use the same implemented complete/all AD/MD magnitude-scaling
     coefficients from Moss et al. (2024) Table 3 / GIRS-2022-05 Table 4.4. Use
-    Moss2022PrimaryFD if you need ``gamma_mode='global'``, the incomplete MD
+    MossEtAl2022PrimaryFD if you need ``gamma_mode='global'``, the incomplete MD
     subset, or the ``sigma_type`` selector.
 
     Model contract: DISPLACEMENT_DEFINITION = "principal",
     DISPLACEMENT_COMPONENT = "vertical" -- same principal reverse-fault
     vertical-offset dataset and metric as the GIRS-2022-05 formulation (see
-    Moss2022PrimaryFD); Moss et al. (2024, Earthquake Spectra) Tables 2-3.
+    MossEtAl2022PrimaryFD); Moss et al. (2024, Earthquake Spectra) Tables 2-3.
     """
 
     DISPLACEMENT_DEFINITION = "principal"
@@ -257,3 +257,8 @@ class Moss2024PrimaryFD(BasePrimarySurfDispl):
         c1 = stats.gamma.cdf(1.0, a=alpha, scale=beta)
         cdf = np.where(y > 1, 1.0, cdf / c1)
         return 1.0 - cdf
+
+
+class Moss2024PrimaryFD(MossEtAl2024PrimaryFD):
+    """Deprecated name of :class:`MossEtAl2024PrimaryFD`."""
+    superseded_by = MossEtAl2024PrimaryFD

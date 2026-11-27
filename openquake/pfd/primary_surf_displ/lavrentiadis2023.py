@@ -22,9 +22,9 @@ the model of Lavrentiadis and Abrahamson (2023) in two classes, one per
 displacement definition (the class choice IS the definition -- unlike a mere
 shape/parameter selection, which is passed as a model parameter):
 
-- :class:`Lavrentiadis2023PrimaryFD_aggregate` - the AGGREGATE-definition variants
+- :class:`LavrentiadisAbrahamson2023PrimaryFDAggregate` - the AGGREGATE-definition variants
   (``output_type`` ``disp_agg_prime`` (default) or ``disp_agg_seg``);
-- :class:`Lavrentiadis2023PrimaryFD_principal` - the sum-of-principal
+- :class:`LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal` - the sum-of-principal
   variant (``disp_prnc_prime``, hard-pinned by the class).
 """
 
@@ -33,7 +33,7 @@ from scipy import stats as scipystats
 from openquake.pfd.params import check_bool, check_style
 from openquake.pfd.primary_surf_displ.base import BasePrimarySurfDispl
 
-class Lavrentiadis2023PrimaryFD_aggregate(BasePrimarySurfDispl):
+class LavrentiadisAbrahamson2023PrimaryFDAggregate(BasePrimarySurfDispl):
     """Aggregate fault-displacement model of Lavrentiadis and Abrahamson (2023).
 
     Model of aggregate fault displacement as a function of magnitude,
@@ -56,7 +56,7 @@ class Lavrentiadis2023PrimaryFD_aggregate(BasePrimarySurfDispl):
     ``disp_prnc_prime`` (principal-strand slip summed within the aperture,
     WITHOUT distributed ruptures -- a sum-of-principal definition), is a
     different physical quantity and lives in its own class,
-    :class:`Lavrentiadis2023PrimaryFD_principal`; requesting it here raises
+    :class:`LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal`; requesting it here raises
     ValueError (and is rejected at logic-tree validation time).
     As an aggregate model, this class runs single-bucket and forbids
     secondary-slot models.
@@ -75,7 +75,7 @@ class Lavrentiadis2023PrimaryFD_aggregate(BasePrimarySurfDispl):
             ``None`` defers to the call (legacy default:
             'disp_agg_prime'). The sum-of-principal 'disp_prnc_prime'
             metric is served by
-            :class:`Lavrentiadis2023PrimaryFD_principal` and rejected
+            :class:`LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal` and rejected
             here.
         :param include_zero_slip: optional flag pinned by the logic-tree
             branch; ``None`` defers to the call (legacy default: False).
@@ -94,11 +94,11 @@ class Lavrentiadis2023PrimaryFD_aggregate(BasePrimarySurfDispl):
         at construction (logic-tree pin) and at call time."""
         if output_type == "disp_prnc_prime":
             raise ValueError(
-                "Lavrentiadis2023PrimaryFD_aggregate is the AGGREGATE-definition "
+                "LavrentiadisAbrahamson2023PrimaryFDAggregate is the AGGREGATE-definition "
                 "model (disp_agg_prime / disp_agg_seg); the sum-of-"
                 "principal metric disp_prnc_prime is a different "
                 "displacement definition (Sarmiento et al. 2025, Table 1). "
-                "Select the Lavrentiadis2023PrimaryFD_principal model "
+                "Select the LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal model "
                 "class instead of passing output_type = disp_prnc_prime."
             )
 
@@ -120,7 +120,7 @@ class Lavrentiadis2023PrimaryFD_aggregate(BasePrimarySurfDispl):
             Displacement metric to evaluate: ``"disp_agg_prime"`` (default) or
             ``"disp_agg_seg"``. The sum-of-principal ``"disp_prnc_prime"``
             metric is served by
-            :class:`Lavrentiadis2023PrimaryFD_principal` and is rejected here.
+            :class:`LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal` and is rejected here.
         :param include_zero_slip:
             If ``True`` the probability accounts for zero slip and gap
             probabilities.
@@ -652,10 +652,10 @@ class Lavrentiadis2023PrimaryFD_aggregate(BasePrimarySurfDispl):
         return np.nanmean(np.where(s >= 0, s, np.nan) ** (10 / 3), axis=1)
 
 
-class Lavrentiadis2023PrimaryFD_principal(Lavrentiadis2023PrimaryFD_aggregate):
+class LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal(LavrentiadisAbrahamson2023PrimaryFDAggregate):
     """Sum-of-principal variant of Lavrentiadis and Abrahamson (2023).
 
-    Identical regression machinery as :class:`Lavrentiadis2023PrimaryFD_aggregate`,
+    Identical regression machinery as :class:`LavrentiadisAbrahamson2023PrimaryFDAggregate`,
     hard-pinned to the paper's ``disp_prnc_prime`` metric: the principal-
     strand slip summed within the measurement aperture, WITHOUT distributed
     ruptures. Following the Petersen2011PrimaryFD_* variant idiom, the class
@@ -676,7 +676,7 @@ class Lavrentiadis2023PrimaryFD_principal(Lavrentiadis2023PrimaryFD_aggregate):
 
     def __init__(self, style=None, output_type=None, include_zero_slip=None):
         """
-        Parameters as in :class:`Lavrentiadis2023PrimaryFD_aggregate`, except
+        Parameters as in :class:`LavrentiadisAbrahamson2023PrimaryFDAggregate`, except
         ``output_type``, which must be left unset -- the metric is fixed
         by the class choice (a logic-tree pin would otherwise be silently
         ignored).
@@ -688,11 +688,11 @@ class Lavrentiadis2023PrimaryFD_principal(Lavrentiadis2023PrimaryFD_aggregate):
     def _check_no_output_type(output_type):
         if output_type is not None:
             raise ValueError(
-                "Lavrentiadis2023PrimaryFD_principal evaluates the "
+                "LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal evaluates the "
                 "disp_prnc_prime (sum-of-principal) metric; output_type "
                 f"is fixed by the class choice (got '{output_type}'). "
                 "Remove the output_type parameter, or select "
-                "Lavrentiadis2023PrimaryFD_aggregate for the aggregate variants."
+                "LavrentiadisAbrahamson2023PrimaryFDAggregate for the aggregate variants."
             )
 
     def get_prob(self, d, X_L_ratio, mag, style=None,
@@ -700,7 +700,7 @@ class Lavrentiadis2023PrimaryFD_principal(Lavrentiadis2023PrimaryFD_aggregate):
         """
         Probability of exceeding sum-of-principal (``disp_prnc_prime``)
         displacement thresholds; parameters as in
-        :meth:`Lavrentiadis2023PrimaryFD_aggregate.get_prob`.
+        :meth:`LavrentiadisAbrahamson2023PrimaryFDAggregate.get_prob`.
 
         :param output_type:
             Must be left unset -- the metric is fixed by the class choice.
@@ -716,3 +716,13 @@ class Lavrentiadis2023PrimaryFD_principal(Lavrentiadis2023PrimaryFD_aggregate):
         return self._evaluate(
             d, X_L_ratio, mag, style=style, output_type="disp_prnc_prime",
             include_zero_slip=include_zero_slip)
+
+
+class Lavrentiadis2023PrimaryFD_aggregate(LavrentiadisAbrahamson2023PrimaryFDAggregate):
+    """Deprecated name of :class:`LavrentiadisAbrahamson2023PrimaryFDAggregate`."""
+    superseded_by = LavrentiadisAbrahamson2023PrimaryFDAggregate
+
+
+class Lavrentiadis2023PrimaryFD_principal(LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal):
+    """Deprecated name of :class:`LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal`."""
+    superseded_by = LavrentiadisAbrahamson2023PrimaryFDSumOfPrincipal

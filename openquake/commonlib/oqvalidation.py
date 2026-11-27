@@ -872,9 +872,11 @@ near_far_threshold_km:
   Default: 0.2
 
 surface_rupture_depth_tolerance_km:
-  PFD only: a rupture contributes surface-displacement hazard only if
-  its top edge reaches within this depth (km); deeper (buried) ruptures
-  are skipped.
+  PFD only: a rupture is at the surface if its top edge reaches within
+  this depth (km). For the floating sources (simple, complex and kite
+  faults) the positions at the surface carry the rate of all the
+  down-dip positions of their magnitude; for the other sources the
+  deeper (buried) ruptures are skipped.
   Example: *surface_rupture_depth_tolerance_km = 0.01*.
   Default: 0.01
 
@@ -1624,6 +1626,9 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('Missing pfd_logic_tree_file')
             path = os.path.join(self.base_path, fname)
             PFDLogicTree(path)  # validate the logic tree
+            if not self.investigation_time:
+                # the curves are probabilities in the investigation time
+                self.raise_invalid('missing investigation_time')
             # the kernel works per source and yields annual rates
             if 'use_rates' in given and not self.use_rates:
                 logging.warning(

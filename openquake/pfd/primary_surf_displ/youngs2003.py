@@ -31,7 +31,7 @@ from scipy.stats import gamma, norm, beta
 from openquake.pfd.params import check_choice, check_style
 from openquake.pfd.primary_surf_displ.base import BasePrimarySurfDispl
 
-class Youngs2003PrimaryFD(BasePrimarySurfDispl):
+class YoungsEtAl2003PrimaryFD(BasePrimarySurfDispl):
     """
     Model of Youngs et al. (2003) for the probability of exceeding
     principal surface fault displacement thresholds on normal faults.
@@ -86,7 +86,7 @@ class Youngs2003PrimaryFD(BasePrimarySurfDispl):
         :param n_sigma:
             Half-width of the ±σ ε-space integration truncation. Defaults to 6
             (improves accuracy over the historical ±3σ). Overridable from the
-            logic tree via ``[Youngs2003PrimaryFD] n_sigma = <value>``.
+            logic tree via ``[YoungsEtAl2003PrimaryFD] n_sigma = <value>``.
         :param scaling_model:
             Magnitude-displacement scaling relation used to convert magnitude
             into AD/MD inside the convolution. Only ``"WC1994"`` (the relation
@@ -283,3 +283,8 @@ class Youngs2003PrimaryFD(BasePrimarySurfDispl):
         a = np.exp(-0.705 + 1.138 * x_L_ratio)  # Shape (1, n_sites) or scalar
         b = np.exp(0.421 - 0.257 * x_L_ratio)   # Shape (1, n_sites) or scalar
         return beta.sf(D_MD, a, b)
+
+
+class Youngs2003PrimaryFD(YoungsEtAl2003PrimaryFD):
+    """Deprecated name of :class:`YoungsEtAl2003PrimaryFD`."""
+    superseded_by = YoungsEtAl2003PrimaryFD

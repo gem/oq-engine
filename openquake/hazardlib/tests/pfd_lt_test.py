@@ -77,16 +77,16 @@ def full_chain():
     """The minimal four-slot chain (one branch each)."""
     return (
         branchset("bs1", "fdhaPrimarySRModel", [
-            ("B1", toml_block("Youngs2003PrimarySR", style="all"), 1.0)]),
+            ("B1", toml_block("YoungsEtAl2003PrimarySR", style="all"), 1.0)]),
         branchset("bs2", "fdhaPrimaryFDModel", [
-            ("B2", toml_block("Youngs2003PrimaryFD", style="normal",
+            ("B2", toml_block("YoungsEtAl2003PrimaryFD", style="normal",
                        norm_disp_type="AD"), 1.0)],
             applyToBranches="B1"),
         branchset("bs3", "fdhaSecondarySRModel", [
-            ("B3", toml_block("Youngs2003SecondarySR", version=3, style="all"),
+            ("B3", toml_block("YoungsEtAl2003SecondarySR", version=3, style="all"),
              1.0)], applyToBranches="B2"),
         branchset("bs4", "fdhaSecondaryFDModel", [
-            ("B4", toml_block("Youngs2003SecondaryFD", style="normal"), 1.0)],
+            ("B4", toml_block("YoungsEtAl2003SecondaryFD", style="normal"), 1.0)],
             applyToBranches="B3"),
     )
 
@@ -111,15 +111,15 @@ def selections(tree, source_id, style):
 # parameter parsing
 # --------------------------------------------------------------------------
 def test_parse_plain_class_name():
-    assert parse_model("Youngs2003PrimarySR") == (
-        "Youngs2003PrimarySR", {})
+    assert parse_model("YoungsEtAl2003PrimarySR") == (
+        "YoungsEtAl2003PrimarySR", {})
 
 
 def test_parse_toml_block_types():
     cls, params = parse_model(toml_block(
-        "Moss2024PrimaryFD", version="MD", completeness="all",
+        "MossEtAl2024PrimaryFD", version="MD", completeness="all",
         pixel_size=50, fractions=[0.1, 0.9]))
-    assert cls == "Moss2024PrimaryFD"
+    assert cls == "MossEtAl2024PrimaryFD"
     assert params == {"version": "MD", "completeness": "all",
                       "pixel_size": 50, "fractions": [0.1, 0.9]}
 
@@ -155,7 +155,7 @@ def test_weights_must_sum_to_one(tmp_path):
     path = write(tmp_path, branchset(
         "bs1", "fdhaPrimarySRModel", [
             ("B1a", "MossRoss2011PrimarySR", 0.7),
-            ("B1b", "Takao2013PrimarySR", 0.2)]))
+            ("B1b", "TakaoEtAl2013PrimarySR", 0.2)]))
     with pytest.raises(LogicTreeError, match="weights sum"):
         PFDLogicTree(path)
 
@@ -166,7 +166,7 @@ def test_single_chain(tmp_path):
     assert weight == 1.0
     assert sorted(sel) == ["primary_surf_displ", "primary_surf_rup",
                            "secondary_surf_displ", "secondary_surf_rup"]
-    assert sel["primary_surf_rup"].class_name == "Youngs2003PrimarySR"
+    assert sel["primary_surf_rup"].class_name == "YoungsEtAl2003PrimarySR"
     assert sel["primary_surf_displ"].params == {
         "style": "normal", "norm_disp_type": "AD"}
     assert sel["secondary_surf_rup"].params == {
@@ -178,7 +178,7 @@ def test_two_branches_and_weights(tmp_path):
         tmp_path,
         branchset("bs1", "fdhaPrimarySRModel", [
             ("B1a", "MossRoss2011PrimarySR", 0.7),
-            ("B1b", "Takao2013PrimarySR", 0.3)]),
+            ("B1b", "TakaoEtAl2013PrimarySR", 0.3)]),
         branchset("bs2", "fdhaPrimaryFDModel", [
             ("B2", "MossRoss2011PrimaryFD", 1.0)],
             applyToBranches="B1a B1b"))
@@ -194,7 +194,7 @@ def test_get_num_paths(tmp_path):
         tmp_path,
         branchset("bs1", "fdhaPrimarySRModel", [
             ("B1a", "MossRoss2011PrimarySR", 0.7),
-            ("B1b", "Takao2013PrimarySR", 0.3)]),
+            ("B1b", "TakaoEtAl2013PrimarySR", 0.3)]),
         branchset("bs2", "fdhaPrimaryFDModel", [
             ("B2", "MossRoss2011PrimaryFD", 1.0)],
             applyToBranches="B1a B1b"))
@@ -216,7 +216,7 @@ def test_apply_to_branches_filter(tmp_path):
         tmp_path,
         branchset("bs1", "fdhaPrimarySRModel", [
             ("B1a", "MossRoss2011PrimarySR", 0.5),
-            ("B1b", "Takao2013PrimarySR", 0.5)]),
+            ("B1b", "TakaoEtAl2013PrimarySR", 0.5)]),
         # applies only under B1a: the B1b branch must not carry a FD selection
         branchset("bs2", "fdhaPrimaryFDModel", [
             ("B2", "MossRoss2011PrimaryFD", 1.0)], applyToBranches="B1a"))
@@ -228,7 +228,7 @@ def test_apply_to_branches_filter(tmp_path):
 
 def test_apply_to_style_filter(tmp_path):
     path = write(tmp_path, branchset(
-        "bs1", "fdhaPrimarySRModel", [("B1", "Moss2013PrimarySR", 1.0)],
+        "bs1", "fdhaPrimarySRModel", [("B1", "MossEtAl2013PrimarySR", 1.0)],
         applyToStyle="reverse"))
     tree = PFDLogicTree(path)
     assert selections(tree, "src1", "reverse")[0][1]
@@ -237,7 +237,7 @@ def test_apply_to_style_filter(tmp_path):
 
 def test_apply_to_sources_filter(tmp_path):
     path = write(tmp_path, branchset(
-        "bs1", "fdhaPrimarySRModel", [("B1", "Moss2013PrimarySR", 1.0)],
+        "bs1", "fdhaPrimarySRModel", [("B1", "MossEtAl2013PrimarySR", 1.0)],
         applyToSources="src1"))
     tree = PFDLogicTree(path)
     assert selections(tree, "src1", "normal")[0][1]
@@ -276,10 +276,10 @@ def test_h5_roundtrip(tmp_path):
     path = write(
         tmp_path,
         branchset("bs1", "fdhaPrimarySRModel", [
-            ("B1", toml_block("Youngs2003PrimarySR", style="all"), 1.0)],
+            ("B1", toml_block("YoungsEtAl2003PrimarySR", style="all"), 1.0)],
             applyToSources="src1", applyToStyle="reverse"),
         branchset("bs2", "fdhaPrimaryFDModel", [
-            ("B2", toml_block("Youngs2003PrimaryFD", style="normal",
+            ("B2", toml_block("YoungsEtAl2003PrimaryFD", style="normal",
                               norm_disp_type="AD"), 1.0)],
             applyToBranches="B1"),
         branchset("bs_sigma", "fdhaCalcRSigma", [
@@ -322,7 +322,7 @@ def test_branching_level_accepted(tmp_path):
 def test_sampling_counts(tmp_path):
     path = write(tmp_path, branchset("bs1", "fdhaPrimarySRModel", [
         ("B1a", "MossRoss2011PrimarySR", 0.7),
-        ("B1b", "Takao2013PrimarySR", 0.3)]))
+        ("B1b", "TakaoEtAl2013PrimarySR", 0.3)]))
     n = 2000
     rlzs = PFDLogicTree(path).sample(n, seed=42)
     assert len(rlzs) == n
@@ -334,7 +334,7 @@ def test_sampling_counts(tmp_path):
 def test_sampling_deterministic(tmp_path):
     path = write(tmp_path, branchset("bs1", "fdhaPrimarySRModel", [
         ("B1a", "MossRoss2011PrimarySR", 0.7),
-        ("B1b", "Takao2013PrimarySR", 0.3)]))
+        ("B1b", "TakaoEtAl2013PrimarySR", 0.3)]))
     tree = PFDLogicTree(path)
     a = [rlz.lt_path for rlz in tree.sample(50, seed=7)]
     b = [rlz.lt_path for rlz in tree.sample(50, seed=7)]
@@ -350,10 +350,10 @@ def test_sampling_respects_apply_to_branches(tmp_path, method):
         tmp_path,
         branchset("bs1", "fdhaPrimarySRModel", [
             ("B1a", "MossRoss2011PrimarySR", 0.7),
-            ("B1b", "Takao2013PrimarySR", 0.3)]),
+            ("B1b", "TakaoEtAl2013PrimarySR", 0.3)]),
         branchset("bs2", "fdhaPrimaryFDModel", [
             ("B2a", "MossRoss2011PrimaryFD", 0.25),
-            ("B2b", "Youngs2003PrimaryFD", 0.75)], applyToBranches="B1a"))
+            ("B2b", "YoungsEtAl2003PrimaryFD", 0.75)], applyToBranches="B1a"))
     tree = PFDLogicTree(path)
     n = 2000
     # Conditional sampling must walk only selected branches, without first
@@ -392,7 +392,7 @@ def test_sampling_respects_apply_to_branches(tmp_path, method):
 def test_sampling_h5_roundtrip(tmp_path):
     path = write(tmp_path, branchset("bs1", "fdhaPrimarySRModel", [
         ("B1a", "MossRoss2011PrimarySR", 0.7),
-        ("B1b", "Takao2013PrimarySR", 0.3)]))
+        ("B1b", "TakaoEtAl2013PrimarySR", 0.3)]))
     tree1 = PFDLogicTree(path, seed=5, num_samples=20,
                          sampling_method='late_weights')
     array, attrs = tree1.__toh5__()
@@ -402,3 +402,18 @@ def test_sampling_h5_roundtrip(tmp_path):
         5, 20, 'late_weights')
     assert ([rlz.lt_path for rlz in tree1.sample(20, tree1.seed)] ==
             [rlz.lt_path for rlz in tree2.sample(20, tree2.seed)])
+
+
+def test_apply_to_sources_logical_ids(tmp_path):
+    # applyToSources refers to the sources as the logic trees see them: the
+    # fragments "fault:17", "fault:18" of the source "fault" (colon
+    # convention), its copies in several files ("!<branch>"), its variants
+    # (";<n>") and the blocks of a split multi-fault source ("@<tag>")
+    path = write(tmp_path, branchset(
+        "bs1", "fdhaPrimarySRModel", [("B1", "MossEtAl2013PrimarySR", 1.0)],
+        applyToSources="fault"))
+    tree = PFDLogicTree(path)
+    for src_id in ("fault", "fault:17", "fault:17!b2", "fault;0", "fault@3"):
+        assert selections(tree, src_id, "normal")[0][1]
+    for src_id in ("fault2", "other:17"):
+        assert selections(tree, src_id, "normal")[0][1] == {}

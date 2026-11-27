@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.pfd.secondary_surf_displ.takao2013` implements the
-model of Takao et al. (2013) in :class:`Takao2013SecondaryFD`.
+model of Takao et al. (2013) in :class:`TakaoEtAl2013SecondaryFD`.
 
 Supported Fault Styles: Reverse and Strike-slip
 
@@ -36,7 +36,7 @@ from openquake.pfd.params import check_choice
 from openquake.pfd.primary_surf_displ.base import BaseSecondarySurfDispl
 
 
-class Takao2013SecondaryFD(BaseSecondarySurfDispl):
+class TakaoEtAl2013SecondaryFD(BaseSecondarySurfDispl):
     """Distributed fault-displacement model of Takao et al. (2013).
 
     The distributed displacement DD is normalized by the maximum (PMD) or
@@ -57,7 +57,7 @@ class Takao2013SecondaryFD(BaseSecondarySurfDispl):
 
     The PMD/PAD lognormal is integrated over ``mean ± n_sigma·sigma`` (log10
     space); ``n_sigma`` defaults to 3 and may be overridden from the logic
-    tree via ``[Takao2013SecondaryFD] n_sigma = <value>``.
+    tree via ``[TakaoEtAl2013SecondaryFD] n_sigma = <value>``.
 
     Model contract: DISPLACEMENT_DEFINITION = "distributed",
     DISPLACEMENT_COMPONENT = "net" -- distributed displacement normalised by
@@ -180,3 +180,8 @@ class Takao2013SecondaryFD(BaseSecondarySurfDispl):
 
         return gamma.sf(DD_norm[np.newaxis, :], self._GAMMA_SHAPE,
                         loc=0, scale=b[:, np.newaxis])
+
+
+class Takao2013SecondaryFD(TakaoEtAl2013SecondaryFD):
+    """Deprecated name of :class:`TakaoEtAl2013SecondaryFD`."""
+    superseded_by = TakaoEtAl2013SecondaryFD

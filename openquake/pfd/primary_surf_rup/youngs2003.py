@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.pfd.primary_surf_rup.youngs2003` implements
-the model of Youngs et al. (2003) in :class:`Youngs2003PrimarySR`
+the model of Youngs et al. (2003) in :class:`YoungsEtAl2003PrimarySR`
 """
 
 import numpy as np
@@ -72,7 +72,7 @@ _VERSION_ALIASES = {
 LEGACY_DEFAULT_VERSION = "WC93"
 
 
-class Youngs2003PrimarySR(BasePrimarySurfRup):
+class YoungsEtAl2003PrimarySR(BasePrimarySurfRup):
     """
     Youngs et al. (2003) principal surface-rupture probability model.
 
@@ -101,7 +101,7 @@ class Youngs2003PrimarySR(BasePrimarySurfRup):
     .. warning::
        ``version="WC93"`` reproduces
        :class:`~openquake.pfd.primary_surf_rup.wells_coppersmith1993.
-       WC1993PrimarySR` **exactly** - they are the same regression, so a
+       WellsCoppersmith1993PrimarySR` **exactly** - they are the same regression, so a
        branch set holding both carries one model under two names.
 
     .. note::
@@ -192,3 +192,8 @@ class Youngs2003PrimarySR(BasePrimarySurfRup):
         fx = a + b * np.asarray(mag, dtype=float)
         prob = np.exp(fx) / (1.0 + np.exp(fx))
         return prob.item() if prob.shape == () else prob
+
+
+class Youngs2003PrimarySR(YoungsEtAl2003PrimarySR):
+    """Deprecated name of :class:`YoungsEtAl2003PrimarySR`."""
+    superseded_by = YoungsEtAl2003PrimarySR

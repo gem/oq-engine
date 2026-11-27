@@ -32,7 +32,7 @@ from openquake.pfd.params import check_choice
 from openquake.pfd.primary_surf_displ.base import BasePrimarySurfDispl
 
 
-class Petersen2011PrimaryFD(BasePrimarySurfDispl):
+class PetersenEtAl2011PrimaryFD(BasePrimarySurfDispl):
     """
     Implements the Petersen et al. (2011) primary fault displacement model.
 
@@ -46,7 +46,7 @@ class Petersen2011PrimaryFD(BasePrimarySurfDispl):
     parameter ('quadratic' (default), 'bilinear' or 'elliptical') -- pin it
     on the logic-tree branch, e.g.::
 
-        [Petersen2011PrimaryFD]
+        [PetersenEtAl2011PrimaryFD]
         version = bilinear
 
     (all three variants share the same dataset and metric).
@@ -220,3 +220,8 @@ class Petersen2011PrimaryFD(BasePrimarySurfDispl):
                 f"'bilinear', 'elliptical', or 'quadratic'.")
         return 1.0 - norm.cdf(np.log(np.asarray(D_AD, dtype=float)),
                               loc=mu, scale=sd)
+
+
+class Petersen2011PrimaryFD(PetersenEtAl2011PrimaryFD):
+    """Deprecated name of :class:`PetersenEtAl2011PrimaryFD`."""
+    superseded_by = PetersenEtAl2011PrimaryFD
