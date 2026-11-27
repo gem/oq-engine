@@ -37,7 +37,7 @@ from openquake.baselib.general import gen_slices
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import npoints_between, geodetic_distance
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.backbone import configuration_key
+from openquake.hazardlib.gsim.backbone import BackboneKey
 
 
 def load_sigma_for_term(grp, term, imt_str, location, sig_action,
@@ -809,9 +809,11 @@ class GridAdjustedGMPE(GMPE):
         # GridAdjustedGMPEs with the same central_key differ only by
         # epsilons and path_cap, so ContextMaker.get_mean_stds computes
         # their backbone and central grid adjustments only once
-        backbone = configuration_key(self.gmpe)
-        self.central_key = ((type(self), digest, backbone)
-                            if backbone is not None else None)
+        backbone = BackboneKey.from_gsim(self.gmpe)
+        self.central_key = None
+        if backbone is not None:
+            self.central_key = BackboneKey.from_options(
+                type(self), {'gmpe': backbone, 'grid_digest': digest.hex()})
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
         self.epsilons = epsilons or {}
