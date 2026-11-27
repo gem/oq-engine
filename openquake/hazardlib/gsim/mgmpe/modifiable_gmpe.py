@@ -774,7 +774,7 @@ class ModifiableGMPE(GMPE):
                 and INDEPENDENT_SCALING.issuperset(self.params)):
             backbone = BackboneKey.from_gsim(self.gmpe)
             if backbone is not None:
-                return BackboneKey.from_options(type(self), {'gmpe': backbone})
+                return BackboneKey.from_options(type(self), {}, gmpe=backbone)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

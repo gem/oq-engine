@@ -17,20 +17,27 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """Shared computation for GSIM branches with additive mean shifts."""
-import struct
 from typing import NamedTuple
+
+import toml
+
+from openquake.hazardlib.gsim.base import fix_toml
 
 
 class BackboneKey(NamedTuple):
-    """A model and its frozen options, displayed as a model call."""
+    """A model and its serialized options, displayed as a model call."""
 
     model: type
-    options: tuple
+    options: str
+    gmpe: 'BackboneKey | None' = None
 
     @classmethod
-    def from_options(cls, model, options):
+    def from_options(cls, model, options, *, gmpe=None):
         """Build a key from a model class and a dictionary of options."""
-        return cls(model, _freeze_option(options))
+        # Use an array of pairs so that the order survives TOML encoding.
+        pairs = [[name, fix_toml(value, for_key=True)]
+                 for name, value in options.items()]
+        return cls(model, toml.dumps({'options': pairs}).strip(), gmpe)
 
     @classmethod
     def from_gsim(cls, gsim, excluded=()):
@@ -68,36 +75,11 @@ class BackboneKey(NamedTuple):
             return None
 
     def __repr__(self):
-        args = ', '.join(f'{name}={value!r}' for name, value in
-                         _thaw_option(self.options).items())
-        return f'{self.model.__name__}({args})'
-
-
-# Preserve type, value and order when taking a snapshot of model options.
-def _freeze_option(value):
-    kind = type(value)
-    if kind in (type(None), bool, int, str, bytes, BackboneKey):
-        return kind, value
-    if kind is float:
-        return kind, struct.pack('!d', value)
-    if kind is dict:
-        return kind, tuple((_freeze_option(key), _freeze_option(item))
-                           for key, item in value.items())
-    if kind in (list, tuple):
-        return kind, tuple(map(_freeze_option, value))
-    raise TypeError(kind)
-
-
-# Recover plain values for display without changing the stored key.
-def _thaw_option(frozen):
-    kind, value = frozen
-    if kind is float:
-        return struct.unpack('!d', value)[0]
-    if kind is dict:
-        return {_thaw_option(key): _thaw_option(item) for key, item in value}
-    if kind in (list, tuple):
-        return kind(map(_thaw_option, value))
-    return value
+        args = [f'{name}={value}' for name, value in
+                toml.loads(self.options)['options']]
+        if self.gmpe is not None:
+            args.insert(0, f'gmpe={self.gmpe!r}')
+        return f'{self.model.__name__}({", ".join(args)})'
 
 
 def branch_key(compute, *varying):

@@ -24,6 +24,7 @@ different kinds of :class:`ground shaking intensity models
 import os
 import sys
 import abc
+import math
 import pathlib
 import inspect
 import warnings
@@ -115,11 +116,40 @@ def warn_adapted(cls):
         warnings.warn(msg, AdaptedWarning)
 
 
-def fix_toml(v):
+# Check exact types before encoding an option as a Python literal.
+def _check_key_option(v):
+    kind = type(v)
+    if kind in (type(None), bool, int, str, bytes):
+        return
+    if kind is float and math.isfinite(v):
+        return
+    if kind in (list, tuple):
+        for value in v:
+            _check_key_option(value)
+    elif kind is dict:
+        for key, value in v.items():
+            _check_key_option(key)
+            _check_key_option(value)
+    else:
+        raise TypeError(f'Unsupported key option {kind.__name__}')
+
+
+def fix_toml(v, *, for_key=False):
     """
     The kwargs dictionary of a GSIM can contain Python objects convertible
     to TOML (arrays, CoeffsTables) and we implement the conversion here.
+
+    With ``for_key=True``, represent an option as a Python literal stored
+    in a TOML string. This preserves None, paths, order and built-in types.
+
+    >>> fix_toml(None, for_key=True)
+    'None'
+    >>> fix_toml('None', for_key=True)
+    "'None'"
     """
+    if for_key:
+        _check_key_option(v)
+        return repr(v)
     if isinstance(v, str) and pathlib.PurePath(v).is_absolute():
         return os.path.basename(v)
     if isinstance(v, (numpy.float32, numpy.float64)):

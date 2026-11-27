@@ -813,7 +813,7 @@ class GridAdjustedGMPE(GMPE):
         self.central_key = None
         if backbone is not None:
             self.central_key = BackboneKey.from_options(
-                type(self), {'gmpe': backbone, 'grid_digest': digest.hex()})
+                type(self), {'grid_digest': digest.hex()}, gmpe=backbone)
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
         self.epsilons = epsilons or {}
