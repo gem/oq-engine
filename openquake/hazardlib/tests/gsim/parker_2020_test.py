@@ -16,6 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import unittest
+import numpy
+
+from openquake.hazardlib.contexts import RuptureContext, get_mean_stds
+from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.parker_2020 import (
     ParkerEtAl2020SInter, ParkerEtAl2020SInterB,
     ParkerEtAl2020SSlab, ParkerEtAl2020SSlabB)
@@ -188,3 +193,21 @@ class ParkerEtAl2020SSlabBTestCase(BaseGSIMTestCase):
         self.check('PARKER20/ParkerEtAl2020SSlabJapanPhi_MEAN.csv',
                    max_discrep_percentage=0.1,
                    region='JP', saturation_region='JP_Phi')
+
+
+class ParkerEtAl2020SigmaMuTestCase(unittest.TestCase):
+    # the epistemic adjustment (sigma_mu) is defined for PGA and SA but
+    # not for PGV, so it must not change the mean of PGV
+    def test_pgv_not_shifted(self):
+        ctx = RuptureContext()
+        ctx.mag = 7.5
+        ctx.hypo_depth = 30.
+        ctx.rrup = numpy.array([20., 100.])
+        ctx.vs30 = numpy.array([400., 760.])
+        ctx.sids = numpy.arange(2)
+        imts = [PGA(), SA(1.0), PGV()]
+        for cls in (ParkerEtAl2020SInter, ParkerEtAl2020SSlab):
+            mean0 = get_mean_stds(cls(), ctx, imts)[0]
+            mean1 = get_mean_stds(cls(sigma_mu_epsilon=1.), ctx, imts)[0]
+            self.assertTrue((mean1[:2] > mean0[:2]).all())  # PGA, SA
+            numpy.testing.assert_allclose(mean1[2], mean0[2])  # PGV

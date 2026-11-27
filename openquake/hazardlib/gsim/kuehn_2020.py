@@ -500,7 +500,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False,
         brt_sea = np.full_like(ctx.vs30, theta_11)
         # Apply m9 basin term where appropriate now have
         # got (potentially inferred) z2pt5 for each site
-        if m9_basin_term and imt != PGV:
+        if m9_basin_term and imt.string != 'PGV':
             brt_sea = _apply_m9(
                 imt.period, brt_sea, z_values / METRES_PER_KM) # back to km
         if usgs_bs:
@@ -532,7 +532,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False,
         # For KuehnEtAl2020 in US 2023 NSHM java code either the M9 basin term
         # OR the GMM basin term is applied (i.e. it is not additive to GMM basin
         # term here as seen in the code - line 457 to 499 of KuehnEtAl_2020.java)
-        if m9_basin_term and imt != PGV:
+        if m9_basin_term and imt.string != 'PGV':
             assert region in ("CAS") # Only remaining z2pt5 region (SEA handled above)
             brt = _apply_m9(imt.period, brt, z_values / METRES_PER_KM)
 
