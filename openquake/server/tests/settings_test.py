@@ -16,9 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import pytest
+import mimetypes
 
-from openquake.server.settings import env_flag
+import pytest
+from django.core.exceptions import ImproperlyConfigured
+
+from openquake.server.settings import (
+    env_flag, check_x_frame_options, fix_static_content_types)
 
 FLAG = 'OQ_TEST_ENV_FLAG'
 
@@ -43,3 +47,41 @@ def test_env_flag_rejects_invalid_values(monkeypatch):
     monkeypatch.setenv(FLAG, 'maybe')
     with pytest.raises(ValueError):
         env_flag(FLAG)
+
+
+def test_security_headers(client):
+    resp = client.get('/v1/engine_version')
+    assert resp['X-Frame-Options'] == 'DENY'
+    assert resp['X-Content-Type-Options'] == 'nosniff'
+    assert resp['Referrer-Policy'] == 'same-origin'
+    assert resp['Cross-Origin-Opener-Policy'] == 'same-origin'
+
+
+def test_x_frame_options_can_be_changed(client, settings):
+    # as in local_settings.py
+    settings.X_FRAME_OPTIONS = 'SAMEORIGIN'
+    resp = client.get('/v1/engine_version')
+    assert resp['X-Frame-Options'] == 'SAMEORIGIN'
+
+
+@pytest.mark.parametrize('value', ['DENY', 'SAMEORIGIN', 'sameorigin'])
+def test_check_x_frame_options(value):
+    assert check_x_frame_options(value) == value
+
+
+@pytest.mark.parametrize('value', ['ALLOW-FROM https://example.org', '', None])
+def test_check_x_frame_options_rejects_invalid_values(value):
+    with pytest.raises(ImproperlyConfigured):
+        check_x_frame_options(value)
+
+
+def test_static_content_types():
+    # as with a Windows registry mapping .js and .css to text/plain
+    mimetypes.add_type('text/plain', '.js')
+    mimetypes.add_type('text/plain', '.css')
+    try:
+        fix_static_content_types()
+        assert mimetypes.guess_type('engine.js')[0] == 'text/javascript'
+        assert mimetypes.guess_type('engine.css')[0] == 'text/css'
+    finally:
+        fix_static_content_types()

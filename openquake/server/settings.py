@@ -22,6 +22,7 @@ import socket
 import getpass
 import tempfile
 import logging
+import mimetypes
 
 from django.core.exceptions import ImproperlyConfigured
 from openquake.baselib import config, is_server_installation
@@ -69,6 +70,30 @@ def env_flag(name, default=False):
     """
     value = os.environ.get(name)
     return default if value is None else valid.boolean(value)
+
+
+def check_x_frame_options(value):
+    """
+    Return the given X_FRAME_OPTIONS value, if it is 'DENY' or 'SAMEORIGIN'
+    (case-insensitively); otherwise raise ImproperlyConfigured, since the
+    browsers ignore an invalid X-Frame-Options header, and any site could then
+    show the WebUI inside a frame.
+    """
+    if str(value).upper() not in ('DENY', 'SAMEORIGIN'):
+        raise ImproperlyConfigured(
+            f"X_FRAME_OPTIONS must be 'DENY' or 'SAMEORIGIN', not {value!r}")
+    return value
+
+
+def fix_static_content_types():
+    """
+    Register the content types of the JavaScript and CSS files served by the
+    WebUI. On Windows, mimetypes reads them from the registry, where some
+    programs map .js to text/plain, and because of the nosniff header the
+    browsers would refuse to run such scripts.
+    """
+    mimetypes.add_type('text/javascript', '.js')
+    mimetypes.add_type('text/css', '.css')
 
 
 WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
@@ -146,11 +171,37 @@ LANGUAGE_CODE = 'en-us'
 USE_I18N = True
 
 MIDDLEWARE = (
+    'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # NOTE: the following can be useful for debugging
     # 'openquake.server.middleware.PrintHeadersMiddleware',
 )
+
+# Security headers sent with every response by SecurityMiddleware and
+# XFrameOptionsMiddleware, as recommended by the Django deployment checklist.
+# They are conservative defaults that can be changed in local_settings.py.
+#
+# A page of another site showing the WebUI inside a frame, possibly
+# transparent or covered by other content, could make the users click the
+# buttons of the WebUI (e.g. Remove or Share) without realizing it: the
+# browsers must not show the WebUI inside frames. X_FRAME_OPTIONS can be
+# 'DENY' (no site can) or 'SAMEORIGIN' (only pages served by the WebUI
+# itself can); it is checked after reading local_settings.py
+X_FRAME_OPTIONS = 'DENY'
+# the browsers must use the declared content type of the files, without
+# guessing it from their contents: otherwise a file uploaded or exported by
+# a user could be run as a script
+SECURE_CONTENT_TYPE_NOSNIFF = True
+# the URLs of the WebUI (e.g. with calculation IDs) are not sent to the
+# external sites linked by its pages, such as the USGS
+SECURE_REFERRER_POLICY = 'same-origin'
+# the windows of other sites opened by the WebUI, or opening it, are kept
+# apart from the WebUI windows (e.g. they cannot redirect them elsewhere)
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+# needed by SECURE_CONTENT_TYPE_NOSNIFF on Windows (see the docstring)
+fix_static_content_types()
 
 # Authentication is not enabled by default
 LOCKDOWN = False
@@ -319,6 +370,9 @@ if not TEST:
             # If a local_setting.py does not exist
             # settings in this file only will be used
             pass
+
+# local_settings.py may have changed it
+X_FRAME_OPTIONS = check_x_frame_options(X_FRAME_OPTIONS)
 
 # In a devel_server installation we might want to set DEBUG = True
 if is_server_installation() and DEBUG:
