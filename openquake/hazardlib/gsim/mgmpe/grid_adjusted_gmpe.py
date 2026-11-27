@@ -800,6 +800,7 @@ class GridAdjustedGMPE(GMPE):
             raise ValueError(
                 f"path_cap must be positive (natural-log units) or empty, "
                 f"got {path_cap!r}.")
+        self.path_cap = path_cap
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
         self.epsilons = epsilons or {}
