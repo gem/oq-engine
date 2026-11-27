@@ -19,7 +19,6 @@
 import os
 import sys
 import time
-import shutil
 import logging
 import getpass
 import cProfile
@@ -120,7 +119,8 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
                        siteid=' '.join(map(str, ids[model])))
             params = get_params_from(dic, mosaic_dir, job_ini=job_ini)
             params['exports'] = 'csv'
-            params['export_dir'] = os.path.abspath(os.path.join(asce_dir, model))
+            params['export_dir'] = os.path.abspath(
+                os.path.join(asce_dir, model))
             # del params['postproc_func']
             allparams.append(params)
             models.append(model)
@@ -132,10 +132,7 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
     engine.run_jobs(logctxs, concurrent_jobs)
-    # oq mosaic run_site is used only in the tests: the exported files
-    # are not needed, except for testing that the export works
-    for model in models:
-        shutil.rmtree(os.path.join(asce_dir, model), ignore_errors=True)
+    # NB: the CSV files exported in <asce_dir>/<model> are kept
     out = []
     count_errors = 0
     asce = {}
@@ -174,7 +171,7 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
 def run_site(lonlat_or_fname, mosaic_dir=None, asce_dir=None,
              *, hc: int = None, slowest: int = None,
              concurrent_jobs: int = None, vs30: float = 760,
-             asce_version: str = oqvalidation.OqParam.asce_version.default, 
+             asce_version: str = oqvalidation.OqParam.asce_version.default,
              job_ini: str = None):
     """
     Run a PSHA analysis on the given sites or given a CSV file
@@ -194,8 +191,8 @@ def run_site(lonlat_or_fname, mosaic_dir=None, asce_dir=None,
                          concurrent_jobs, asce_version, vs30, job_ini)
     sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
     params = get_params_from(
-        dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir, 
-        config=job_ini) 
+        dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir,
+        config=job_ini)
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
