@@ -44,6 +44,25 @@
                     <option value="">All tags</option>
                 </select>
             </div>
+            <div id="search-filters">
+                <span class="filter-item">
+                    <label for="search_input">Search by:</label>
+                    <input type="text" id="search_input" class="form-control"
+                           style="width: 280px;" placeholder="ID, User or Description">
+                </span>
+                <span class="filter-item">
+                    <label for="calc_mode_selector">Calculation mode:</label>
+                    <select id="calc_mode_selector" class="form-control" style="width: 200px;">
+                        <option value="">all</option>
+                    </select>
+                </span>
+                <span class="filter-item">
+                    <label for="status_selector">Status:</label>
+                    <select id="status_selector" class="form-control" style="width: 200px;">
+                        <option value="">all</option>
+                    </select>
+                </span>
+            </div>
             <div id="my-calculations" class="well"></div>
           </div>
         </div>
@@ -61,7 +80,7 @@
           <th style="width: 100px;">User</th>
           <th style="width: 100px;">Calculation</th>
           <th style="width: 280px;">Description</th>
-          <th style="width: 100px;">Tags</th>
+          <th class="tag-column-table" style="width: 100px;">Tags</th>
           <th style="width: 100px;">Start time</th>
           <th style="width: 70px;">Status</th>
           <th style="width: 150px;">Action</th>
@@ -75,7 +94,7 @@
           <td><%- calc.get('owner') %></td>
           <td><%- calc.get('calculation_mode') %></td>
           <td><%- calc.get('description') %></td>
-          <td><%- calc.get('tags') %></td>
+          <td class="tag-column-table"><%- calc.get('tags') %></td>
           <td><%- calc.get('start_time') %></td>
           <td class="calc-status">
             <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('status') == 'shared' || calc.get('is_running') == true) { %>

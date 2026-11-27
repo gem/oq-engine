@@ -665,6 +665,14 @@ def calc_list_count(params, valid_users, acl_on):
         'get_calcs', params, valid_users, valid.boolean(acl_on or '1'))
 
 
+def calc_filter_values(valid_users, acl_on):
+    """
+    Return the distinct calculation_mode and status values of the
+    calculations visible to the given users.
+    """
+    return logs.dbcmd('get_distinct_filter_values', valid_users, acl_on)
+
+
 def calc_log(calc_id, start, stop):
     """Return a slice of the log of a calculation."""
     return logs.dbcmd('get_log_slice', calc_id, start, stop)

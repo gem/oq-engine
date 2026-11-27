@@ -18,6 +18,9 @@ var refresh_calcs;
 var calc_page = 0;
 var calc_page_size = window.calc_list_page_size || 10;
 var calc_total = 0;
+// whether any job has a tag; updated by refresh_tag_selector and used
+// by render to hide the Tags column when there is nothing to show
+var any_tagged_job = true;
 
 var Calculation = Backbone.Model.extend({
     defaults: {
@@ -361,6 +364,15 @@ var CalculationTable = Backbone.View.extend({
 
     render: function () {
         if (!this.can_be_rendered) return;
+        if (this.calculations.models.length === 0) {
+            this.$el.html(
+                '<div class="alert alert-info">No calculations found</div>'
+            );
+            this.table_html = null;
+            this.$el.find('.pagination').remove();
+            this.render_pagination();
+            return;
+        }
         var table_html = _.template(
             $('#calculation-table-template').html(), {
                 calculations: this.calculations.models
@@ -371,6 +383,9 @@ var CalculationTable = Backbone.View.extend({
             this.$el.html(table_html);
             this.table_html = table_html;
         }
+        // the template always draws the Tags column, so re-apply the
+        // visibility after each render
+        this.$el.find('.tag-column-table').toggle(any_tagged_job);
         this.$el.find('.pagination').remove();
         this.render_pagination();
     }
@@ -384,6 +399,7 @@ function setTimer() {
     closeTimer();
     refresh_calcs = setInterval(function () {
         refresh_tag_selector();
+        populate_filter_dropdowns();
         fetch_calc_page();
     }, 3000);
 }
@@ -405,6 +421,19 @@ function get_calc_list_params() {
     if (filter_by_tag) {
         params.filter_by_tag = filter_by_tag;
     }
+    var search = $('input#search_input').val().trim();
+    if (search) {
+        params.search = search;
+    }
+    var calc_mode = $('select#calc_mode_selector').val();
+    if (calc_mode) {
+        params.calculation_mode = calc_mode;
+    }
+    var status = $('select#status_selector').val();
+    if (status) {
+        params.status = status;
+    }
+
     return params;
 }
 
@@ -441,12 +470,10 @@ function set_calc_list_params() {
 }
 
 function refresh_tag_selector() {
-    $.getJSON('/v1/calc/list_tags', function(resp) {
-        if (resp.tags.length == 0) {
-            $("div#tag-filters").hide();
-        } else {
-            $("div#tag-filters").show();
-        }
+    $.getJSON(gem_oq_server_url + '/v1/calc/list_tags', function(resp) {
+        any_tagged_job = resp.any_tagged_job;
+        $("div#tag-filters").toggle(resp.tags.length > 0);
+        $(".tag-column-table").toggle(any_tagged_job);
         const tag_selector = $('#tag_selector');
         const selected_tag = tag_selector.val();
         tag_selector.empty();
@@ -472,3 +499,54 @@ $('select#tag_selector').change(function() {
     set_calc_list_params();
 });
 
+var search_timeout = null;
+$('input#search_input').on('input', function() {
+    if (search_timeout) window.clearTimeout(search_timeout);
+    search_timeout = window.setTimeout(function() {
+        calc_page = 0;
+        fetch_calc_page();
+    }, 300);
+});
+
+$('select#calc_mode_selector').change(function() {
+    set_calc_list_params();
+});
+$('select#status_selector').change(function() {
+    set_calc_list_params();
+});
+
+// Rebuild the options of a filter <select> only if they changed, so that
+// the periodic refresh does not close a dropdown the user is browsing.
+// The current selection is kept even if no longer present in the DB,
+// otherwise the filter would be silently reset to "all".
+function update_filter_select($sel, values) {
+    var selected = $sel.val();
+    if (selected && !values.includes(selected)) {
+        values = values.concat([selected]);
+    }
+    var current = $sel.find('option').map(function() {
+        return this.value;
+    }).get().slice(1);  // skip the "all" option
+    if (current.join('\n') === values.join('\n')) {
+        return;
+    }
+    $sel.empty().append('<option value="">all</option>');
+    $.each(values, function(_, v) {
+        $sel.append($('<option>').val(v).text(v));
+    });
+    $sel.val(selected);
+}
+
+function populate_filter_dropdowns() {
+    $.getJSON(gem_oq_server_url + "/v1/calc/list_filter_values",
+              function(resp) {
+        update_filter_select($('select#calc_mode_selector'),
+                             resp.calculation_modes);
+        update_filter_select($('select#status_selector'), resp.statuses);
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+        console.error('Error fetching filter values:', textStatus,
+                      errorThrown);
+    });
+}
+
+populate_filter_dropdowns();

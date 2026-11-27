@@ -132,6 +132,15 @@ user level, are described in the section of each route.
      - ✓
      - ✓
      - 
+   * - ``/v1/calc/list_filter_values``
+     - GET
+     - login
+     - ✓
+     - ✓
+     - ✓
+     - ✓
+     - ✓
+     - 
    * - ``/v1/calc/jobs_from_inis``
      - GET
      - login
@@ -828,9 +837,10 @@ permissions and status restrictions apply.
 GET /v1/calc/list_tags
 **********************
 
-List all available tags. Response::
+List all available tags. ``any_tagged_job`` tells whether at least one
+(non-deleted) calculation has a tag. Response::
 
-	{"success": "ok", "tags": ["tag-a", "tag-b"]}
+	{"success": "ok", "tags": ["tag-a", "tag-b"], "any_tagged_job": true}
 
 **********************************
 POST /v1/calc/create_tag/:tag_name

@@ -375,3 +375,33 @@ input[type="radio"] {
     width: 18px;
     height: 18px;
 }
+
+.title_list_calc {
+    position: relative;
+}
+
+#search-filters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+#search-filters .filter-item {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+#search-filters .filter-item label {
+    margin: 0;
+    white-space: nowrap;
+}
+
+#search-filters .filter-item .form-control {
+    margin: 0;
+}

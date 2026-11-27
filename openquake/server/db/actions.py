@@ -591,6 +591,9 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     if 'calculation_mode' in request_get_dict:
         filterdict['j.calculation_mode'] = request_get_dict.get('calculation_mode')
 
+    if 'status' in request_get_dict:
+        filterdict['j.status'] = request_get_dict.get('status')
+
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
         filterdict['j.is_running'] = valid.boolean(is_running)
@@ -620,6 +623,22 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
+    # search by id, description and user
+    if 'search' in request_get_dict:
+        search = request_get_dict.get('search').strip()
+        # isdigit() alone accepts non-ASCII digits like '²' (int() fails)
+        # and huge numbers overflowing SQLite INTEGER (max 19 digits)
+        if search.isascii() and search.isdigit() and len(search) < 19:
+            search_filter = "j.id = ?x"
+            query_params.append(int(search))
+        else:
+            search_filter = ("(j.description LIKE ?x COLLATE NOCASE "
+                             "OR j.user_name LIKE ?x COLLATE NOCASE)")
+            query_params.append(f'%{search}%')  # description placeholder
+            query_params.append(f'%{search}%')  # user_name placeholder
+    else:
+        search_filter = 1
+
     preferred_only = int(request_get_dict.get('preferred_only', 0))
     filter_by_tag = request_get_dict.get('filter_by_tag', 0)
 
@@ -641,6 +660,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     if include_shared:
         where_clause += " OR j.status == 'shared'"
     where_clause += f") AND {time_filter} AND j.status != 'deleted'"
+    where_clause += f" AND {search_filter}"
+
     if relevant_only:
         where_clause += " AND j.relevant != 0"
     if preferred_only:
@@ -898,7 +919,12 @@ WHERE id = ?x
 def list_tags(db):
     rows = db("SELECT name FROM tag ORDER BY name")
     tags = [row.name for row in rows]
-    return {'success': 'ok', 'tags': tags}
+    # used by the WebUI to hide the Tags column when no job has a tag
+    any_tagged_job = bool(db(
+        "SELECT EXISTS (SELECT 1 FROM job_tag AS jt "
+        "JOIN job AS j ON j.id = jt.job_id WHERE j.status != 'deleted')",
+        scalar=True))
+    return {'success': 'ok', 'tags': tags, 'any_tagged_job': any_tagged_job}
 
 
 def update_parent_child(db, parent_child):
@@ -991,6 +1017,35 @@ def get_results(db, job_id):
                      scalar=True)
     datadir = os.path.dirname(ds_calc_dir)
     return datadir, [output.ds_key for output in get_outputs(db, job_id)]
+
+
+def get_distinct_filter_values(db, allowed_users, user_acl_on=False):
+    """
+    Return the distinct values of calculation_mode and status of the
+    calculations visible to the user, used to populate the filter dropdowns.
+
+    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
+    :param allowed_users: a list of user names
+    :param user_acl_on:
+        if True, consider only the calculations owned by the allowed users
+        or shared, consistently with get_calcs
+    :returns: dict with keys 'calculation_modes' and 'statuses'
+    """
+    # deleted calculations are never listed, so they must not be offered
+    where = "status != 'deleted'"
+    params = []
+    if user_acl_on:
+        where += " AND (user_name IN (?X) OR status == 'shared')"
+        params.append(allowed_users)
+    calc_modes = [r.calculation_mode for r in db(
+        "SELECT DISTINCT calculation_mode FROM job WHERE " + where +
+        " AND calculation_mode IS NOT NULL AND calculation_mode != '' "
+        "ORDER BY calculation_mode", *params)]
+    statuses = [r.status for r in db(
+        "SELECT DISTINCT status FROM job WHERE " + where +
+        " AND status IS NOT NULL AND status != '' "
+        "ORDER BY status", *params)]
+    return {'calculation_modes': calc_modes, 'statuses': statuses}
 
 
 # ############################### db commands ########################### #

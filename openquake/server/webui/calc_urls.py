@@ -24,6 +24,7 @@ from openquake.server import views
 urlpatterns = [
     re_path(r'^list$', views.calc_list),
     re_path(r'^list/count$', views.calc_count),
+    re_path(r'^list_filter_values$', views.calc_filter_values),
     re_path(r'^jobs_from_inis$', views.jobs_from_inis),
     re_path(r'^(\d+)/status$', views.calc_list),
     re_path(r'^(\d+)$', views.calc, name='calc'),
