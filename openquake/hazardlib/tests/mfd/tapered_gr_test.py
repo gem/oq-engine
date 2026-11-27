@@ -149,3 +149,26 @@ class TaperedGRMFDFromMomentTestCase(BaseMFDTestCase):
                                        moment_from_occ_rates,
                                        significant=3)
 
+    def test_custom_c_val(self):
+        # occurrence rates for fixed a_val and b_val depend only on moment
+        # ratios and must be invariant to the moment-magnitude constant c_val
+        base = TaperedGRMFD(5.0, 8.0, 7.5, 0.1, 4.0, 1.0, c_val=9.05)
+        base_rates = [r for _, r in base.get_annual_occurrence_rates()]
+        for c_val in (9.1, 16.05):
+            mfd = TaperedGRMFD(5.0, 8.0, 7.5, 0.1, 4.0, 1.0, c_val=c_val)
+            rates = [r for _, r in mfd.get_annual_occurrence_rates()]
+            np.testing.assert_allclose(rates, base_rates, rtol=1e-12)
+
+    def test_from_moment_custom_c_val(self):
+        # 1e20 N*m/yr equals 1e27 dyn*cm/yr (c_val shifted by +7)
+        mfd_si = TaperedGRMFD.from_moment(
+            6.0, 8.0, 7.0, 0.1, 1.0, 1e20, c_val=9.05)
+        mfd_cgs = TaperedGRMFD.from_moment(
+            6.0, 8.0, 7.0, 0.1, 1.0, 1e27, c_val=16.05)
+        self.assertEqual(mfd_cgs.c_val, 16.05)
+        np.testing.assert_allclose(mfd_cgs.a_val, mfd_si.a_val, rtol=1e-12)
+        np.testing.assert_allclose(
+            mfd_cgs._get_total_moment_rate(), 1e27, rtol=1e-12)
+        rates_si = [r for _, r in mfd_si.get_annual_occurrence_rates()]
+        rates_cgs = [r for _, r in mfd_cgs.get_annual_occurrence_rates()]
+        np.testing.assert_allclose(rates_cgs, rates_si, rtol=1e-12)
