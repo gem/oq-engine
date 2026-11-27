@@ -26,7 +26,7 @@ import numpy as np
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import _apply_nshm_shift
-from openquake.hazardlib.gsim.branching import (
+from openquake.hazardlib.gsim.backbone import (
     mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA

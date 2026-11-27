@@ -23,7 +23,7 @@ import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.branching import (
+from openquake.hazardlib.gsim.backbone import (
     mean_shift_functions, branch_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (

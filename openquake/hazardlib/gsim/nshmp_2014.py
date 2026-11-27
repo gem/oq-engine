@@ -24,7 +24,7 @@ import inspect
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim import base
-from openquake.hazardlib.gsim.branching import (
+from openquake.hazardlib.gsim.backbone import (
     branch_key, mean_shift_functions)
 
 

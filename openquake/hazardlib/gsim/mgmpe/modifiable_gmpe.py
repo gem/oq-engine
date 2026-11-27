@@ -24,7 +24,7 @@ import toml
 import numpy as np
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.gsim.branching import configuration_key
+from openquake.hazardlib.gsim.backbone import configuration_key
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 

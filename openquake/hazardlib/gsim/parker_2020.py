@@ -29,7 +29,7 @@ from scipy.special import erf
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.branching import (
+from openquake.hazardlib.gsim.backbone import (
     mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV

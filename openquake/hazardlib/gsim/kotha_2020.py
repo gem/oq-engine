@@ -33,7 +33,7 @@ from shapely.geometry import shape
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.geo.packager import fiona
-from openquake.hazardlib.gsim.branching import (
+from openquake.hazardlib.gsim.backbone import (
     mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const

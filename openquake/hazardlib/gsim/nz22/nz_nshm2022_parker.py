@@ -47,7 +47,7 @@ import math
 import numpy as np
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib.gsim.branching import (
+from openquake.hazardlib.gsim.backbone import (
     mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA

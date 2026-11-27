@@ -46,7 +46,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.gsim.branching import sigma_mu_key
+from openquake.hazardlib.gsim.backbone import sigma_mu_key
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.kuehn_2020 import (
     _get_ln_z_ref,

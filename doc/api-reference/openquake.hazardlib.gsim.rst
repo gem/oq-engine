@@ -255,6 +255,12 @@ atkinson_macias_2009
     :undoc-members:
     :show-inheritance:
 
+backbone
+--------
+
+.. automodule:: openquake.hazardlib.gsim.backbone
+    :members:
+
 bahrampouri_2021_Arias_Intensity
 ----------------------------------------------------
 
@@ -446,12 +452,6 @@ bradley_2013
     :members:
     :undoc-members:
     :show-inheritance:
-
-branching
----------
-
-.. automodule:: openquake.hazardlib.gsim.branching
-    :members:
 
 campbell_1997
 ---------------------------------------------

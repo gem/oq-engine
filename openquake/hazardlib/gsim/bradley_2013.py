@@ -34,7 +34,7 @@ import shapely
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2014 import _apply_nshm_shift
-from openquake.hazardlib.gsim.branching import (
+from openquake.hazardlib.gsim.backbone import (
     mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
 from openquake.hazardlib import const

@@ -41,7 +41,7 @@ import os
 import h5py
 from scipy.interpolate import RegularGridInterpolator
 
-from openquake.hazardlib.gsim.branching import (
+from openquake.hazardlib.gsim.backbone import (
     compute_without_shift, mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
