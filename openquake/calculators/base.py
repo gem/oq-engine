@@ -755,7 +755,10 @@ class HazardCalculator(BaseCalculator):
                 if oq.inputs['gmfs'][0].endswith('.csv'):
                     eids = import_gmfs_csv(self.datastore, oq, self.sitecol)
                 elif oq.inputs['gmfs'][0].endswith('.hdf5'):
-                    eids = import_gmfs_hdf5(self.datastore, oq, self.sitecol)
+                    eids = import_gmfs_hdf5(
+                        self.datastore, oq, self.sitecol,
+                        source=self._gmf_source)
+                    del self._gmf_source
                 else:
                     raise NotImplementedError(
                         'Importer for %s' % oq.inputs['gmfs'])
@@ -1063,8 +1066,11 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = read_parent_sitecol(oq, self.datastore)
         else:
             if 'gmfs' in oq.inputs and oq.inputs['gmfs'][0].endswith('.hdf5'):
-                haz_sitecol, _ = site.merge_sitecols(
+                sites, converters = _read_sites_hdf5(
                     oq.inputs['gmfs'], oq.mosaic_model, check_gmfs=True)
+                haz_sitecol = sites.complete
+                self._gmf_source = (
+                    _gmf_grid_snapshot(haz_sitecol), converters)
             else:
                 haz_sitecol = readinput.get_site_collection(
                     oq, self.datastore.hdf5)
@@ -1621,21 +1627,35 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     return eids
 
 
-def _getset_attrs(oq):
-    # read effective_time, num_events and imts from oq.inputs['gmfs']
-    # if the format of the file is old (v3.11) also sets the attributes
-    # investigation_time and ses_per_logic_tree_path on `oq`
+# Older GMF files only stored the event count in the events dataset.
+def _gmf_event_counts(fnames):
     num_events = []
-    for fname in oq.inputs['gmfs']:
+    for fname in fnames:
         with hdf5.File(fname, 'r') as f:
-            try:
-                attrs = dict(f['gmf_data'].attrs)
-                num_events.append(attrs['num_events'])
-            except KeyError:
-                attrs = {}
-                num_events.append(len(f['events']))
-    return dict(effective_time=attrs.get('effective_time'),
-                num_events=num_events, imts=list(oq.imtls))
+            attrs = f['gmf_data'].attrs
+            num_events.append(attrs['num_events'] if 'num_events' in attrs
+                              else len(f['events']))
+    return num_events
+
+
+# Read the input grid and, for multiple files, the site ID mappings.
+def _read_sites_hdf5(fnames, mosaic_model='', check_gmfs=False):
+    if len(fnames) == 1:
+        with hdf5.File(fnames[0], 'r') as f:
+            return site.read_sitecol(f), []
+    return site.merge_sitecols(fnames, mosaic_model, check_gmfs=check_gmfs)
+
+
+# Keep only the original site IDs and coordinates. Input preparation can
+# change site parameters and append station sites to the working grid.
+def _gmf_grid_snapshot(grid):
+    array = grid.array
+    names = ('sids', 'lon', 'lat', 'depth', 'custom_site_id')
+    keys = numpy.empty(len(array), [(n, array.dtype[n]) for n in names
+                                    if n in array.dtype.names])
+    for name in keys.dtype.names:
+        keys[name] = array[name]
+    return site.SiteCollection.from_(keys)
 
 
 # GMF rows are keyed by the source grid. Extra station sites may be appended.
@@ -1656,21 +1676,14 @@ def _check_imported_grid(source, selected):
                               'site ID mapping of the imported GMF grid')
 
 
-def import_sites_hdf5(dstore, fnames, check_gmfs=False, sitecol=None):
+def import_sites_hdf5(dstore, fnames):
     """
     Store the sites from one file or a merged grid from several files.
     Return the site ID mappings used when merging GMFs.
     """
-    if len(fnames) == 1:
-        with hdf5.File(fnames[0], 'r') as f:
-            sites = site.read_sitecol(f)
-        convs = []
-    else:
-        sites, convs = site.merge_sitecols(fnames, check_gmfs=check_gmfs)
-    if check_gmfs:
-        _check_imported_grid(sites.complete, sitecol)
+    sites, convs = _read_sites_hdf5(fnames)
     h5 = getattr(dstore, 'hdf5', dstore)
-    site.store_sitecol(h5, sites if sitecol is None else sitecol)
+    site.store_sitecol(h5, sites)
     return convs
 
 
@@ -1763,13 +1776,14 @@ def _import_gmf_rows(dstore, fname, conv, covered, event_offset):
     covered |= present
 
 
-def import_gmfs_hdf5(dstore, oq, sitecol=None):
+def import_gmfs_hdf5(dstore, oq, sitecol=None, *, source=None):
     """
     Import in the datastore a ground motion field HDF5 file.
 
     :param dstore: the datastore
     :param oq: an OqParam instance
     :param sitecol: the sites already selected from the imported GMF grid
+    :param source: the original grid and mappings from input preparation
     :returns: event_ids
     """
     # NB: we tried to use ExternalLinks to avoid copying the GMFs,
@@ -1787,10 +1801,16 @@ def import_gmfs_hdf5(dstore, oq, sitecol=None):
     size = sum(os.path.getsize(f) for f in fnames)
     logging.warning('Importing %d files, %s',
                     len(fnames), general.humansize(size))
-    attrs = _getset_attrs(oq)
-    E = sum(attrs['num_events'])
+    num_events = _gmf_event_counts(fnames)
+    E = sum(num_events)
     h5 = getattr(dstore, 'hdf5', dstore)
-    convs = import_sites_hdf5(dstore, fnames, check_gmfs=True, sitecol=sitecol)
+    if source is None:
+        source = _read_sites_hdf5(fnames, oq.mosaic_model, check_gmfs=True)
+    sites, convs = source
+    _check_imported_grid(sites.complete, sitecol)
+    if sitecol is not None:
+        sites = sitecol
+    site.store_sitecol(h5, sites)
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
             if 'gmv_0' in f['gmf_data']:  # old format <= v3.23
@@ -1813,13 +1833,12 @@ def import_gmfs_hdf5(dstore, oq, sitecol=None):
     else:  # merge the sites and the gmfs, tested in scenario/case_33
         create_gmf_data(dstore, oq.all_imts(), E=E,
                         R=oq.number_of_logic_tree_samples)
-        grid = 'complete' if 'complete' in h5 else 'sitecol'
-        covered = numpy.zeros(len(h5[f'{grid}/sids']), bool)
+        covered = numpy.zeros(len(sites.complete), bool)
         nE = 0
-        for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
+        for fname, conv, ne in zip(fnames, convs, num_events):
             _import_gmf_rows(dstore, fname, conv, covered, nE)
             nE += ne
-        oq.hazard_imtls = {imt: [0] for imt in attrs['imts']}
+        oq.hazard_imtls = {imt: [0] for imt in oq.imtls}
 
     return _store_events(E, oq.number_of_logic_tree_samples, dstore)
 

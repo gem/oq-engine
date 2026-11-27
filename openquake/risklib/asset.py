@@ -758,12 +758,8 @@ class AssetCollection(object):
         """
         :returns: a reduced AssetCollection on the given sitecol
         """
-        ok_indices = numpy.sum(
-            [self.array['site_id'] == sid for sid in sitecol.sids],
-            axis=0, dtype=bool)
-        new = object.__new__(self.__class__)
-        vars(new).update(vars(self))
-        new.array = self.array[ok_indices]
+        ok = numpy.isin(self['site_id'], sitecol.sids)
+        new = self.new(self.array[ok])
         new.array['ordinal'] = numpy.arange(len(new.array))
         return new
 
