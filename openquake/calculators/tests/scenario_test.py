@@ -29,7 +29,7 @@ from openquake.qa_tests_data.scenario import (
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.commonlib import readinput
-from openquake.hazardlib import InvalidFile, nrml
+from openquake.hazardlib import InvalidFile, nrml, site
 from openquake.hazardlib.site import SiteCollection
 from openquake.calculators import base, getters
 from openquake.calculators.export import export
@@ -54,18 +54,23 @@ def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
 
 def test_merge_gmf_site_ids(tmp_path):
     paths = []
-    for i, lons in enumerate(([0, 1], [0, 2, 3, 4], [5, 1, 6])):
+    inputs = [
+        ([0, 1], [0], [0]),
+        ([1, 2, 3, 4], [0, 1, 2, 3, 0], [0, 0, 0, 0, 1]),
+        ([4, 5, 6], [0, 1, 2], [0, 0, 0])]
+    for i, (lons, sids, eids) in enumerate(inputs):
         sites = SiteCollection.from_points(lons, numpy.zeros(len(lons)))
         sites.ensure_custom_site_id(8)
         path = str(tmp_path / f'sites-{i}.hdf5')
         paths.append(path)
         with hdf5.File(path, 'w') as h5:
-            h5['sitecol'] = sites
+            site.store_sitecol(h5, sites.filtered(numpy.unique(sids)))
             h5.create_df(
                 'gmf_data',
-                [('sid', sites.sids), ('eid', numpy.zeros(len(sites), 'u4')),
-                 ('PGA', sites.lons / 100)],
-                num_events=1, imts='PGA', effective_time=0,
+                [('sid', numpy.array(sids, 'u4')),
+                 ('eid', numpy.array(eids, 'u4')),
+                 ('PGA', (10 * i + sites.lons[sids]).astype('f4') / 100)],
+                num_events=max(eids) + 1, imts='PGA', effective_time=0,
                 investigation_time=0)
 
     job_ini = os.path.join(os.path.dirname(case_33.__file__), 'job1.ini')
@@ -74,9 +79,9 @@ def test_merge_gmf_site_ids(tmp_path):
     with hdf5.File(str(tmp_path / 'merged.hdf5'), 'w') as merged:
         base.import_gmfs_hdf5(merged, oq)
         df = merged.read_df('gmf_data')
-        numpy.testing.assert_array_equal(df.sid, numpy.arange(7))
-        numpy.testing.assert_array_equal(df.eid, [0, 0, 1, 1, 1, 2, 2])
-        aae(merged['sitecol'].lons[df.sid] / 100, df.PGA)
+        aae(df.eid, [0, 1, 1, 1, 1, 2, 3, 3])
+        aae(merged['sitecol'].lons[df.sid], [0, 1, 2, 3, 4, 1, 5, 6])
+        aae(df.PGA, [.0, .11, .12, .13, .14, .11, .25, .26])
 
 
 class ScenarioTestCase(CalculatorTestCase):

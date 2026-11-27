@@ -1225,6 +1225,32 @@ class HazardCalculator(BaseCalculator):
             complete.assoc(sm, dist, mode, station_sids=station_sids)
         self.sitecol = complete.filtered(sitecol.sids)
 
+    # A single override can change the parameters without changing site IDs.
+    def _override_vs30(self):
+        oq = self.oqparam
+        sites = self.sitecol
+        values = oq.override_vs30
+        if ('gmfs' in oq.inputs and
+                oq.inputs['gmfs'][0].endswith('.hdf5')):
+            if len(values) != 1:
+                raise InvalidFile('HDF5 GMFs can only use a single '
+                                  'override_vs30 value')
+            updated = sites.complete
+            updated.add_col('vs30', site.site_param_dt['vs30'])
+            updated.array['vs30'] = values[0]
+        elif len(values) == 1:
+            updated = sites.complete.multiply(values)
+        else:
+            if len(sites) == 1:  # tested in classical/case_08
+                sites.array['vs30'] = -999
+            updated = sites.multiply(values)
+        if 'z1pt0' in updated.names:
+            updated.calculate_z1pt0()
+        if 'z2pt5' in updated.names:
+            updated.calculate_z2pt5()
+        self.sitecol = (updated.filtered(sites.sids) if len(values) == 1
+                        else updated)
+
     def _read_risk3(self):
         oq = self.oqparam
         station_sids = set()
@@ -1246,16 +1272,7 @@ class HazardCalculator(BaseCalculator):
                 self._associate_site_model(station_sids)
 
             if oq.override_vs30:
-                # override vs30, z1pt0 and z2pt5
-                if len(self.sitecol) == 1:
-                    # tested in classical/case_08
-                    self.sitecol.array['vs30'] = -999
-                self.sitecol = self.sitecol.multiply(oq.override_vs30)
-                names = self.sitecol.array.dtype.names
-                if 'z1pt0' in names:
-                    self.sitecol.calculate_z1pt0()
-                if 'z2pt5' in names:
-                    self.sitecol.calculate_z2pt5()
+                self._override_vs30()
 
             # NaN check on core params after final site-model association:
             # catches silent zero hazard from missing z1pt4 and similar
@@ -1621,6 +1638,24 @@ def _getset_attrs(oq):
                 num_events=num_events, imts=list(oq.imtls))
 
 
+# GMF rows are keyed by the source grid. Extra station sites may be appended.
+def _check_imported_grid(source, selected):
+    source.check()
+    if selected is None:
+        return
+    grid = selected.complete
+    nsites = len(source)
+    fields = ['lons', 'lats', 'depths']
+    if 'custom_site_id' in source.names:
+        fields.append('custom_site_id')
+    for name in fields:
+        column = getattr(grid, name, None)
+        if column is None or not numpy.array_equal(
+                getattr(source, name), column[:nsites]):
+            raise InvalidFile('The selected site collection changes the '
+                              'site ID mapping of the imported GMF grid')
+
+
 def import_sites_hdf5(dstore, fnames, check_gmfs=False, sitecol=None):
     """
     Store the sites from one file or a merged grid from several files.
@@ -1632,6 +1667,8 @@ def import_sites_hdf5(dstore, fnames, check_gmfs=False, sitecol=None):
         convs = []
     else:
         sites, convs = site.merge_sitecols(fnames, check_gmfs=check_gmfs)
+    if check_gmfs:
+        _check_imported_grid(sites.complete, sitecol)
     h5 = getattr(dstore, 'hdf5', dstore)
     site.store_sitecol(h5, sites if sitecol is None else sitecol)
     return convs
@@ -1699,6 +1736,33 @@ def import_ruptures_hdf5(h5, fnames):
         assert rup_id == rup['id'], (rup_id, rup['id'])
 
 
+# Keep all GMF rows at sites not covered by any earlier input file.
+def _import_gmf_rows(dstore, fname, conv, covered, event_offset):
+    logging.warning('Importing %s', fname)
+    site_ids = pandas.Series(conv, dtype=numpy.int64)
+    present = numpy.zeros_like(covered)
+    with hdf5.File(fname, 'r') as f:
+        imts = f['gmf_data'].attrs['imts'].split()
+        size = len(f['gmf_data/sid'])
+        logging.info('Reading %s rows from %s', format(size, '_'), fname)
+        for slc in general.gen_slices(0, size, 10_000_000):
+            df = f.read_df('gmf_data', slc=slc)
+            sids = df.sid.map(site_ids).to_numpy(numpy.int64, na_value=-1)
+            keep = sids >= 0
+            keep[keep] = ~covered[sids[keep]]
+            sids = sids[keep]
+            present[sids] = True
+            df = df.loc[keep].copy()
+            df['sid'] = sids.astype(U32)
+            df['eid'] += event_offset
+            for col in df.columns:
+                # Columns were positional before v3.24.
+                name = imts[int(col[4:])] if col.startswith('gmv_') else col
+                hdf5.extend(dstore[f'gmf_data/{name}'], df[col])
+    # Sites can recur across chunks of the same file.
+    covered |= present
+
+
 def import_gmfs_hdf5(dstore, oq, sitecol=None):
     """
     Import in the datastore a ground motion field HDF5 file.
@@ -1749,25 +1813,11 @@ def import_gmfs_hdf5(dstore, oq, sitecol=None):
     else:  # merge the sites and the gmfs, tested in scenario/case_33
         create_gmf_data(dstore, oq.all_imts(), E=E,
                         R=oq.number_of_logic_tree_samples)
+        grid = 'complete' if 'complete' in h5 else 'sitecol'
+        covered = numpy.zeros(len(h5[f'{grid}/sids']), bool)
         nE = 0
         for fname, conv, ne in zip(fnames, convs, attrs['num_events']):
-            logging.warning('Importing %s', fname)
-            with hdf5.File(fname, 'r') as f:
-                imtlist = f['gmf_data'].attrs['imts'].split()
-                size = len(f['gmf_data/sid'])
-                logging.info('Reading {:_d} rows from {}'.format(size, fname))
-                sids = numpy.array(list(conv))
-                for slc in general.gen_slices(0, size, 10_000_000):
-                    df = f.read_df('gmf_data', slc=slc)
-                    df = df.loc[numpy.isin(df.sid, sids)].copy()
-                    df['sid'] = df.sid.map(conv).astype(U32)
-                    df['eid'] += nE  # add an offset to the event IDs
-                    for col in df.columns:
-                        if col.startswith('gmv_'):  # before v3.24
-                            name = imtlist[int(col[4:])]
-                        else:
-                            name = col
-                        hdf5.extend(dstore[f'gmf_data/{name}'], df[col])
+            _import_gmf_rows(dstore, fname, conv, covered, nE)
             nE += ne
         oq.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
@@ -1830,7 +1880,15 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
             df.pop('eid')
             df.pop('sid')
             avg_gmf[:, sid] = stats.avg_std(df.to_numpy())
-        dstore['avg_gmf'] = avg_gmf
+        store_avg_gmf(dstore, avg_gmf)
+
+
+def store_avg_gmf(dstore, avg_gmf):
+    """
+    Store average GMFs with the site ID as the column index.
+    """
+    dstore['avg_gmf'] = avg_gmf
+    dstore['avg_gmf'].attrs['site_axis'] = 'sid'
 
 
 def create_exposure_by_lse(dstore):
@@ -1922,6 +1980,21 @@ def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
         [model], dtype=hdf5.vstr)
 
 
+# After correlation, assign the IDs used by both the stored GMFs and assets.
+def _store_shakemap_sites(calc, sites, assetcol):
+    dstore = calc.datastore
+    calc.sitecol = sites.reindexed()
+    dstore.store_sitecol(calc.sitecol)
+    if assetcol is not None:
+        assetcol.remap_sites(sites)
+        logging.info('Extracted %d assets', len(assetcol))
+        calc.assetcol = dstore['assetcol'] = assetcol
+        if 'agg_keys' in dstore.hdf5 or 'agg_values' in dstore.hdf5:
+            oq = calc.oqparam
+            save_agg_values(dstore, assetcol, oq.loss_types, oq.aggregate_by)
+    return calc.sitecol
+
+
 def store_gmfs(calc, sitecol, shakemap, gmf_dict, assetcol=None):
     """
     Store a ShakeMap array as a gmf_data dataset.
@@ -1957,16 +2030,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict, assetcol=None):
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
-        # GMF rows already follow sitecol order. Assign the IDs used for
-        # storage now that correlation has used the original grid.
-        if assetcol is not None:
-            assetcol.remap_sites(sitecol)
-            logging.info('Extracted %d assets', len(assetcol))
-        calc.sitecol = sitecol = sitecol.reindexed()
-        calc.datastore.store_sitecol(sitecol)
-        if assetcol is not None:
-            calc.assetcol = assetcol
-            calc.datastore['assetcol'] = assetcol
+        sitecol = _store_shakemap_sites(calc, sitecol, assetcol)
         N, E, M = gmfs.shape
         events = store_events(calc.datastore, E)
         oq.hazard_imtls = {str(imt): [0] for imt in imts}

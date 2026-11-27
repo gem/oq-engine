@@ -228,6 +228,16 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         assert_eq(reindexed.sids, [0, 1])
         assert_eq(reordered.sids, [3, 1])
 
+    def test_multiply_reindexes_unchanged_sites(self):
+        sites = SiteCollection.from_points([0, 1], [0, 0],
+                                           req_site_params={'vs30'})
+        sites.array['vs30'] = [-999, 760]
+        updated = sites.multiply([500, 800])
+        updated.check()
+        assert_eq(updated.sids, [0, 1, 2])
+        assert_eq(updated.lons, [0, 0, 1])
+        assert_eq(updated.vs30, [500, 800, 760])
+
     def test_filter_all_in(self):
         col = self.SITES
         filtered = col.filter(numpy.ones(len(self.SITES), bool))

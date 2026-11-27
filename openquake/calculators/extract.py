@@ -1380,10 +1380,14 @@ def extract_relevant_gmfs(dstore, what):
 def extract_avg_gmf(dstore, what):
     qdict = parse(what)
     info = get_info(dstore)
-    sitecol = dstore['sitecol']
+    sitecol = dstore.read_sitecol('avg_gmf')
     [imt] = qdict['imt']
     imti = info['imt'][imt]
-    avg_gmf = dstore['avg_gmf'][0, :, imti]
+    data = dstore['avg_gmf']
+    avg_gmf = data[0, :, imti]
+    # Older event based results used only the active site rows.
+    if data.attrs.get('site_axis') == 'sid' or len(avg_gmf) != len(sitecol):
+        avg_gmf = avg_gmf[sitecol.sids]
 
     # Check if filtering zero values is disabled via 'filter_zeros=0'
     filter_zeros = int(qdict.get('filter_zeros', [1])[0]) != 0

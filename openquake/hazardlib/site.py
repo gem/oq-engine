@@ -624,14 +624,11 @@ class SiteCollection(object):
                         rec[name] = add(orig_rec[name][:5], b':' + cl, 8)
                     elif name == 'vs30':
                         rec[name] = vs30
-                    elif name == 'sids':
-                        rec[name] = j
                     else:
                         rec[name] = orig_rec[name]
                 j += 1
-        new = object.__new__(self.__class__)
-        new.array = array
-        new.complete = new
+        new = self.from_(array)
+        new.make_complete()
         return new
 
     def get_around(self, lon, lat, digits=5):
@@ -1218,9 +1215,8 @@ def store_sitecol(h5, sitecol):
 
 def merge_sitecols(hdf5fnames, mosaic_model='', check_gmfs=False):
     """
-    Read a number of site collections from the given filenames
-    and returns a single SiteCollection instance, plus a list
-    of site ID arrays, one for each site collection, excluding the duplicates.
+    Merge site collections by custom site ID. Return the merged collection
+    and one mapping from local to merged site IDs per file.
 
     If `check_gmfs` is set, assume there are `gmf_data` groups and
     make sure the attributes are consistent (i.e. the same over all files).
@@ -1242,12 +1238,19 @@ def merge_sitecols(hdf5fnames, mosaic_model='', check_gmfs=False):
         check_all_equal(mosaic_model, attrs, '__pdcolumns__', 'effective_time',
                         'investigation_time')
 
-    assert 'custom_site_id' in sitecol.array.dtype.names
     array = sitecol.array
+    merged_ids = {}
+    for sid, custom_id in enumerate(sitecol.custom_site_id):
+        merged_ids.setdefault(custom_id, sid)
     for sc in sitecols[1:]:
         offset = len(array)
         array, dupl = merge_without_dupl(array, sc.array, 'custom_site_id')
-        conv = {sid: offset + i for i, sid in enumerate(sc.sids[~dupl])}
+        conv = {sid: merged_ids[custom_id] for sid, custom_id in
+                zip(sc.sids[dupl], sc.custom_site_id[dupl])}
+        for sid, (local_id, custom_id) in enumerate(
+                zip(sc.sids[~dupl], sc.custom_site_id[~dupl]), offset):
+            conv[local_id] = sid
+            merged_ids.setdefault(custom_id, sid)
         converters.append(conv)
     new = sitecol.from_(array)
     new.make_complete()

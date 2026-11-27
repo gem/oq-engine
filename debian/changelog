@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed site IDs when importing HDF5 ground motion fields and overriding
+    Vs30. Fixed average GMF exports and ShakeMap exposure aggregation after
+    site filtering.
   * Faster probabilities of exceedance in classical calculations, using a
     tabulated cubic approximation of the normal CDF (more than doubling
     the speed of get_poes)
