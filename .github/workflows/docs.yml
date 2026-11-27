@@ -99,9 +99,9 @@ jobs:
           # pip install -r ./doc/requirements.txt
       - name: Install oq engine
         run: |
-          WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
-          GEM_WHEELS_URL = "https://wheelhouse.openquake.org/gem261118/"
-          URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
+          WHEELHOUSE_URL="https://wheelhouse.openquake.org/unified/"
+          GEM_WHEELS_URL="https://wheelhouse.openquake.org/gem261118/"
+          URL_STANDALONE="https://wheelhouse.openquake.org/py/standalone/post-inst/"
           # install core dependencies from wheelhouse
           # and documentation optional dependencies from pypi
           pip install -e --no-index --no-cache-dir --find-links $WHEELHOUSE_URL --find-links $GEM_WHEELS_URL --find-links $URL_STANDALONE .
