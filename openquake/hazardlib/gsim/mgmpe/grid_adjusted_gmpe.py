@@ -37,6 +37,7 @@ from openquake.baselib.general import gen_slices
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import npoints_between, geodetic_distance
 from openquake.hazardlib.gsim.base import GMPE, registry
+from openquake.hazardlib.gsim.branching import mean_shift_functions
 
 
 def load_sigma_for_term(grp, term, imt_str, location, sig_action,
@@ -779,7 +780,7 @@ class GridAdjustedGMPE(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     experimental = True # It's not extensively tested yet
-    central_functions = (compute_central, apply_epsilons)
+    central_functions = mean_shift_functions(apply_epsilons, compute_central)
 
     def __init__(self, gmpe_name, grid_hdf5_file, epsilons=None,
                  path_cap=None, **kwargs):

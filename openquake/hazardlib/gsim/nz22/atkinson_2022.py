@@ -28,7 +28,7 @@ from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.branching import (
-    branch_key, compute_without_shift)
+    mean_shift_functions, branch_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.nz22.const import (
     periods_AG20,
@@ -362,8 +362,8 @@ class Atkinson2022Crust(GMPE):
         if apply_shift:
             _apply_epistemic_shift(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_epistemic_shift)
-    central_key = branch_key(compute, 'epistemic')
+    central_functions = mean_shift_functions(_apply_epistemic_shift)
+    make_central_key = branch_key(compute, 'epistemic')
 
     # periods given by 1 / 10 ** COEFFS['f']
     with Atk22_COEFFS.open() as coefs_file:

@@ -45,7 +45,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib.gsim.branching import (
-    compute_without_shift, sigma_mu_key)
+    mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import add_alias
@@ -169,8 +169,8 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
 
 
 
-    central_functions = (compute_without_shift, _apply_sigma_mu)
-    central_key = sigma_mu_key(compute)
+    central_functions = mean_shift_functions(_apply_sigma_mu)
+    make_central_key = sigma_mu_key(compute)
 
 class NZNSHM2022_AbrahamsonGulerce2020SSlab(
     NZNSHM2022_AbrahamsonGulerce2020SInter

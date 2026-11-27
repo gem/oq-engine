@@ -26,7 +26,7 @@ import numpy as np
 from scipy import interpolate
 
 from openquake.hazardlib.gsim.branching import (
-    compute_without_shift, sigma_mu_key)
+    mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -623,8 +623,8 @@ class AbrahamsonEtAl2014(GMPE):
         if apply_shift:
             _apply_nshm_shift(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_nshm_shift)
-    central_key = sigma_mu_key(compute)
+    central_functions = mean_shift_functions(_apply_nshm_shift)
+    make_central_key = sigma_mu_key(compute)
 
     #: Coefficient tables as per annex B of Abrahamson et al. (2014)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

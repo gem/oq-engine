@@ -46,8 +46,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.gsim.branching import (
-    compute_without_shift, sigma_mu_key)
+from openquake.hazardlib.gsim.branching import sigma_mu_key
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.kuehn_2020 import (
     _get_ln_z_ref,
@@ -313,12 +312,10 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
         if apply_shift:
-            _apply_sigma_mu(self, ctx, imts, mean)
+            _apply_sigma_mu(self, (ctx, {}), imts, mean)
 
+    make_central_key = sigma_mu_key(compute, 'gmpe_table')
 
-
-    central_functions = (compute_without_shift, _apply_sigma_mu)
-    central_key = sigma_mu_key(compute, 'gmpe_table')
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
     #: Supported tectonic region type is subduction in-slab
@@ -328,4 +325,5 @@ class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
     REQUIRES_SITES_PARAMETERS = {"vs30", "backarc"}
 
     # Other required params
-    REQUIRES_ATTRIBUTES = {'region', 'm_b', 'sigma_mu_model', 'sigma_mu_epsilon'}
+    REQUIRES_ATTRIBUTES = {'region', 'm_b', 'sigma_mu_model',
+                           'sigma_mu_epsilon'}

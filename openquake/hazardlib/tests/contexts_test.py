@@ -47,7 +47,11 @@ from openquake.hazardlib.geo.surface.planar import (
     get_distances_planar, build_planar)
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import to_python
+from openquake.hazardlib.gsim import kuehn_2020
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
+    CampbellBozorgnia2014)
+from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput
@@ -518,16 +522,70 @@ class SharedGSIMTestCase(unittest.TestCase):
         ctx.vs30 = [300.0, 900.0]
         ctx.dip = 60.0
         ctx.width = 15.0
+        slices = [ctx[:1], ctx[1:]]
+        for maker in (cm, cm.copy(gsims=gsims + [gsims[1]])):
+            with self.subTest(branches=len(maker.gsims)):
+                expected = numpy.stack([maker.get_4MN(slices, gsim)
+                                        for gsim in maker.gsims], axis=1)
+                adj = [gsim.adj.copy() for gsim in maker.gsims]
+                with mock.patch.object(maker, '_compute_group',
+                                       wraps=maker._compute_group) as grouped:
+                    actual = maker.get_mean_stds(slices, split_by_mag=False)
+                grouped.assert_called_once()
+                numpy.testing.assert_array_equal(actual, expected)
+                for gsim, expected_adj in zip(maker.gsims, adj):
+                    numpy.testing.assert_array_equal(gsim.adj, expected_adj)
+
+    def test_shared_kwargs_preserve_coefficient_overrides(self):
+        coeffs = {'PGA': {'c0': -4.}}
+        lower = CampbellBozorgnia2014(coeffs=coeffs, sigma_mu_epsilon=-1.)
+        coeffs['PGA']['c0'] = -3.
+        upper = CampbellBozorgnia2014(coeffs=coeffs, sigma_mu_epsilon=1.)
+        cm = contexts.simple_cmaker([lower, upper], ['PGA'])
+        ctx = cm.new_ctx(1)
+        ctx.mag, ctx.vs30, ctx.rrup, ctx.rjb = 6.2, 350., 10., 9.
+        ctx.rx, ctx.z2pt5, ctx.rake = 2., 1.2, 0.
+        ctx.dip, ctx.ztor, ctx.width, ctx.hypo_depth = 60., 4., 16., 10.
         expected = numpy.stack([cm.get_4MN([ctx], gsim)
                                 for gsim in cm.gsims], axis=1)
-        adj = [gsim.adj.copy() for gsim in cm.gsims]
-        with mock.patch.object(cm, '_compute_group',
-                               wraps=cm._compute_group) as grouped:
+        numpy.testing.assert_array_equal(cm.get_mean_stds([ctx]), expected)
+
+    def test_independent_median_and_sigma_scaling(self):
+        options = {'gmpe': {'AkkarEtAlRjb2014': {}},
+                   'set_scale_total_sigma_vector': {
+                       'scaling_factor': {'PGA': 0.8}}}
+        lower = ModifiableGMPE(
+            **options, set_scale_median_scalar={'scaling_factor': 0.9})
+        options['set_scale_total_sigma_vector']['scaling_factor']['PGA'] = 1.2
+        upper = ModifiableGMPE(
+            **options, set_scale_median_scalar={'scaling_factor': 1.1})
+        cm = contexts.simple_cmaker([lower, upper], ['PGA'])
+        ctx = cm.new_ctx(1)
+        ctx.mag, ctx.vs30, ctx.rjb, ctx.rake = 6.2, 350., 9., 0.
+        with mock.patch.object(lower.gmpe, 'compute',
+                               wraps=lower.gmpe.compute) as backbone:
             actual = cm.get_mean_stds([ctx])
-        grouped.assert_called_once()
+        backbone.assert_called_once()
+        self.assertEqual(lower.central_key, upper.central_key)
+        expected = numpy.stack([cm.get_4MN([ctx], gsim)
+                                for gsim in cm.gsims], axis=1)
         numpy.testing.assert_array_equal(actual, expected)
-        for gsim, expected_adj in zip(cm.gsims, adj):
-            numpy.testing.assert_array_equal(gsim.adj, expected_adj)
+
+    def test_kuehn_interpolates_once_per_imt_and_slice(self):
+        gsims = [kuehn_2020.KuehnEtAl2020SInter(sigma_mu_epsilon=eps)
+                 for eps in (0., -1., 1.)]
+        cm = contexts.simple_cmaker(gsims, ['PGA', 'SA(0.5)'])
+        ctx = cm.new_ctx(2)
+        ctx.mag, ctx.rrup, ctx.vs30 = [6., 7.2], [30., 110.], [300., 900.]
+        slices = [ctx[:1], ctx[1:]]
+        get_adjustment = kuehn_2020.get_sigma_mu_adjustment
+        with mock.patch.object(kuehn_2020, 'get_sigma_mu_adjustment',
+                               wraps=get_adjustment) as interpolate:
+            actual = cm.get_mean_stds(slices, split_by_mag=False)
+        self.assertEqual(interpolate.call_count, len(cm.imts) * len(slices))
+        expected = numpy.stack([cm.get_4MN(slices, gsim)
+                                for gsim in cm.gsims], axis=1)
+        numpy.testing.assert_array_equal(actual, expected)
 
 
 class CollapseCtxTestCase(unittest.TestCase):

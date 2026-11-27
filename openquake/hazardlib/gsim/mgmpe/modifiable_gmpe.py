@@ -24,8 +24,7 @@ import toml
 import numpy as np
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.gsim.branching import (
-    compute_without_shift, configuration_key)
+from openquake.hazardlib.gsim.branching import configuration_key
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 
@@ -671,19 +670,36 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
     return sorted(imts_req)
 
 
-MEDIAN_SCALING = {'set_scale_median_scalar', 'set_scale_median_vector'}
-INDEPENDENT_SCALING = MEDIAN_SCALING | {
+INDEPENDENT_SCALING = {
+    'set_scale_median_scalar', 'set_scale_median_vector',
     'set_scale_total_sigma_scalar', 'set_scale_total_sigma_vector'}
 
 
-# Median scaling commutes with total sigma scaling. Reuse the original
-# modifiers in the order specified by the branch.
-def _apply_median_scaling(gsim, ctx, imts, mean):
+# Apply the original modifiers in the order specified by the branch.
+def _apply_modifiers(gsim, ctx, imts, mean, sig, tau, phi, ref=None):
     for name, kwargs in gsim.params.items():
-        if name in MEDIAN_SCALING:
-            scale = globals()[name]
-            for m, imt in enumerate(imts):
-                scale(ctx, imt, mean[m], None, None, None, **kwargs)
+        # CEUS 2020 site term needs ref PGA stored.
+        if name == 'ceus2020_site_term':
+            kwargs['ref_pga'] = np.exp(ref)
+
+        # Conditional GMPEs
+        if name == 'conditional_gmpe':
+            kwargs['base_preds'] = gsim.params[name]['base_preds']
+
+        modify = globals()[name]
+        for m, imt in enumerate(imts):
+            modify(ctx, imt, mean[m], sig[m], tau[m], phi[m], **kwargs)
+
+
+# Independent scaling needs only the original GMPE predictions.
+def _compute_unmodified(gsim, ctx, imts, mean, sig, tau, phi, gra_mon=None):
+    gsim.gmpe.compute(ctx, imts, mean, sig, tau, phi)
+    return ctx
+
+
+# Apply the scaling factors to this branch's copy of the predictions.
+def _apply_scaling(gsim, ctx, imts, outputs):
+    _apply_modifiers(gsim, ctx, imts, *outputs)
 
 
 class ModifiableGMPE(GMPE):
@@ -759,18 +775,17 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-    central_functions = (compute_without_shift, _apply_median_scaling)
+    central_functions = (_compute_unmodified, _apply_scaling)
 
-    @property
-    def central_key(self):
+    def make_central_key(self):
+        """Identify the backbone for branches with independent scaling."""
         if (type(self).compute is ModifiableGMPE.compute
-                and MEDIAN_SCALING.intersection(self.params)
                 and INDEPENDENT_SCALING.issuperset(self.params)):
-            return (type(self), configuration_key(
-                self.kwargs.items(), MEDIAN_SCALING | {'weight'}))
+            config = configuration_key(self.gmpe.kwargs.items(), {'weight'})
+            if config is not None:
+                return type(self), type(self.gmpe), config
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -791,23 +806,8 @@ class ModifiableGMPE(GMPE):
             self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
         # Compute reference PGA for the CEUS2020 site term
+        ref = None
         if 'ceus2020_site_term' in self.params:
             ref = ceus2020_setup(self.gmpe, ctx, self.params, len(sig[0]))
 
-        # Apply sequentially the modifications
-        g = globals()
-        for methname, kw in self.params.items():
-            if not apply_shift and methname in MEDIAN_SCALING:
-                continue
-
-            # CEUS 2020 site term needs ref PGA stored
-            if methname in ['ceus2020_site_term']:
-                kw['ref_pga'] = np.exp(ref)
-
-            # Conditional GMPEs
-            if methname in ["conditional_gmpe"]:
-                kw['base_preds'] = self.params["conditional_gmpe"]["base_preds"]
-                
-            for m, imt in enumerate(imts):
-                me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
-                g[methname](ctx, imt, me, si, ta, ph, **kw)
+        _apply_modifiers(self, ctx, imts, mean, sig, tau, phi, ref)

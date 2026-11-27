@@ -436,8 +436,9 @@ class GridAdjustedGMPETest(unittest.TestCase):
         cm = simple_cmaker(adjs[:1] + [base] + adjs[1:], IMTS)
         ctx = cm.recarray([self._make_ctx(cm)])
         central = mock.Mock(wraps=mod.compute_central)
+        apply_branch = GridAdjustedGMPE.central_functions[1]
         with mock.patch.object(GridAdjustedGMPE, 'central_functions',
-                               (central, mod.apply_epsilons)):
+                               (central, apply_branch)):
             shared = cm.get_mean_stds([ctx, ctx], split_by_mag=False)
         # Each slice shares one central computation across all 27 branches.
         self.assertEqual(central.call_count, 2)

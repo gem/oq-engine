@@ -34,7 +34,7 @@ from shapely.geometry import shape
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.branching import (
-    compute_without_shift, sigma_mu_key)
+    mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
@@ -580,8 +580,8 @@ class KothaEtAl2020(GMPE):
         if apply_shift:
             _apply_mean_shift(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_mean_shift)
-    central_key = sigma_mu_key(compute)
+    central_functions = mean_shift_functions(_apply_mean_shift)
+    make_central_key = sigma_mu_key(compute)
 
     # Coefficients obtained direclty from the regression outputs of
     # Kotha et al. (2020)
@@ -832,7 +832,7 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     REQUIRES_SITES_PARAMETERS = set(("region", "vs30", "vs30measured"))
 
     kind = "ESHM20"
-    central_key = sigma_mu_key(KothaEtAl2020.compute, 'dl2l')
+    make_central_key = sigma_mu_key(KothaEtAl2020.compute, 'dl2l')
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                   e1                 b1                  b2                  b3                  c1                   c2                   c3              tau_c3             phi_s2s         tau_event_0             tau_l2l               phi_0       d0_obs        d1_obs   phi_s2s_obs       d0_inf        d1_inf   phi_s2s_inf

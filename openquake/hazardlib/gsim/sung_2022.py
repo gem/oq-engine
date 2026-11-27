@@ -37,6 +37,7 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.branching import mean_shift_functions
 from openquake.hazardlib.gsim.bayless_abrahamson_2018 import (
     _path_scaling, _ztor_scaling, _linear_site_response)
 
@@ -348,7 +349,8 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
 
     experimental = True # For now
-    central_functions = (compute_central, apply_branch_shift)
+    central_functions = mean_shift_functions(apply_branch_shift,
+                                             compute_central)
 
     def __init__(self, adjustment_file, rlz_id="mean"):
         self.adjustment_file = adjustment_file

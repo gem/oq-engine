@@ -135,7 +135,8 @@ def fix_toml(v):
     return v
 
 
-OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
+OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters',
+              'make_central_key')
 
 
 def bad_methods(clsdict):
@@ -191,6 +192,9 @@ class MetaGSIM(abc.ABCMeta):
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             self.kwargs['gmpe_table'] = self.gmpe_table
+        if hasattr(self, 'make_central_key'):
+            # Snapshot constructor options before callers can reuse them.
+            self.central_key = self.make_central_key()
         if mixture_model is not None:
             self.mixture_model = mixture_model
 

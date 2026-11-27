@@ -48,7 +48,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib.gsim.branching import (
-    compute_without_shift, sigma_mu_key)
+    mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
@@ -373,8 +373,8 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
         if apply_shift:
             _apply_sigma_mu(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_sigma_mu)
-    central_key = sigma_mu_key(compute)
+    central_functions = mean_shift_functions(_apply_sigma_mu)
+    make_central_key = sigma_mu_key(compute)
 
     # Note that in these set of coefficients (EQS paper) c6 for
     # interface and f4 and f5 have changed. Also as mentioned by Grace

@@ -1707,26 +1707,25 @@ class ContextMaker(object):
             # GSIMs opt in with two module-level functions and a key that
             # identifies the inputs to their shared computation.
             central_functions = getattr(gsim, 'central_functions', None)
-            key = gsim.central_key if central_functions else None
-            if key is None:
+            key = getattr(gsim, 'central_key', None)
+            if not central_functions or key is None:
                 out[:, g] = self.get_4MN(recarrays, gsim)
             else:
                 groups.setdefault((central_functions, key), []).append(
                     (g, gsim))
         for (central_functions, _), g_gsim_pairs in groups.items():
-            compute_central, apply_shift = central_functions
+            compute_central, apply_branch = central_functions
             self._compute_group(recarrays, g_gsim_pairs, out,
-                                compute_central, apply_shift)
+                                compute_central, apply_branch)
         return out
 
     # Share the backbone and spatial lookups for one context slice at a time.
     def _compute_group(self, ctxs, g_gsim_pairs, out, compute_central,
-                       apply_shift):
+                       apply_branch):
         # Every branch has the same central_key, so use the first GSIM
         # to compute the shared result.
         first, backbone = g_gsim_pairs[0]
-        for _, gsim in g_gsim_pairs:
-            gsim.adj = []
+        adjustments = {}
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
@@ -1739,12 +1738,12 @@ class ContextMaker(object):
                 branch = out[:, g, :, slc]
                 if g != first:
                     branch[:] = central
-                adj = apply_shift(gsim, resolved, self.imts, branch[0])
+                adj = apply_branch(gsim, resolved, self.imts, branch)
                 if adj is not None:
-                    gsim.adj.append(adj)
+                    adjustments.setdefault(g, []).append(adj)
             start = slc.stop
         for g, gsim in g_gsim_pairs:
-            self._finish_mean_stds(out[:, g], gsim)
+            self._finish_mean_stds(out[:, g], gsim, adjustments.get(g))
 
     def get_4MN(self, ctxs, gsim):
         """
@@ -1753,22 +1752,21 @@ class ContextMaker(object):
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imts)
         out = numpy.zeros((4, M, N))
-        gsim.adj = []  # NSHM2014P adjustments
+        adjustments = []  # NSHM2014P adjustments
         compute = gsim.__class__.compute
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
             adj = compute(gsim, ctx, self.imts, *out[:, :, slc])
             if adj is not None:
-                gsim.adj.append(adj)
+                adjustments.append(adj)
             start = slc.stop
-        self._finish_mean_stds(out, gsim)
+        self._finish_mean_stds(out, gsim, adjustments)
         return out
 
     # Collect adjustments for PoEs, check stddevs and convert components.
-    def _finish_mean_stds(self, out, gsim):
-        if gsim.adj:
-            gsim.adj = numpy.concatenate(gsim.adj)
+    def _finish_mean_stds(self, out, gsim, adjustments):
+        gsim.adj = numpy.concatenate(adjustments) if adjustments else []
         if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
             raise ValueError('Total StdDev is zero for %s' % gsim)
         if self.conv:

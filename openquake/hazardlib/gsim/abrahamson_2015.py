@@ -29,7 +29,7 @@ Module exports :class:`AbrahamsonEtAl2015`
 import numpy as np
 
 from openquake.hazardlib.gsim.branching import (
-    compute_without_shift, sigma_mu_key)
+    mean_shift_functions, sigma_mu_key)
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -418,8 +418,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
         if apply_shift:
             _apply_sigma_mu(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_sigma_mu)
-    central_key = sigma_mu_key(compute)
+    central_functions = mean_shift_functions(_apply_sigma_mu)
+    make_central_key = sigma_mu_key(compute)
 
     # Period-dependent coefficients (Table 3)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

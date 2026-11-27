@@ -22,19 +22,24 @@ import pickle
 
 def configuration_key(options, excluded):
     """Make a hashable key while preserving the order of model options."""
-    return pickle.dumps(tuple((name, value) for name, value in options
-                              if name not in excluded))
+    selected = tuple((name, value) for name, value in options
+                     if name not in excluded)
+    try:
+        return pickle.dumps(selected)
+    except (pickle.PicklingError, AttributeError, TypeError):
+        # Some programmatic options cannot be serialized for grouping.
+        return None
 
 
 def branch_key(compute, *varying):
-    """Define the key of branches that differ only in the given options."""
+    """Build a constructor hook for branches that differ in these options."""
     excluded = {'weight', *varying}
     # Subclasses with their own compute implementation must opt in again.
-    @property
     def key(gsim):
         if type(gsim).compute is compute:
-            return (type(gsim), configuration_key(
-                sorted(gsim.kwargs.items()), excluded))
+            config = configuration_key(sorted(gsim.kwargs.items()), excluded)
+            if config is not None:
+                return type(gsim), config
     return key
 
 
@@ -47,3 +52,10 @@ def compute_without_shift(gsim, ctx, imts, mean, sig, tau, phi, gra_mon=None):
     """Compute the shared predictions and pass the context to the shift."""
     gsim.compute(ctx, imts, mean, sig, tau, phi, apply_shift=False)
     return ctx
+
+
+def mean_shift_functions(apply_shift, compute_central=compute_without_shift):
+    """Pair shared computation with a callback that updates only the mean."""
+    def apply_branch(gsim, resolved, imts, outputs):
+        return apply_shift(gsim, resolved, imts, outputs[0])
+    return compute_central, apply_branch
