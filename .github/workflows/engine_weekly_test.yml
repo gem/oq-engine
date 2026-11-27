@@ -379,14 +379,18 @@ jobs:
       - name: Server 'AELO' mode tests
         env:
           OQ_APPLICATION_MODE: AELO
+          WHEELHOUSE_URL="https://wheelhouse.openquake.org/unified/"
+          GEM_WHEELS_URL="https://wheelhouse.openquake.org/gem261118/"
+          URL_STANDALONE="https://wheelhouse.openquake.org/py/standalone/post-inst/"
+
         run: |
           source ~/openquake/bin/activate
-          python -m pip install -r requirements-aelo-py-linux64.txt
+
+          pip install --no-index --no-cache-dir --find-links $WHEELHOUSE_URL --find-links $GEM_WHEELS_URL --find-links $URL_STANDALONE -e .[test,aelo]
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
           ./openquake/server/manage.py collectstatic --noinput
-          pip install https://wheelhouse.openquake.org/unified/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_aelo_mode.py
 
   server_impact_mode:
@@ -419,6 +423,10 @@ jobs:
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WHEELHOUSE_URL="https://wheelhouse.openquake.org/unified/"
+          GEM_WHEELS_URL="https://wheelhouse.openquake.org/gem261118/"
+          URL_STANDALONE="https://wheelhouse.openquake.org/py/standalone/post-inst/"
+
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
@@ -433,7 +441,9 @@ jobs:
           source ~/openquake/bin/activate
           PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
           echo $PY_VER
-          python -m pip install -r requirements-impact-$PY_VER-linux64.txt
+
+          pip install --no-index --no-cache-dir --find-links $WHEELHOUSE_URL --find-links $GEM_WHEELS_URL --find-links $URL_STANDALONE -e .[test,impact]
+
       - name: Actualize 'impact' templates for email notifications
         run: |
           for file in ./openquake/server/templates/registration/*.impact.tmpl; do

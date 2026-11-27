@@ -60,6 +60,7 @@ server = [
 ]
 test = [
     "pytest~=9.0.3",
+    "pytest_django~=4.9.0",
 ]
 impact = [
     "affine~=2.4.0",
