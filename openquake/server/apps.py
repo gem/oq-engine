@@ -20,8 +20,9 @@ import os
 import importlib
 from django.apps import AppConfig
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from openquake.baselib import config
-from openquake.commonlib import dbapi
+from openquake.commonlib import auth, dbapi
 from openquake.server.db import actions
 
 # optional dependencies needed in IMPACT mode: (module, package, purpose)
@@ -35,6 +36,15 @@ IMPACT_DEPENDENCIES = [
 ]
 
 oqdir = os.path.dirname(os.path.dirname(__file__))
+
+
+def check_api_key():
+    # second line of defense: `oq webui start` and the ExecStartPre of the
+    # gunicorn units (python -m openquake.server.postinstall) already stop
+    # the WebUI before it starts, but a unit may lack the ExecStartPre
+    error = auth.api_key_error()
+    if error:
+        raise ImproperlyConfigured(error)
 
 
 class ServerConfig(AppConfig):
@@ -53,6 +63,8 @@ class ServerConfig(AppConfig):
         import openquake.server.signals  # NOQA
         if settings.LOCKDOWN:
             import openquake.server.user_profile.signals  # NOQA
+
+        check_api_key()
 
         # reset any computation left in the 'executing' state;
         # the database may not exist yet (this happens when building

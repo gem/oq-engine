@@ -17,13 +17,14 @@ Standalone OpenQuake Django applications distributed with the engine, and
 the postinstall commands run after their installation.
 
 Run as ``python -m openquake.server.postinstall`` (e.g. as ExecStartPre of
-the gunicorn systemd unit) it checks that the engine database is updated
-and then runs the postinstall commands, exiting with an error otherwise.
+the gunicorn systemd unit) it checks that the key of the internal API is set
+and that the engine database is updated, and then runs the postinstall
+commands, exiting with an error otherwise.
 """
 import subprocess
 import sys
 
-from openquake.commonlib import dbapi
+from openquake.commonlib import auth, dbapi
 from openquake.server.db import actions
 from openquake.server.db.upgrade_manager import VersioningNotInstalled
 
@@ -70,7 +71,15 @@ def postinstall(pycmd, apps=STANDALONE_APP_INFO):
     return errors
 
 
-if __name__ == '__main__':
+def main():
+    """
+    Check the key of the internal API and the engine database, then run the
+    postinstall; exit with an error before the WebUI (e.g. the gunicorn
+    workers) is started if anything is wrong
+    """
+    error = auth.api_key_error()
+    if error:
+        sys.exit(error)
     # Check the engine schema before Django migrations or app hooks write.
     try:
         outdated = actions.check_outdated(dbapi.db)
@@ -85,3 +94,7 @@ if __name__ == '__main__':
     errors = postinstall(sys.executable)
     if errors:
         sys.exit('\n'.join(errors))
+
+
+if __name__ == '__main__':
+    main()
