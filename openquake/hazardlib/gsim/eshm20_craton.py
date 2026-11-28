@@ -126,6 +126,14 @@ def get_stddevs(ergodic, tau_model, TAU, PHI_SS, imt, ctx):
     return [sigma, tau, phi]
 
 
+def apply_sigma_mu(gsim, ctx, imts, mean_stds, adj, epsilon):
+    """Apply the final epistemic mean shift for this branch."""
+    mean = mean_stds[0]
+    if epsilon:
+        for m, imt in enumerate(imts):
+            mean[m] += epsilon * gsim.COEFFS[imt]["sigma_mu"]
+
+
 class ESHM20Craton(GMPE):
     """
     Implements a scalable backbone GMPE for application to stable cratonic
@@ -238,10 +246,13 @@ class ESHM20Craton(GMPE):
         self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
                                              self.phi_ss_quantile)
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = apply_sigma_mu
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         Returns the mean and standard deviations
         """
+        mean, sig, tau, phi = mean_stds
         C_ROCK = self.COEFFS[PGA()]
         pga_r = get_hard_rock_mean(C_ROCK, ctx)
         for m, imt in enumerate(imts):
@@ -262,9 +273,7 @@ class ESHM20Craton(GMPE):
             sig[m], tau[m], phi[m] = get_stddevs(
                 self.ergodic, self.tau_model, self.TAU, self.PHI_SS,
                 imt, ctx)
-            if self.epsilon:
-                # If requested, apply epistemic uncertainty
-                mean[m] += (self.epsilon * C["sigma_mu"])
+        return {}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                    e1                 b1                    b2                  b3                  c1                   c2                    c3            sigma_mu

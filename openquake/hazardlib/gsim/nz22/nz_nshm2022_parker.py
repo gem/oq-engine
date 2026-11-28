@@ -279,6 +279,16 @@ def get_backarc_term(trt, imt, ctx):
         return np.zeros_like(dists)
 
 
+def apply_sigma_mu(gsim, ctx, imts, mean_stds, adj, sigma_mu_epsilon):
+    """Apply the final epistemic mean shift for this branch."""
+    mean = mean_stds[0]
+    if sigma_mu_epsilon:
+        trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
+        for m, imt in enumerate(imts):
+            mean[m] += sigma_mu_epsilon * get_sigma_epistemic(
+                trt, gsim.region, imt)
+
+
 class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     """
     Implements NZ NSHM 2022 Soil nonlinearity sigma model modification
@@ -301,12 +311,15 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = apply_sigma_mu
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
         for m, imt in enumerate(imts):
@@ -347,11 +360,6 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             # The output is the desired median model prediction in LN units
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
             mean[m] = fp + fnl + fb + flin + fm + c0 + fd + fba
-            if self.sigma_mu_epsilon:
-                # Apply an epistmic adjustment factor.
-                # Currently, its applied to only global model.
-                mean[m] += self.sigma_mu_epsilon * get_sigma_epistemic(
-                    trt, self.region, imt)
             # The default sigma is modified sigma that accounts for
             # soil nonlinearity
             if self.modified_sigma:
@@ -362,6 +370,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
                     C, C_PGA, imt, pgar, ctx.rrup, ctx.vs30)
             else:
                 sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
+        return {}
 
     # Note that in these set of coefficients (EQS paper) c6 for
     # interface and f4 and f5 have changed. Also as mentioned by Grace

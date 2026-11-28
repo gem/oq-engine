@@ -22,7 +22,6 @@ import json
 import os
 import hashlib
 import ctypes
-from contextlib import nullcontext
 from functools import lru_cache
 import h5py
 import h3
@@ -536,7 +535,7 @@ def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
 
 
 # Resolve central mean, optional SE and per-cell sigma in one spatial search.
-def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
+def _resolve_adjs(grid_data, cfg, term, imt, ctx):
     # Path-based terms are stored in the raytrace grids. Mean / SE
     # are both returned uncapped here; the path_cap (if set) is applied
     # to the per-branch total (central + eps*SE) in compute()
@@ -552,11 +551,9 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
         if (term, imt) not in cache:
             cache[term, imt] = _build_masks(grid, grid_data["h3_res"])
         masks = cache[term, imt]
-        # The ContextMaker owns the monitor; standalone GSIMs need none.
-        with gra_mon:
-            return _raytrace_path_adjs(
-                grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
-                grid_data["h3_res"], masks)
+        return _raytrace_path_adjs(
+            grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
+            grid_data["h3_res"], masks)
 
     # Hypo/site terms are stored as cell_id -> value dicts
     entry = grid_data["grids"].get(imt, {}).get(term, {})
@@ -567,8 +564,7 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
     return grid_lookup(entry, lats, lons, grid_data["h3_res"])
 
 
-def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
-                    gra_mon=nullcontext()):
+def compute_central(gsim, ctx: np.recarray, imts, mean_stds):
     """
     Compute the backbone and the central grid corrections, i.e. the
     part of the result which is independent from the epsilons.
@@ -593,16 +589,18 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
         Inter-event standard deviation output array, same shape as mean.
     :param phi:
         Intra-event standard deviation output array, same shape as mean.
-    :param gra_mon:
-        Optional ray-tracing monitor owned by the ContextMaker.
     :returns:
         A dict {(imt_index, term): (mean_adj, se_adj)} for terms with
         mean data. Each adjustment has shape (len(ctx),); se_adj is None
         when that term/IMT has no SE data.
     """
+    mean, sig, tau, phi = mean_stds
     grid_data = gsim.grid_data
     gsim.gmpe.compute(ctx, imts, mean, sig, tau, phi)
-    resolved = {}
+    # term -> (mean_adj, se_adj), arrays of shape (len(imts), len(ctx)):
+    # mean_adj is NaN where the term has no mean data for that IMT, and
+    # se_adj is NaN where the SE data is missing or there is no mean data
+    adj = {}
     for m, imt in enumerate(imts):
         # Apply each correction - example (term, cfg):
         #   term = 'dL2L'
@@ -611,12 +609,17 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
         for term, cfg in grid_data["res_terms"].items():
             # Resolve central, SE and per-cell sigma together so each
             # branch only has to add its own eps * SE shift later
-            adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx, gra_mon)
+            adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx)
             mean_adj, se_adj = adjs.get("mean"), adjs.get("mean_se")
             if mean_adj is None:
                 # No central mean data for this term/IMT: skip correction
                 continue
-            resolved[m, term] = mean_adj, se_adj
+            if term not in adj:
+                shape = (len(imts), len(ctx))
+                adj[term] = np.full(shape, np.nan), np.full(shape, np.nan)
+            adj[term][0][m] = mean_adj
+            if se_adj is not None:
+                adj[term][1][m] = se_adj
             # Central mean and sigma adjustments do not depend on
             # epsilon, so they are added here
             mean[m] += mean_adj
@@ -629,37 +632,45 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
                 sig_vals = adjs.get("sig", scalars.get(term))
                 adjust_sigma(sig_vals, cfg, sig_action,
                              sig[m], tau[m], phi[m])
-    return resolved
+    return adj
 
 
-def apply_epsilons(gsim, resolved, imts, mean):
+def apply_epsilons(gsim, ctx, imts, mean_stds, adj, epsilons, path_cap):
     """
     Add this branch's eps * mean_se shift to the central mean.
 
     :param gsim: GridAdjustedGMPE instance
-    :param resolved: the dictionary returned by compute_central
+    :param ctx: the context
+    :param adj: the dictionary returned by compute
     :param imts: sequence of IMT instances, in output array row order
-    :param mean: central mean array of shape (len(imts), N)
+    :param mean_stds: mean, sig, tau and phi arrays of shape (M, N)
     """
-    # Terms with no mean data contributed nothing to the central mean
-    # and are omitted from resolved. For path terms with path_cap set,
-    # clip the per-branch total (central + eps*SE) so no single LT
-    # realisation's path contribution can exceed the physical bound
-    for (m, term), (mean_adj, se_adj) in resolved.items():
-        eps = gsim.epsilons.get(term, 0.0)
-        if eps != 0.0 and se_adj is None:
-            raise ValueError(
-                f"Non-zero epsilon requested for term '{term}' but "
-                f"per-cell '{term}_mean_se' dataset is missing for "
-                f"IMT '{imts[m]}'.")
-        shift = eps * se_adj if eps != 0.0 else 0.0
+    mean = mean_stds[0]
+    # The option is '' when the caller omits it
+    epsilons = epsilons or {}
+    # NaN marks the IMTs without mean data for a term: they contribute
+    # nothing to the central mean. For path terms with path_cap set, clip
+    # the per-branch total (central + eps*SE) so no single LT realisation's
+    # path contribution can exceed the physical bound
+    for term, (mean_adj, se_adj) in adj.items():
+        eps = epsilons.get(term, 0.0)
+        if eps != 0.0:
+            missing = ~np.isnan(mean_adj) & np.isnan(se_adj)
+            if missing.any():
+                m = np.nonzero(missing.any(axis=1))[0][0]
+                raise ValueError(
+                    f"Non-zero epsilon requested for term '{term}' but "
+                    f"per-cell '{term}_mean_se' dataset is missing for "
+                    f"IMT '{imts[m]}'.")
+        mean_adj = np.nan_to_num(mean_adj)
+        shift = eps * np.nan_to_num(se_adj)
         cfg = gsim.grid_data["res_terms"][term]
-        if cfg["location"] == "path" and gsim.path_cap:
+        if cfg["location"] == "path" and path_cap:
             # mean_adj was already added uncapped in compute_central;
             # replace it with the capped (central + eps*SE) total
             shift = np.clip(mean_adj + shift,
-                            -gsim.path_cap, gsim.path_cap) - mean_adj
-        mean[m] += shift
+                            -path_cap, path_cap) - mean_adj
+        mean += shift
 
 
 class GridAdjustedGMPE(GMPE):
@@ -767,6 +778,15 @@ class GridAdjustedGMPE(GMPE):
         [0.5, 2.0] on every LT realisation. Useful for constraining long
         rays crossing many weakly-constrained cells, where the per-km
         shifts can stack into physically unrealistic path adjustments.
+
+    :param gmpe_options:
+        Additional keyword arguments accepted by the model selected by
+        ``gmpe_name``. In a logic tree, put them alongside ``gmpe_name``
+        in the ``[GridAdjustedGMPE]`` table. For example, with
+        ``gmpe_name = "BooreEtAl2014"``, the model accepts ``region``,
+        ``sof``, ``sigma_mu_epsilon``, ``usgs_basin_scaling``, and
+        ``cybershake_basin_adj``. To see the parameters and defaults for
+        a different model, inspect ``registry[gmpe_name].__init__``.
     """
     # Req Params - set from underlying GMM via set_parameters()
     REQUIRES_SITES_PARAMETERS = set()
@@ -779,13 +799,12 @@ class GridAdjustedGMPE(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     experimental = True # It's not extensively tested yet
-    central_functions = (compute_central, apply_epsilons)
 
     def __init__(self, gmpe_name, grid_hdf5_file, epsilons='',
-                 path_cap='', **kwargs):
+                 path_cap='', **gmpe_options):
 
         # Instantiate the underlying GMM
-        self.gmpe = registry[gmpe_name](**kwargs)
+        self.gmpe = registry[gmpe_name](**gmpe_options)
         self.set_parameters()
 
         # Load grid-based corrections from the hdf5; they are shared with
@@ -801,16 +820,8 @@ class GridAdjustedGMPE(GMPE):
                 f"got {path_cap!r}.")
         self.path_cap = path_cap
 
-        # GridAdjustedGMPEs with the same central_key differ only by
-        # epsilons and path_cap, so ContextMaker.get_mean_stds computes
-        # their backbone and central grid adjustments only once
-        self.central_key = (
-            os.fspath(grid_hdf5_file), type(self.gmpe).__name__,
-            repr(tuple(self.gmpe.kwargs.items())))
-
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
-        self.epsilons = epsilons or {}
-        unknown = set(self.epsilons) - set(self.grid_data["res_terms"])
+        unknown = set(epsilons or {}) - set(self.grid_data["res_terms"])
         if unknown:
             # Reject typos rather than silently falling back to default
             raise ValueError(
@@ -848,11 +859,6 @@ class GridAdjustedGMPE(GMPE):
                     "but the underlying GSIM does not support "
                     "random-effects residuals.")
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.compute>`
-        for spec of input and result values.
-        """
-        resolved = compute_central(self, ctx, imts, mean, sig, tau, phi)
-        apply_epsilons(self, resolved, imts, mean)
+    update_adj = apply_epsilons
+
+    compute_adj = compute_central

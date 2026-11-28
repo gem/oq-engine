@@ -124,7 +124,7 @@ class GenericGmpeAvgSA(GMPE):
         non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
         if non_avgSA:
             compute_imts_subset(
-                self.gmpe, imts, non_avgSA, ctx, mean, sig, tau, phi)
+                self.gmpe, ctx, imts, non_avgSA, mean, sig, tau, phi)
 
 
 def _get_periods(t_low, t_high, t_num, max_num_per, imts):
@@ -255,7 +255,7 @@ class GmpeIndirectAvgSA(GMPE):
         non_avgSA = {imt for imt in imts if imt.name != "AvgSA"}
         if non_avgSA:
             compute_imts_subset(
-                self.gmpe, imts, non_avgSA, ctx, mean, sig, tau, phi)
+                self.gmpe, ctx, imts, non_avgSA, mean, sig, tau, phi)
 
         # Get periods
         periods_all, apply_interpolation, periods_per_avgsa_imt = _get_periods(

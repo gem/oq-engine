@@ -20,9 +20,13 @@ import unittest
 import unittest.mock as mock
 import numpy
 
+from openquake.baselib.general import duplicated, gen_subclasses
 from openquake.hazardlib import const, valid
 from openquake.hazardlib.gsim.base import (
-    GMPE, gsim_aliases, NotVerifiedWarning, DeprecationWarning)
+    GMPE, GroundShakingIntensityModel, gsim_aliases, NotVerifiedWarning,
+    DeprecationWarning, get_central_key)
+from openquake.hazardlib.gsim.kotha_2020 import (
+    KothaEtAl2020, KothaEtAl2020ESHM20)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.contexts import ContextMaker
 aac = numpy.testing.assert_allclose
@@ -66,7 +70,82 @@ class TGMPE(GMPE):
     REQUIRES_DISTANCES = ()
 
 
+def apply_test_shift(gsim, ctx, imts, mean_stds, adj, shift):
+    pass
+
+
+class ShiftedGMPE(TGMPE):
+    update_adj = apply_test_shift
+
+    def compute_adj(self, ctx: numpy.recarray, imts, mean_stds):
+        return {}
+
+
+class GeneratedComputeTestCase(unittest.TestCase):
+    def test_plain_compute_opts_out(self):
+        class Plain(ShiftedGMPE):
+            def compute(self, ctx: numpy.recarray, imts, mean, sig, tau,
+                        phi):
+                pass
+        self.assertIsNone(Plain.compute_adj)
+
+    def test_compute_with_compute_adj_is_an_error(self):
+        with self.assertRaises(TypeError):
+            class Bad(TGMPE):
+                def compute(self, ctx: numpy.recarray, imts, mean, sig, tau,
+                            phi):
+                    pass
+
+                def compute_adj(self, ctx: numpy.recarray, imts, mean_stds):
+                    pass
+
+    def test_compute_adj_without_update_adj_is_an_error(self):
+        with self.assertRaises(TypeError):
+            class Bad(TGMPE):
+                def compute_adj(self, ctx: numpy.recarray, imts, mean_stds):
+                    pass
+
+
+class CentralKeyTestCase(unittest.TestCase):
+    def test_options_preserve_values_and_order(self):
+        gsim = ShiftedGMPE()
+        gsim.kwargs = {'option': [1]}
+        list_key = get_central_key(gsim)
+        gsim.kwargs = {'option': (1,)}
+        self.assertEqual(get_central_key(gsim), list_key)
+        values = ['', 'None', '/first/table', '/second/table']
+        keys = set()
+        for value in values:
+            gsim.kwargs = {'option': value}
+            keys.add(get_central_key(gsim))
+        self.assertEqual(len(keys), len(values))
+        gsim.kwargs = {'first': 1, 'second': 2}
+        key = get_central_key(gsim)
+        gsim.kwargs = {'second': 2, 'first': 1}
+        self.assertNotEqual(get_central_key(gsim), key)
+
+    def test_branch_options_are_excluded(self):
+        gsim = ShiftedGMPE()
+        gsim.kwargs = {'option': 1, 'shift': -1.}
+        key = get_central_key(gsim)
+        gsim.kwargs = {'option': 1, 'shift': 1.}
+        self.assertEqual(get_central_key(gsim), key)
+
+    def test_kotha_can_share_across_dl2l_values(self):
+        lower, upper = {'PGA': -0.2}, {'PGA': 0.2}
+        self.assertEqual(KothaEtAl2020ESHM20(dl2l=lower).central_key,
+                         KothaEtAl2020ESHM20(dl2l=upper).central_key)
+        self.assertEqual(KothaEtAl2020(dl2l=lower).central_key,
+                         KothaEtAl2020(dl2l=upper).central_key)
+
+
 class GsimInstantiationTestCase(unittest.TestCase):
+    def test_unique_class_names(self):
+        # The registry can overwrite earlier classes with the same name.
+        classes = gen_subclasses(GroundShakingIntensityModel)
+        names = [cls.__name__ for cls in classes
+                 if cls.__module__.startswith('openquake.hazardlib.gsim.')]
+        self.assertEqual(duplicated(names), [])
     def test_none_default_is_rejected(self):
         with self.assertRaisesRegex(TypeError, "option must default to ''"):
             class NoneDefaultGMPE(TGMPE):

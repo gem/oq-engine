@@ -38,6 +38,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
 """
 import numpy as np
 import os
+import functools
 import h5py
 from scipy.interpolate import RegularGridInterpolator
 
@@ -580,6 +581,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
     return mean
 
 
+@functools.lru_cache(maxsize=None)  # the tables are read-only
 def _retrieve_sigma_mu_data(trt, region):
     """
     Extracts the within-model epistemic uncertainty (sigma_mu) from the hdf5
@@ -738,6 +740,24 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
     return sig, tau, phi
 
 
+def get_sigma_mu_adjustments(gsim, ctx, imts):
+    """
+    Returns the sigma_mu adjustments as an array of shape (M, N)
+    """
+    return np.array([get_sigma_mu_adjustment(
+        gsim.sigma_mu_model, imt, ctx.mag, ctx.rrup) for imt in imts])
+
+
+def apply_sigma_mu(gsim, ctx, imts, mean_stds, adj, sigma_mu_epsilon):
+    """
+    Apply the final epistemic mean shift for this branch
+    """
+    mean = mean_stds[0]
+    if sigma_mu_epsilon:
+        for m in range(len(imts)):
+            mean[m] += sigma_mu_epsilon * adj['sigma_mu'][m]
+
+
 class KuehnEtAl2020SInter(GMPE):
     """
     Implements the NGA Subduction model of Kuehn et al. (2020)
@@ -862,12 +882,9 @@ class KuehnEtAl2020SInter(GMPE):
         self.m_b = m_b
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
-        if self.sigma_mu_epsilon:
-            self.gmpe_table = None  # enable split by mag
-            self.sigma_mu_model = _retrieve_sigma_mu_data(
-                self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
-        else:
-            self.sigma_mu_model = {}
+        # independent of the epsilon, so that the branches can share it
+        self.sigma_mu_model = _retrieve_sigma_mu_data(
+            self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
 
         # Alaska 2023 USGS model adjustments
         self.ak23_bias_adj = ak23_bias_adj
@@ -884,12 +901,15 @@ class KuehnEtAl2020SInter(GMPE):
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = apply_sigma_mu
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         if self.m_b:
             # Take the user define magnitude scaling breakpoint
@@ -945,15 +965,11 @@ class KuehnEtAl2020SInter(GMPE):
                 # Apply Alaska 2023 bias adjustment
                 mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
 
-            # Apply the sigma mu adjustment if necessary
-            if self.sigma_mu_epsilon:
-                sigma_mu_adjust = get_sigma_mu_adjustment(
-                    self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
-                mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
-
             # Get standard deviations
             sig[m], tau[m], phi[m] = get_std_dev(
                 C, C_PGA, ctx, pga1100, self.ak23_cb14_sig)
+
+        return {'sigma_mu': get_sigma_mu_adjustments(self, ctx, imts)}
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:

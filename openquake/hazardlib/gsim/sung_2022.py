@@ -217,16 +217,14 @@ EAS(5.0) -4.042505531 1.27 -0.041712502 -2.165 7.487714222 0.476000074 -0.007202
 """)
 
 
-def compute_central(gsim, ctx, imts, mean, sigma, tau, phi, **_kw):
+def compute_central(gsim, ctx, imts, mean_stds):
     """
     Branch-independent work: ergodic backbone + nearest-node index +
-    per-row site-name decode. Returns (idx_all, csids) so
-    apply_branch_shift() can pull the per-rlz column for the right
+    per-row site-name decode. Returns {'idx_all': idx_all, 'csids': csids}
+    so apply_branch_shift() can pull the per-rlz column for the right
     site without redoing the work.
-
-    ``**_kw`` absorbs ContextMaker kwargs (e.g. ``gra_mon``) that this
-    GSIM has no use for - accepted for interface compatibility only.
     """
+    mean, sigma, tau, phi = mean_stds
     missing = sorted({imt.frequency for imt in imts} - set(gsim.freqs))
     if missing:
         raise ValueError(
@@ -288,24 +286,25 @@ def compute_central(gsim, ctx, imts, mean, sigma, tau, phi, **_kw):
 
     _compute_backbone(gsim.COEFFS, ctx, imts, mean, sigma, tau, phi,
                       ergodic=False)
-    return idx_all, csids
+    return {'idx_all': idx_all, 'csids': csids}
 
 
-def apply_branch_shift(gsim, central, imts, mean):
+def apply_branch_shift(gsim, ctx, imts, mean_stds, adj, rlz_id):
     """
     Branch-specific shift: for each unique custom_site_id in the batch,
     add Delta-mu from that site's rlz column into the central mean.
     """
-    idx_all, csids = central
+    mean = mean_stds[0]
+    idx_all, csids = adj['idx_all'], adj['csids']
     for site in np.unique(csids):
         mask = csids == site
         nidx = idx_all[mask]
         for m, imt in enumerate(imts):
             dat = gsim.dat[(site, imt.frequency)]
-            if gsim.rlz_id == 'mean':
+            if rlz_id == 'mean':
                 mean[m, mask] += dat['mean'][nidx]
             else:
-                mean[m, mask] += dat['rlz'][nidx, int(gsim.rlz_id)]
+                mean[m, mask] += dat['rlz'][nidx, int(rlz_id)]
 
 
 class SungEtAl2022NonErgodic(SungEtAl2022):
@@ -348,7 +347,6 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
 
     experimental = True # For now
-    central_functions = (compute_central, apply_branch_shift)
 
     def __init__(self, adjustment_file, rlz_id="mean"):
         self.adjustment_file = adjustment_file
@@ -373,25 +371,13 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         self._lon_fast = p['lon_fast']
         self.off_grid_tol = p['off_grid_tol']
 
-    @property
-    def central_key(self):
-        """
-        Branches with the same adjustment hdf5 share the same backbone and
-        the same nearest-neighbour lookup. ContextMaker computes those once
-        per batch and reuses the result across every branch returning the
-        same key (see contexts.py:get_mean_stds).
-        """
-        return (self.adjustment_file,)
+    # Branches share the backbone and nearest-neighbour lookup. The
+    # non-ergodic backbone derives phi from total sigma and tau.
+    update_adj = apply_branch_shift
 
-    def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
-        """
-        Delegate to compute_central + apply_branch_shift so direct
-        .compute() calls return the non-ergodic mean. The inherited
-        ergodic compute would read C['phi'] which this class's COEFFS
-        does not provide (phi is derived from tot and tau instead).
-        """
-        central = compute_central(self, ctx, imts, mean, sigma, tau, phi)
-        apply_branch_shift(self, central, imts, mean)
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
+        """Compute the non-ergodic backbone and resolve adjustment indices."""
+        return compute_central(self, ctx, imts, mean_stds)
 
     # The Coefficients used here are the same of the ergodic model BUT the
     # standard deviations differ given they are for the non-ergodic variant

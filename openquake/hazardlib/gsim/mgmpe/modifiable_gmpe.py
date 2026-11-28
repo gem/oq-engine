@@ -88,7 +88,7 @@ ADJUSTMENT_REQUIREMENTS = {
 # ############## HANDLER FUNCTIONS FOR CONDITIONAL GMPES ################ #
 
 
-def compute_imts_subset(gmpe, imts, imts_comp, ctx_copy, mean, sig, tau, phi):
+def compute_imts_subset(gmpe, ctx_copy, imts, imts_comp, mean, sig, tau, phi):
     """
     Compute mean and sigms only for the required imts, and then assign them
     to their correct positions in the original mean, sig, tau and phi arrays.
@@ -124,7 +124,7 @@ def compute_imts_subset(gmpe, imts, imts_comp, ctx_copy, mean, sig, tau, phi):
         phi[m] = phi_t[idx]
 
 
-def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
+def conditional_gmpe_compute(self, ctx_copy, imts, mean, sig, tau, phi):
     """
     This function:
         1) Compute the means and standard deviations for the IMTs
@@ -162,7 +162,7 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     # the means and std devs will be returned as zeroed arrays
     if imts_base:
         compute_imts_subset(
-            self.gmpe, imts, imts_base, ctx_copy, mean, sig, tau, phi)
+            self.gmpe, ctx_copy, imts, imts_base, mean, sig, tau, phi)
     
 
 def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
@@ -669,6 +669,27 @@ def init_underlying_gmpes(cond_gmpe_by_imt):
     return sorted(imts_req)
 
 
+INDEPENDENT_SCALING = {
+    'set_scale_median_scalar', 'set_scale_median_vector',
+    'set_scale_total_sigma_scalar', 'set_scale_total_sigma_vector'}
+
+
+# Apply the original modifiers in the order specified by the branch.
+def _apply_modifiers(gsim, ctx, imts, mean_stds, adj,
+                     set_scale_median_scalar=None,
+                     set_scale_median_vector=None,
+                     set_scale_total_sigma_scalar=None,
+                     set_scale_total_sigma_vector=None):
+    for name, kwargs in gsim.params.items():
+        # CEUS 2020 site term needs ref PGA stored.
+        if name == 'ceus2020_site_term':
+            kwargs['ref_pga'] = np.exp(adj['ref'])
+
+        modify = globals()[name]
+        for m, imt in enumerate(imts):
+            modify(ctx, imt, *(a[m] for a in mean_stds), **kwargs)
+
+
 class ModifiableGMPE(GMPE):
     """
     This is a class to modify an underlying GMPE.
@@ -689,6 +710,8 @@ class ModifiableGMPE(GMPE):
         _toml = toml.dumps(kwargs['gmpe'])
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters
+        # Other modifiers can prepare instance-specific data in compute.
+        self.share_central = INDEPENDENT_SCALING.issuperset(self.params)
         g = globals()
         for k in self.params:
             if k not in g:
@@ -742,12 +765,15 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = _apply_modifiers
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         # Set reference Vs30 if required
         ctx_copy = set_ref_ctx(ctx, self.params)
 
@@ -757,27 +783,14 @@ class ModifiableGMPE(GMPE):
             if not hasattr(self, 'imts_req'):
                 self.imts_req = init_underlying_gmpes(
                     self.params["conditional_gmpe"])
-            conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi)
+            conditional_gmpe_compute(self, ctx_copy, imts, mean, sig, tau, phi)
         else:
             # otherwise, compute the original mean and std devs for all IMTs
             self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
         # Compute reference PGA for the CEUS2020 site term
+        ref = None
         if 'ceus2020_site_term' in self.params:
             ref = ceus2020_setup(self.gmpe, ctx, self.params, len(sig[0]))
 
-        # Apply sequentially the modifications
-        g = globals()
-        for methname, kw in self.params.items():
-
-            # CEUS 2020 site term needs ref PGA stored
-            if methname in ['ceus2020_site_term']:
-                kw['ref_pga'] = np.exp(ref)
-
-            # Conditional GMPEs
-            if methname in ["conditional_gmpe"]:
-                kw['base_preds'] = self.params["conditional_gmpe"]["base_preds"]
-                
-            for m, imt in enumerate(imts):
-                me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
-                g[methname](ctx, imt, me, si, ta, ph, **kw)
+        return {} if ref is None else {'ref': ref}

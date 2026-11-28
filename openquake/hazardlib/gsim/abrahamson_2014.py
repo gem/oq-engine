@@ -524,6 +524,13 @@ def get_epistemic_sigma(ctx):
     return sigma_epi
 
 
+def apply_nshm_shift(gsim, ctx, imts, mean_stds, adj, sigma_mu_epsilon):
+    """Apply the same epistemic factor to every IMT in a branch."""
+    mean = mean_stds[0]
+    if len(imts) and sigma_mu_epsilon:
+        mean[:len(imts)] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
+
+
 class AbrahamsonEtAl2014(GMPE):
     """
     Implements GMPE by Abrahamson, Silva and Kamai developed within the
@@ -577,12 +584,15 @@ class AbrahamsonEtAl2014(GMPE):
         self.usgs_basin_scaling = usgs_basin_scaling
         self.cybershake_basin_adj = cybershake_basin_adj
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = apply_nshm_shift
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # compute median sa on rock (vs30=1180m/s). Used for site response
@@ -606,11 +616,11 @@ class AbrahamsonEtAl2014(GMPE):
             mean[m] += _get_regional_term(
                 self.region, C, imt, ctx.vs30, ctx.rrup)
 
-            mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
             # get standard deviations
             sig[m], tau[m], phi[m] = _get_stddevs(
                 self.region, C, imt, ctx, sa1180)
+        return {}
 
     #: Coefficient tables as per annex B of Abrahamson et al. (2014)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

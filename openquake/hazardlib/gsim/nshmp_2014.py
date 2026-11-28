@@ -47,6 +47,11 @@ def nga_west2_epistemic_adjustment(mag, dist):
     return adjustment
 
 
+# Apply this branch's signed adjustment to every IMT.
+def _apply_shift(gsim, ctx, imts, mean_stds, adj, sgn):
+    mean_stds[0][:] += sgn * adj['shift']
+
+
 class NSHMP2014(base.GMPE):
     """
     Implements the NSHMP adjustment factors for the NGA West GMPEs.
@@ -91,14 +96,14 @@ class NSHMP2014(base.GMPE):
             setattr(self.gsim, kwarg, kwargs[kwarg])
             
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        """
-        Compute mean, sig, tau, phi and returns the so called adjustment
-        """
+    update_adj = _apply_shift
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
+        """Compute mean, sig, tau and phi, and return the adjustment."""
+        mean, sig, tau, phi = mean_stds
         self.gsim.compute(ctx, imts, mean, sig, tau, phi)
-        adjustment = nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
-        mean[:] += self.sgn * adjustment
-        return adjustment
+        return {'shift': nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)}
+
 
 # populate gsim_aliases
 # for instance "AbrahamsonEtAl2014NSHMPMean" is associated to the TOML string

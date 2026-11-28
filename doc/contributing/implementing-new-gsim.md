@@ -106,3 +106,59 @@ This will apparently work well for most GSIMs, but as soon as one of the underly
 operation at instantiation time, like reading an .onnx file of several megabytes, the performance of the
 engine will be destroyed, since the ``compute`` method is called millions of times (at worse it will
 correspond to the number of ruptures in the model).
+
+## Sharing the computation across logic tree branches
+
+Logic trees often contain several branches of the same GSIM differing only in
+an option shifting the median, like ``sigma_mu_epsilon``. Such branches can
+share the expensive part of the computation, which is then performed only once.
+If your model uses the NSHM epistemic shift, set
+``self.sigma_mu_epsilon`` from the constructor, then declare two methods on
+the class:
+
+- ``compute_adj(self, ctx, imts, mean_stds)`` computes the central part,
+  which is shared by the branches with the same options. It fills
+  ``mean_stds`` in place, which holds the arrays ``(mean, sig, tau, phi)``,
+  and returns a dictionary mapping names to arrays, which is empty when
+  there is nothing to share.
+- ``update_adj(self, ctx, imts, mean_stds, adj, sigma_mu_epsilon)`` applies
+  the adjustment of a single branch. Its final argument names the branch
+  option that changes the result:
+
+```python
+from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
+
+class MyGMPE(GMPE):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
+        mean, sig, tau, phi = mean_stds
+        ...  # fill the central mean and standard deviations
+        return {}  # the central adjustments, as a dictionary term -> array
+
+    def update_adj(self, ctx: np.recarray, imts, mean_stds, adj,
+                   sigma_mu_epsilon):
+        if sigma_mu_epsilon:
+            mean_stds[0][:] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
+```
+
+The arguments of ``update_adj`` are the input context ``ctx``, the
+``imts``, ``mean_stds``, which holds the output arrays as
+``(mean, sig, tau, phi)``, so ``mean_stds[0]`` is the mean, and the
+dictionary ``adj`` returned by ``compute_adj``. The method modifies the
+output arrays in place. Parameters after these five standard arguments must
+name constructor options used by the adjustment. The engine omits
+those options from the central computation key, so branches with different
+values can share the central computation.
+
+You do not write ``compute`` in this case: ``MetaGSIM`` generates it from the
+two methods, so direct calls run ``compute_adj`` followed by ``update_adj``.
+Inside ``ContextMaker``, ``compute_adj`` runs once for the branches with
+matching central options, then each branch's ``update_adj`` runs.
+
+Both methods must be declared together, either on the class or inherited
+from a parent class; declaring only one of them is an error, and so is
+declaring ``compute`` in the same class as ``compute_adj`` or
+``update_adj``. A class that declares a plain ``compute`` opts out of the
+sharing, and then the branches are computed one by one. A subclass can
+override ``compute_adj`` or ``update_adj`` and call the parent's method with
+``super()``: the generated ``compute`` of the parent still applies only the
+adjustment of the parent.

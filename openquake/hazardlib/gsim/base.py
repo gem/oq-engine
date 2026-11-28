@@ -25,7 +25,6 @@ import os
 import sys
 import abc
 import ast
-import pathlib
 import inspect
 import warnings
 import functools
@@ -36,6 +35,9 @@ from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import const
 from openquake.hazardlib.const import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
+from openquake.hazardlib.gsim.backbone import (
+    adjustment_options, fix_toml, generate_compute, get_central_key,
+    _normalize_option)
 
 
 ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
@@ -116,43 +118,8 @@ def warn_adapted(cls):
         warnings.warn(msg, AdaptedWarning)
 
 
-def fix_toml(v):
-    """
-    Convert paths and Python objects such as arrays and CoeffsTables
-    for TOML serialization.
-    """
-    if isinstance(v, str) and pathlib.PurePath(v).is_absolute():
-        return os.path.basename(v)
-    if isinstance(v, (numpy.float32, numpy.float64)):
-        return float(v)
-    elif isinstance(v, numpy.ndarray):
-        return list(v)
-    elif hasattr(v, 'to_dict'):
-        return v.to_dict()
-    elif hasattr(v, 'items'):
-        return {k1: fix_toml(v1) for k1, v1 in v.items()}
-    elif isinstance(v, list):
-        return [fix_toml(x) for x in v]
-    return v
-
-
-# Convert filenames and NumPy values to their Python equivalents.
-def _normalize_option(value):
-    if isinstance(value, pathlib.PurePath):
-        return os.fspath(value)
-    if isinstance(value, numpy.ndarray):
-        return _normalize_option(value.tolist())
-    if isinstance(value, numpy.generic):
-        return value.item()
-    if type(value) is dict:
-        return {_normalize_option(key): _normalize_option(item)
-                for key, item in value.items()}
-    if type(value) in (list, tuple):
-        return type(value)(_normalize_option(item) for item in value)
-    return value
-
-
-OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
+OK_METHODS = ('compute', 'compute_adj', 'update_adj', 'set_poes', 'requires',
+              'set_parameters')
 
 
 def bad_methods(clsdict):
@@ -171,8 +138,9 @@ def bad_methods(clsdict):
 class MetaGSIM(abc.ABCMeta):
     """
     A metaclass converting set class attributes into frozensets, to avoid
-    mutability bugs without having to change already written GSIMs. Moreover
-    it performs some checks against typos.
+    mutability bugs without having to change already written GSIMs. It also
+    generates the compute method of the classes declaring ``compute_adj``
+    and ``update_adj`` and performs some checks against typos.
     """
     def __new__(meta, name, bases, dic):
         if len(bases) > 1:
@@ -199,10 +167,31 @@ class MetaGSIM(abc.ABCMeta):
                     if missing:
                         raise ValueError('Unknown distance %s in %s' %
                                          (missing, name))
+        if 'compute' in dic:
+            if 'compute_adj' in dic or 'update_adj' in dic:
+                raise TypeError(f'{name} cannot define both compute and '
+                                'compute_adj or update_adj')
+            # A plain compute method opts out of sharing the computation.
+            # update_adj is kept, since the inherited compute of a parent
+            # still needs the options of its adjustment in kwargs.
+            dic['compute_adj'] = None
+        elif bases and ('compute_adj' in dic or 'update_adj' in dic):
+            # Generate compute from the methods, inheriting the missing one
+            base = bases[0]
+            compute_adj = dic.get('compute_adj',
+                                  getattr(base, 'compute_adj', None))
+            update_adj = dic.get('update_adj',
+                                 getattr(base, 'update_adj', None))
+            if compute_adj is None or update_adj is None:
+                raise TypeError(f'{name} must define both compute_adj and '
+                                'update_adj to share its computation')
+            dic['compute_adj'] = compute_adj
+            dic['update_adj'] = update_adj
+            dic['compute'] = generate_compute(compute_adj, update_adj)
         cls = super().__new__(meta, name, bases, dic)
         return cls
 
-    def __call__(cls, **kwargs):
+    def __call__(cls, *, basedir='', **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
         for name, value in kwargs.items():
             kwargs[name] = value = _normalize_option(value)
@@ -223,12 +212,27 @@ class MetaGSIM(abc.ABCMeta):
         else:
             self = type.__call__(cls, **kwargs)
         self.kwargs = kwargs
-        self._toml = toml.dumps({cls.__name__: fix_toml(kwargs)}).strip()
+        self._toml = toml.dumps(
+            {cls.__name__: fix_toml(kwargs, basedir)}).strip()
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             table = self.gmpe_table
             self.kwargs['gmpe_table'] = (
                 os.fspath(table) if table is not None else None)
+        if cls.update_adj is not None:
+            # Store the constructor defaults of the adjustment options,
+            # which kwargs lacks when the caller omits them. Options that
+            # the constructor does not name (ModifiableGMPE) get None.
+            params = inspect.signature(cls.__init__).parameters
+            for name in adjustment_options(cls.update_adj):
+                default = params[name].default if name in params else None
+                kwargs.setdefault(name, default)
+            # Snapshot constructor options before callers can reuse them.
+            # NB: the key is computed once, at construction time, so a
+            # GSIM must not be modified after it is built, otherwise
+            # branches with different predictions could share the same
+            # computation in ContextMaker.get_mean_stds.
+            self.central_key = get_central_key(self)
         if mixture_model is not None:
             self.mixture_model = mixture_model
 
@@ -337,6 +341,9 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     adapted = False
     conditional = False  # must be instantiated from ModifiableGMPE
     from_mgmpe = False  # instantiated using ModifiableGMPE
+    # Set by the classes sharing their computation across branches
+    compute_adj = None
+    update_adj = None
 
     @classmethod
     def __init_subclass__(cls):

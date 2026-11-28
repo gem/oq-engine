@@ -24,6 +24,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
+from openquake.baselib import hdf5
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as mod
@@ -34,6 +35,7 @@ from openquake.hazardlib.gsim.mgmpe.grid_adjusted_gmpe import (
     raytrace_path_adj,
 )
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
+from openquake.hazardlib.gsim_lt import GsimLogicTree
 
 aae = np.testing.assert_array_almost_equal
 
@@ -363,6 +365,47 @@ class GridAdjustedGMPETest(unittest.TestCase):
         out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
         aae(out, self._get_mean_stds(IMTS))
 
+    def test_grid_subdirectories_survive_logic_tree_round_trip(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            for name in ('low', 'high'):
+                folder = root / name
+                folder.mkdir()
+                shutil.copy(GRID_HDF5, folder / 'adjustments.hdf5')
+            with h5py.File(root / 'high/adjustments.hdf5', 'a') as hf:
+                hf['dL2L']['PGA']['dL2L'][:] += 0.5
+            branches = ''.join(f'''
+              <logicTreeBranch branchID="{name}">
+                <uncertaintyModel>
+                  [GridAdjustedGMPE]
+                  gmpe_name = "{BASE_GSIM}"
+                  grid_hdf5_file = "{name}/adjustments.hdf5"
+                </uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+              </logicTreeBranch>''' for name in ('low', 'high'))
+            xml = root / 'gsim.xml'
+            xml.write_text(f'''
+            <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+            <logicTree logicTreeID="lt">
+              <logicTreeBranchSet
+                  uncertaintyType="gmpeModel" branchSetID="bs"
+                  applyToTectonicRegionType="Active Shallow Crust">
+                {branches}
+              </logicTreeBranchSet>
+            </logicTree>
+            </nrml>''')
+            tree = GsimLogicTree(str(xml), ['*'])
+            with hdf5.File(root / 'tree.hdf5', 'w') as ds:
+                ds['tree'] = tree
+            with hdf5.File(root / 'tree.hdf5', 'r') as ds:
+                restored = ds['tree']
+        gsims = [b.gsim for b in restored.branches]
+        for name, gsim in zip(('low', 'high'), gsims, strict=True):
+            self.assertIn(f'"{name}/adjustments.hdf5"', gsim._toml)
+        cmaker = simple_cmaker(gsims, ['PGA'])
+        mean = cmaker.get_mean_stds([self._make_ctx(cmaker)])[0]
+        aae(mean[1] - mean[0], 0.5)
+
     def test_grids_shared_and_pickled(self):
         # Like GMPETable, pickling preserves the loaded grids and their
         # sharing, even after the extracted HDF5 file has been deleted.
@@ -380,6 +423,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             restored = pickle.loads(data)
         self.assertIs(restored[0].grid_data, restored[1].grid_data)
         new = restored[1]
+        self.assertEqual(new.central_key, gsims[1].central_key)
         cmaker = simple_cmaker([valid.gsim(BASE_GSIM), gsims[1]], IMTS)
         ctx = self._make_ctx(cmaker)
         expected = cmaker.get_mean_stds([ctx])
@@ -436,15 +480,11 @@ class GridAdjustedGMPETest(unittest.TestCase):
                 for eps in combos]
         cm = simple_cmaker(adjs[:1] + [base] + adjs[1:], IMTS)
         ctx = cm.recarray([self._make_ctx(cm)])
-        central = mock.Mock(wraps=mod.compute_central)
-        with mock.patch.object(GridAdjustedGMPE, 'central_functions',
-                               (central, mod.apply_epsilons)):
+        with mock.patch.object(mod, '_raytrace_path_adjs',
+                               wraps=mod._raytrace_path_adjs) as raytrace:
             shared = cm.get_mean_stds([ctx, ctx], split_by_mag=False)
-        # Each slice shares one central computation across all 27 branches.
-        self.assertEqual(central.call_count, 2)
-        # Ray tracing is monitored once per IMT and slice.
-        self.assertEqual(cm.gra_mon.counts, 2 * len(IMTS))
-        self.assertIn(cm.gra_mon, cm.monitor.children)
+        # All 27 branches share one ray trace per IMT and slice.
+        self.assertEqual(raytrace.call_count, 2 * len(IMTS))
         np.testing.assert_array_equal(shared[:, 1], reference[0][:, 0])
         for i, eps in enumerate(combos):
             g = i + (i > 0)

@@ -544,6 +544,16 @@ def get_epistemic_adjustment(C, rrup):
     return C["e1"] + C["e2"] * rrup_norm + C["e3"] * (rrup_norm ** 2.0)
 
 
+def apply_sigma_mu(gsim, ctx, imts, mean_stds, adj, sigma_mu_epsilon):
+    """Apply the final epistemic mean shift for this branch."""
+    mean = mean_stds[0]
+    if sigma_mu_epsilon:
+        for m, imt in enumerate(imts):
+            sigma_mu = get_epistemic_adjustment(
+                gsim.COEFFS[imt], ctx.rrup)
+            mean[m] += sigma_mu_epsilon * sigma_mu
+
+
 class AbrahamsonGulerce2020SInter(GMPE):
     """
     Implements the 2020 Subduction ground motion model of Abrahamson &
@@ -675,12 +685,15 @@ class AbrahamsonGulerce2020SInter(GMPE):
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = apply_sigma_mu
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
         pga1000 = get_acceleration_on_reference_rock(C_PGA, trt,
@@ -700,11 +713,6 @@ class AbrahamsonGulerce2020SInter(GMPE):
                 # Apply Alaska 2023 bias adjustment
                 mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
 
-            if self.sigma_mu_epsilon:
-                # Apply an epistemic adjustment factor
-                mean[m] += (self.sigma_mu_epsilon *
-                            get_epistemic_adjustment(C, ctx.rrup))
-
             # Get the standard deviations
             tau_m, phi_m = get_tau_phi(C, C_PGA, self.region, imt.period,
                                        ctx.rrup, ctx.vs30, pga1000,
@@ -713,6 +721,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
             phi[m] = phi_m
 
         sig[:] = np.sqrt(tau ** 2.0 + phi ** 2.0)
+        return {}
 
     # Coefficients taken from digital files supplied by Norm Abrahamson
     COEFFS = CoeffsTable(sa_damping=5, table="""\

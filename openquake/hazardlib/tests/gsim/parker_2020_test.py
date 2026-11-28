@@ -19,7 +19,8 @@
 import unittest
 import numpy
 
-from openquake.hazardlib.contexts import RuptureContext, get_mean_stds
+from openquake.hazardlib.contexts import (
+    RuptureContext, get_mean_stds, simple_cmaker)
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.parker_2020 import (
     ParkerEtAl2020SInter, ParkerEtAl2020SInterB,
@@ -33,6 +34,15 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 class ParkerEtAl2020SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ParkerEtAl2020SInter
+
+    def test_shift_excludes_pgv(self):
+        gsims = [self.GSIM_CLASS(sigma_mu_epsilon=eps) for eps in (0., 1.)]
+        cm = simple_cmaker(gsims, ['PGA', 'PGV'])
+        ctx = cm.new_ctx(1)
+        ctx.mag, ctx.rrup, ctx.vs30 = 7., 40., 500.
+        mean = cm.get_mean_stds([ctx])[0]
+        numpy.testing.assert_array_equal(mean[0, 1], mean[1, 1])
+        self.assertGreater(mean[1, 0, 0], mean[0, 0, 0])
 
     def test_all(self):
         self.check('PARKER20/ParkerEtAl2020SInter_MEAN.csv',

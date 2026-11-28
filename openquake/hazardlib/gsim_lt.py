@@ -407,7 +407,7 @@ class GsimLogicTree(lt.AbstractLogicTree):
                 for gsim in gsims:
                     kw = toml.loads(gsim._toml)[gsim.__class__.__name__]
                     # i.e. kw = {'gmpe_table': 'Wcrust_low_rhypo.hdf5'}
-                    # notice that fix_toml ensure relative path names
+                    # The serialized paths are relative to the logic tree.
                     for k, v in kw.items():
                         # Optional files such as volc_arc_file can be empty.
                         if v and k.endswith(('_file', '_table')):

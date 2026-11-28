@@ -401,6 +401,27 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
     return [np.sqrt(tau ** 2. + phi ** 2.), tau, phi]
 
 
+# Apply the final epistemic mean shift for this branch.
+def _apply_mean_shift(gsim, ctx, imts, mean_stds, adj,
+                      sigma_mu_epsilon, dl2l):
+    mean = mean_stds[0]
+    if dl2l:
+        # The source-region parameter is specified explicitly.
+        table = CoeffsTable.fromdict(
+            {from_string(key): {"dl2l": dl2l[key]} for key in dl2l})
+        for m, imt in enumerate(imts):
+            mean[m] += table[imt]["dl2l"]
+    elif gsim.kind == 'regional':
+        for m, imt in enumerate(imts):
+            mean[m] += get_dl2l(gsim.tec_vals, adj['tec_feat_idx'],
+                                str(imt), gsim.delta_l2l_epsilon)
+    elif sigma_mu_epsilon:
+        for m, imt in enumerate(imts):
+            sigma_mu = get_sigma_mu_adjustment(
+                gsim.kind, gsim.COEFFS[imt], imt, ctx)
+            mean[m] += sigma_mu_epsilon * sigma_mu
+
+
 class KothaEtAl2020(GMPE):
     """
     Implements the first complete version of the newly derived GMPE
@@ -489,7 +510,7 @@ class KothaEtAl2020(GMPE):
         self.c3_epsilon = c3_epsilon
         self.ergodic = ergodic
         if dl2l:
-            # Check that the input is a dictionary and p
+            # Check that the input is a dictionary and parse it
             if not isinstance(dl2l, dict):
                 raise IOError("For Kotha et al. (2020) GMM, source-region "
                               "scaling parameter (dl2l) must be input in the "
@@ -512,14 +533,18 @@ class KothaEtAl2020(GMPE):
         else:
             self.c3 = None
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = _apply_mean_shift
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         # Point-in-polygon assignments do not depend on IMT, so compute them
         # once per compute call and reuse across all IMTs.
+        tec_feat_idx = None
         if self.kind == 'regional':
             site_feat_idx = _assign_feature_indices(
                 self.att_tree, ctx.lon, ctx.lat)
@@ -556,20 +581,7 @@ class KothaEtAl2020(GMPE):
                 mean[m] -= np.log(100.0 * g)
             sig[m], tau[m], phi[m] = get_stddevs(
                 self.kind, self.ergodic, phi_s2s, C, ctx, imt)
-            if self.dl2l:
-                # The source-region parameter is specified explicity
-                mean[m] += self.dl2l[imt]["dl2l"]
-
-            elif self.kind == 'regional':
-                dl2l = get_dl2l(self.tec_vals, tec_feat_idx, str(imt),
-                                self.delta_l2l_epsilon)
-                mean[m] += dl2l
-
-            elif self.sigma_mu_epsilon:
-                # epistemic uncertainty factor (sigma_mu) multiplied by
-                # the number of standard deviations
-                sigma_mu = get_sigma_mu_adjustment(self.kind, C, imt, ctx)
-                mean[m] += self.sigma_mu_epsilon * sigma_mu
+        return {} if tec_feat_idx is None else {'tec_feat_idx': tec_feat_idx}
 
     # Coefficients obtained direclty from the regression outputs of
     # Kotha et al. (2020)

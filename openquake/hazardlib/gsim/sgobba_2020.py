@@ -225,7 +225,7 @@ class SgobbaEtAl2020(GMPE):
 
     def __init__(self, event_id='', directionality=False, cluster='',
                  site=False, bedrock=False):
-        self.event_id = event_id
+        self.event_id = event_id or ''
         self.directionality = directionality
         self.cluster = cluster
         self.site = site

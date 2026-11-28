@@ -33,7 +33,7 @@ import numpy as np
 import shapely
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
+from openquake.hazardlib.gsim.abrahamson_2014 import apply_nshm_shift
 from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -442,12 +442,15 @@ class Bradley2013(GMPE):
     def __init__(self, sigma_mu_epsilon=0.0):
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = apply_nshm_shift
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
@@ -462,9 +465,9 @@ class Bradley2013(GMPE):
             v1 = _get_v1(imt)
             mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
 
-            mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             set_stddevs(self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
                         sig[m], tau[m], phi[m])
+        return {}
 
     #: Coefficient tables are constructed from values in tables 1, 2 and 3
     #: (pages 197, 198 and 199) in Chiou & Youngs,2008. Only Coefficients c1,

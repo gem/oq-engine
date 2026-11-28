@@ -282,6 +282,15 @@ def _compute_site_response_term(C, ctx, pga1000):
     return site_resp_term
 
 
+def apply_sigma_mu(gsim, ctx, imts, mean_stds, adj, sigma_mu_epsilon):
+    """Apply the final epistemic mean shift for this branch."""
+    mean = mean_stds[0]
+    if sigma_mu_epsilon:
+        slab = gsim.trt == const.TRT.SUBDUCTION_INTRASLAB
+        for m, imt in enumerate(imts):
+            mean[m] += get_stress_factor(imt, slab) * sigma_mu_epsilon
+
+
 class AbrahamsonEtAl2015SInter(GMPE):
     """
     Implements the Subduction GMPE developed by Norman Abrahamson, Nicholas
@@ -372,12 +381,15 @@ class AbrahamsonEtAl2015SInter(GMPE):
         else:
             self.faba_model = None
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = apply_sigma_mu
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         C_PGA = self.COEFFS[PGA()]
         dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
         # compute median pga on rock (vs30=1000), needed for site response
@@ -399,15 +411,11 @@ class AbrahamsonEtAl2015SInter(GMPE):
                     self.kind, self.trt, C, ctx, self.faba_model) +
                 _compute_site_response_term(
                     C, ctx, pga1000))
-            if self.sigma_mu_epsilon:
-                sigma_mu = get_stress_factor(
-                    imt, self.trt == const.TRT.SUBDUCTION_INTRASLAB)
-                mean[m] += sigma_mu * self.sigma_mu_epsilon
-
             sig[m] = C["sigma"] if self.ergodic else C["sigma_ss"]
             tau[m] = C['tau']
             phi[m] = C["phi"] if self.ergodic else np.sqrt(
                 C["sigma_ss"] ** 2. - C["tau"] ** 2.)
+        return {}
 
     # Period-dependent coefficients (Table 3)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

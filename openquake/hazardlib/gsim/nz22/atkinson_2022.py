@@ -262,6 +262,31 @@ def get_backarc_term(trt, imt, ctx):
         return np.zeros_like(dists)
 
 
+# Apply the selected epistemic mean shift.
+def _apply_epistemic_shift(gsim, ctx, imts, mean_stds, adj, epistemic):
+    mean = mean_stds[0]
+    # In her email and slack post Gail mentioned that her
+    # upper and lower branches are as 1.28 times of the delta.
+    # So as to represent 10th and 90th percentile.
+    # Consequently, the weights have also changed to 0.3, 0.4,
+    # 0.3.  The scale factor of 0.9 is applied based upon the
+    # discussion that it accounts for the reduction in
+    # epistemic uncertainty when no perfect correlation is
+    # assumed between rupture scenarios. See the note of Peter
+    # and Brendon on slack.
+    branch = epistemic.lower()
+    if branch == "lower":
+        adjustment, sign = _epistemic_adjustment_lower, -1
+    elif branch == "upper":
+        adjustment, sign = _epistemic_adjustment_upper, 1
+    else:
+        return
+
+    for m, imt in enumerate(imts):
+        delta = adjustment(gsim.COEFFS[imt], ctx)
+        mean[m] += sign * (delta * 1.28155 * 0.893)
+
+
 class Atkinson2022Crust(GMPE):
     """
     Implements Atkinson (2022) backbone model for New Zealand. For
@@ -304,7 +329,10 @@ class Atkinson2022Crust(GMPE):
         self.epistemic = epistemic
         self.modified_sigma = modified_sigma
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = _apply_epistemic_shift
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
         pga_rock = _get_pga_on_rock(self.suffix, C_PGA, ctx) * np.exp(
@@ -325,37 +353,13 @@ class Atkinson2022Crust(GMPE):
 
             mean[m] = mean[m] - np.log(981.0)  # Convert the cm/s^2 to g.
 
-            # In her email and slack post Gail mentioned that her
-            # upper and lower branches are as 1.28 times of the delta.
-            # So as to represent 10th and 90th percentile.
-            # Consequently, the weights have also changed to 0.3, 0.4,
-            # 0.3.  The scale factor of 0.9 is applied based upon the
-            # discussion that it accounts for the reduction in
-            # epistemic uncertainty when no perfect correlation is
-            # assumed between rupture scenarios. See the note of Peter
-            # and Brendon on slack.
-            epistemic_scale_factor = 0.893
-            if self.epistemic.lower() == "lower":
-                mean[m] = (
-                    mean[m]
-                    - _epistemic_adjustment_lower(C, ctx)
-                    * 1.28155
-                    * epistemic_scale_factor)
-
-            elif self.epistemic.lower() == "upper":
-                mean[m] = (
-                    mean[m]
-                    + _epistemic_adjustment_upper(C, ctx)
-                    * 1.28155
-                    * epistemic_scale_factor)
-            else:
-                mean[m] = mean[m]
             # Aleatory Uncertainty terms.
             if self.modified_sigma:
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(
                     self.suffix, C, C_PGA, imt, pga_rock, ctx.vs30)
             else:
                 sig[m], tau[m], phi[m] = get_stddevs(self.suffix, C)
+        return {}
 
     # periods given by 1 / 10 ** COEFFS['f']
     with Atk22_COEFFS.open() as coefs_file:

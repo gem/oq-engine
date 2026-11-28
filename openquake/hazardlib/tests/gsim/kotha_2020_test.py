@@ -102,6 +102,7 @@ class KothaEtAl2020InstantiationTestCase(unittest.TestCase):
     def test_instantiation_dl2l(self):
         dl2l = {"PGA": 1.0, "SA(0.2)": 0.5, "SA(1.0)": -1.0}
         gsim = KothaEtAl2020(dl2l=dl2l)
+        self.assertEqual(gsim.kwargs['dl2l'], dl2l)
         self.assertIsInstance(gsim.dl2l, CoeffsTable)
         for imt, val in zip([PGA(), SA(0.2), SA(1.0)], [1.0, 0.5, -1.0]):
             self.assertAlmostEqual(gsim.dl2l[imt]["dl2l"], val)

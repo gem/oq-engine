@@ -51,7 +51,8 @@ from openquake.hazardlib.gsim.kuehn_2020 import (
     _get_ln_z_ref,
     _infer_z,
     get_mean_values,
-    get_sigma_mu_adjustment,
+    apply_sigma_mu,
+    get_sigma_mu_adjustments,
     KuehnEtAl2020SInter,
     CONSTS,
     REGION_TERMS_IF,
@@ -233,12 +234,15 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 self.__class__.REQUIRES_SITES_PARAMETERS
 
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = apply_sigma_mu
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         if self.m_b:
             # Take the user define magnitude scaling breakpoint
@@ -300,11 +304,6 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                     mean[m] += get_basin_term(C, ctx, self.region)
                 mean[m] += get_backarc_term(trt, imt, ctx)
 
-            # Apply the sigma mu adjustment if necessary
-            if self.sigma_mu_epsilon:
-                sigma_mu_adjust = get_sigma_mu_adjustment(
-                    self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
-                mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
             # Get standard deviations
             if self.modified_sigma:
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(
@@ -313,6 +312,8 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 tau[m] = C["tau"]
                 phi[m] = C["phi"]
                 sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
+
+        return {'sigma_mu': get_sigma_mu_adjustments(self, ctx, imts)}
 
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
@@ -323,4 +324,5 @@ class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
     REQUIRES_SITES_PARAMETERS = {"vs30", "backarc"}
 
     # Other required params
-    REQUIRES_ATTRIBUTES = {'region', 'm_b', 'sigma_mu_model', 'sigma_mu_epsilon'}
+    REQUIRES_ATTRIBUTES = {'region', 'm_b', 'sigma_mu_model',
+                           'sigma_mu_epsilon'}

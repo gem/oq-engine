@@ -740,7 +740,7 @@ class NGAEastGMPE(GMPETable):
         """
         self.tau_model = tau_model
         self.phi_model = phi_model
-        self.phi_s2ss_model = phi_s2ss_model
+        self.phi_s2ss_model = phi_s2ss_model or ''
         self.TAU = None
         self.PHI_SS = None
         self.PHI_S2SS = None

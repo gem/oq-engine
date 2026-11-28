@@ -422,6 +422,19 @@ def get_stddevs(C, rrup, vs30):
     return [np.sqrt(C["Tau"] ** 2 + phi_tot ** 2), C["Tau"], phi_tot]
 
 
+def apply_sigma_mu(gsim, ctx, imts, mean_stds, adj, sigma_mu_epsilon):
+    """Apply the final epistemic mean shift for this branch."""
+    mean = mean_stds[0]
+    if sigma_mu_epsilon:
+        trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
+        for m, imt in enumerate(imts):
+            # The epistemic adjustment excludes PGV.
+            if imt.string != 'PGV':
+                sigma_mu = _get_sigma_mu_adjustment(
+                    gsim.saturation_region, trt, imt, gsim.epi_adjs_table)
+                mean[m] += sigma_mu * sigma_mu_epsilon
+
+
 class ParkerEtAl2020SInter(GMPE):
     """
     Implements Parker et al. (2020) for subduction interface.
@@ -520,12 +533,15 @@ class ParkerEtAl2020SInter(GMPE):
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    update_adj = apply_sigma_mu
+
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
         for m, imt in enumerate(imts):
@@ -560,14 +576,8 @@ class ParkerEtAl2020SInter(GMPE):
                 # Apply Alaska 2023 bias adjustment
                 mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
 
-            # Assume don't apply to PGV
-            if self.sigma_mu_epsilon and imt.string != 'PGV':
-                # Apply epistemic uncertainty factor
-                sigma_mu_adjust = _get_sigma_mu_adjustment(
-                    self.saturation_region, trt, imt, self.epi_adjs_table)
-                mean[m] += sigma_mu_adjust * self.sigma_mu_epsilon
-
             sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
+        return {}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT    c0    AK_c0        Aleutian_c0  Cascadia_c0 CAM_N_c0     CAM_S_c0    JP_Pac_c0    JP_Phi_c0    SA_N_c0     SA_S_c0      TW_E_c0      TW_W_c0     c0slab AK_c0slab Aleutian_c0slab Cascadia_c0slab CAM_c0slab JP_c0slab SA_N_c0slab SA_S_c0slab TW_c0slab  c1     c1slab b4   a0        AK_a0     CAM_a0    JP_a0     SA_a0     TW_a0     a0slab    AK_a0slab Cascadia_a0slab CAM_a0slab JP_a0slab SA_a0slab TW_a0slab c4     c5    c6    c4slab c5slab c6slab d      m      db   V2  JP_s1  TW_s1  s2     AK_s2  Cascadia_s2 JP_s2  SA_s2  TW_s2  f4       f4slab   f5       J_e1   J_e2   J_e3  C_e1   C_e2   C_e3   del_None del_Seattle Tau   phi21 phi22  phi2V  VM phi2S2S,0 a1    phi2SS,1 phi2SS,2 a2
