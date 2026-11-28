@@ -172,7 +172,6 @@ class MetaGSIM(abc.ABCMeta):
             # An overridden compute method must opt into sharing again:
             # without an adjustment it stays unwrapped.
             if adjustment is not None:
-                adjustment_options(adjustment)
                 dic['compute'] = adjusted_compute(dic['compute'], adjustment)
         elif adjustment is not None and bases:
             # A new adjustment for an inherited compute wraps its raw body,
@@ -180,7 +179,6 @@ class MetaGSIM(abc.ABCMeta):
             inherited = getattr(bases[0], 'compute', None)
             raw = getattr(inherited, '__wrapped__', None)
             if raw is not None:
-                adjustment_options(adjustment)
                 dic['compute'] = adjusted_compute(raw, adjustment)
         cls = super().__new__(meta, name, bases, dic)
         return cls
