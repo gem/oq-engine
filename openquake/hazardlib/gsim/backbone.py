@@ -145,8 +145,6 @@ def get_central_key(gsim):
     True
     >>> print(get_central_key(
     ...     KothaEtAl2020ESHM20(c3_epsilon=1.732051)))
-    _gsim = "KothaEtAl2020ESHM20"
-    <BLANKLINE>
     [KothaEtAl2020ESHM20]
     c3_epsilon = 1.732051
     """
@@ -160,5 +158,4 @@ def get_central_key(gsim):
                     if name != 'weight' and name not in exclusions)
     options = dict(options)
     name = type(gsim).__name__
-    key = {'_gsim': name, name: fix_toml(options, basedir=None)}
-    return toml.dumps(key).strip()
+    return toml.dumps({name: fix_toml(options, basedir=None)}).strip()
