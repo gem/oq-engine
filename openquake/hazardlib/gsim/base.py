@@ -118,8 +118,8 @@ def warn_adapted(cls):
 
 def fix_toml(v):
     """
-    The kwargs dictionary of a GSIM can contain Python objects convertible
-    to TOML (arrays, CoeffsTables) and we implement the conversion here.
+    Convert paths and Python objects such as arrays and CoeffsTables
+    for TOML serialization.
     """
     if isinstance(v, str) and pathlib.PurePath(v).is_absolute():
         return os.path.basename(v)
@@ -136,12 +136,28 @@ def fix_toml(v):
     return v
 
 
+# Convert filenames and NumPy values to their Python equivalents.
+def _normalize_option(value):
+    if isinstance(value, pathlib.PurePath):
+        return os.fspath(value)
+    if isinstance(value, numpy.ndarray):
+        return _normalize_option(value.tolist())
+    if isinstance(value, numpy.generic):
+        return value.item()
+    if type(value) is dict:
+        return {_normalize_option(key): _normalize_option(item)
+                for key, item in value.items()}
+    if type(value) in (list, tuple):
+        return type(value)(_normalize_option(item) for item in value)
+    return value
+
+
 def get_central_key(gsim):
     """
     Return the class name and a snapshot of the central constructor options.
 
-    The key is None for an ordinary compute method, a GSIM instance that
-    disables sharing, or options that cannot round-trip as Python literals.
+    The key is None for an ordinary compute method or a GSIM instance
+    that disables sharing.
 
     >>> from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
     >>> low = KothaEtAl2020ESHM20(sigma_mu_epsilon=-1.35563)
@@ -158,13 +174,7 @@ def get_central_key(gsim):
         return None
     options = tuple((name, value) for name, value in gsim.kwargs.items()
                     if name != 'weight' and name not in exclusions)
-    key = repr(options)
-    try:
-        # only Python literals have a faithful representation
-        if ast.literal_eval(key) == options:
-            return type(gsim).__name__, key
-    except (ValueError, SyntaxError, RecursionError):
-        pass
+    return type(gsim).__name__, repr(options)
 
 
 OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
@@ -220,10 +230,17 @@ class MetaGSIM(abc.ABCMeta):
     def __call__(cls, **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
         for name, value in kwargs.items():
+            kwargs[name] = value = _normalize_option(value)
             if value is None:
                 raise TypeError(
                     f"{cls.__name__}.{name} must use '' instead of None "
                     "for TOML serialization")
+            try:
+                if ast.literal_eval(repr(value)) == value:
+                    continue
+            except (ValueError, SyntaxError, RecursionError):
+                pass
+            raise ValueError(f'{cls.__name__}.{name} must be a Python literal')
         if 'weight' in kwargs:  # AvgPoeGMPE
             w = kwargs.pop('weight')
             self = type.__call__(cls, **kwargs)
@@ -234,7 +251,9 @@ class MetaGSIM(abc.ABCMeta):
         self._toml = toml.dumps({cls.__name__: fix_toml(kwargs)}).strip()
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
-            self.kwargs['gmpe_table'] = self.gmpe_table
+            table = self.gmpe_table
+            self.kwargs['gmpe_table'] = (
+                os.fspath(table) if table is not None else None)
         if hasattr(cls.compute, 'central_key_excluded'):
             # Snapshot constructor options before callers can reuse them.
             # NB: the key is computed once, at construction time, so a

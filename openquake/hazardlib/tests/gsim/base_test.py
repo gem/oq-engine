@@ -84,7 +84,7 @@ class ShiftedGMPE(TGMPE):
 class CentralKeyTestCase(unittest.TestCase):
     def test_options_preserve_values_and_order(self):
         gsim = ShiftedGMPE()
-        values = [[1], (1,), None, 'None', '/first/table', '/second/table']
+        values = [[1], (1,), '', 'None', '/first/table', '/second/table']
         keys = set()
         for value in values:
             gsim.kwargs = {'option': value}
@@ -101,12 +101,6 @@ class CentralKeyTestCase(unittest.TestCase):
         key = get_central_key(gsim)
         gsim.kwargs = {'option': 1, 'shift': 1.}
         self.assertEqual(get_central_key(gsim), key)
-
-    def test_non_literal_options_are_not_shared(self):
-        # the repr of a large array is truncated
-        gsim = ShiftedGMPE()
-        gsim.kwargs = {'option': numpy.zeros(2000)}
-        self.assertIsNone(get_central_key(gsim))
 
     def test_kotha_eshm20_can_share_across_dl2l_values(self):
         lower, upper = {'PGA': -0.2}, {'PGA': 0.2}
@@ -132,6 +126,11 @@ class GsimInstantiationTestCase(unittest.TestCase):
     def test_explicit_none_is_rejected(self):
         with self.assertRaisesRegex(TypeError, "option must use ''"):
             TGMPE(option=None)
+
+    def test_non_literal_options_are_rejected(self):
+        with self.assertRaisesRegex(
+                ValueError, 'TGMPE.option must be a Python literal'):
+            TGMPE(option={'unsupported': object()})
 
     def test_deprecated(self):
         # check that a deprecation warning is raised when a deprecated

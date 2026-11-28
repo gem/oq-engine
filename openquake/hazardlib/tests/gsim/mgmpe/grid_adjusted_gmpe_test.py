@@ -358,6 +358,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
         # filename (sanity check for usage outside of engine calcs)
         adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
                                grid_hdf5_file=Path(GRID_HDF5))
+        self.assertEqual(adj.kwargs['grid_hdf5_file'], GRID_HDF5)
         cmaker = simple_cmaker([valid.gsim(BASE_GSIM), adj], IMTS)
         out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
         aae(out, self._get_mean_stds(IMTS))
