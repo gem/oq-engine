@@ -113,24 +113,36 @@ Logic trees often contain several branches of the same GSIM differing only in
 an option shifting the median, like ``sigma_mu_epsilon``. Such branches can
 share the expensive part of the computation, which is then performed only once.
 If your model uses the NSHM epistemic shift, set
-``self.sigma_mu_epsilon`` from the constructor and use ``with_nshm_shift``
-on a ``compute`` method that fills the central mean and standard deviations.
+``self.sigma_mu_epsilon`` from the constructor, then declare an
+``apply_adjustment`` method on the class. Its final argument names the
+branch option that changes the result:
 
 ```python
-from openquake.hazardlib.gsim.abrahamson_2014 import with_nshm_shift
+from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
+
+
+def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi,
+                   sigma_mu_epsilon):
+    if sigma_mu_epsilon:
+        mean[:] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
 class MyGMPE(GMPE):
-    @with_nshm_shift
+    apply_adjustment = apply_sigma_mu
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         ...  # fill the central mean and standard deviations
 ```
 
-For a model-specific shift, use
-``@shifted_compute(apply_adjustment, 'sigma_mu_epsilon')`` from
-``openquake.hazardlib.gsim.backbone``. The second argument,
-``central_key_excluded``, names the constructor options that may vary
-without changing the central computation. The module documents the callback
-signature and how to pass precomputed data to it.
+The callback signature starts with ``gsim, ctx, imts, mean, sig, tau, phi``.
+The ``ctx`` argument is the input context when ``compute`` returns ``None``;
+otherwise it is the value returned by ``compute``. The callback modifies the
+output arrays in place. Parameters after these seven standard arguments must
+name constructor options used by the adjustment. The engine omits those
+options from the central computation key, so branches with different values
+can share the central computation.
 
-A subclass inherits the optimization with its ``compute`` method.
-An override can opt in by decorating its own ``compute``.
+``MetaGSIM`` wraps ``compute`` so direct calls still apply the adjustment.
+Inside ``ContextMaker``, the original ``compute`` body runs once for branches
+with matching central options, then each branch's ``apply_adjustment`` runs.
+If a subclass overrides ``compute``, it must declare its own
+``apply_adjustment`` to opt into sharing.
