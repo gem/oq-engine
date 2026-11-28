@@ -689,7 +689,7 @@ def _apply_modifiers(gsim, resolved, imts, mean, sig, tau, phi):
 
 
 # Only independent scalings can vary across branches using the same backbone.
-def _central_key_excluded(gsim):
+def _get_excluded_options(gsim):
     if INDEPENDENT_SCALING.issuperset(gsim.params):
         return INDEPENDENT_SCALING
 
@@ -767,7 +767,7 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-    @shifted_compute(_apply_modifiers, _central_key_excluded)
+    @shifted_compute(_apply_modifiers, _get_excluded_options)
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
