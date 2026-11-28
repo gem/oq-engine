@@ -36,10 +36,22 @@ import toml
 from decorator import decorate
 
 
-# Pass an empty adjustment dictionary if compute_func returns None.
-def _compute_central(compute_func, gsim, ctx, imts, mean, sig, tau, phi):
+def central_adjustments(compute_func, gsim, ctx, imts, mean, sig, tau, phi):
+    """
+    Returns the dictionary computed by compute_func, which is empty when
+    compute_func returns None
+    """
     result = compute_func(gsim, ctx, imts, mean, sig, tau, phi)
     return {} if result is None else result
+
+
+def apply_options(gsim, ctx, adj, imts, mean_stds, apply_adjustment, names):
+    """
+    Applies the adjustment, passing the values of the constructor options
+    named by names (as returned by adjustment_options) from kwargs
+    """
+    values = [gsim.kwargs[name] for name in names]
+    apply_adjustment(gsim, ctx, adj, imts, mean_stds, *values)
 
 
 def adjustment_options(apply_adjustment):
@@ -63,10 +75,10 @@ def adjusted_compute(compute_func, apply_adjustment):
     names = adjustment_options(apply_adjustment)
 
     def adjusted(func, gsim, ctx, imts, mean, sig, tau, phi):
-        adj = _compute_central(func, gsim, ctx, imts, mean, sig, tau, phi)
-        return apply_adjustment(
-            gsim, ctx, adj, imts, (mean, sig, tau, phi),
-            *[gsim.kwargs[name] for name in names])
+        adj = central_adjustments(
+            func, gsim, ctx, imts, mean, sig, tau, phi)
+        return apply_options(gsim, ctx, adj, imts, (mean, sig, tau, phi),
+                             apply_adjustment, names)
 
     return decorate(compute_func, adjusted)
 

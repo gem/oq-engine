@@ -38,6 +38,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
 """
 import numpy as np
 import os
+import functools
 import h5py
 from scipy.interpolate import RegularGridInterpolator
 
@@ -580,6 +581,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
     return mean
 
 
+@functools.lru_cache(maxsize=None)  # the tables are read-only
 def _retrieve_sigma_mu_data(trt, region):
     """
     Extracts the within-model epistemic uncertainty (sigma_mu) from the hdf5
@@ -738,18 +740,21 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
     return sig, tau, phi
 
 
+def get_sigma_mu_adjustments(gsim, imts, ctx):
+    """
+    Returns the sigma_mu adjustments as an array of shape (len(imts), N)
+    """
+    return np.array([get_sigma_mu_adjustment(
+        gsim.sigma_mu_model, imt, ctx.mag, ctx.rrup) for imt in imts])
+
+
 def apply_sigma_mu(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
     """
-    Apply the final epistemic mean shift for this branch. The sigma_mu
-    adjustments are computed from the model of the first branch with a
-    nonzero epsilon, and cached in adj (NaN marks the IMTs not yet computed)
+    Apply the final epistemic mean shift for this branch
     """
     mean = mean_stds[0]
     if sigma_mu_epsilon:
-        for m, imt in enumerate(imts):
-            if np.isnan(adj['sigma_mu'][m]).any():
-                adj['sigma_mu'][m] = get_sigma_mu_adjustment(
-                    gsim.sigma_mu_model, imt, ctx.mag, ctx.rrup)
+        for m in range(len(imts)):
             mean[m] += sigma_mu_epsilon * adj['sigma_mu'][m]
 
 
@@ -877,11 +882,9 @@ class KuehnEtAl2020SInter(GMPE):
         self.m_b = m_b
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
-        if self.sigma_mu_epsilon:
-            self.sigma_mu_model = _retrieve_sigma_mu_data(
-                self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
-        else:
-            self.sigma_mu_model = {}
+        # independent of the epsilon, so that the branches can share it
+        self.sigma_mu_model = _retrieve_sigma_mu_data(
+            self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
 
         # Alaska 2023 USGS model adjustments
         self.ak23_bias_adj = ak23_bias_adj
@@ -966,7 +969,7 @@ class KuehnEtAl2020SInter(GMPE):
             sig[m], tau[m], phi[m] = get_std_dev(
                 C, C_PGA, ctx, pga1100, self.ak23_cb14_sig)
 
-        return {'sigma_mu': np.full((len(imts), len(ctx)), np.nan)}
+        return {'sigma_mu': get_sigma_mu_adjustments(self, imts, ctx)}
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:

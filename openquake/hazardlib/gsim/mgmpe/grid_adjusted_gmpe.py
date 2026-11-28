@@ -596,6 +596,8 @@ def compute_central(gsim, ctx: np.recarray, imts, mean, sig, tau, phi):
     """
     grid_data = gsim.grid_data
     gsim.gmpe.compute(ctx, imts, mean, sig, tau, phi)
+    # term -> (mean_adj, se_adj), arrays of shape (len(imts), len(ctx)),
+    # with NaN where the term has no mean data for that IMT
     adj = {}
     for m, imt in enumerate(imts):
         # Apply each correction - example (term, cfg):
@@ -610,7 +612,12 @@ def compute_central(gsim, ctx: np.recarray, imts, mean, sig, tau, phi):
             if mean_adj is None:
                 # No central mean data for this term/IMT: skip correction
                 continue
-            adj[imt.string, term] = mean_adj, se_adj
+            if term not in adj:
+                shape = (len(imts), len(ctx))
+                adj[term] = np.full(shape, np.nan), np.full(shape, np.nan)
+            adj[term][0][m] = mean_adj
+            if se_adj is not None:
+                adj[term][1][m] = se_adj
             # Central mean and sigma adjustments do not depend on
             # epsilon, so they are added here
             mean[m] += mean_adj
@@ -639,27 +646,29 @@ def apply_epsilons(gsim, ctx, adj, imts, mean_stds, epsilons, path_cap):
     mean = mean_stds[0]
     # The option is '' when the caller omits it
     epsilons = epsilons or {}
-    # Terms with no mean data contributed nothing to the central mean
-    # and are omitted from adj. For path terms with path_cap set,
-    # clip the per-branch total (central + eps*SE) so no single LT
-    # realisation's path contribution can exceed the physical bound
-    index = {imt.string: m for m, imt in enumerate(imts)}
-    for (imt, term), (mean_adj, se_adj) in adj.items():
-        m = index[imt]
+    # NaN marks the IMTs without mean data for a term: they contribute
+    # nothing to the central mean. For path terms with path_cap set, clip
+    # the per-branch total (central + eps*SE) so no single LT realisation's
+    # path contribution can exceed the physical bound
+    for term, (mean_adj, se_adj) in adj.items():
         eps = epsilons.get(term, 0.0)
-        if eps != 0.0 and se_adj is None:
-            raise ValueError(
-                f"Non-zero epsilon requested for term '{term}' but "
-                f"per-cell '{term}_mean_se' dataset is missing for "
-                f"IMT '{imt}'.")
-        shift = eps * se_adj if eps != 0.0 else 0.0
+        if eps != 0.0:
+            missing = ~np.isnan(mean_adj) & np.isnan(se_adj)
+            if missing.any():
+                m = np.nonzero(missing.any(axis=1))[0][0]
+                raise ValueError(
+                    f"Non-zero epsilon requested for term '{term}' but "
+                    f"per-cell '{term}_mean_se' dataset is missing for "
+                    f"IMT '{imts[m]}'.")
+        mean_adj = np.nan_to_num(mean_adj)
+        shift = eps * np.nan_to_num(se_adj)
         cfg = gsim.grid_data["res_terms"][term]
         if cfg["location"] == "path" and path_cap:
             # mean_adj was already added uncapped in compute_central;
             # replace it with the capped (central + eps*SE) total
             shift = np.clip(mean_adj + shift,
                             -path_cap, path_cap) - mean_adj
-        mean[m] += shift
+        mean += shift
 
 
 class GridAdjustedGMPE(GMPE):

@@ -52,6 +52,7 @@ from openquake.hazardlib.gsim.kuehn_2020 import (
     _infer_z,
     get_mean_values,
     apply_sigma_mu,
+    get_sigma_mu_adjustments,
     KuehnEtAl2020SInter,
     CONSTS,
     REGION_TERMS_IF,
@@ -312,7 +313,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 phi[m] = C["phi"]
                 sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
-        return {'sigma_mu': np.full((len(imts), len(ctx)), np.nan)}
+        return {'sigma_mu': get_sigma_mu_adjustments(self, imts, ctx)}
 
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
