@@ -738,13 +738,13 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
     return sig, tau, phi
 
 
-def apply_sigma_mu(gsim, resolved, imts, mean, sig, tau, phi,
+def apply_sigma_mu(gsim, central, imts, mean, sig, tau, phi,
                    sigma_mu_epsilon):
     """
     Apply the final epistemic mean shift for this branch, resolving
     each IMT on the first branch with a nonzero epsilon
     """
-    context, adjustments = resolved
+    context, adjustments = central
     if sigma_mu_epsilon:
         for m, imt in enumerate(imts):
             if imt not in adjustments:

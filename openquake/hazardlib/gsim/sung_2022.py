@@ -288,12 +288,12 @@ def compute_central(gsim, ctx, imts, mean, sigma, tau, phi):
     return idx_all, csids
 
 
-def apply_branch_shift(gsim, resolved, imts, mean, sig, tau, phi, rlz_id):
+def apply_branch_shift(gsim, central, imts, mean, sig, tau, phi, rlz_id):
     """
     Branch-specific shift: for each unique custom_site_id in the batch,
     add Delta-mu from that site's rlz column into the central mean.
     """
-    idx_all, csids = resolved
+    idx_all, csids = central
     for site in np.unique(csids):
         mask = csids == site
         nidx = idx_all[mask]
