@@ -331,6 +331,7 @@ class Atkinson2022Crust(GMPE):
 
     apply_adjustment = _apply_epistemic_shift
 
+    # meta-adjusted
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]

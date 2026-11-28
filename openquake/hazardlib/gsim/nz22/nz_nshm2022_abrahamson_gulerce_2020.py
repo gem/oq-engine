@@ -127,6 +127,7 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
 
     apply_adjustment = apply_sigma_mu
 
+    # meta-adjusted
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

@@ -313,6 +313,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
 
     apply_adjustment = apply_sigma_mu
 
+    # meta-adjusted
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

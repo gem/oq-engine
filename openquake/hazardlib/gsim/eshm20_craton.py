@@ -247,6 +247,7 @@ class ESHM20Craton(GMPE):
 
     apply_adjustment = apply_sigma_mu
 
+    # meta-adjusted
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations

@@ -586,6 +586,7 @@ class AbrahamsonEtAl2014(GMPE):
 
     apply_adjustment = apply_nshm_shift
 
+    # meta-adjusted
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

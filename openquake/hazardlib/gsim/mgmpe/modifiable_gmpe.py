@@ -768,6 +768,7 @@ class ModifiableGMPE(GMPE):
 
     apply_adjustment = _apply_modifiers
 
+    # meta-adjusted
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

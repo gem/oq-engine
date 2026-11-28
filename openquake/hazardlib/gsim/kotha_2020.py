@@ -533,6 +533,7 @@ class KothaEtAl2020(GMPE):
 
     apply_adjustment = _apply_mean_shift
 
+    # meta-adjusted
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

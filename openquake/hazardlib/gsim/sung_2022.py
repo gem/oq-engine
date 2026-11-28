@@ -373,6 +373,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     # non-ergodic backbone derives phi from total sigma and tau.
     apply_adjustment = apply_branch_shift
 
+    # meta-adjusted
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         """Compute the non-ergodic backbone and resolve adjustment indices."""
         return compute_central(self, ctx, imts, mean, sigma, tau, phi)
