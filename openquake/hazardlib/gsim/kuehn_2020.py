@@ -738,19 +738,19 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
     return sig, tau, phi
 
 
-def apply_sigma_mu(gsim, adj, imts, mean, sig, tau, phi,
-                   sigma_mu_epsilon):
+def apply_sigma_mu(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
     """
-    Apply the final epistemic mean shift for this branch, resolving
-    each IMT on the first branch with a nonzero epsilon
+    Apply the final epistemic mean shift for this branch. The sigma_mu
+    adjustments are computed from the model of the first branch with a
+    nonzero epsilon, and cached in adj (NaN marks the IMTs not yet computed)
     """
-    context, adjustments = adj
+    mean = mean_stds[0]
     if sigma_mu_epsilon:
         for m, imt in enumerate(imts):
-            if imt not in adjustments:
-                adjustments[imt] = get_sigma_mu_adjustment(
-                    gsim.sigma_mu_model, imt, context.mag, context.rrup)
-            mean[m] += sigma_mu_epsilon * adjustments[imt]
+            if np.isnan(adj['sigma_mu'][m]).any():
+                adj['sigma_mu'][m] = get_sigma_mu_adjustment(
+                    gsim.sigma_mu_model, imt, ctx.mag, ctx.rrup)
+            mean[m] += sigma_mu_epsilon * adj['sigma_mu'][m]
 
 
 class KuehnEtAl2020SInter(GMPE):
@@ -966,8 +966,7 @@ class KuehnEtAl2020SInter(GMPE):
             sig[m], tau[m], phi[m] = get_std_dev(
                 C, C_PGA, ctx, pga1100, self.ak23_cb14_sig)
 
-        # Keep the interpolation cache local to this slice.
-        return (ctx, {})
+        return {'sigma_mu': np.full((len(imts), len(ctx)), np.nan)}
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:

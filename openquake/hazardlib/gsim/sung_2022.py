@@ -220,8 +220,8 @@ EAS(5.0) -4.042505531 1.27 -0.041712502 -2.165 7.487714222 0.476000074 -0.007202
 def compute_central(gsim, ctx, imts, mean, sigma, tau, phi):
     """
     Branch-independent work: ergodic backbone + nearest-node index +
-    per-row site-name decode. Returns (idx_all, csids) so
-    apply_branch_shift() can pull the per-rlz column for the right
+    per-row site-name decode. Returns {'idx_all': idx_all, 'csids': csids}
+    so apply_branch_shift() can pull the per-rlz column for the right
     site without redoing the work.
     """
     missing = sorted({imt.frequency for imt in imts} - set(gsim.freqs))
@@ -285,15 +285,16 @@ def compute_central(gsim, ctx, imts, mean, sigma, tau, phi):
 
     _compute_backbone(gsim.COEFFS, ctx, imts, mean, sigma, tau, phi,
                       ergodic=False)
-    return idx_all, csids
+    return {'idx_all': idx_all, 'csids': csids}
 
 
-def apply_branch_shift(gsim, adj, imts, mean, sig, tau, phi, rlz_id):
+def apply_branch_shift(gsim, ctx, adj, imts, mean_stds, rlz_id):
     """
     Branch-specific shift: for each unique custom_site_id in the batch,
     add Delta-mu from that site's rlz column into the central mean.
     """
-    idx_all, csids = adj
+    mean = mean_stds[0]
+    idx_all, csids = adj['idx_all'], adj['csids']
     for site in np.unique(csids):
         mask = csids == site
         nidx = idx_all[mask]

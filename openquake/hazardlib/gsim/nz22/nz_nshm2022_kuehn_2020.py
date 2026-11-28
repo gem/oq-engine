@@ -312,8 +312,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 phi[m] = C["phi"]
                 sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
-        # Keep the interpolation cache local to this slice.
-        return (ctx, {})
+        return {'sigma_mu': np.full((len(imts), len(ctx)), np.nan)}
 
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):

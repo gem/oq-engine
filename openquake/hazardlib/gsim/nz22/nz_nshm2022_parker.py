@@ -279,9 +279,9 @@ def get_backarc_term(trt, imt, ctx):
         return np.zeros_like(dists)
 
 
-def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi,
-                   sigma_mu_epsilon):
+def apply_sigma_mu(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
     """Apply the final epistemic mean shift for this branch."""
+    mean = mean_stds[0]
     if sigma_mu_epsilon:
         trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
         for m, imt in enumerate(imts):

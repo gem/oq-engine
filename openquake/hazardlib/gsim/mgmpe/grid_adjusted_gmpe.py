@@ -626,16 +626,17 @@ def compute_central(gsim, ctx: np.recarray, imts, mean, sig, tau, phi):
     return adj
 
 
-def apply_epsilons(gsim, adj, imts, mean, sig, tau, phi,
-                   epsilons, path_cap):
+def apply_epsilons(gsim, ctx, adj, imts, mean_stds, epsilons, path_cap):
     """
     Add this branch's eps * mean_se shift to the central mean.
 
     :param gsim: GridAdjustedGMPE instance
+    :param ctx: the context
     :param adj: the dictionary returned by compute
     :param imts: sequence of IMT instances, in output array row order
-    :param mean: central mean array of shape (len(imts), N)
+    :param mean_stds: mean, sig, tau and phi arrays of shape (len(imts), N)
     """
+    mean = mean_stds[0]
     # The option is '' when the caller omits it
     epsilons = epsilons or {}
     # Terms with no mean data contributed nothing to the central mean

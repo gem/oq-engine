@@ -675,20 +675,19 @@ INDEPENDENT_SCALING = {
 
 
 # Apply the original modifiers in the order specified by the branch.
-def _apply_modifiers(gsim, adj, imts, mean, sig, tau, phi,
+def _apply_modifiers(gsim, ctx, adj, imts, mean_stds,
                      set_scale_median_scalar=None,
                      set_scale_median_vector=None,
                      set_scale_total_sigma_scalar=None,
                      set_scale_total_sigma_vector=None):
-    context, ref = adj
     for name, kwargs in gsim.params.items():
         # CEUS 2020 site term needs ref PGA stored.
         if name == 'ceus2020_site_term':
-            kwargs['ref_pga'] = np.exp(ref)
+            kwargs['ref_pga'] = np.exp(adj['ref'])
 
         modify = globals()[name]
         for m, imt in enumerate(imts):
-            modify(context, imt, mean[m], sig[m], tau[m], phi[m], **kwargs)
+            modify(ctx, imt, *(a[m] for a in mean_stds), **kwargs)
 
 
 class ModifiableGMPE(GMPE):
@@ -794,4 +793,4 @@ class ModifiableGMPE(GMPE):
         if 'ceus2020_site_term' in self.params:
             ref = ceus2020_setup(self.gmpe, ctx, self.params, len(sig[0]))
 
-        return ctx, ref
+        return {} if ref is None else {'ref': ref}

@@ -282,9 +282,9 @@ def _compute_site_response_term(C, ctx, pga1000):
     return site_resp_term
 
 
-def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi,
-                   sigma_mu_epsilon):
+def apply_sigma_mu(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
     """Apply the final epistemic mean shift for this branch."""
+    mean = mean_stds[0]
     if sigma_mu_epsilon:
         slab = gsim.trt == const.TRT.SUBDUCTION_INTRASLAB
         for m, imt in enumerate(imts):

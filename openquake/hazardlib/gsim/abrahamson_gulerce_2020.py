@@ -544,9 +544,9 @@ def get_epistemic_adjustment(C, rrup):
     return C["e1"] + C["e2"] * rrup_norm + C["e3"] * (rrup_norm ** 2.0)
 
 
-def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi,
-                   sigma_mu_epsilon):
+def apply_sigma_mu(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
     """Apply the final epistemic mean shift for this branch."""
+    mean = mean_stds[0]
     if sigma_mu_epsilon:
         for m, imt in enumerate(imts):
             sigma_mu = get_epistemic_adjustment(

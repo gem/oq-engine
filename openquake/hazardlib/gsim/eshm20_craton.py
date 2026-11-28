@@ -126,8 +126,9 @@ def get_stddevs(ergodic, tau_model, TAU, PHI_SS, imt, ctx):
     return [sigma, tau, phi]
 
 
-def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi, epsilon):
+def apply_sigma_mu(gsim, ctx, adj, imts, mean_stds, epsilon):
     """Apply the final epistemic mean shift for this branch."""
+    mean = mean_stds[0]
     if epsilon:
         for m, imt in enumerate(imts):
             mean[m] += epsilon * gsim.COEFFS[imt]["sigma_mu"]

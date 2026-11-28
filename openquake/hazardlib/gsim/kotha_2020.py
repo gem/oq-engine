@@ -402,9 +402,9 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
 
 
 # Apply the final epistemic mean shift for this branch.
-def _apply_mean_shift(gsim, adj, imts, mean, sig, tau, phi,
+def _apply_mean_shift(gsim, ctx, adj, imts, mean_stds,
                       sigma_mu_epsilon, dl2l):
-    context, tec_feat_idx = adj
+    mean = mean_stds[0]
     if dl2l:
         # The source-region parameter is specified explicitly.
         table = CoeffsTable.fromdict(
@@ -413,12 +413,12 @@ def _apply_mean_shift(gsim, adj, imts, mean, sig, tau, phi,
             mean[m] += table[imt]["dl2l"]
     elif gsim.kind == 'regional':
         for m, imt in enumerate(imts):
-            mean[m] += get_dl2l(gsim.tec_vals, tec_feat_idx, str(imt),
-                                gsim.delta_l2l_epsilon)
+            mean[m] += get_dl2l(gsim.tec_vals, adj['tec_feat_idx'],
+                                str(imt), gsim.delta_l2l_epsilon)
     elif sigma_mu_epsilon:
         for m, imt in enumerate(imts):
             sigma_mu = get_sigma_mu_adjustment(
-                gsim.kind, gsim.COEFFS[imt], imt, context)
+                gsim.kind, gsim.COEFFS[imt], imt, ctx)
             mean[m] += sigma_mu_epsilon * sigma_mu
 
 
@@ -581,7 +581,7 @@ class KothaEtAl2020(GMPE):
                 mean[m] -= np.log(100.0 * g)
             sig[m], tau[m], phi[m] = get_stddevs(
                 self.kind, self.ergodic, phi_s2s, C, ctx, imt)
-        return ctx, tec_feat_idx
+        return {} if tec_feat_idx is None else {'tec_feat_idx': tec_feat_idx}
 
     # Coefficients obtained direclty from the regression outputs of
     # Kotha et al. (2020)

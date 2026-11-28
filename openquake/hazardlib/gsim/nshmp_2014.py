@@ -48,8 +48,8 @@ def nga_west2_epistemic_adjustment(mag, dist):
 
 
 # Apply this branch's signed adjustment to every IMT.
-def _apply_shift(gsim, adj, imts, mean, sig, tau, phi, sgn):
-    mean[:] += sgn * adj
+def _apply_shift(gsim, ctx, adj, imts, mean_stds, sgn):
+    mean_stds[0][:] += sgn * adj['shift']
 
 
 class NSHMP2014(base.GMPE):
@@ -102,7 +102,7 @@ class NSHMP2014(base.GMPE):
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """Compute mean, sig, tau and phi, and return the adjustment."""
         self.gsim.compute(ctx, imts, mean, sig, tau, phi)
-        return nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
+        return {'shift': nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)}
 
 
 # populate gsim_aliases

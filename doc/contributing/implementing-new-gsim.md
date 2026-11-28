@@ -121,22 +121,23 @@ branch option that changes the result:
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 
 class MyGMPE(GMPE):
-    def apply_adjustment(gsim, ctx, imts, mean, sig, tau, phi,
-                         sigma_mu_epsilon):
+    def apply_adjustment(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
         if sigma_mu_epsilon:
-            mean[:] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
+            mean_stds[0][:] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         ...  # fill the central mean and standard deviations
+        return {}  # the central adjustments, as a dictionary term -> array
 ```
 
-The callback signature starts with ``gsim, ctx, imts, mean, sig, tau,
-phi``. Name the second argument ``ctx`` when it is the input context, that
-is when ``compute`` returns ``None``. Otherwise name it ``adj``: it is
-the value returned by ``compute``, a tuple of precomputed values, a
-dictionary, or another payload needed by the adjustment.
-The callback modifies the output arrays in place. Parameters after these
-seven standard arguments must name constructor options used by the adjustment.
+The callback signature starts with ``gsim, ctx, adj, imts, mean_stds``.
+``ctx`` is the input context. ``adj`` is the dictionary returned by
+``compute`` (an empty dictionary if ``compute`` returns ``None``), mapping
+the names of the precomputed adjustments to arrays. ``mean_stds`` holds
+the output arrays as ``(mean, sig, tau, phi)``, so ``mean_stds[0]`` is the
+mean. The callback modifies the output arrays in place. Parameters after
+these five standard arguments must name constructor options used by the
+adjustment.
 The engine omits those options from the central computation key, so branches
 with different values can share the central computation.
 

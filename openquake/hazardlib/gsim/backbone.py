@@ -20,9 +20,9 @@
 Utilities for sharing central GSIM computations across branches.
 
 Shifted GSIM classes declare an ``apply_adjustment`` method. Its arguments
-after ``gsim, ctx, imts, mean, sig, tau, phi`` (``adj`` instead of
-``ctx`` when compute returns a value other than the context) name the
-constructor options that vary by branch. MetaGSIM wraps ``compute`` to
+``gsim, ctx, adj, imts, mean_stds`` are followed by the constructor options
+that vary by branch. ``adj`` is the dictionary returned by ``compute`` and
+``mean_stds`` holds the mean, sig, tau and phi arrays. MetaGSIM wraps ``compute`` to
 preserve direct calls, while ContextMaker runs the original compute body
 once per group. Keep the GSIM configuration fixed after construction.
 """
@@ -36,26 +36,24 @@ import toml
 from decorator import decorate
 
 
-# Pass the context to the adjustment if compute_func returns None.
+# Pass an empty adjustment dictionary if compute_func returns None.
 def _compute_central(compute_func, gsim, ctx, imts, mean, sig, tau, phi):
     result = compute_func(gsim, ctx, imts, mean, sig, tau, phi)
-    return ctx if result is None else result
+    return {} if result is None else result
 
 
 def adjustment_options(apply_adjustment):
     # Extra callback arguments explicitly list branch-varying options.
     params = list(inspect.signature(apply_adjustment).parameters.values())
-    names = tuple(param.name for param in params[:7])
-    # The second argument is the context, or the value returned by compute
-    if (names[:1] != ('gsim',) or names[1] not in ('ctx', 'adj')
-            or names[2:] != ('imts', 'mean', 'sig', 'tau', 'phi')):
-        raise TypeError('apply_adjustment must start with gsim, ctx or '
-                        'adj, imts, mean, sig, tau, phi')
+    names = tuple(param.name for param in params[:5])
+    if names != ('gsim', 'ctx', 'adj', 'imts', 'mean_stds'):
+        raise TypeError('apply_adjustment must start with gsim, ctx, adj, '
+                        'imts, mean_stds')
     if any(param.kind not in (param.POSITIONAL_ONLY,
                               param.POSITIONAL_OR_KEYWORD)
            for param in params):
         raise TypeError('apply_adjustment arguments must be positional')
-    return tuple(param.name for param in params[7:])
+    return tuple(param.name for param in params[5:])
 
 
 def adjusted_compute(compute_func, apply_adjustment):
@@ -65,10 +63,9 @@ def adjusted_compute(compute_func, apply_adjustment):
     names = adjustment_options(apply_adjustment)
 
     def adjusted(func, gsim, ctx, imts, mean, sig, tau, phi):
-        adj = _compute_central(func, gsim, ctx, imts, mean, sig, tau,
-                               phi)
+        adj = _compute_central(func, gsim, ctx, imts, mean, sig, tau, phi)
         return apply_adjustment(
-            gsim, adj, imts, mean, sig, tau, phi,
+            gsim, ctx, adj, imts, (mean, sig, tau, phi),
             *[gsim.kwargs[name] for name in names])
 
     return decorate(compute_func, adjusted)
@@ -124,7 +121,7 @@ def get_central_key(gsim):
     """
     Return a TOML representation of the central constructor options.
 
-    Parameters following ``gsim, ctx, imts, mean, sig, tau, phi`` in the
+    Parameters following ``gsim, ctx, adj, imts, mean_stds`` in the
     GSIM's ``apply_adjustment`` method are omitted from the key.
     Constructor options are assumed to stay fixed after instantiation.
     The key is None for an ordinary compute method or a GSIM instance
