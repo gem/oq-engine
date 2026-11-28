@@ -116,13 +116,22 @@ def warn_adapted(cls):
         warnings.warn(msg, AdaptedWarning)
 
 
-def fix_toml(v):
+def fix_toml(v, basedir=''):
     """
     Convert paths and Python objects such as arrays and CoeffsTables
     for TOML serialization.
+
+    Keep paths inside ``basedir`` relative to it. Other absolute paths
+    are serialized using their basename. With ``basedir=None``, preserve
+    absolute paths.
     """
     if isinstance(v, str) and pathlib.PurePath(v).is_absolute():
-        return os.path.basename(v)
+        path = pathlib.PurePath(os.path.normpath(v))
+        if basedir is None:
+            return path.as_posix()
+        if basedir and path.is_relative_to(basedir):
+            return path.relative_to(basedir).as_posix()
+        return path.name
     if isinstance(v, (numpy.float32, numpy.float64)):
         return float(v)
     elif isinstance(v, numpy.ndarray):
@@ -130,9 +139,9 @@ def fix_toml(v):
     elif hasattr(v, 'to_dict'):
         return v.to_dict()
     elif hasattr(v, 'items'):
-        return {k1: fix_toml(v1) for k1, v1 in v.items()}
+        return {k1: fix_toml(v1, basedir) for k1, v1 in v.items()}
     elif isinstance(v, list):
-        return [fix_toml(x) for x in v]
+        return [fix_toml(x, basedir) for x in v]
     return v
 
 
@@ -154,7 +163,7 @@ def _normalize_option(value):
 
 def get_central_key(gsim):
     """
-    Return the class name and a snapshot of the central constructor options.
+    Return a TOML representation of the central constructor options.
 
     Constructor options are assumed to stay fixed after instantiation.
     The key is None for an ordinary compute method or a GSIM instance
@@ -165,15 +174,22 @@ def get_central_key(gsim):
     >>> high = KothaEtAl2020ESHM20(sigma_mu_epsilon=1.35563)
     >>> get_central_key(low) == get_central_key(high)
     True
-    >>> get_central_key(KothaEtAl2020ESHM20(c3_epsilon=1.732051))
-    ('KothaEtAl2020ESHM20', "(('c3_epsilon', 1.732051),)")
+    >>> print(get_central_key(
+    ...     KothaEtAl2020ESHM20(c3_epsilon=1.732051)))
+    _gsim = "KothaEtAl2020ESHM20"
+
+    [KothaEtAl2020ESHM20]
+    c3_epsilon = 1.732051
     """
     exclusions = getattr(type(gsim).compute, 'central_key_excluded', None)
     if exclusions is None or not getattr(gsim, 'share_central', True):
         return None
     options = tuple((name, value) for name, value in gsim.kwargs.items()
                     if name != 'weight' and name not in exclusions)
-    return type(gsim).__name__, repr(options)
+    options = dict(options)
+    name = type(gsim).__name__
+    key = {'_gsim': name, name: fix_toml(options, basedir=None)}
+    return toml.dumps(key).strip()
 
 
 OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
@@ -226,7 +242,7 @@ class MetaGSIM(abc.ABCMeta):
         cls = super().__new__(meta, name, bases, dic)
         return cls
 
-    def __call__(cls, **kwargs):
+    def __call__(cls, *, _gsim_basedir='', **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
         for name, value in kwargs.items():
             kwargs[name] = value = _normalize_option(value)
@@ -247,7 +263,8 @@ class MetaGSIM(abc.ABCMeta):
         else:
             self = type.__call__(cls, **kwargs)
         self.kwargs = kwargs
-        self._toml = toml.dumps({cls.__name__: fix_toml(kwargs)}).strip()
+        self._toml = toml.dumps(
+            {cls.__name__: fix_toml(kwargs, _gsim_basedir)}).strip()
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             table = self.gmpe_table

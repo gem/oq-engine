@@ -37,7 +37,8 @@ from openquake.hazardlib import imt, gsim, pmf, site, tom
 from openquake.hazardlib.codes import SOURCE_CODES
 from openquake.hazardlib.scalerel import (
     SCALEREL as SCALEREL, mag_scale_rel as mag_scale_rel)
-from openquake.hazardlib.gsim.base import registry, gsim_aliases, fix_toml
+from openquake.hazardlib.gsim.base import (
+    MetaGSIM, registry, gsim_aliases, fix_toml)
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
@@ -179,7 +180,8 @@ def gsim(value, basedir=''):
     """
     value = to_toml(value)  # convert to TOML
     [(gsim_name, kwargs)] = toml.loads(value).items()
-    kwargs = fix_toml(kwargs)
+    if basedir:
+        basedir = os.path.abspath(basedir)
     for k, v in kwargs.items():
         if k.endswith(('_file', '_table')) and v != '':
             kwargs[k] = os.path.normpath(os.path.join(basedir, v))
@@ -189,7 +191,9 @@ def gsim(value, basedir=''):
         gsim_class = registry[gsim_name]
     except KeyError:
         raise NameError('Unknown GSIM: %s' % gsim_name)
-    if inspect.isclass(gsim_class):
+    if isinstance(gsim_class, MetaGSIM):
+        gs = gsim_class(_gsim_basedir=basedir, **kwargs)
+    elif inspect.isclass(gsim_class):
         gs = gsim_class(**kwargs)
     else:  # is an alias, i.e. a thunk
         gs = gsim_class()

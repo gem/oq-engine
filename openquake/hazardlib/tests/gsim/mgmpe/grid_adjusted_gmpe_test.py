@@ -24,6 +24,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
+from openquake.baselib import hdf5
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as mod
@@ -34,6 +35,7 @@ from openquake.hazardlib.gsim.mgmpe.grid_adjusted_gmpe import (
     raytrace_path_adj,
 )
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
+from openquake.hazardlib.gsim_lt import GsimLogicTree
 
 aae = np.testing.assert_array_almost_equal
 
@@ -362,6 +364,47 @@ class GridAdjustedGMPETest(unittest.TestCase):
         cmaker = simple_cmaker([valid.gsim(BASE_GSIM), adj], IMTS)
         out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
         aae(out, self._get_mean_stds(IMTS))
+
+    def test_grid_subdirectories_survive_logic_tree_round_trip(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            for name in ('low', 'high'):
+                folder = root / name
+                folder.mkdir()
+                shutil.copy(GRID_HDF5, folder / 'adjustments.hdf5')
+            with h5py.File(root / 'high/adjustments.hdf5', 'a') as hf:
+                hf['dL2L']['PGA']['dL2L'][:] += 0.5
+            branches = ''.join(f'''
+              <logicTreeBranch branchID="{name}">
+                <uncertaintyModel>
+                  [GridAdjustedGMPE]
+                  gmpe_name = "{BASE_GSIM}"
+                  grid_hdf5_file = "{name}/adjustments.hdf5"
+                </uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+              </logicTreeBranch>''' for name in ('low', 'high'))
+            xml = root / 'gsim.xml'
+            xml.write_text(f'''
+            <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+            <logicTree logicTreeID="lt">
+              <logicTreeBranchSet
+                  uncertaintyType="gmpeModel" branchSetID="bs"
+                  applyToTectonicRegionType="Active Shallow Crust">
+                {branches}
+              </logicTreeBranchSet>
+            </logicTree>
+            </nrml>''')
+            tree = GsimLogicTree(str(xml), ['*'])
+            with hdf5.File(root / 'tree.hdf5', 'w') as ds:
+                ds['tree'] = tree
+            with hdf5.File(root / 'tree.hdf5', 'r') as ds:
+                restored = ds['tree']
+        gsims = [b.gsim for b in restored.branches]
+        for name, gsim in zip(('low', 'high'), gsims, strict=True):
+            self.assertIn(f'"{name}/adjustments.hdf5"', gsim._toml)
+        cmaker = simple_cmaker(gsims, ['PGA'])
+        mean = cmaker.get_mean_stds([self._make_ctx(cmaker)])[0]
+        aae(mean[1] - mean[0], 0.5)
 
     def test_grids_shared_and_pickled(self):
         # Like GMPETable, pickling preserves the loaded grids and their

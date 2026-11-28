@@ -84,7 +84,11 @@ class ShiftedGMPE(TGMPE):
 class CentralKeyTestCase(unittest.TestCase):
     def test_options_preserve_values_and_order(self):
         gsim = ShiftedGMPE()
-        values = [[1], (1,), '', 'None', '/first/table', '/second/table']
+        gsim.kwargs = {'option': [1]}
+        list_key = get_central_key(gsim)
+        gsim.kwargs = {'option': (1,)}
+        self.assertEqual(get_central_key(gsim), list_key)
+        values = ['', 'None', '/first/table', '/second/table']
         keys = set()
         for value in values:
             gsim.kwargs = {'option': value}
