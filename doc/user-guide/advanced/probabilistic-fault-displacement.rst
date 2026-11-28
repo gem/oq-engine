@@ -19,9 +19,8 @@ How it works
 -------------
 
 The engine reads a standard fault source model (simple, complex or
-multi-fault sources). For each rupture whose top edge reaches within
-``surface_rupture_depth_tolerance_km`` of the surface, and for each
-hazard site, it computes annual exceedance rates of displacement:
+multi-fault sources). For each rupture and for each hazard site it
+computes annual exceedance rates of displacement:
 
 - the *principal* rate, for displacement on the fault trace itself,
   ``lambda_p = rate * P(SR) * P(D > d | SR) * W_p(r)``;
@@ -32,7 +31,40 @@ hazard site, it computes annual exceedance rates of displacement:
 conditional probability of exceeding the displacement level ``d``,
 ``W_p(r)`` a rupture-location weight that accounts for the uncertainty
 on the actual surface trace, and ``G(r)`` the distributed-rupture
-weight. The faulting style (normal, reverse or strike-slip) of each
+weight.
+
+``P(SR)`` is the only probability that a rupture of magnitude ``m``
+breaks the surface, and it comes from the primary surface-rupture model
+of the logic-tree branch. Simple, complex and kite fault sources float
+their ruptures along strike and down dip, giving each position the same
+share of the rate of the magnitude; the fraction of positions that
+touch the surface depends on the mesh spacing and is not a probability.
+So the engine sums the rate of each magnitude over the down-dip
+positions and assigns it to the positions whose top edge is within
+``surface_rupture_depth_tolerance_km`` of the surface, which provide the
+geometry (trace, length, position along strike): for these sources
+``lambda(m) * P(SR | m)`` is the rate of surface rupture, for any mesh.
+The sum is done for each position along strike, so the distribution of
+the rate along strike is kept also on complex and kite faults whose
+width changes along strike; where no position at the surface exists
+along strike, the rate there is discarded as blind (see below).
+The ruptures of characteristic, multi-fault and non-parametric sources
+are given one by one: one with a buried top edge is a blind rupture and
+is skipped. A rupture given with the probabilities :math:`p(k)` of
+:math:`k` occurrences in the investigation time (multi-fault sources with
+``infer_occur_rates = false``, non-parametric sources) contributes, as in
+the classical calculator, :math:`-\ln \sum_k p(k)\,(1 - q)^k` to the rate
+over the investigation time, where :math:`q` is the probability that one
+occurrence exceeds the displacement (the :math:`p(k)` are normalized to
+sum to 1; for a negative binomial TOM the series is summed exactly).
+With ``infer_occur_rates = true`` the rate of a multi-fault rupture is
+:math:`-\ln p(0) / T`: the probabilities of a source model refer to its
+investigation time, which must be the one of the job. A floating source
+with no position at the surface for a
+magnitude (i.e. an upper seismogenic depth below the tolerance) is blind
+as well: the engine logs a warning with the discarded rate.
+
+The faulting style (normal, reverse or strike-slip) of each
 rupture is derived from its rake: normal for -150 <= rake <= -30,
 reverse for 30 <= rake <= 150, strike-slip otherwise, and it is used
 to select the models that apply to the source.
@@ -72,9 +104,11 @@ The PFD-specific parameters are:
 - ``near_far_threshold_km``: distance (km) below which a site is in
   the Visini et al. (2025) distributed-faulting 'near' regime.
   Default: 0.2.
-- ``surface_rupture_depth_tolerance_km``: a rupture contributes to
-  the hazard only if its top edge reaches within this depth (km);
-  deeper (buried) ruptures are skipped. Default: 0.01.
+- ``surface_rupture_depth_tolerance_km``: a rupture is at the surface
+  if its top edge reaches within this depth (km). The floating sources
+  use it to select the positions that carry the hazard (see above), not
+  to reduce the rate; the buried ruptures of the other sources are
+  skipped. Default: 0.01.
 
 The standard statistics parameters work as in the classical
 calculator: ``mean``, ``std``, ``max``, ``quantile_hazard_curves``,
@@ -119,7 +153,13 @@ The PFD logic tree is also *source-oriented*: a
 branch set can carry the attributes ``applyToSources`` (a
 space-separated list of source IDs) and ``applyToStyle`` (normal,
 reverse or strike-slip), so that different model combinations can be
-applied to different sources or faulting styles. The total number of
+applied to different sources or faulting styles. As in the source model
+logic tree, ``applyToSources`` names sources of the source models, and a
+source that does not exist is an error. By the colon convention of the
+engine, sources with IDs ``fault:17`` and ``fault:18`` are fragments of
+the source ``fault``, which is the name to use; the blocks of a split
+multi-fault source belong to the source as well.
+The total number of
 realizations of a displacement calculation is the product of the
 number of source model realizations and the number of paths of the
 PFD logic tree.
@@ -232,23 +272,36 @@ measure levels:
   each probability of exceedence; the export key is ``hmaps``
 - per-source rates: the mean annual rate contributed by each source,
   as ``mean_rates_by_src`` (the export key is ``mean_rates_by_src``),
-  useful to see which fault drives the hazard at a site
+  useful to see which fault drives the hazard at a site; as in the
+  classical calculator, the fragments of a source (``fault:17``,
+  ``fault:18``) are added together under its name (``fault``)
 - source information: ``source_info`` and ``source_data`` tables with
   the number of contexts, ruptures and the computation time per
   source
 
-The rates are annual rates of exceedence: with
-``investigation_time = 1.0`` they can be used directly; with a
-different investigation time the engine divides by it, as in the
-classical calculator.
+As in the classical calculator, the hazard curves are probabilities of
+exceedence in the investigation time, :math:`1 - \exp(-\lambda\,T)`
+with :math:`\lambda` the annual rate and :math:`T` the
+``investigation_time``, and the hazard maps refer to the ``poes`` in
+that time (or to the ``return_periods``). With
+``investigation_time = 1.0`` the curves are close to the annual rates
+where these are small. ``mean_rates_by_src`` always contains annual
+rates.
 
 Caveats
 --------
 
-- only ruptures that break (almost) the surface contribute to the
-  hazard: ruptures with a top edge deeper than
-  ``surface_rupture_depth_tolerance_km`` are ignored, so the
-  calculator is meant for active, shallow faulting sources
+- only sources that reach (almost) the surface contribute to the
+  hazard: a source with no rupture having the top edge within
+  ``surface_rupture_depth_tolerance_km`` is blind and is ignored, so
+  the calculator is meant for active, shallow faulting sources
+- groups of mutually exclusive sources or ruptures
+  (``src_interdep="mutex"`` or ``rup_interdep="mutex"``) and clusters of
+  sources (``cluster="true"``) are not supported and are rejected
+- the probability of surface rupture is the business of the primary
+  surface-rupture model alone: do not correct the magnitude-frequency
+  distribution of a floating source for the buried float positions,
+  the engine already assigns their rate to the positions at the surface
 - the displacement models are empirical regressions calibrated on
   specific datasets and faulting styles (see the tables below); a
   model should be applied only to sources with a compatible
@@ -324,7 +377,10 @@ Models of the probability of principal surface rupture P(SR | M).
    * - ``Mammarella2024PrimarySR``
      - Mammarella et al. (2024)
      - all (from the rake)
-     - uses the seismogenic thickness and a magnitude-scaling relation
+     - evaluated with the dip and the lower seismogenic depth of each
+       source, and a magnitude-scaling relation; ``dip_mu``,
+       ``seismothickness`` or ``Zs_mu`` in the branch override the
+       sources (with a warning)
    * - ``MammarellaEtAl2024PrimarySR``
      - Mammarella et al. (2024)
      - all
@@ -470,6 +526,10 @@ threshold P(D > d | M, r).
      - Takao et al. (2013), JJAEE 9(2)
      - reverse, strike-slip
      - 
+   * - ``Takao2016SecondaryFD``
+     - Takao et al. (2016), JJAEE 16(2)
+     - reverse, strike-slip
+     - parameter ``case`` (1 or 2, Table 1)
    * - ``Moss2022SecondaryFD``
      - Moss et al. (2022)
      - reverse

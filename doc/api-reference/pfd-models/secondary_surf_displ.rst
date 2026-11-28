@@ -19,6 +19,12 @@ Takao2013SecondaryFD
 .. autoclass:: openquake.pfd.secondary_surf_displ.takao2013.Takao2013SecondaryFD
     :show-inheritance:
 
+Takao2016SecondaryFD
+--------------------
+
+.. autoclass:: openquake.pfd.secondary_surf_displ.takao2016.Takao2016SecondaryFD
+    :show-inheritance:
+
 Visini2025SecondaryFD
 ---------------------
 

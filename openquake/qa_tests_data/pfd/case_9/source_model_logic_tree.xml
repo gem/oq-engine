@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt_sm_fdha_case_9">
+    <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs_sm">
+      <logicTreeBranch branchID="b_sm">
+        <uncertaintyModel>source_model.xml</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet uncertaintyType="abGRAbsolute" branchSetID="bs_ab"
+                        applyToSources="3">
+      <logicTreeBranch branchID="b_a01">
+        <uncertaintyModel>3.95 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.012821</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a02">
+        <uncertaintyModel>4.00 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.025641</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a03">
+        <uncertaintyModel>4.05 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.038462</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a04">
+        <uncertaintyModel>4.10 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.051282</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a05">
+        <uncertaintyModel>4.15 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.064103</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a06">
+        <uncertaintyModel>4.20 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.076923</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a07">
+        <uncertaintyModel>4.25 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.089744</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a08">
+        <uncertaintyModel>4.30 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.102564</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a09">
+        <uncertaintyModel>4.35 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.115385</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a10">
+        <uncertaintyModel>4.40 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.128205</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a11">
+        <uncertaintyModel>4.45 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.141026</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_a12">
+        <uncertaintyModel>4.50 0.9</uncertaintyModel>
+        <uncertaintyWeight>0.153844</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

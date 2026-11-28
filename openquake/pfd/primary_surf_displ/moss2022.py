@@ -182,7 +182,29 @@ class Moss2022PrimaryFD(BasePrimarySurfDispl):
                  if (st == 'recommended' and sc['s_rec'] is not None)
                  else sc['s'])
 
-        # ── Numerical integration over ε ∈ [−6, 6] ──
+        if ver == 'MD':
+            # D cannot exceed MD. As in the report's Appendix C code
+            # (``B(B>=1)=1; %truncating the gamma distribution``), D/MD
+            # samples >= 1 are set to 1: D = MD * min(B, 1), so
+            #   P(D > d) = integral over MD > d of [1 - G(d/MD)] dP(MD).
+            # The integrand jumps at MD = d (eps = eps_d), so each
+            # displacement is integrated on its own eps grid starting there
+            # (trapezoid rule over 16 sigma, step 0.05).
+            with np.errstate(divide='ignore'):
+                eps_d = (np.log10(d_arr) - mu) / sigma          # (n_disp,)
+            dv = 0.05
+            v = np.arange(0.0, 16.0 + dv / 2, dv)
+            eps = np.clip(eps_d, -8.0, 8.0)[None, :] + v[:, None]  # (n_v, n_disp)
+            y = 10 ** (sigma * (eps_d[None, :] - eps))           # d / MD
+            surv = stats.gamma.sf(
+                y[:, :, None], a=alpha[None, None, :], scale=beta[None, None, :])
+            surv = np.where(y[:, :, None] > 1.0, 0.0, surv)
+            w = stats.norm.pdf(eps) * dv
+            w[[0, -1]] *= 0.5
+            prob = np.einsum('vd,vds->ds', w, surv)             # (n_disp, n_sites)
+            return np.clip(prob, 0.0, 1.0).squeeze()
+
+        # ── AD: numerical integration over ε ∈ [−6, 6] ──
         dz = 0.1
         eps = np.arange(-6.0, 6.0 + dz / 2, dz)
         z = 10 ** (mu + eps * sigma)
@@ -192,11 +214,6 @@ class Moss2022PrimaryFD(BasePrimarySurfDispl):
         y = d_arr[None, :, None] / z[:, None, None]
         cdf_mat = stats.gamma.cdf(
             y, a=alpha[None, None, :], scale=beta[None, None, :])
-
-        if ver == 'MD':
-            c1 = stats.gamma.cdf(
-                1.0, a=alpha[None, None, :], scale=beta[None, None, :])
-            cdf_mat = np.where(y > 1.0, 1.0, cdf_mat / c1)
 
         cdf = np.tensordot(p_eps, cdf_mat, axes=(0, 0)) * dz
         prob = 1.0 - cdf
