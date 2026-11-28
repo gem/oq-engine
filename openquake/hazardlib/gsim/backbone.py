@@ -55,14 +55,9 @@ def adjustment_options(apply_adjustment):
 
 
 def adjustment_values(gsim, apply_adjustment):
-    # Use initialized attributes when available, else constructor values.
-    values = []
-    for name in adjustment_options(apply_adjustment):
-        if hasattr(gsim, name):
-            values.append(getattr(gsim, name))
-        else:
-            values.append(gsim.kwargs.get(name))
-    return values
+    # The constructor options, including the defaults stored by MetaGSIM.
+    return [gsim.kwargs[name]
+            for name in adjustment_options(apply_adjustment)]
 
 
 def adjusted_compute(compute_func, apply_adjustment):

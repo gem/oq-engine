@@ -636,6 +636,8 @@ def apply_epsilons(gsim, adj, imts, mean, sig, tau, phi,
     :param imts: sequence of IMT instances, in output array row order
     :param mean: central mean array of shape (len(imts), N)
     """
+    # The option is '' when the caller omits it
+    epsilons = epsilons or {}
     # Terms with no mean data contributed nothing to the central mean
     # and are omitted from adj. For path terms with path_cap set,
     # clip the per-branch total (central + eps*SE) so no single LT
@@ -805,8 +807,7 @@ class GridAdjustedGMPE(GMPE):
         self.path_cap = path_cap
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
-        self.epsilons = epsilons or {}
-        unknown = set(self.epsilons) - set(self.grid_data["res_terms"])
+        unknown = set(epsilons or {}) - set(self.grid_data["res_terms"])
         if unknown:
             # Reject typos rather than silently falling back to default
             raise ValueError(

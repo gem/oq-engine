@@ -407,8 +407,10 @@ def _apply_mean_shift(gsim, adj, imts, mean, sig, tau, phi,
     context, tec_feat_idx = adj
     if dl2l:
         # The source-region parameter is specified explicitly.
+        table = CoeffsTable.fromdict(
+            {from_string(key): {"dl2l": dl2l[key]} for key in dl2l})
         for m, imt in enumerate(imts):
-            mean[m] += dl2l[imt]["dl2l"]
+            mean[m] += table[imt]["dl2l"]
     elif gsim.kind == 'regional':
         for m, imt in enumerate(imts):
             mean[m] += get_dl2l(gsim.tec_vals, tec_feat_idx, str(imt),
@@ -508,17 +510,11 @@ class KothaEtAl2020(GMPE):
         self.c3_epsilon = c3_epsilon
         self.ergodic = ergodic
         if dl2l:
-            # Check that the input is a dictionary and p
+            # Check that the input is a dictionary
             if not isinstance(dl2l, dict):
                 raise IOError("For Kotha et al. (2020) GMM, source-region "
                               "scaling parameter (dl2l) must be input in the "
                               "form of a dictionary, if specified")
-            self.dl2l = {}
-            for key in dl2l:
-                self.dl2l[from_string(key)] = {"dl2l": dl2l[key]}
-            self.dl2l = CoeffsTable.fromdict(self.dl2l)
-        else:
-            self.dl2l = None
         if c3:
             if not isinstance(c3, dict):
                 raise IOError("For Kotha et al. (2020) GMM, residual "

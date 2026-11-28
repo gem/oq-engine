@@ -295,6 +295,13 @@ class MetaGSIM(abc.ABCMeta):
             self.kwargs['gmpe_table'] = (
                 os.fspath(table) if table is not None else None)
         if cls.apply_adjustment is not None:
+            # Store the constructor defaults of the adjustment options,
+            # which kwargs lacks when the caller omits them. Options that
+            # the constructor does not name (ModifiableGMPE) get None.
+            params = inspect.signature(cls.__init__).parameters
+            for name in adjustment_options(cls.apply_adjustment):
+                default = params[name].default if name in params else None
+                kwargs.setdefault(name, default)
             # Snapshot constructor options before callers can reuse them.
             # NB: the key is computed once, at construction time, so a
             # GSIM must not be modified after it is built, otherwise
