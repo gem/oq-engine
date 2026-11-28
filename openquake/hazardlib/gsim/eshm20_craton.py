@@ -23,7 +23,7 @@ import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.backbone import compute_without_shift
+from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
@@ -246,8 +246,8 @@ class ESHM20Craton(GMPE):
         self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
                                              self.phi_ss_quantile)
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @shifted_compute(apply_sigma_mu, 'epsilon')
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """
@@ -271,12 +271,6 @@ class ESHM20Craton(GMPE):
             sig[m], tau[m], phi[m] = get_stddevs(
                 self.ergodic, self.tau_model, self.TAU, self.PHI_SS,
                 imt, ctx)
-
-        if apply_shift:
-            apply_sigma_mu(self, ctx, imts, mean)
-
-    central_functions = (compute_without_shift, apply_sigma_mu)
-    shifted_options = ('epsilon',)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                    e1                 b1                    b2                  b3                  c1                   c2                    c3            sigma_mu

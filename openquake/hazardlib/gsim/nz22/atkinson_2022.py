@@ -27,7 +27,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.backbone import compute_without_shift
+from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.nz22.const import (
     periods_AG20,
@@ -329,8 +329,8 @@ class Atkinson2022Crust(GMPE):
         self.epistemic = epistemic
         self.modified_sigma = modified_sigma
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @shifted_compute(_apply_epistemic_shift, 'epistemic')
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
         pga_rock = _get_pga_on_rock(self.suffix, C_PGA, ctx) * np.exp(
@@ -357,12 +357,6 @@ class Atkinson2022Crust(GMPE):
                     self.suffix, C, C_PGA, imt, pga_rock, ctx.vs30)
             else:
                 sig[m], tau[m], phi[m] = get_stddevs(self.suffix, C)
-
-        if apply_shift:
-            _apply_epistemic_shift(self, ctx, imts, mean)
-
-    central_functions = (compute_without_shift, _apply_epistemic_shift)
-    shifted_options = ('epistemic',)
 
     # periods given by 1 / 10 ** COEFFS['f']
     with Atk22_COEFFS.open() as coefs_file:

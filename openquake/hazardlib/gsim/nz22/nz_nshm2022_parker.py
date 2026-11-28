@@ -47,7 +47,7 @@ import math
 import numpy as np
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib.gsim.backbone import compute_without_shift
+from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
@@ -311,8 +311,8 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @shifted_compute(apply_sigma_mu, 'sigma_mu_epsilon')
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -368,12 +368,6 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
                     C, C_PGA, imt, pgar, ctx.rrup, ctx.vs30)
             else:
                 sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
-
-        if apply_shift:
-            apply_sigma_mu(self, ctx, imts, mean)
-
-    central_functions = (compute_without_shift, apply_sigma_mu)
-    shifted_options = ('sigma_mu_epsilon',)
 
     # Note that in these set of coefficients (EQS paper) c6 for
     # interface and f4 and f5 have changed. Also as mentioned by Grace

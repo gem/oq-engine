@@ -28,7 +28,7 @@ Module exports :class:`AbrahamsonEtAl2015`
 """
 import numpy as np
 
-from openquake.hazardlib.gsim.backbone import compute_without_shift
+from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -381,8 +381,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
         else:
             self.faba_model = None
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @shifted_compute(apply_sigma_mu, 'sigma_mu_epsilon')
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -413,12 +413,6 @@ class AbrahamsonEtAl2015SInter(GMPE):
             tau[m] = C['tau']
             phi[m] = C["phi"] if self.ergodic else np.sqrt(
                 C["sigma_ss"] ** 2. - C["tau"] ** 2.)
-
-        if apply_shift:
-            apply_sigma_mu(self, ctx, imts, mean)
-
-    central_functions = (compute_without_shift, apply_sigma_mu)
-    shifted_options = ('sigma_mu_epsilon',)
 
     # Period-dependent coefficients (Table 3)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

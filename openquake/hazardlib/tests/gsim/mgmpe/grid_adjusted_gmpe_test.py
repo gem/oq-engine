@@ -396,7 +396,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
 
         kwargs = dict(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
         base, shifted = GridAdjustedGMPE(**kwargs), ShiftedGridGMPE(**kwargs)
-        self.assertIsNone(shifted.central_key)
+        self.assertIsNone(getattr(shifted, 'central_key', None))
         cmaker = simple_cmaker([base, shifted], ['PGA'])
         mean = cmaker.get_mean_stds([self._make_ctx(cmaker)])[0]
         aae(mean[1] - mean[0], 0.5)
@@ -449,10 +449,8 @@ class GridAdjustedGMPETest(unittest.TestCase):
                 for eps in combos]
         cm = simple_cmaker(adjs[:1] + [base] + adjs[1:], IMTS)
         ctx = cm.recarray([self._make_ctx(cm)])
-        central = mock.Mock(wraps=mod.compute_central)
-        apply_branch = GridAdjustedGMPE.central_functions[1]
-        with mock.patch.object(GridAdjustedGMPE, 'central_functions',
-                               (central, apply_branch)):
+        with mock.patch.object(mod, 'compute_central',
+                               wraps=mod.compute_central) as central:
             shared = cm.get_mean_stds([ctx, ctx], split_by_mag=False)
         # Each slice shares one central computation across all 27 branches.
         self.assertEqual(central.call_count, 2)

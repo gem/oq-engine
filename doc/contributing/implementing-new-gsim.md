@@ -107,25 +107,24 @@ correspond to the number of ruptures in the model).
 Logic trees often contain several branches of the same GSIM differing only in
 an option shifting the median, like ``sigma_mu_epsilon``. Such branches can
 share the expensive part of the computation, which is then performed only once.
-To enable that for a GSIM:
-
-1. add an ``apply_shift=True`` argument to the ``compute`` method and apply
-   the shift at its end only if ``apply_shift`` is true;
-2. write the shift as a module-level function with signature
-   ``(gsim, ctx, imts, mean, *_stddevs)``, modifying ``mean`` in place;
-3. declare ``central_functions`` and the options which only shift the
-   result in the class:
+If your model uses the NSHM epistemic shift, set
+``self.sigma_mu_epsilon`` from the constructor and use ``with_nshm_shift``
+on a ``compute`` body that fills the central mean and standard deviations.
 
 ```python
-from openquake.hazardlib.gsim.backbone import compute_without_shift
+from openquake.hazardlib.gsim.abrahamson_2014 import with_nshm_shift
 
 class MyGMPE(GMPE):
-    central_functions = (compute_without_shift, apply_sigma_mu)
-    shifted_options = ('sigma_mu_epsilon',)
+    @with_nshm_shift
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        ...  # fill the central mean and standard deviations
 ```
 
-The branches differing only in the ``shifted_options`` will share the
-computation. Subclasses overriding ``compute`` must declare
-``shifted_options`` again, otherwise they are computed independently.
-The full contract, and how the engine performs the computation, are explained
-in the docstring of the module ``openquake.hazardlib.gsim.backbone``.
+For a model-specific shift, use
+``@shifted_compute(apply_branch, 'sigma_mu_epsilon')`` from
+``openquake.hazardlib.gsim.backbone``. List the constructor options that may
+vary without changing the central computation. The module documents the
+callback signature and how to pass precomputed data to it.
+
+A subclass inherits the optimization with its ``compute`` method.
+An override can opt in by decorating its own ``compute``.

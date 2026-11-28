@@ -44,14 +44,13 @@ Module exports :class:`NZNSHM2022_AbrahamsonGulerce2020SInter`
 import numpy as np
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib.gsim.backbone import compute_without_shift
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
     AbrahamsonGulerce2020SInter,
     get_acceleration_on_reference_rock,
-    apply_sigma_mu,
+    with_abrahamson_gulerce_shift,
     get_mean_acceleration,
     get_tau_phi,
     SUPPORTED_REGIONS,)
@@ -126,8 +125,8 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
             apply_usa_adjustment=apply_usa_adjustment,
             sigma_mu_epsilon=sigma_mu_epsilon)
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @with_abrahamson_gulerce_shift
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -163,13 +162,6 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
             phi[m] = phi_m
         sig += np.sqrt(tau**2.0 + phi**2.0)
 
-        if apply_shift:
-            apply_sigma_mu(self, ctx, imts, mean)
-
-
-
-    central_functions = (compute_without_shift, apply_sigma_mu)
-    shifted_options = ('sigma_mu_epsilon',)
 
 class NZNSHM2022_AbrahamsonGulerce2020SSlab(
     NZNSHM2022_AbrahamsonGulerce2020SInter

@@ -51,7 +51,7 @@ from openquake.hazardlib.gsim.kuehn_2020 import (
     _get_ln_z_ref,
     _infer_z,
     get_mean_values,
-    apply_sigma_mu,
+    with_kuehn_shift,
     KuehnEtAl2020SInter,
     CONSTS,
     REGION_TERMS_IF,
@@ -233,8 +233,8 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 self.__class__.REQUIRES_SITES_PARAMETERS
 
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @with_kuehn_shift
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -310,10 +310,8 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 phi[m] = C["phi"]
                 sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
-        if apply_shift:
-            apply_sigma_mu(self, (ctx, {}), imts, mean)
-
-    shifted_options = ('sigma_mu_epsilon',)
+        # Keep the interpolation cache local to this slice.
+        return (ctx, {})
 
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):

@@ -24,7 +24,7 @@ Module exports :class:`AbrahamsonGulerce2020SInter`,
 import os
 import numpy as np
 
-from openquake.hazardlib.gsim.backbone import compute_without_shift
+from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -553,6 +553,10 @@ def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
             mean[m] += gsim.sigma_mu_epsilon * sigma_mu
 
 
+with_abrahamson_gulerce_shift = shifted_compute(
+    apply_sigma_mu, 'sigma_mu_epsilon')
+
+
 class AbrahamsonGulerce2020SInter(GMPE):
     """
     Implements the 2020 Subduction ground motion model of Abrahamson &
@@ -684,8 +688,8 @@ class AbrahamsonGulerce2020SInter(GMPE):
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @with_abrahamson_gulerce_shift
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -718,12 +722,6 @@ class AbrahamsonGulerce2020SInter(GMPE):
             phi[m] = phi_m
 
         sig[:] = np.sqrt(tau ** 2.0 + phi ** 2.0)
-
-        if apply_shift:
-            apply_sigma_mu(self, ctx, imts, mean)
-
-    central_functions = (compute_without_shift, apply_sigma_mu)
-    shifted_options = ('sigma_mu_epsilon',)
 
     # Coefficients taken from digital files supplied by Norm Abrahamson
     COEFFS = CoeffsTable(sa_damping=5, table="""\

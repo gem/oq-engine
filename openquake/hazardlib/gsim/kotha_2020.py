@@ -33,7 +33,7 @@ from shapely.geometry import shape
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.geo.packager import fiona
-from openquake.hazardlib.gsim.backbone import compute_without_shift
+from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
@@ -415,6 +415,13 @@ def _apply_mean_shift(gsim, ctx, imts, mean, *_stddevs):
             mean[m] += gsim.sigma_mu_epsilon * sigma_mu
 
 
+# Regional central predictions depend on whether dl2l is set.
+def _branch_options(gsim):
+    if isinstance(gsim, KothaEtAl2020ESHM20) and gsim.kind != 'regional':
+        return 'sigma_mu_epsilon', 'dl2l'
+    return ('sigma_mu_epsilon',)
+
+
 class KothaEtAl2020(GMPE):
     """
     Implements the first complete version of the newly derived GMPE
@@ -526,8 +533,8 @@ class KothaEtAl2020(GMPE):
         else:
             self.c3 = None
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @shifted_compute(_apply_mean_shift, _branch_options)
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -575,12 +582,6 @@ class KothaEtAl2020(GMPE):
                 dl2l = get_dl2l(self.tec_vals, tec_feat_idx, str(imt),
                                 self.delta_l2l_epsilon)
                 mean[m] += dl2l
-
-        if apply_shift:
-            _apply_mean_shift(self, ctx, imts, mean)
-
-    central_functions = (compute_without_shift, _apply_mean_shift)
-    shifted_options = ('sigma_mu_epsilon',)
 
     # Coefficients obtained direclty from the regression outputs of
     # Kotha et al. (2020)
@@ -831,7 +832,6 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     REQUIRES_SITES_PARAMETERS = set(("region", "vs30", "vs30measured"))
 
     kind = "ESHM20"
-    shifted_options = ('sigma_mu_epsilon', 'dl2l')
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                   e1                 b1                  b2                  b3                  c1                   c2                   c3              tau_c3             phi_s2s         tau_event_0             tau_l2l               phi_0       d0_obs        d1_obs   phi_s2s_obs       d0_inf        d1_inf   phi_s2s_inf

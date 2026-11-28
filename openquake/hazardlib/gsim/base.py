@@ -138,17 +138,10 @@ def fix_toml(v):
 
 def get_central_key(gsim):
     """
-    GSIMs with ``central_functions`` list in ``shifted_options`` the
-    options which only shift the central computation; branches differing
-    only in such options share the same key, so that
-    ContextMaker.get_mean_stds performs the central computation once
-    (see :mod:`openquake.hazardlib.gsim.backbone`).
+    Return the class name and a snapshot of the central constructor options.
 
-    :returns:
-        (class name, repr of the other options) or None if the GSIM cannot
-        share the central computation, i.e. if a subclass overrides
-        ``compute`` without redeclaring ``shifted_options`` or if some
-        option is not a Python literal
+    The key is None for an ordinary compute method, a GSIM instance that
+    disables sharing, or options that cannot round-trip as Python literals.
 
     >>> from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
     >>> low = KothaEtAl2020ESHM20(sigma_mu_epsilon=-1.35563)
@@ -158,16 +151,13 @@ def get_central_key(gsim):
     >>> get_central_key(KothaEtAl2020ESHM20(c3_epsilon=1.732051))
     ('KothaEtAl2020ESHM20', "(('c3_epsilon', 1.732051),)")
     """
-    for cls in type(gsim).__mro__:
-        if 'shifted_options' in cls.__dict__:
-            break
-        elif 'compute' in cls.__dict__:
-            # the central functions would bypass this compute
-            return None
-    else:  # no shifted_options
+    branch_options = getattr(type(gsim).compute, 'branch_options', None)
+    if callable(branch_options):
+        branch_options = branch_options(gsim)
+    if branch_options is None:
         return None
     options = tuple((name, value) for name, value in gsim.kwargs.items()
-                    if name != 'weight' and name not in gsim.shifted_options)
+                    if name != 'weight' and name not in branch_options)
     key = repr(options)
     try:
         # only Python literals have a faithful representation
@@ -245,7 +235,7 @@ class MetaGSIM(abc.ABCMeta):
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             self.kwargs['gmpe_table'] = self.gmpe_table
-        if getattr(self, 'central_functions', None):
+        if hasattr(cls.compute, 'branch_options'):
             # Snapshot constructor options before callers can reuse them.
             # NB: the key is computed once, at construction time, so a
             # GSIM must not be modified after it is built, otherwise

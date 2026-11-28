@@ -26,8 +26,7 @@ import numpy as np
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
-from openquake.hazardlib.gsim.abrahamson_2014 import apply_nshm_shift
-from openquake.hazardlib.gsim.backbone import compute_without_shift
+from openquake.hazardlib.gsim.abrahamson_2014 import with_nshm_shift
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -754,8 +753,8 @@ class ChiouYoungs2014(GMPE):
         if not hasattr(self, "COEFFS_EMME"):
             self.COEFFS_EMME = False
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @with_nshm_shift
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -792,12 +791,6 @@ class ChiouYoungs2014(GMPE):
                 
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
-
-        if apply_shift:
-            apply_nshm_shift(self, ctx, imts, mean)
-
-    central_functions = (compute_without_shift, apply_nshm_shift)
-    shifted_options = ('sigma_mu_epsilon',)
 
     #: Coefficient tables are constructed from values in tables 1 - 5
     COEFFS = CoeffsTable(sa_damping=5, table="""\

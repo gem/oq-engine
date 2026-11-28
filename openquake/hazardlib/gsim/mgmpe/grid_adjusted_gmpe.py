@@ -36,6 +36,7 @@ from openquake.hazardlib import const
 from openquake.baselib.general import gen_slices
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import npoints_between, geodetic_distance
+from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
@@ -779,8 +780,6 @@ class GridAdjustedGMPE(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     experimental = True # It's not extensively tested yet
-    central_functions = (compute_central, apply_epsilons)
-    shifted_options = ('epsilons', 'path_cap')
 
     def __init__(self, gmpe_name, grid_hdf5_file, epsilons='',
                  path_cap='', **kwargs):
@@ -842,11 +841,13 @@ class GridAdjustedGMPE(GMPE):
                     "but the underlying GSIM does not support "
                     "random-effects residuals.")
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    @shifted_compute(apply_epsilons, ('epsilons', 'path_cap'))
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
+                gra_mon=nullcontext()):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        resolved = compute_central(self, ctx, imts, mean, sig, tau, phi)
-        apply_epsilons(self, resolved, imts, mean)
+        return compute_central(
+            self, ctx, imts, mean, sig, tau, phi, gra_mon=gra_mon)

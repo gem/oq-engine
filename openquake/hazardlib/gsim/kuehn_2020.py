@@ -41,7 +41,7 @@ import os
 import h5py
 from scipy.interpolate import RegularGridInterpolator
 
-from openquake.hazardlib.gsim.backbone import compute_without_shift
+from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -753,10 +753,8 @@ def apply_sigma_mu(gsim, resolved, imts, mean, *_stddevs):
             mean[m] += gsim.sigma_mu_epsilon * adjustments[imt]
 
 
-# Keep the interpolation cache local to this group and context slice.
-def _compute_central(gsim, ctx, imts, mean, sig, tau, phi, gra_mon=None):
-    compute_without_shift(gsim, ctx, imts, mean, sig, tau, phi)
-    return ctx, {}
+with_kuehn_shift = shifted_compute(
+    apply_sigma_mu, 'sigma_mu_epsilon')
 
 
 class KuehnEtAl2020SInter(GMPE):
@@ -904,8 +902,8 @@ class KuehnEtAl2020SInter(GMPE):
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @with_kuehn_shift
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -970,11 +968,8 @@ class KuehnEtAl2020SInter(GMPE):
             sig[m], tau[m], phi[m] = get_std_dev(
                 C, C_PGA, ctx, pga1100, self.ak23_cb14_sig)
 
-        if apply_shift:
-            apply_sigma_mu(self, (ctx, {}), imts, mean)
-
-    central_functions = (_compute_central, apply_sigma_mu)
-    shifted_options = ('sigma_mu_epsilon',)
+        # Keep the interpolation cache local to this slice.
+        return (ctx, {})
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:

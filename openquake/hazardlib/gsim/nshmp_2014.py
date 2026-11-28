@@ -23,6 +23,7 @@ import numpy as np
 import inspect
 
 from openquake.hazardlib import const
+from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim import base
 
 
@@ -47,15 +48,10 @@ def nga_west2_epistemic_adjustment(mag, dist):
     return adjustment
 
 
-# Compute the backbone and the adjustment shared by upper and lower branches.
-def _compute_central(gsim, ctx, imts, mean, sig, tau, phi, gra_mon=None):
-    gsim.gsim.compute(ctx, imts, mean, sig, tau, phi)
-    return nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
-
-
 # Apply this branch's signed adjustment to every IMT.
 def _apply_shift(gsim, adjustment, imts, mean, *_stddevs):
     mean[:] += gsim.sgn * adjustment
+    return adjustment
 
 
 class NSHMP2014(base.GMPE):
@@ -102,16 +98,12 @@ class NSHMP2014(base.GMPE):
             setattr(self.gsim, kwarg, kwargs[kwarg])
             
 
+    @shifted_compute(_apply_shift, 'sgn')
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        """
-        Compute mean, sig, tau, phi and returns the so called adjustment
-        """
-        adjustment = _compute_central(self, ctx, imts, mean, sig, tau, phi)
-        _apply_shift(self, adjustment, imts, mean)
-        return adjustment
+        """Compute mean, sig, tau and phi, and return the adjustment."""
+        self.gsim.compute(ctx, imts, mean, sig, tau, phi)
+        return nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)
 
-    central_functions = (_compute_central, _apply_shift)
-    shifted_options = ('sgn',)
 
 # populate gsim_aliases
 # for instance "AbrahamsonEtAl2014NSHMPMean" is associated to the TOML string

@@ -1705,21 +1705,17 @@ class ContextMaker(object):
                 raise NotImplementedError(
                     f'{gsim} was not instantiated with a '
                     f'ModifiableGMPE, please read {url}')
-            # GSIMs opt in with two module-level functions and a key that
-            # identifies the inputs to their shared computation. The branch
-            # callback receives the shared result and the four output arrays.
-            # See the docstring of openquake.hazardlib.gsim.backbone
-            central_functions = getattr(gsim, 'central_functions', None)
+            branch_functions = getattr(
+                type(gsim).compute, 'branch_functions', None)
             key = getattr(gsim, 'central_key', None)
-            if not central_functions or key is None:
+            if not branch_functions or key is None:
                 out[:, g] = self.get_4MN(recarrays, gsim)
             else:
-                groups.setdefault((central_functions, key), []).append(
+                groups.setdefault((branch_functions, key), []).append(
                     (g, gsim))
-        for (central_functions, _), g_gsim_pairs in groups.items():
-            compute_central, apply_branch = central_functions
+        for (branch_functions, _), g_gsim_pairs in groups.items():
             self._compute_group(recarrays, g_gsim_pairs, out,
-                                compute_central, apply_branch)
+                                *branch_functions)
         return out
 
     # Share the backbone and spatial lookups for one context slice at a time.

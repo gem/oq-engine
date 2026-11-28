@@ -17,104 +17,65 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Shared computation for GSIM branches with additive mean shifts.
+Share the central computation across compatible branches of a GSIM.
 
-Logic trees often contain several branches of the same GSIM differing
-only in an option shifting the result, like ``sigma_mu_epsilon=-1.36, 0,
-+1.36`` for ``BooreEtAl2014``. Running the full ``compute`` for each
-branch is wasteful: GSIMs can declare instead how to split the
-computation in a central part, common to all the branches and computed
-once, and a cheap shift, applied to each branch.
+Decorate the central body of ``compute`` with :func:`shifted_compute`.
+A direct call computes the central predictions and applies the branch
+adjustment. ContextMaker computes the central part once per group and
+context slice, copies its output to each branch, then applies each
+branch's adjustment. An override of ``compute`` opts in independently.
 
-Opting in
----------
-
-A GSIM opts in with two class attributes::
-
-    class BooreEtAl2014(GMPE):
-        central_functions = (compute_without_shift, apply_nshm_shift)
-        shifted_options = ('sigma_mu_epsilon',)
-
-``central_functions`` is a pair of functions:
-
-``compute_central(gsim, ctx, imts, mean, sig, tau, phi, gra_mon)``
-    fills the four output arrays with the part common to all the
-    branches and returns a ``resolved`` object with whatever the shifts
-    need later, usually ``ctx``; it can also be a tuple like
-    ``(ctx, adjustments)`` in ``KuehnEtAl2020SInter`` or the grid
-    adjustments in ``GridAdjustedGMPE``.
-
-``apply_branch(gsim, resolved, imts, mean, sig, tau, phi)``
-    modifies the arrays in place, using only the shifted options of the
-    branch and ``resolved``; it can use ``resolved`` as a cache shared by
-    the branches (as ``KuehnEtAl2020SInter`` does), but it must not
-    modify it otherwise.
-
-The two functions must satisfy one rule: ``compute_central`` followed by
-``apply_branch`` must give the same result as ``gsim.compute``. The
-simplest way to guarantee it is to give ``compute`` an ``apply_shift``
-flag, calling the shift at the end, and to use :func:`compute_without_shift`
-as ``compute_central``::
-
-    def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
-        if gsim.sigma_mu_epsilon:
-            for m, imt in enumerate(imts):
-                mean[m] += gsim.sigma_mu_epsilon * gsim.COEFFS[imt]['sm']
-
-    class MyGMPE(GMPE):
-        central_functions = (compute_without_shift, apply_sigma_mu)
-        shifted_options = ('sigma_mu_epsilon',)
-
-        def __init__(self, sigma_mu_epsilon=0.):
-            self.sigma_mu_epsilon = sigma_mu_epsilon
-
-        def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi,
-                    apply_shift=True):
-            ...  # the expensive part
-            if apply_shift:
-                apply_sigma_mu(self, ctx, imts, mean)
-
-The central key
----------------
-
-At instantiation time the GSIM metaclass sets ``gsim.central_key`` with
-:func:`openquake.hazardlib.gsim.base.get_central_key`: the class name and
-the repr of all the options except the ``shifted_options`` (and the
-weight). The key is None, i.e. the GSIM is computed independently, if
-a subclass overrides ``compute`` without redeclaring ``shifted_options``
-(the central functions would bypass its ``compute``) or if an option is
-not a Python literal (for instance the repr of a large numpy array is
-truncated). A ``ModifiableGMPE`` with modifiers which are not independent
-scalings disables the sharing by setting ``central_functions = ()`` on
-the instance. Since the key is computed only once, a GSIM must not be
-modified after its instantiation.
-
-The computation
----------------
-
-``ContextMaker.get_mean_stds`` computes normally the GSIMs without
-central functions or without a key, and groups the others by
-``(central_functions, central_key)``. For each group and context slice
-it calls ``compute_central`` once, on the first GSIM of the group and
-writing directly in its output slot; then it loops on the branches in
-reverse order: each branch copies the central result in its own slot
-and calls ``apply_branch`` on it. The first branch is shifted last since
-its slot holds the central result until all the other branches have
-copied it::
-
-    branches:  eps=-1.36   eps=0    eps=+1.36      (same key)
-                    \\        |        /
-               compute_central  (once, into slot 0)
-                    /        |        \\
-          copy + shift   copy + shift   shift slot 0 last
-
-Since the cost of ``compute`` is in the central part (backbone,
-interpolations, raytracing) and a shift is usually a few array additions,
-a group of N branches costs about one ``compute`` instead of N.
+The grouping key snapshots the concrete class and constructor options
+other than the options named by the decorator and the logic-tree weight.
+Keep the GSIM configuration fixed after construction.
 """
 
+import inspect
+from functools import wraps
 
-def compute_without_shift(gsim, ctx, imts, mean, sig, tau, phi, gra_mon=None):
-    """Compute the shared predictions and pass the context to the shift."""
-    gsim.compute(ctx, imts, mean, sig, tau, phi, apply_shift=False)
-    return ctx
+
+def shifted_compute(apply_branch, options):
+    """
+    Apply a branch adjustment after the body of ``compute``.
+
+    The body fills the four output arrays and can return data for the
+    adjustment. If it returns None, the adjustment receives the context.
+    The adjustment takes ``(gsim, resolved, imts, mean, sig, tau, phi)``,
+    modifies the outputs in place, and supplies the public return value
+    of ``compute``. Shared data is local to a group and context slice.
+    Treat it as read-only except for caching branch-independent work.
+
+    ``options`` is a name or collection of constructor option names used
+    only by the adjustment. It can also be a function of the GSIM
+    returning a collection of names or None to disable sharing for that
+    instance. ContextMaker supplies its ray-tracing monitor to bodies
+    that accept a ``gra_mon`` keyword.
+    """
+    if isinstance(options, str):
+        options = (options,)
+
+    def decorate(body):
+        signature = inspect.signature(body)
+        monitor = 'gra_mon' in signature.parameters
+
+        def central(self, ctx, imts, mean, sig, tau, phi, gra_mon=None):
+            args = (self, ctx, imts, mean, sig, tau, phi)
+            if monitor and gra_mon is not None:
+                resolved = body(*args, gra_mon=gra_mon)
+            else:
+                resolved = body(*args)
+            return ctx if resolved is None else resolved
+
+        @wraps(body)
+        def compute(self, *args, **kwargs):
+            gra_mon = kwargs.pop('gra_mon', None) if monitor else None
+            if kwargs or len(args) != 6:
+                args = signature.bind(self, *args, **kwargs).args[1:]
+            resolved = central(self, *args, gra_mon=gra_mon)
+            return apply_branch(self, resolved, *args[1:])
+
+        compute.branch_functions = central, apply_branch
+        compute.branch_options = options
+        return compute
+
+    return decorate

@@ -33,8 +33,7 @@ import numpy as np
 import shapely
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim.abrahamson_2014 import apply_nshm_shift
-from openquake.hazardlib.gsim.backbone import compute_without_shift
+from openquake.hazardlib.gsim.abrahamson_2014 import with_nshm_shift
 from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -443,8 +442,8 @@ class Bradley2013(GMPE):
     def __init__(self, sigma_mu_epsilon=0.0):
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                apply_shift=True):
+    @with_nshm_shift
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
@@ -466,12 +465,6 @@ class Bradley2013(GMPE):
 
             set_stddevs(self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
                         sig[m], tau[m], phi[m])
-
-        if apply_shift:
-            apply_nshm_shift(self, ctx, imts, mean)
-
-    central_functions = (compute_without_shift, apply_nshm_shift)
-    shifted_options = ('sigma_mu_epsilon',)
 
     #: Coefficient tables are constructed from values in tables 1, 2 and 3
     #: (pages 197, 198 and 199) in Chiou & Youngs,2008. Only Coefficients c1,

@@ -22,9 +22,12 @@ import numpy
 
 from openquake.baselib.general import duplicated, gen_subclasses
 from openquake.hazardlib import const, valid
+from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import (
     GMPE, GroundShakingIntensityModel, gsim_aliases, NotVerifiedWarning,
     DeprecationWarning, get_central_key)
+from openquake.hazardlib.gsim.kotha_2020 import (
+    KothaEtAl2020, KothaEtAl2020ESHM20)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.contexts import ContextMaker
 aac = numpy.testing.assert_allclose
@@ -68,8 +71,14 @@ class TGMPE(GMPE):
     REQUIRES_DISTANCES = ()
 
 
+def apply_test_shift(gsim, ctx, imts, mean, *_stddevs):
+    pass
+
+
 class ShiftedGMPE(TGMPE):
-    shifted_options = ('shift',)
+    @shifted_compute(apply_test_shift, 'shift')
+    def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
+        pass
 
 
 class CentralKeyTestCase(unittest.TestCase):
@@ -86,7 +95,7 @@ class CentralKeyTestCase(unittest.TestCase):
         gsim.kwargs = {'second': 2, 'first': 1}
         self.assertNotEqual(get_central_key(gsim), key)
 
-    def test_shifted_options_are_excluded(self):
+    def test_branch_options_are_excluded(self):
         gsim = ShiftedGMPE()
         gsim.kwargs = {'option': 1, 'shift': -1.}
         key = get_central_key(gsim)
@@ -98,6 +107,13 @@ class CentralKeyTestCase(unittest.TestCase):
         gsim = ShiftedGMPE()
         gsim.kwargs = {'option': numpy.zeros(2000)}
         self.assertIsNone(get_central_key(gsim))
+
+    def test_kotha_eshm20_can_share_across_dl2l_values(self):
+        lower, upper = {'PGA': -0.2}, {'PGA': 0.2}
+        self.assertEqual(KothaEtAl2020ESHM20(dl2l=lower).central_key,
+                         KothaEtAl2020ESHM20(dl2l=upper).central_key)
+        self.assertNotEqual(KothaEtAl2020(dl2l=lower).central_key,
+                            KothaEtAl2020(dl2l=upper).central_key)
 
 
 class GsimInstantiationTestCase(unittest.TestCase):
