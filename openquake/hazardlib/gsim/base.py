@@ -250,21 +250,19 @@ class MetaGSIM(abc.ABCMeta):
                                          (missing, name))
         adjustment = dic.get('apply_adjustment')
         if 'compute' in dic:
+            # An overridden compute method must opt into sharing again:
+            # without an adjustment it stays unwrapped.
             if adjustment is not None:
                 adjustment_options(adjustment)
-                dic['compute_central'] = staticmethod(dic['compute'])
                 dic['compute'] = adjusted_compute(dic['compute'], adjustment)
-            else:
-                # An overridden compute method must opt into sharing again.
-                dic['compute_central'] = None
         elif adjustment is not None and bases:
-            # A new adjustment for an inherited compute wraps the inherited
-            # central computation, so direct calls match ContextMaker.
-            central = getattr(bases[0], 'compute_central', None)
-            if central is not None:
+            # A new adjustment for an inherited compute wraps its raw body,
+            # so direct calls match the shared computation in ContextMaker.
+            inherited = getattr(bases[0], 'compute', None)
+            raw = getattr(inherited, '__wrapped__', None)
+            if raw is not None:
                 adjustment_options(adjustment)
-                dic['compute_central'] = staticmethod(central)
-                dic['compute'] = adjusted_compute(central, adjustment)
+                dic['compute'] = adjusted_compute(raw, adjustment)
         cls = super().__new__(meta, name, bases, dic)
         return cls
 

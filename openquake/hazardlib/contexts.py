@@ -1705,7 +1705,8 @@ class ContextMaker(object):
                 raise NotImplementedError(
                     f'{gsim} was not instantiated with a '
                     f'ModifiableGMPE, please read {url}')
-            compute_central = type(gsim).compute_central
+            # the raw body of a shareable compute is kept in __wrapped__
+            compute_central = getattr(type(gsim).compute, '__wrapped__', None)
             apply_adjustment = type(gsim).apply_adjustment
             key = getattr(gsim, 'central_key', None)
             if (key is None or compute_central is None
