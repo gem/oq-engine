@@ -610,7 +610,7 @@ def compute_central(gsim, ctx: np.recarray, imts, mean, sig, tau, phi):
             if mean_adj is None:
                 # No central mean data for this term/IMT: skip correction
                 continue
-            adj[m, term] = mean_adj, se_adj
+            adj[str(imt), term] = mean_adj, se_adj
             # Central mean and sigma adjustments do not depend on
             # epsilon, so they are added here
             mean[m] += mean_adj
@@ -642,13 +642,15 @@ def apply_epsilons(gsim, adj, imts, mean, sig, tau, phi,
     # and are omitted from adj. For path terms with path_cap set,
     # clip the per-branch total (central + eps*SE) so no single LT
     # realisation's path contribution can exceed the physical bound
-    for (m, term), (mean_adj, se_adj) in adj.items():
+    index = {str(imt): m for m, imt in enumerate(imts)}
+    for (imt, term), (mean_adj, se_adj) in adj.items():
+        m = index[imt]
         eps = epsilons.get(term, 0.0)
         if eps != 0.0 and se_adj is None:
             raise ValueError(
                 f"Non-zero epsilon requested for term '{term}' but "
                 f"per-cell '{term}_mean_se' dataset is missing for "
-                f"IMT '{imts[m]}'.")
+                f"IMT '{imt}'.")
         shift = eps * se_adj if eps != 0.0 else 0.0
         cfg = gsim.grid_data["res_terms"][term]
         if cfg["location"] == "path" and path_cap:
