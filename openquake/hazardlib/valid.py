@@ -192,7 +192,7 @@ def gsim(value, basedir=''):
     except KeyError:
         raise NameError('Unknown GSIM: %s' % gsim_name)
     if isinstance(gsim_class, MetaGSIM):
-        gs = gsim_class(_gsim_basedir=basedir, **kwargs)
+        gs = gsim_class(basedir=basedir, **kwargs)
     elif inspect.isclass(gsim_class):
         gs = gsim_class(**kwargs)
     else:  # is an alias, i.e. a thunk

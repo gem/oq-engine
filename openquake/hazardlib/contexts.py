@@ -1740,7 +1740,7 @@ class ContextMaker(object):
                     branch[:] = central
                 apply_adjustment(
                     gsim, resolved, self.imts, *branch,
-                    *adjustment_values(gsim))
+                    *adjustment_values(gsim, apply_adjustment))
             start = slc.stop
         for g, gsim in g_gsim_pairs:
             self._check_conv(out[:, g], gsim)

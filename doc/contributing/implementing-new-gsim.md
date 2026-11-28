@@ -120,26 +120,25 @@ branch option that changes the result:
 ```python
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 
-
-def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi,
-                   sigma_mu_epsilon):
-    if sigma_mu_epsilon:
-        mean[:] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
-
 class MyGMPE(GMPE):
-    apply_adjustment = apply_sigma_mu
+    def apply_adjustment(gsim, ctx, imts, mean, sig, tau, phi,
+                         sigma_mu_epsilon):
+        if sigma_mu_epsilon:
+            mean[:] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         ...  # fill the central mean and standard deviations
 ```
 
-The callback signature starts with ``gsim, ctx, imts, mean, sig, tau, phi``.
-The ``ctx`` argument is the input context when ``compute`` returns ``None``;
-otherwise it is the value returned by ``compute``. The callback modifies the
-output arrays in place. Parameters after these seven standard arguments must
-name constructor options used by the adjustment. The engine omits those
-options from the central computation key, so branches with different values
-can share the central computation.
+The callback signature starts with ``gsim, ctx, imts, mean, sig, tau,
+phi``. Name the second argument ``ctx`` when it is the input context, that
+is when ``compute`` returns ``None``. Otherwise name it ``resolved``: it is
+the value returned by ``compute``, a tuple of precomputed values, a
+dictionary, or another payload needed by the adjustment.
+The callback modifies the output arrays in place. Parameters after these
+seven standard arguments must name constructor options used by the adjustment.
+The engine omits those options from the central computation key, so branches
+with different values can share the central computation.
 
 ``MetaGSIM`` wraps ``compute`` so direct calls still apply the adjustment.
 Inside ``ContextMaker``, the original ``compute`` body runs once for branches

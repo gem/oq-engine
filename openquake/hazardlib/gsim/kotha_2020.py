@@ -402,9 +402,9 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
 
 
 # Apply the final epistemic mean shift for this branch.
-def _apply_mean_shift(gsim, ctx, imts, mean, sig, tau, phi,
+def _apply_mean_shift(gsim, resolved, imts, mean, sig, tau, phi,
                       sigma_mu_epsilon, dl2l):
-    context, tec_feat_idx = ctx
+    context, tec_feat_idx = resolved
     if dl2l:
         # The source-region parameter is specified explicitly.
         for m, imt in enumerate(imts):

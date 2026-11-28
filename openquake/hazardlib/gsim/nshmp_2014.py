@@ -48,9 +48,8 @@ def nga_west2_epistemic_adjustment(mag, dist):
 
 
 # Apply this branch's signed adjustment to every IMT.
-def _apply_shift(gsim, ctx, imts, mean, sig, tau, phi, sgn):
-    mean[:] += sgn * ctx
-    return ctx
+def _apply_shift(gsim, resolved, imts, mean, sig, tau, phi, sgn):
+    mean[:] += sgn * resolved
 
 
 class NSHMP2014(base.GMPE):

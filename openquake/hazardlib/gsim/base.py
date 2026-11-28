@@ -181,7 +181,7 @@ def get_central_key(gsim):
     >>> print(get_central_key(
     ...     KothaEtAl2020ESHM20(c3_epsilon=1.732051)))
     _gsim = "KothaEtAl2020ESHM20"
-
+    <BLANKLINE>
     [KothaEtAl2020ESHM20]
     c3_epsilon = 1.732051
     """
@@ -248,19 +248,27 @@ class MetaGSIM(abc.ABCMeta):
                     if missing:
                         raise ValueError('Unknown distance %s in %s' %
                                          (missing, name))
+        adjustment = dic.get('apply_adjustment')
         if 'compute' in dic:
-            if 'apply_adjustment' in dic:
-                adjustment_options(dic['apply_adjustment'])
+            if adjustment is not None:
+                adjustment_options(adjustment)
                 dic['compute_central'] = staticmethod(dic['compute'])
-                dic['compute'] = adjusted_compute(dic['compute'])
+                dic['compute'] = adjusted_compute(dic['compute'], adjustment)
             else:
                 # An overridden compute method must opt into sharing again.
                 dic['compute_central'] = None
-                dic['apply_adjustment'] = None
+        elif adjustment is not None and bases:
+            # A new adjustment for an inherited compute wraps the inherited
+            # central computation, so direct calls match ContextMaker.
+            central = getattr(bases[0], 'compute_central', None)
+            if central is not None:
+                adjustment_options(adjustment)
+                dic['compute_central'] = staticmethod(central)
+                dic['compute'] = adjusted_compute(central, adjustment)
         cls = super().__new__(meta, name, bases, dic)
         return cls
 
-    def __call__(cls, *, _gsim_basedir='', **kwargs):
+    def __call__(cls, *, basedir='', **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
         for name, value in kwargs.items():
             kwargs[name] = value = _normalize_option(value)
@@ -282,7 +290,7 @@ class MetaGSIM(abc.ABCMeta):
             self = type.__call__(cls, **kwargs)
         self.kwargs = kwargs
         self._toml = toml.dumps(
-            {cls.__name__: fix_toml(kwargs, _gsim_basedir)}).strip()
+            {cls.__name__: fix_toml(kwargs, basedir)}).strip()
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             table = self.gmpe_table
@@ -403,6 +411,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     adapted = False
     conditional = False  # must be instantiated from ModifiableGMPE
     from_mgmpe = False  # instantiated using ModifiableGMPE
+    apply_adjustment = None  # set by classes sharing compute across branches
 
     @classmethod
     def __init_subclass__(cls):

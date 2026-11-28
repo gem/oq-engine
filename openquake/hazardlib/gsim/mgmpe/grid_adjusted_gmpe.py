@@ -626,13 +626,13 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
     return resolved
 
 
-def apply_epsilons(gsim, ctx, imts, mean, sig, tau, phi,
+def apply_epsilons(gsim, resolved, imts, mean, sig, tau, phi,
                    epsilons, path_cap):
     """
     Add this branch's eps * mean_se shift to the central mean.
 
     :param gsim: GridAdjustedGMPE instance
-    :param ctx: the dictionary returned by compute
+    :param resolved: the dictionary returned by compute
     :param imts: sequence of IMT instances, in output array row order
     :param mean: central mean array of shape (len(imts), N)
     """
@@ -640,7 +640,7 @@ def apply_epsilons(gsim, ctx, imts, mean, sig, tau, phi,
     # and are omitted from resolved. For path terms with path_cap set,
     # clip the per-branch total (central + eps*SE) so no single LT
     # realisation's path contribution can exceed the physical bound
-    for (m, term), (mean_adj, se_adj) in ctx.items():
+    for (m, term), (mean_adj, se_adj) in resolved.items():
         eps = epsilons.get(term, 0.0)
         if eps != 0.0 and se_adj is None:
             raise ValueError(
