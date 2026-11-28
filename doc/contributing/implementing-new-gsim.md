@@ -132,7 +132,7 @@ class MyGMPE(GMPE):
 
 The callback signature starts with ``gsim, ctx, imts, mean, sig, tau,
 phi``. Name the second argument ``ctx`` when it is the input context, that
-is when ``compute`` returns ``None``. Otherwise name it ``central``: it is
+is when ``compute`` returns ``None``. Otherwise name it ``adj``: it is
 the value returned by ``compute``, a tuple of precomputed values, a
 dictionary, or another payload needed by the adjustment.
 The callback modifies the output arrays in place. Parameters after these

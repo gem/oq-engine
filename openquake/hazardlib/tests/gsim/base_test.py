@@ -70,7 +70,7 @@ class TGMPE(GMPE):
     REQUIRES_DISTANCES = ()
 
 
-def apply_test_shift(gsim, central, imts, mean, sig, tau, phi, shift):
+def apply_test_shift(gsim, adj, imts, mean, sig, tau, phi, shift):
     pass
 
 

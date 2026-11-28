@@ -675,12 +675,12 @@ INDEPENDENT_SCALING = {
 
 
 # Apply the original modifiers in the order specified by the branch.
-def _apply_modifiers(gsim, central, imts, mean, sig, tau, phi,
+def _apply_modifiers(gsim, adj, imts, mean, sig, tau, phi,
                      set_scale_median_scalar=None,
                      set_scale_median_vector=None,
                      set_scale_total_sigma_scalar=None,
                      set_scale_total_sigma_vector=None):
-    context, ref = central
+    context, ref = adj
     for name, kwargs in gsim.params.items():
         # CEUS 2020 site term needs ref PGA stored.
         if name == 'ceus2020_site_term':

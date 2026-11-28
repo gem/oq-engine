@@ -596,7 +596,7 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
     """
     grid_data = gsim.grid_data
     gsim.gmpe.compute(ctx, imts, mean, sig, tau, phi)
-    central = {}
+    adj = {}
     for m, imt in enumerate(imts):
         # Apply each correction - example (term, cfg):
         #   term = 'dL2L'
@@ -610,7 +610,7 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
             if mean_adj is None:
                 # No central mean data for this term/IMT: skip correction
                 continue
-            central[m, term] = mean_adj, se_adj
+            adj[m, term] = mean_adj, se_adj
             # Central mean and sigma adjustments do not depend on
             # epsilon, so they are added here
             mean[m] += mean_adj
@@ -623,24 +623,24 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
                 sig_vals = adjs.get("sig", scalars.get(term))
                 adjust_sigma(sig_vals, cfg, sig_action,
                              sig[m], tau[m], phi[m])
-    return central
+    return adj
 
 
-def apply_epsilons(gsim, central, imts, mean, sig, tau, phi,
+def apply_epsilons(gsim, adj, imts, mean, sig, tau, phi,
                    epsilons, path_cap):
     """
     Add this branch's eps * mean_se shift to the central mean.
 
     :param gsim: GridAdjustedGMPE instance
-    :param central: the dictionary returned by compute
+    :param adj: the dictionary returned by compute
     :param imts: sequence of IMT instances, in output array row order
     :param mean: central mean array of shape (len(imts), N)
     """
     # Terms with no mean data contributed nothing to the central mean
-    # and are omitted from central. For path terms with path_cap set,
+    # and are omitted from adj. For path terms with path_cap set,
     # clip the per-branch total (central + eps*SE) so no single LT
     # realisation's path contribution can exceed the physical bound
-    for (m, term), (mean_adj, se_adj) in central.items():
+    for (m, term), (mean_adj, se_adj) in adj.items():
         eps = epsilons.get(term, 0.0)
         if eps != 0.0 and se_adj is None:
             raise ValueError(

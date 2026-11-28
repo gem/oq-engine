@@ -20,7 +20,7 @@
 Utilities for sharing central GSIM computations across branches.
 
 Shifted GSIM classes declare an ``apply_adjustment`` method. Its arguments
-after ``gsim, ctx, imts, mean, sig, tau, phi`` (``central`` instead of
+after ``gsim, ctx, imts, mean, sig, tau, phi`` (``adj`` instead of
 ``ctx`` when compute returns a value other than the context) name the
 constructor options that vary by branch. MetaGSIM wraps ``compute`` to
 preserve direct calls, while ContextMaker runs the original compute body
@@ -43,10 +43,10 @@ def adjustment_options(apply_adjustment):
     params = list(inspect.signature(apply_adjustment).parameters.values())
     names = tuple(param.name for param in params[:7])
     # The second argument is the context, or the value returned by compute
-    if (names[:1] != ('gsim',) or names[1] not in ('ctx', 'central')
+    if (names[:1] != ('gsim',) or names[1] not in ('ctx', 'adj')
             or names[2:] != ('imts', 'mean', 'sig', 'tau', 'phi')):
         raise TypeError('apply_adjustment must start with gsim, ctx or '
-                        'central, imts, mean, sig, tau, phi')
+                        'adj, imts, mean, sig, tau, phi')
     if any(param.kind not in (param.POSITIONAL_ONLY,
                               param.POSITIONAL_OR_KEYWORD)
            for param in params):
@@ -70,10 +70,10 @@ def adjusted_compute(compute_func, apply_adjustment):
     # so a super().compute() call applies only the parent's adjustment.
     # ContextMaker calls the original method separately.
     def adjusted(func, gsim, ctx, imts, mean, sig, tau, phi):
-        central = _compute_central(func, gsim, ctx, imts, mean, sig, tau,
-                                   phi)
+        adj = _compute_central(func, gsim, ctx, imts, mean, sig, tau,
+                               phi)
         return apply_adjustment(
-            gsim, central, imts, mean, sig, tau, phi,
+            gsim, adj, imts, mean, sig, tau, phi,
             *adjustment_values(gsim, apply_adjustment))
 
     return decorate(compute_func, adjusted)

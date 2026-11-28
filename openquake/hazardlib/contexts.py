@@ -1730,16 +1730,16 @@ class ContextMaker(object):
             slc = slice(start, start + len(ctx))
             out_central = out[:, first, :, slc]
             out_central.fill(0)
-            central = compute_central(backbone, ctx, self.imts, *out_central)
-            if central is None:
-                central = ctx
+            adj = compute_central(backbone, ctx, self.imts, *out_central)
+            if adj is None:
+                adj = ctx
             # Shift the first branch last since its slot holds the backbone.
             for g, gsim in reversed(g_gsim_pairs):
                 branch = out[:, g, :, slc]
                 if g != first:
                     branch[:] = out_central
                 apply_adjustment(
-                    gsim, central, self.imts, *branch,
+                    gsim, adj, self.imts, *branch,
                     *adjustment_values(gsim, apply_adjustment))
             start = slc.stop
         for g, gsim in g_gsim_pairs:
