@@ -190,25 +190,33 @@ def _get_faulting_style_term(C, ctx):
             f8 * ((ctx.rake > -150) & (ctx.rake < -30)))
 
 
-def _get_hanging_wall_term(C, ctx):
+def _get_hanging_wall_tapers(ctx):
     """
-    Compute and return hanging wall model term, see page 1038.
+    Compute and return the product of the hanging wall tapers T1 ... T5,
+    see page 1038; they do not depend on the IMT, so they can be computed
+    once and multiplied by the coefficient a13 for each IMT.
     """
-    Fhw = np.zeros_like(ctx.rx)
-    Fhw[ctx.rx > 0] = 1.
-    # Taper 1
-    T1 = _hw_taper1(ctx)
-    # Taper 2
-    T2 = _hw_taper2(ctx)
-    # Taper 3
-    T3 = _hw_taper3(ctx)
-    # Taper 4
-    T4 = _hw_taper4(ctx)
-    # Taper 5
-    T5 = _hw_taper5(ctx)
-    Fhw[ctx.dip == 90.] = 0.
-    # Finally, compute the hanging wall term
-    return Fhw * C['a13'] * T1 * T2 * T3 * T4 * T5
+    tapers = np.zeros_like(ctx.rx)
+    # the hanging wall term is zero for sites on the footwall (rx <= 0), for
+    # vertical faults, for mag <= 5.5 (T2 = 0) and for ztor > 10 (T4 = 0),
+    # so the tapers are computed only for the other contexts
+    idx = ((ctx.rx > 0) & (ctx.dip != 90.) & (ctx.mag > 5.5) &
+           (ctx.ztor <= 10.))
+    if idx.any():
+        sub = ctx[idx]
+        tapers[idx] = (_hw_taper1(sub) * _hw_taper2(sub) * _hw_taper3(sub) *
+                       _hw_taper4(sub) * _hw_taper5(sub))
+    return tapers
+
+
+def _get_hanging_wall_term(C, ctx, tapers=None):
+    """
+    Compute and return hanging wall model term, see page 1038; the
+    tapers can be passed to avoid computing them again for each IMT.
+    """
+    if tapers is None:
+        tapers = _get_hanging_wall_tapers(ctx)
+    return C['a13'] * tapers
 
 
 def _get_inter_event_std(C, mag, sa1180, vs30):
@@ -461,7 +469,8 @@ def _hw_taper5(ctx):
     return T5
 
 
-def _get_sa_at_1180(region, C, imt, ctx, usgs_baf=False, cy=False):
+def _get_sa_at_1180(region, C, imt, ctx, usgs_baf=False, cy=False,
+                    tapers=None):
     """
     Compute and return mean imt value for rock conditions
     (vs30 = 1100 m/s)
@@ -473,7 +482,7 @@ def _get_sa_at_1180(region, C, imt, ctx, usgs_baf=False, cy=False):
     return (_get_basic_term(C, ctx) +
             _get_faulting_style_term(C, ctx) +
             _get_site_response_term(C, imt, vs30_1180, ref_iml) +
-            _get_hanging_wall_term(C, ctx) +
+            _get_hanging_wall_term(C, ctx, tapers) +
             _get_top_of_rupture_depth_term(C, imt, ctx) +
             _get_aftershock_term(C, ctx) +
             _get_basin_term(C, ctx, region, imt, usgs_baf, cy, vs30_1180) +
@@ -583,6 +592,8 @@ class AbrahamsonEtAl2014(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        # the hanging wall tapers do not depend on the IMT
+        tapers = _get_hanging_wall_tapers(ctx)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # compute median sa on rock (vs30=1180m/s). Used for site response
@@ -590,11 +601,12 @@ class AbrahamsonEtAl2014(GMPE):
             sa1180 = np.exp(_get_sa_at_1180(self.region,
                                             C, imt, ctx,
                                             self.usgs_basin_scaling,
-                                            self.cybershake_basin_adj))
+                                            self.cybershake_basin_adj,
+                                            tapers))
 
             # get the mean value
             mean[m] = (_get_basic_term(C, ctx) +
-                       _get_hanging_wall_term(C, ctx) +
+                       _get_hanging_wall_term(C, ctx, tapers) +
                        _get_site_response_term(C, imt, ctx.vs30, sa1180) +
                        _get_top_of_rupture_depth_term(C, imt, ctx) +
                        _get_faulting_style_term(C, ctx) +
