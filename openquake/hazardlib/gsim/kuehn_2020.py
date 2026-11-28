@@ -739,8 +739,11 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
     return sig, tau, phi
 
 
-# Resolve each IMT on the first branch with a nonzero epsilon.
-def _apply_sigma_mu(gsim, resolved, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, resolved, imts, mean, *_stddevs):
+    """
+    Apply the final epistemic mean shift for this branch, resolving
+    each IMT on the first branch with a nonzero epsilon
+    """
     ctx, adjustments = resolved
     if gsim.sigma_mu_epsilon:
         for m, imt in enumerate(imts):
@@ -968,9 +971,9 @@ class KuehnEtAl2020SInter(GMPE):
                 C, C_PGA, ctx, pga1100, self.ak23_cb14_sig)
 
         if apply_shift:
-            _apply_sigma_mu(self, (ctx, {}), imts, mean)
+            apply_sigma_mu(self, (ctx, {}), imts, mean)
 
-    central_functions = (_compute_central, _apply_sigma_mu)
+    central_functions = (_compute_central, apply_sigma_mu)
     shifted_options = ('sigma_mu_epsilon',)
 
     # Coefficients in external file - supplied directly by the author

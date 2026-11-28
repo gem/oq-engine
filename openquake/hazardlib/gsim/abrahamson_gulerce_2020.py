@@ -545,8 +545,8 @@ def get_epistemic_adjustment(C, rrup):
     return C["e1"] + C["e2"] * rrup_norm + C["e3"] * (rrup_norm ** 2.0)
 
 
-# Apply the final epistemic mean shift for this branch.
-def _apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+    """Apply the final epistemic mean shift for this branch."""
     if gsim.sigma_mu_epsilon:
         for m, imt in enumerate(imts):
             sigma_mu = get_epistemic_adjustment(gsim.COEFFS[imt], ctx.rrup)
@@ -720,9 +720,9 @@ class AbrahamsonGulerce2020SInter(GMPE):
         sig[:] = np.sqrt(tau ** 2.0 + phi ** 2.0)
 
         if apply_shift:
-            _apply_sigma_mu(self, ctx, imts, mean)
+            apply_sigma_mu(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_sigma_mu)
+    central_functions = (compute_without_shift, apply_sigma_mu)
     shifted_options = ('sigma_mu_epsilon',)
 
     # Coefficients taken from digital files supplied by Norm Abrahamson

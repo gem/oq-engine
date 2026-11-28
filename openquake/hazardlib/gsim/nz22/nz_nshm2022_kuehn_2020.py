@@ -51,7 +51,7 @@ from openquake.hazardlib.gsim.kuehn_2020 import (
     _get_ln_z_ref,
     _infer_z,
     get_mean_values,
-    _apply_sigma_mu,
+    apply_sigma_mu,
     KuehnEtAl2020SInter,
     CONSTS,
     REGION_TERMS_IF,
@@ -311,7 +311,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
         if apply_shift:
-            _apply_sigma_mu(self, (ctx, {}), imts, mean)
+            apply_sigma_mu(self, (ctx, {}), imts, mean)
 
     shifted_options = ('sigma_mu_epsilon',)
 

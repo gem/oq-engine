@@ -127,8 +127,8 @@ def get_stddevs(ergodic, tau_model, TAU, PHI_SS, imt, ctx):
     return [sigma, tau, phi]
 
 
-# Apply the final epistemic mean shift for this branch.
-def _apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+    """Apply the final epistemic mean shift for this branch."""
     if gsim.epsilon:
         for m, imt in enumerate(imts):
             mean[m] += gsim.epsilon * gsim.COEFFS[imt]["sigma_mu"]
@@ -273,9 +273,9 @@ class ESHM20Craton(GMPE):
                 imt, ctx)
 
         if apply_shift:
-            _apply_sigma_mu(self, ctx, imts, mean)
+            apply_sigma_mu(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_sigma_mu)
+    central_functions = (compute_without_shift, apply_sigma_mu)
     shifted_options = ('epsilon',)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\

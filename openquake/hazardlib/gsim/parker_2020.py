@@ -423,8 +423,8 @@ def get_stddevs(C, rrup, vs30):
     return [np.sqrt(C["Tau"] ** 2 + phi_tot ** 2), C["Tau"], phi_tot]
 
 
-# Apply the final epistemic mean shift for this branch.
-def _apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+    """Apply the final epistemic mean shift for this branch."""
     if gsim.sigma_mu_epsilon:
         trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
         for m, imt in enumerate(imts):
@@ -577,9 +577,9 @@ class ParkerEtAl2020SInter(GMPE):
             sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
 
         if apply_shift:
-            _apply_sigma_mu(self, ctx, imts, mean)
+            apply_sigma_mu(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_sigma_mu)
+    central_functions = (compute_without_shift, apply_sigma_mu)
     shifted_options = ('sigma_mu_epsilon',)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\

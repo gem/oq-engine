@@ -51,7 +51,7 @@ from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
     AbrahamsonGulerce2020SInter,
     get_acceleration_on_reference_rock,
-    _apply_sigma_mu,
+    apply_sigma_mu,
     get_mean_acceleration,
     get_tau_phi,
     SUPPORTED_REGIONS,)
@@ -164,11 +164,11 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
         sig += np.sqrt(tau**2.0 + phi**2.0)
 
         if apply_shift:
-            _apply_sigma_mu(self, ctx, imts, mean)
+            apply_sigma_mu(self, ctx, imts, mean)
 
 
 
-    central_functions = (compute_without_shift, _apply_sigma_mu)
+    central_functions = (compute_without_shift, apply_sigma_mu)
     shifted_options = ('sigma_mu_epsilon',)
 
 class NZNSHM2022_AbrahamsonGulerce2020SSlab(

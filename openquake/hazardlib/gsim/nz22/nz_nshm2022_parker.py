@@ -280,8 +280,8 @@ def get_backarc_term(trt, imt, ctx):
         return np.zeros_like(dists)
 
 
-# Apply the final epistemic mean shift for this branch.
-def _apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+    """Apply the final epistemic mean shift for this branch."""
     if gsim.sigma_mu_epsilon:
         trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
         for m, imt in enumerate(imts):
@@ -370,9 +370,9 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
                 sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
 
         if apply_shift:
-            _apply_sigma_mu(self, ctx, imts, mean)
+            apply_sigma_mu(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_sigma_mu)
+    central_functions = (compute_without_shift, apply_sigma_mu)
     shifted_options = ('sigma_mu_epsilon',)
 
     # Note that in these set of coefficients (EQS paper) c6 for
