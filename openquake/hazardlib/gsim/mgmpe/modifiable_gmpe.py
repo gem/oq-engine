@@ -688,12 +688,6 @@ def _apply_modifiers(gsim, resolved, imts, mean, sig, tau, phi):
             modify(ctx, imt, mean[m], sig[m], tau[m], phi[m], **kwargs)
 
 
-# Only independent scalings can vary across branches using the same backbone.
-def _get_excluded_options(gsim):
-    if INDEPENDENT_SCALING.issuperset(gsim.params):
-        return INDEPENDENT_SCALING
-
-
 class ModifiableGMPE(GMPE):
     """
     This is a class to modify an underlying GMPE.
@@ -714,6 +708,8 @@ class ModifiableGMPE(GMPE):
         _toml = toml.dumps(kwargs['gmpe'])
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters
+        # Other modifiers can prepare instance-specific data in compute.
+        self.share_central = INDEPENDENT_SCALING.issuperset(self.params)
         g = globals()
         for k in self.params:
             if k not in g:
@@ -767,7 +763,7 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-    @shifted_compute(_apply_modifiers, _get_excluded_options)
+    @shifted_compute(_apply_modifiers, INDEPENDENT_SCALING)
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

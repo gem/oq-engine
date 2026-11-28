@@ -102,12 +102,12 @@ class CentralKeyTestCase(unittest.TestCase):
         gsim.kwargs = {'option': 1, 'shift': 1.}
         self.assertEqual(get_central_key(gsim), key)
 
-    def test_kotha_eshm20_can_share_across_dl2l_values(self):
+    def test_kotha_can_share_across_dl2l_values(self):
         lower, upper = {'PGA': -0.2}, {'PGA': 0.2}
         self.assertEqual(KothaEtAl2020ESHM20(dl2l=lower).central_key,
                          KothaEtAl2020ESHM20(dl2l=upper).central_key)
-        self.assertNotEqual(KothaEtAl2020(dl2l=lower).central_key,
-                            KothaEtAl2020(dl2l=upper).central_key)
+        self.assertEqual(KothaEtAl2020(dl2l=lower).central_key,
+                         KothaEtAl2020(dl2l=upper).central_key)
 
 
 class GsimInstantiationTestCase(unittest.TestCase):

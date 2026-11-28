@@ -594,6 +594,22 @@ class SharedGSIMTestCase(unittest.TestCase):
                                 for gsim in cm.gsims], axis=1)
         numpy.testing.assert_array_equal(actual, expected)
 
+    def test_modifiable_with_other_modifiers_runs_independently(self):
+        options = {'gmpe': {'AkkarEtAlRjb2014': {}},
+                   'add_delta_to_total_std_scalar': {'delta': 0.15}}
+        gsims = [ModifiableGMPE(
+            **options, set_scale_median_scalar={'scaling_factor': scale})
+            for scale in (0.9, 1.1)]
+        cm = contexts.simple_cmaker(gsims, ['PGA'])
+        ctx = cm.new_ctx(1)
+        ctx.mag, ctx.vs30, ctx.rjb, ctx.rake = 6.2, 350., 9., 0.
+        with mock.patch.object(cm, '_compute_group') as grouped:
+            actual = cm.get_mean_stds([ctx])
+        grouped.assert_not_called()
+        expected = numpy.stack([cm.get_4MN([ctx], gsim) for gsim in gsims],
+                               axis=1)
+        numpy.testing.assert_array_equal(actual, expected)
+
     def test_kuehn_interpolates_once_per_imt_and_slice(self):
         gsims = [kuehn_2020.KuehnEtAl2020SInter(sigma_mu_epsilon=eps)
                  for eps in (0., -1., 1.)]

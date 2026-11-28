@@ -69,12 +69,12 @@ def shifted_compute(apply_adjustment, central_key_excluded):
     Treat it as read-only except for caching branch-independent work.
 
     ``central_key_excluded`` names the constructor options that may vary
-    without changing the central calculation. It accepts a name, a
-    collection of names, or a function of the GSIM returning a collection
-    of names. The function can return None to disable sharing.
+    without changing the central calculation. It accepts a name or a
+    collection of names. An instance can set ``share_central = False``
+    during construction to disable sharing.
     """
     if isinstance(central_key_excluded, str):
         central_key_excluded = (central_key_excluded,)
 
     return partial(_compute_adjusted, apply_adjustment=apply_adjustment,
-                   central_key_excluded=central_key_excluded)
+                   central_key_excluded=frozenset(central_key_excluded))

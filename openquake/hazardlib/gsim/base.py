@@ -168,9 +168,7 @@ def get_central_key(gsim):
     ('KothaEtAl2020ESHM20', "(('c3_epsilon', 1.732051),)")
     """
     exclusions = getattr(type(gsim).compute, 'central_key_excluded', None)
-    if callable(exclusions):
-        exclusions = exclusions(gsim)
-    if exclusions is None:
+    if exclusions is None or not getattr(gsim, 'share_central', True):
         return None
     options = tuple((name, value) for name, value in gsim.kwargs.items()
                     if name != 'weight' and name not in exclusions)

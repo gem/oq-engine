@@ -403,23 +403,21 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
 
 
 # Apply the final epistemic mean shift for this branch.
-def _apply_mean_shift(gsim, ctx, imts, mean, *_stddevs):
+def _apply_mean_shift(gsim, resolved, imts, mean, *_stddevs):
+    ctx, tec_feat_idx = resolved
     if gsim.dl2l:
         # The source-region parameter is specified explicitly.
         for m, imt in enumerate(imts):
             mean[m] += gsim.dl2l[imt]["dl2l"]
-    elif gsim.sigma_mu_epsilon and gsim.kind != 'regional':
+    elif gsim.kind == 'regional':
+        for m, imt in enumerate(imts):
+            mean[m] += get_dl2l(gsim.tec_vals, tec_feat_idx, str(imt),
+                                gsim.delta_l2l_epsilon)
+    elif gsim.sigma_mu_epsilon:
         for m, imt in enumerate(imts):
             sigma_mu = get_sigma_mu_adjustment(
                 gsim.kind, gsim.COEFFS[imt], imt, ctx)
             mean[m] += gsim.sigma_mu_epsilon * sigma_mu
-
-
-# Regional central predictions depend on whether dl2l is set.
-def _get_excluded_options(gsim):
-    if isinstance(gsim, KothaEtAl2020ESHM20) and gsim.kind != 'regional':
-        return 'sigma_mu_epsilon', 'dl2l'
-    return ('sigma_mu_epsilon',)
 
 
 class KothaEtAl2020(GMPE):
@@ -533,7 +531,7 @@ class KothaEtAl2020(GMPE):
         else:
             self.c3 = None
 
-    @shifted_compute(_apply_mean_shift, _get_excluded_options)
+    @shifted_compute(_apply_mean_shift, ('sigma_mu_epsilon', 'dl2l'))
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -542,6 +540,7 @@ class KothaEtAl2020(GMPE):
         """
         # Point-in-polygon assignments do not depend on IMT, so compute them
         # once per compute call and reuse across all IMTs.
+        tec_feat_idx = None
         if self.kind == 'regional':
             site_feat_idx = _assign_feature_indices(
                 self.att_tree, ctx.lon, ctx.lat)
@@ -578,10 +577,7 @@ class KothaEtAl2020(GMPE):
                 mean[m] -= np.log(100.0 * g)
             sig[m], tau[m], phi[m] = get_stddevs(
                 self.kind, self.ergodic, phi_s2s, C, ctx, imt)
-            if self.kind == 'regional' and not self.dl2l:
-                dl2l = get_dl2l(self.tec_vals, tec_feat_idx, str(imt),
-                                self.delta_l2l_epsilon)
-                mean[m] += dl2l
+        return ctx, tec_feat_idx
 
     # Coefficients obtained direclty from the regression outputs of
     # Kotha et al. (2020)
