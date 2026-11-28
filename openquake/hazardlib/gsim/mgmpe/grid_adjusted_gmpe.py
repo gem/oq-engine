@@ -564,7 +564,7 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx):
     return grid_lookup(entry, lats, lons, grid_data["h3_res"])
 
 
-def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
+def compute_central(gsim, ctx: np.recarray, imts, mean, sig, tau, phi):
     """
     Compute the backbone and the central grid corrections, i.e. the
     part of the result which is independent from the epsilons.
@@ -847,10 +847,4 @@ class GridAdjustedGMPE(GMPE):
     apply_adjustment = apply_epsilons
 
     # meta-adjusted
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.compute>`
-        for spec of input and result values.
-        """
-        return compute_central(self, ctx, imts, mean, sig, tau, phi)
+    compute = compute_central
