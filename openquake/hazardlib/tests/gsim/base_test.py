@@ -78,7 +78,7 @@ class ShiftedGMPE(TGMPE):
     update_adj = apply_test_shift
 
     def compute_adj(self, ctx: numpy.recarray, imts, mean_stds):
-        pass
+        return {}
 
 
 class GeneratedComputeTestCase(unittest.TestCase):

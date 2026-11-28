@@ -415,6 +415,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
             tau[m] = C['tau']
             phi[m] = C["phi"] if self.ergodic else np.sqrt(
                 C["sigma_ss"] ** 2. - C["tau"] ** 2.)
+        return {}
 
     # Period-dependent coefficients (Table 3)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

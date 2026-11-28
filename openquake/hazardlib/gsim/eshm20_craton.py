@@ -273,6 +273,7 @@ class ESHM20Craton(GMPE):
             sig[m], tau[m], phi[m] = get_stddevs(
                 self.ergodic, self.tau_model, self.TAU, self.PHI_SS,
                 imt, ctx)
+        return {}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt                    e1                 b1                    b2                  b3                  c1                   c2                    c3            sigma_mu

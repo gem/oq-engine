@@ -119,8 +119,8 @@ the class:
 - ``compute_adj(self, ctx, imts, mean_stds)`` computes the central part,
   which is shared by the branches with the same options. It fills
   ``mean_stds`` in place, which holds the arrays ``(mean, sig, tau, phi)``,
-  and returns a dictionary mapping names to arrays. It can return ``None``,
-  meaning an empty dictionary.
+  and returns a dictionary mapping names to arrays, which is empty when
+  there is nothing to share.
 - ``update_adj(self, ctx, imts, mean_stds, adj, sigma_mu_epsilon)`` applies
   the adjustment of a single branch. Its final argument names the branch
   option that changes the result:

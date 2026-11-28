@@ -371,6 +371,7 @@ class BooreEtAl2014(GMPE):
                                   self.usgs_basin_scaling,
                                   self.cybershake_basin_adj))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
+        return {}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2       tau1       tau2

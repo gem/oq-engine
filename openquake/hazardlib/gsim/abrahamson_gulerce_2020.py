@@ -721,6 +721,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
             phi[m] = phi_m
 
         sig[:] = np.sqrt(tau ** 2.0 + phi ** 2.0)
+        return {}
 
     # Coefficients taken from digital files supplied by Norm Abrahamson
     COEFFS = CoeffsTable(sa_damping=5, table="""\

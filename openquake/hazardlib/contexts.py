@@ -47,7 +47,7 @@ from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 from openquake.hazardlib.gsim.nshmp_2014 import nga_west2_epistemic_adjustment
 from openquake.hazardlib.gsim.backbone import (
-    adjustment_options, apply_options, central_adjustments)
+    adjustment_options, apply_options)
 from openquake.hazardlib.site_amplification import get_poes_site
 
 U8 = numpy.uint8
@@ -1731,8 +1731,7 @@ class ContextMaker(object):
             slc = slice(start, start + len(ctx))
             out_central = out[:, first, :, slc]
             out_central.fill(0)
-            adj = central_adjustments(
-                compute_adj, backbone, ctx, self.imts, out_central)
+            adj = compute_adj(backbone, ctx, self.imts, out_central)
             # Shift the first branch last since its slot holds the backbone.
             for g, gsim in reversed(g_gsim_pairs):
                 branch = out[:, g, :, slc]

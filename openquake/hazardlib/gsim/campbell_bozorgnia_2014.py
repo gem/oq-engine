@@ -571,6 +571,7 @@ class CampbellBozorgnia2014(GMPE):
 
             sig[m], tau[m], phi[m] = compute_sigma(
                 C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b)
+        return {}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT         c0     c1      c2      c3      c4      c5     c6     c7     c8      c9    c10     c11     c12    c13      c14     c15    c16      c17     c18      c19      c20  Dc20     a2     h1     h2      h3      h5      h6    k1      k2     k3   phi1   phi2   tau1   tau2  rho1pga  rho2pga      philnAF   phiC  rholny

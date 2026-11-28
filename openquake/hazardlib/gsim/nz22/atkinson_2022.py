@@ -359,6 +359,7 @@ class Atkinson2022Crust(GMPE):
                     self.suffix, C, C_PGA, imt, pga_rock, ctx.vs30)
             else:
                 sig[m], tau[m], phi[m] = get_stddevs(self.suffix, C)
+        return {}
 
     # periods given by 1 / 10 ** COEFFS['f']
     with Atk22_COEFFS.open() as coefs_file:

@@ -370,6 +370,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
                     C, C_PGA, imt, pgar, ctx.rrup, ctx.vs30)
             else:
                 sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
+        return {}
 
     # Note that in these set of coefficients (EQS paper) c6 for
     # interface and f4 and f5 have changed. Also as mentioned by Grace

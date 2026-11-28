@@ -467,6 +467,7 @@ class Bradley2013(GMPE):
 
             set_stddevs(self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
                         sig[m], tau[m], phi[m])
+        return {}
 
     #: Coefficient tables are constructed from values in tables 1, 2 and 3
     #: (pages 197, 198 and 199) in Chiou & Youngs,2008. Only Coefficients c1,

@@ -793,6 +793,7 @@ class ChiouYoungs2014(GMPE):
                 
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
+        return {}
 
     #: Coefficient tables are constructed from values in tables 1 - 5
     COEFFS = CoeffsTable(sa_damping=5, table="""\

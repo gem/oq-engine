@@ -22,8 +22,8 @@ Utilities for sharing central GSIM computations across branches.
 A shifted GSIM class declares two methods. ``compute_adj(self, ctx, imts,
 mean_stds)`` computes the central part, which is shared by the branches with
 the same constructor options. It fills ``mean_stds``, the mean, sig, tau and
-phi arrays, in place and returns a dictionary term -> array (None means an
-empty dictionary).
+phi arrays, in place and returns a dictionary term -> array, which is
+empty when there is nothing to share.
 ``update_adj(self, ctx, imts, mean_stds, adj, *options)`` applies the
 adjustment of a single branch, where ``options`` are the constructor options
 that vary by branch and ``mean_stds`` holds the mean, sig, tau and phi
@@ -38,15 +38,6 @@ import pathlib
 
 import numpy
 import toml
-
-
-def central_adjustments(compute_adj, gsim, ctx, imts, mean_stds):
-    """
-    Returns the dictionary computed by compute_adj, which is empty when
-    compute_adj returns None
-    """
-    result = compute_adj(gsim, ctx, imts, mean_stds)
-    return {} if result is None else result
 
 
 def apply_options(gsim, ctx, imts, mean_stds, adj, update_adj, names):
@@ -83,7 +74,7 @@ def generate_compute(compute_adj, update_adj):
 
     def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         mean_stds = (mean, sig, tau, phi)
-        adj = central_adjustments(compute_adj, self, ctx, imts, mean_stds)
+        adj = compute_adj(self, ctx, imts, mean_stds)
         apply_options(self, ctx, imts, mean_stds, adj, update_adj, names)
 
     compute.__doc__ = ("Compute mean, sig, tau and phi: the central "

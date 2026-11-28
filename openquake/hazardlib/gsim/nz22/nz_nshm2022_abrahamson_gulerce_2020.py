@@ -163,6 +163,7 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
             tau[m] = tau_m
             phi[m] = phi_m
         sig += np.sqrt(tau**2.0 + phi**2.0)
+        return {}
 
 
 class NZNSHM2022_AbrahamsonGulerce2020SSlab(
