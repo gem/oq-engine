@@ -24,7 +24,7 @@ mean_stds)`` computes the central part, which is shared by the branches with
 the same constructor options. It fills ``mean_stds``, the mean, sig, tau and
 phi arrays, in place and returns a dictionary term -> array (None means an
 empty dictionary).
-``update_adj(self, ctx, adj, imts, mean_stds, *options)`` applies the
+``update_adj(self, ctx, imts, mean_stds, adj, *options)`` applies the
 adjustment of a single branch, where ``options`` are the constructor options
 that vary by branch and ``mean_stds`` holds the mean, sig, tau and phi
 arrays. MetaGSIM generates ``compute`` from the two methods, so direct calls
@@ -49,13 +49,13 @@ def central_adjustments(compute_adj, gsim, ctx, imts, mean_stds):
     return {} if result is None else result
 
 
-def apply_options(gsim, ctx, adj, imts, mean_stds, update_adj, names):
+def apply_options(gsim, ctx, imts, mean_stds, adj, update_adj, names):
     """
     Applies update_adj, passing the values of the constructor options named
     by names (as returned by adjustment_options) from kwargs
     """
     values = [gsim.kwargs[name] for name in names]
-    update_adj(gsim, ctx, adj, imts, mean_stds, *values)
+    update_adj(gsim, ctx, imts, mean_stds, adj, *values)
 
 
 def adjustment_options(update_adj):
@@ -63,9 +63,9 @@ def adjustment_options(update_adj):
     params = list(inspect.signature(update_adj).parameters.values())
     # the first argument is the GSIM, whatever its name
     names = tuple(param.name for param in params[1:5])
-    if names != ('ctx', 'adj', 'imts', 'mean_stds'):
+    if names != ('ctx', 'imts', 'mean_stds', 'adj'):
         raise TypeError('update_adj must start with a GSIM argument, then '
-                        'ctx, adj, imts, mean_stds')
+                        'ctx, imts, mean_stds, adj')
     if any(param.kind not in (param.POSITIONAL_ONLY,
                               param.POSITIONAL_OR_KEYWORD)
            for param in params):
@@ -84,7 +84,7 @@ def generate_compute(compute_adj, update_adj):
     def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         mean_stds = (mean, sig, tau, phi)
         adj = central_adjustments(compute_adj, self, ctx, imts, mean_stds)
-        apply_options(self, ctx, adj, imts, mean_stds, update_adj, names)
+        apply_options(self, ctx, imts, mean_stds, adj, update_adj, names)
 
     compute.__doc__ = ("Compute mean, sig, tau and phi: the central "
                        "computation followed by the adjustment")
@@ -141,7 +141,7 @@ def get_central_key(gsim):
     """
     Return a TOML representation of the central constructor options.
 
-    Parameters following ``gsim, ctx, adj, imts, mean_stds`` in the
+    Parameters following ``gsim, ctx, imts, mean_stds, adj`` in the
     GSIM's ``update_adj`` method are omitted from the key.
     Constructor options are assumed to stay fixed after instantiation.
     The key is None for an ordinary compute method or a GSIM instance

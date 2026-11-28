@@ -524,7 +524,7 @@ def get_epistemic_sigma(ctx):
     return sigma_epi
 
 
-def apply_nshm_shift(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
+def apply_nshm_shift(gsim, ctx, imts, mean_stds, adj, sigma_mu_epsilon):
     """Apply the same epistemic factor to every IMT in a branch."""
     mean = mean_stds[0]
     if len(imts) and sigma_mu_epsilon:

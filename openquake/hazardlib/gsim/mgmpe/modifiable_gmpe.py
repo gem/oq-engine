@@ -88,7 +88,7 @@ ADJUSTMENT_REQUIREMENTS = {
 # ############## HANDLER FUNCTIONS FOR CONDITIONAL GMPES ################ #
 
 
-def compute_imts_subset(gmpe, imts, imts_comp, ctx_copy, mean, sig, tau, phi):
+def compute_imts_subset(gmpe, ctx_copy, imts, imts_comp, mean, sig, tau, phi):
     """
     Compute mean and sigms only for the required imts, and then assign them
     to their correct positions in the original mean, sig, tau and phi arrays.
@@ -124,7 +124,7 @@ def compute_imts_subset(gmpe, imts, imts_comp, ctx_copy, mean, sig, tau, phi):
         phi[m] = phi_t[idx]
 
 
-def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
+def conditional_gmpe_compute(self, ctx_copy, imts, mean, sig, tau, phi):
     """
     This function:
         1) Compute the means and standard deviations for the IMTs
@@ -162,7 +162,7 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     # the means and std devs will be returned as zeroed arrays
     if imts_base:
         compute_imts_subset(
-            self.gmpe, imts, imts_base, ctx_copy, mean, sig, tau, phi)
+            self.gmpe, ctx_copy, imts, imts_base, mean, sig, tau, phi)
     
 
 def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
@@ -675,7 +675,7 @@ INDEPENDENT_SCALING = {
 
 
 # Apply the original modifiers in the order specified by the branch.
-def _apply_modifiers(gsim, ctx, adj, imts, mean_stds,
+def _apply_modifiers(gsim, ctx, imts, mean_stds, adj,
                      set_scale_median_scalar=None,
                      set_scale_median_vector=None,
                      set_scale_total_sigma_scalar=None,
@@ -783,7 +783,7 @@ class ModifiableGMPE(GMPE):
             if not hasattr(self, 'imts_req'):
                 self.imts_req = init_underlying_gmpes(
                     self.params["conditional_gmpe"])
-            conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi)
+            conditional_gmpe_compute(self, ctx_copy, imts, mean, sig, tau, phi)
         else:
             # otherwise, compute the original mean and std devs for all IMTs
             self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)

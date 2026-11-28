@@ -740,7 +740,7 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
     return sig, tau, phi
 
 
-def get_sigma_mu_adjustments(gsim, imts, ctx):
+def get_sigma_mu_adjustments(gsim, ctx, imts):
     """
     Returns the sigma_mu adjustments as an array of shape (len(imts), N)
     """
@@ -748,7 +748,7 @@ def get_sigma_mu_adjustments(gsim, imts, ctx):
         gsim.sigma_mu_model, imt, ctx.mag, ctx.rrup) for imt in imts])
 
 
-def apply_sigma_mu(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
+def apply_sigma_mu(gsim, ctx, imts, mean_stds, adj, sigma_mu_epsilon):
     """
     Apply the final epistemic mean shift for this branch
     """
@@ -969,7 +969,7 @@ class KuehnEtAl2020SInter(GMPE):
             sig[m], tau[m], phi[m] = get_std_dev(
                 C, C_PGA, ctx, pga1100, self.ak23_cb14_sig)
 
-        return {'sigma_mu': get_sigma_mu_adjustments(self, imts, ctx)}
+        return {'sigma_mu': get_sigma_mu_adjustments(self, ctx, imts)}
 
     # Coefficients in external file - supplied directly by the author
     with open(KUEHN_COEFFS) as f:

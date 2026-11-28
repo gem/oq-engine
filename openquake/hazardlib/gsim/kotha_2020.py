@@ -402,7 +402,7 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
 
 
 # Apply the final epistemic mean shift for this branch.
-def _apply_mean_shift(gsim, ctx, adj, imts, mean_stds,
+def _apply_mean_shift(gsim, ctx, imts, mean_stds, adj,
                       sigma_mu_epsilon, dl2l):
     mean = mean_stds[0]
     if dl2l:

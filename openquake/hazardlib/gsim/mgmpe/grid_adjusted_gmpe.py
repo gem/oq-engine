@@ -597,8 +597,9 @@ def compute_central(gsim, ctx: np.recarray, imts, mean_stds):
     mean, sig, tau, phi = mean_stds
     grid_data = gsim.grid_data
     gsim.gmpe.compute(ctx, imts, mean, sig, tau, phi)
-    # term -> (mean_adj, se_adj), arrays of shape (len(imts), len(ctx)),
-    # with NaN where the term has no mean data for that IMT
+    # term -> (mean_adj, se_adj), arrays of shape (len(imts), len(ctx)):
+    # mean_adj is NaN where the term has no mean data for that IMT, and
+    # se_adj is NaN where the SE data is missing or there is no mean data
     adj = {}
     for m, imt in enumerate(imts):
         # Apply each correction - example (term, cfg):
@@ -634,7 +635,7 @@ def compute_central(gsim, ctx: np.recarray, imts, mean_stds):
     return adj
 
 
-def apply_epsilons(gsim, ctx, adj, imts, mean_stds, epsilons, path_cap):
+def apply_epsilons(gsim, ctx, imts, mean_stds, adj, epsilons, path_cap):
     """
     Add this branch's eps * mean_se shift to the central mean.
 

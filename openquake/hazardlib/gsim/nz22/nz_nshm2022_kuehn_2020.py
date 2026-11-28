@@ -313,7 +313,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 phi[m] = C["phi"]
                 sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
-        return {'sigma_mu': get_sigma_mu_adjustments(self, imts, ctx)}
+        return {'sigma_mu': get_sigma_mu_adjustments(self, ctx, imts)}
 
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):

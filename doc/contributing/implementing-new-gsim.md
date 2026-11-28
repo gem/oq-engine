@@ -121,7 +121,7 @@ the class:
   ``mean_stds`` in place, which holds the arrays ``(mean, sig, tau, phi)``,
   and returns a dictionary mapping names to arrays. It can return ``None``,
   meaning an empty dictionary.
-- ``update_adj(self, ctx, adj, imts, mean_stds, sigma_mu_epsilon)`` applies
+- ``update_adj(self, ctx, imts, mean_stds, adj, sigma_mu_epsilon)`` applies
   the adjustment of a single branch. Its final argument names the branch
   option that changes the result:
 
@@ -134,20 +134,20 @@ class MyGMPE(GMPE):
         ...  # fill the central mean and standard deviations
         return {}  # the central adjustments, as a dictionary term -> array
 
-    def update_adj(self, ctx: np.recarray, adj, imts, mean_stds,
+    def update_adj(self, ctx: np.recarray, imts, mean_stds, adj,
                    sigma_mu_epsilon):
         if sigma_mu_epsilon:
             mean_stds[0][:] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
 ```
 
 The arguments of ``update_adj`` are the input context ``ctx``, the
-dictionary ``adj`` returned by ``compute_adj``, the ``imts``, and
-``mean_stds``, which holds the output arrays as ``(mean, sig, tau, phi)``,
-so ``mean_stds[0]`` is the mean. The method modifies the output arrays in
-place. Parameters after these five standard arguments must name constructor
-options used by the adjustment. The engine omits those options from the
-central computation key, so branches with different values can share the
-central computation.
+``imts``, ``mean_stds``, which holds the output arrays as
+``(mean, sig, tau, phi)``, so ``mean_stds[0]`` is the mean, and the
+dictionary ``adj`` returned by ``compute_adj``. The method modifies the
+output arrays in place. Parameters after these five standard arguments must
+name constructor options used by the adjustment. The engine omits
+those options from the central computation key, so branches with different
+values can share the central computation.
 
 You do not write ``compute`` in this case: ``MetaGSIM`` generates it from the
 two methods, so direct calls run ``compute_adj`` followed by ``update_adj``.

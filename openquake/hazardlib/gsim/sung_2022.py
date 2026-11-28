@@ -289,7 +289,7 @@ def compute_central(gsim, ctx, imts, mean_stds):
     return {'idx_all': idx_all, 'csids': csids}
 
 
-def apply_branch_shift(gsim, ctx, adj, imts, mean_stds, rlz_id):
+def apply_branch_shift(gsim, ctx, imts, mean_stds, adj, rlz_id):
     """
     Branch-specific shift: for each unique custom_site_id in the batch,
     add Delta-mu from that site's rlz column into the central mean.

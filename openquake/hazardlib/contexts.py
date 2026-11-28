@@ -1738,7 +1738,7 @@ class ContextMaker(object):
                 branch = out[:, g, :, slc]
                 if g != first:
                     branch[:] = out_central
-                apply_options(gsim, ctx, adj, self.imts, branch,
+                apply_options(gsim, ctx, self.imts, branch, adj,
                               update_adj, names)
             start = slc.stop
         for g, gsim in g_gsim_pairs:

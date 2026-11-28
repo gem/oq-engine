@@ -263,7 +263,7 @@ def get_backarc_term(trt, imt, ctx):
 
 
 # Apply the selected epistemic mean shift.
-def _apply_epistemic_shift(gsim, ctx, adj, imts, mean_stds, epistemic):
+def _apply_epistemic_shift(gsim, ctx, imts, mean_stds, adj, epistemic):
     mean = mean_stds[0]
     # In her email and slack post Gail mentioned that her
     # upper and lower branches are as 1.28 times of the delta.
