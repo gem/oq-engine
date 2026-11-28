@@ -122,9 +122,10 @@ class MyGMPE(GMPE):
 
 For a model-specific shift, use
 ``@shifted_compute(apply_adjustment, 'sigma_mu_epsilon')`` from
-``openquake.hazardlib.gsim.backbone``. List the constructor options that may
-vary without changing the central computation. The module documents the
-callback signature and how to pass precomputed data to it.
+``openquake.hazardlib.gsim.backbone``. The second argument,
+``central_key_excluded``, names the constructor options that may vary
+without changing the central computation. The module documents the callback
+signature and how to pass precomputed data to it.
 
 A subclass inherits the optimization with its ``compute`` method.
 An override can opt in by decorating its own ``compute``.

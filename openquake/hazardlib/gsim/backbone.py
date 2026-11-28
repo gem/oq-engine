@@ -42,7 +42,7 @@ def _compute_central(compute_func, gsim, ctx, imts, mean, sig, tau, phi):
 
 
 # Build the direct-call method and attach the callbacks for grouped calls.
-def _compute_adjusted(compute_func, apply_adjustment, options):
+def _compute_adjusted(compute_func, apply_adjustment, central_key_excluded):
     central = partial(_compute_central, compute_func)
 
     def adjusted(func, gsim, ctx, imts, mean, sig, tau, phi):
@@ -51,11 +51,11 @@ def _compute_adjusted(compute_func, apply_adjustment, options):
 
     compute = decorate(compute_func, adjusted)
     compute.branch_functions = central, apply_adjustment
-    compute.branch_options = options
+    compute.central_key_excluded = central_key_excluded
     return compute
 
 
-def shifted_compute(apply_adjustment, options):
+def shifted_compute(apply_adjustment, central_key_excluded):
     """
     Apply a branch adjustment after the body of ``compute``.
 
@@ -66,13 +66,13 @@ def shifted_compute(apply_adjustment, options):
     of ``compute``. Shared data is local to a group and context slice.
     Treat it as read-only except for caching branch-independent work.
 
-    ``options`` is a name or collection of constructor option names used
-    only by the adjustment. It can also be a function of the GSIM
-    returning a collection of names or None to disable sharing for that
-    instance.
+    ``central_key_excluded`` names the constructor options that may vary
+    without changing the central calculation. It accepts a name, a
+    collection of names, or a function of the GSIM returning a collection
+    of names. The function can return None to disable sharing.
     """
-    if isinstance(options, str):
-        options = (options,)
+    if isinstance(central_key_excluded, str):
+        central_key_excluded = (central_key_excluded,)
 
     return partial(_compute_adjusted, apply_adjustment=apply_adjustment,
-                   options=options)
+                   central_key_excluded=central_key_excluded)

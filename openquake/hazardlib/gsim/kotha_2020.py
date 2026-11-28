@@ -416,7 +416,7 @@ def _apply_mean_shift(gsim, ctx, imts, mean, *_stddevs):
 
 
 # Regional central predictions depend on whether dl2l is set.
-def _branch_options(gsim):
+def _central_key_excluded(gsim):
     if isinstance(gsim, KothaEtAl2020ESHM20) and gsim.kind != 'regional':
         return 'sigma_mu_epsilon', 'dl2l'
     return ('sigma_mu_epsilon',)
@@ -533,7 +533,7 @@ class KothaEtAl2020(GMPE):
         else:
             self.c3 = None
 
-    @shifted_compute(_apply_mean_shift, _branch_options)
+    @shifted_compute(_apply_mean_shift, _central_key_excluded)
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

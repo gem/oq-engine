@@ -151,13 +151,13 @@ def get_central_key(gsim):
     >>> get_central_key(KothaEtAl2020ESHM20(c3_epsilon=1.732051))
     ('KothaEtAl2020ESHM20', "(('c3_epsilon', 1.732051),)")
     """
-    branch_options = getattr(type(gsim).compute, 'branch_options', None)
-    if callable(branch_options):
-        branch_options = branch_options(gsim)
-    if branch_options is None:
+    exclusions = getattr(type(gsim).compute, 'central_key_excluded', None)
+    if callable(exclusions):
+        exclusions = exclusions(gsim)
+    if exclusions is None:
         return None
     options = tuple((name, value) for name, value in gsim.kwargs.items()
-                    if name != 'weight' and name not in branch_options)
+                    if name != 'weight' and name not in exclusions)
     key = repr(options)
     try:
         # only Python literals have a faithful representation
@@ -235,7 +235,7 @@ class MetaGSIM(abc.ABCMeta):
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
             self.kwargs['gmpe_table'] = self.gmpe_table
-        if hasattr(cls.compute, 'branch_options'):
+        if hasattr(cls.compute, 'central_key_excluded'):
             # Snapshot constructor options before callers can reuse them.
             # NB: the key is computed once, at construction time, so a
             # GSIM must not be modified after it is built, otherwise
