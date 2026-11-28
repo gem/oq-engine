@@ -30,11 +30,32 @@ other than the options named by the decorator and the logic-tree weight.
 Keep the GSIM configuration fixed after construction.
 """
 
-import inspect
-from functools import wraps
+from functools import partial
+
+from decorator import decorate
 
 
-def shifted_compute(apply_branch, options):
+# Use the context when the central body has no extra data for the shift.
+def _compute_central(compute_func, gsim, ctx, imts, mean, sig, tau, phi):
+    resolved = compute_func(gsim, ctx, imts, mean, sig, tau, phi)
+    return ctx if resolved is None else resolved
+
+
+# Build the direct-call method and attach the callbacks for grouped calls.
+def _compute_adjusted(compute_func, apply_adjustment, options):
+    central = partial(_compute_central, compute_func)
+
+    def adjusted(func, gsim, ctx, imts, mean, sig, tau, phi):
+        resolved = _compute_central(func, gsim, ctx, imts, mean, sig, tau, phi)
+        return apply_adjustment(gsim, resolved, imts, mean, sig, tau, phi)
+
+    compute = decorate(compute_func, adjusted)
+    compute.branch_functions = central, apply_adjustment
+    compute.branch_options = options
+    return compute
+
+
+def shifted_compute(apply_adjustment, options):
     """
     Apply a branch adjustment after the body of ``compute``.
 
@@ -48,34 +69,10 @@ def shifted_compute(apply_branch, options):
     ``options`` is a name or collection of constructor option names used
     only by the adjustment. It can also be a function of the GSIM
     returning a collection of names or None to disable sharing for that
-    instance. ContextMaker supplies its ray-tracing monitor to bodies
-    that accept a ``gra_mon`` keyword.
+    instance.
     """
     if isinstance(options, str):
         options = (options,)
 
-    def decorate(body):
-        signature = inspect.signature(body)
-        monitor = 'gra_mon' in signature.parameters
-
-        def central(self, ctx, imts, mean, sig, tau, phi, gra_mon=None):
-            args = (self, ctx, imts, mean, sig, tau, phi)
-            if monitor and gra_mon is not None:
-                resolved = body(*args, gra_mon=gra_mon)
-            else:
-                resolved = body(*args)
-            return ctx if resolved is None else resolved
-
-        @wraps(body)
-        def compute(self, *args, **kwargs):
-            gra_mon = kwargs.pop('gra_mon', None) if monitor else None
-            if kwargs or len(args) != 6:
-                args = signature.bind(self, *args, **kwargs).args[1:]
-            resolved = central(self, *args, gra_mon=gra_mon)
-            return apply_branch(self, resolved, *args[1:])
-
-        compute.branch_functions = central, apply_branch
-        compute.branch_options = options
-        return compute
-
-    return decorate
+    return partial(_compute_adjusted, apply_adjustment=apply_adjustment,
+                   options=options)

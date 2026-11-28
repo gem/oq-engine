@@ -22,7 +22,6 @@ import json
 import os
 import hashlib
 import ctypes
-from contextlib import nullcontext
 from functools import lru_cache
 import h5py
 import h3
@@ -537,7 +536,7 @@ def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
 
 
 # Resolve central mean, optional SE and per-cell sigma in one spatial search.
-def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
+def _resolve_adjs(grid_data, cfg, term, imt, ctx):
     # Path-based terms are stored in the raytrace grids. Mean / SE
     # are both returned uncapped here; the path_cap (if set) is applied
     # to the per-branch total (central + eps*SE) in compute()
@@ -553,11 +552,9 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
         if (term, imt) not in cache:
             cache[term, imt] = _build_masks(grid, grid_data["h3_res"])
         masks = cache[term, imt]
-        # The ContextMaker owns the monitor; standalone GSIMs need none.
-        with gra_mon:
-            return _raytrace_path_adjs(
-                grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
-                grid_data["h3_res"], masks)
+        return _raytrace_path_adjs(
+            grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
+            grid_data["h3_res"], masks)
 
     # Hypo/site terms are stored as cell_id -> value dicts
     entry = grid_data["grids"].get(imt, {}).get(term, {})
@@ -568,8 +565,7 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
     return grid_lookup(entry, lats, lons, grid_data["h3_res"])
 
 
-def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
-                    gra_mon=nullcontext()):
+def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
     """
     Compute the backbone and the central grid corrections, i.e. the
     part of the result which is independent from the epsilons.
@@ -594,8 +590,6 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
         Inter-event standard deviation output array, same shape as mean.
     :param phi:
         Intra-event standard deviation output array, same shape as mean.
-    :param gra_mon:
-        Optional ray-tracing monitor owned by the ContextMaker.
     :returns:
         A dict {(imt_index, term): (mean_adj, se_adj)} for terms with
         mean data. Each adjustment has shape (len(ctx),); se_adj is None
@@ -612,7 +606,7 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
         for term, cfg in grid_data["res_terms"].items():
             # Resolve central, SE and per-cell sigma together so each
             # branch only has to add its own eps * SE shift later
-            adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx, gra_mon)
+            adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx)
             mean_adj, se_adj = adjs.get("mean"), adjs.get("mean_se")
             if mean_adj is None:
                 # No central mean data for this term/IMT: skip correction
@@ -768,6 +762,15 @@ class GridAdjustedGMPE(GMPE):
         [0.5, 2.0] on every LT realisation. Useful for constraining long
         rays crossing many weakly-constrained cells, where the per-km
         shifts can stack into physically unrealistic path adjustments.
+
+    :param gmpe_options:
+        Additional keyword arguments accepted by the model selected by
+        ``gmpe_name``. In a logic tree, put them alongside ``gmpe_name``
+        in the ``[GridAdjustedGMPE]`` table. For example, with
+        ``gmpe_name = "BooreEtAl2014"``, the model accepts ``region``,
+        ``sof``, ``sigma_mu_epsilon``, ``usgs_basin_scaling``, and
+        ``cybershake_basin_adj``. To see the parameters and defaults for
+        a different model, inspect ``registry[gmpe_name].__init__``.
     """
     # Req Params - set from underlying GMM via set_parameters()
     REQUIRES_SITES_PARAMETERS = set()
@@ -782,10 +785,10 @@ class GridAdjustedGMPE(GMPE):
     experimental = True # It's not extensively tested yet
 
     def __init__(self, gmpe_name, grid_hdf5_file, epsilons='',
-                 path_cap='', **kwargs):
+                 path_cap='', **gmpe_options):
 
         # Instantiate the underlying GMM
-        self.gmpe = registry[gmpe_name](**kwargs)
+        self.gmpe = registry[gmpe_name](**gmpe_options)
         self.set_parameters()
 
         # Load grid-based corrections from the hdf5; they are shared with
@@ -842,12 +845,10 @@ class GridAdjustedGMPE(GMPE):
                     "random-effects residuals.")
 
     @shifted_compute(apply_epsilons, ('epsilons', 'path_cap'))
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi, *,
-                gra_mon=nullcontext()):
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        return compute_central(
-            self, ctx, imts, mean, sig, tau, phi, gra_mon=gra_mon)
+        return compute_central(self, ctx, imts, mean, sig, tau, phi)

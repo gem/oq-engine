@@ -909,7 +909,6 @@ class ContextMaker(object):
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
-        self.gra_mon = monitor('ray tracing', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
@@ -1720,7 +1719,7 @@ class ContextMaker(object):
 
     # Share the backbone and spatial lookups for one context slice at a time.
     def _compute_group(self, ctxs, g_gsim_pairs, out, compute_central,
-                       apply_branch):
+                       apply_adjustment):
         # Every branch has the same central_key, so use the first GSIM
         # to compute the shared result.
         first, backbone = g_gsim_pairs[0]
@@ -1729,14 +1728,13 @@ class ContextMaker(object):
             slc = slice(start, start + len(ctx))
             central = out[:, first, :, slc]
             central.fill(0)
-            resolved = compute_central(
-                backbone, ctx, self.imts, *central, gra_mon=self.gra_mon)
+            resolved = compute_central(backbone, ctx, self.imts, *central)
             # Shift the first branch last since its slot holds the backbone.
             for g, gsim in reversed(g_gsim_pairs):
                 branch = out[:, g, :, slc]
                 if g != first:
                     branch[:] = central
-                apply_branch(gsim, resolved, self.imts, *branch)
+                apply_adjustment(gsim, resolved, self.imts, *branch)
             start = slc.stop
         for g, gsim in g_gsim_pairs:
             self._check_conv(out[:, g], gsim)
