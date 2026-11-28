@@ -44,14 +44,13 @@ def _compute_central(compute_func, gsim, ctx, imts, mean, sig, tau, phi):
 
 # Build the direct-call method and attach the callbacks for grouped calls.
 def _compute_adjusted(compute_func, apply_adjustment, central_key_excluded):
-    central = partial(_compute_central, compute_func)
-
     def adjusted(func, gsim, ctx, imts, mean, sig, tau, phi):
         resolved = _compute_central(func, gsim, ctx, imts, mean, sig, tau, phi)
         return apply_adjustment(gsim, resolved, imts, mean, sig, tau, phi)
 
     compute = decorate(compute_func, adjusted)
-    compute.branch_functions = central, apply_adjustment
+    compute.compute_central = partial(_compute_central, compute_func)
+    compute.apply_adjustment = apply_adjustment
     compute.central_key_excluded = central_key_excluded
     return compute
 

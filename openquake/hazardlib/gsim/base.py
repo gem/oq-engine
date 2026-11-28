@@ -156,6 +156,7 @@ def get_central_key(gsim):
     """
     Return the class name and a snapshot of the central constructor options.
 
+    Constructor options are assumed to stay fixed after instantiation.
     The key is None for an ordinary compute method or a GSIM instance
     that disables sharing.
 

@@ -1704,17 +1704,19 @@ class ContextMaker(object):
                 raise NotImplementedError(
                     f'{gsim} was not instantiated with a '
                     f'ModifiableGMPE, please read {url}')
-            branch_functions = getattr(
-                type(gsim).compute, 'branch_functions', None)
+            compute = type(gsim).compute
+            compute_central = getattr(compute, 'compute_central', None)
+            apply_adjustment = getattr(compute, 'apply_adjustment', None)
             key = getattr(gsim, 'central_key', None)
-            if not branch_functions or key is None:
+            if (key is None or compute_central is None
+                    or apply_adjustment is None):
                 out[:, g] = self.get_4MN(recarrays, gsim)
             else:
-                groups.setdefault((branch_functions, key), []).append(
-                    (g, gsim))
-        for (branch_functions, _), g_gsim_pairs in groups.items():
-            self._compute_group(recarrays, g_gsim_pairs, out,
-                                *branch_functions)
+                group_key = (compute_central, apply_adjustment, key)
+                groups.setdefault(group_key, []).append((g, gsim))
+        for (compute_central, apply_adjustment, _), pairs in groups.items():
+            self._compute_group(recarrays, pairs, out, compute_central,
+                                apply_adjustment)
         return out
 
     # Share the backbone and spatial lookups for one context slice at a time.
