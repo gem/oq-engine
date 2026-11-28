@@ -345,10 +345,9 @@ class BooreEtAl2014(GMPE):
         if region != "nobasin":  # z1pt0 is used if period >= 0.65
             self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
 
-    apply_adjustment = apply_nshm_shift
+    update_adj = apply_nshm_shift
 
-    # meta-adjusted
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

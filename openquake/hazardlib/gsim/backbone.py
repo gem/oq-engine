@@ -19,12 +19,16 @@
 """
 Utilities for sharing central GSIM computations across branches.
 
-Shifted GSIM classes declare an ``apply_adjustment`` method. Its arguments
-``gsim, ctx, adj, imts, mean_stds`` are followed by the constructor options
-that vary by branch. ``adj`` is the dictionary returned by ``compute`` and
-``mean_stds`` holds the mean, sig, tau and phi arrays. MetaGSIM wraps ``compute`` to
-preserve direct calls, while ContextMaker runs the original compute body
-once per group. Keep the GSIM configuration fixed after construction.
+A shifted GSIM class declares two methods. ``compute_adj(self, ctx, imts,
+mean, sig, tau, phi)`` computes the central part, which is shared by the
+branches with the same constructor options. It fills mean, sig, tau and phi
+and returns a dictionary term -> array (None means an empty dictionary).
+``update_adj(gsim, ctx, adj, imts, mean_stds, *options)`` applies the
+adjustment of a single branch, where ``options`` are the constructor options
+that vary by branch and ``mean_stds`` holds the mean, sig, tau and phi
+arrays. MetaGSIM generates ``compute`` from the two methods, so direct calls
+apply the adjustment, while ContextMaker runs compute_adj once per group.
+Keep the GSIM configuration fixed after construction.
 """
 
 import inspect
@@ -33,54 +37,57 @@ import pathlib
 
 import numpy
 import toml
-from decorator import decorate
 
 
-def central_adjustments(compute_func, gsim, ctx, imts, mean, sig, tau, phi):
+def central_adjustments(compute_adj, gsim, ctx, imts, mean, sig, tau, phi):
     """
-    Returns the dictionary computed by compute_func, which is empty when
-    compute_func returns None
+    Returns the dictionary computed by compute_adj, which is empty when
+    compute_adj returns None
     """
-    result = compute_func(gsim, ctx, imts, mean, sig, tau, phi)
+    result = compute_adj(gsim, ctx, imts, mean, sig, tau, phi)
     return {} if result is None else result
 
 
-def apply_options(gsim, ctx, adj, imts, mean_stds, apply_adjustment, names):
+def apply_options(gsim, ctx, adj, imts, mean_stds, update_adj, names):
     """
-    Applies the adjustment, passing the values of the constructor options
-    named by names (as returned by adjustment_options) from kwargs
+    Applies update_adj, passing the values of the constructor options named
+    by names (as returned by adjustment_options) from kwargs
     """
     values = [gsim.kwargs[name] for name in names]
-    apply_adjustment(gsim, ctx, adj, imts, mean_stds, *values)
+    update_adj(gsim, ctx, adj, imts, mean_stds, *values)
 
 
-def adjustment_options(apply_adjustment):
+def adjustment_options(update_adj):
     # Extra callback arguments explicitly list branch-varying options.
-    params = list(inspect.signature(apply_adjustment).parameters.values())
+    params = list(inspect.signature(update_adj).parameters.values())
     names = tuple(param.name for param in params[:5])
     if names != ('gsim', 'ctx', 'adj', 'imts', 'mean_stds'):
-        raise TypeError('apply_adjustment must start with gsim, ctx, adj, '
-                        'imts, mean_stds')
+        raise TypeError('update_adj must start with gsim, ctx, adj, imts, '
+                        'mean_stds')
     if any(param.kind not in (param.POSITIONAL_ONLY,
                               param.POSITIONAL_OR_KEYWORD)
            for param in params):
-        raise TypeError('apply_adjustment arguments must be positional')
+        raise TypeError('update_adj arguments must be positional')
     return tuple(param.name for param in params[5:])
 
 
-def adjusted_compute(compute_func, apply_adjustment):
-    # Wrap direct calls with the adjustment of the class defining compute,
-    # so a super().compute() call applies only the parent's adjustment.
-    # ContextMaker calls the original method separately.
-    names = adjustment_options(apply_adjustment)
+def generate_compute(compute_adj, update_adj):
+    """
+    Returns the compute method made of the central computation followed by
+    the adjustment. The two functions are bound here, at class creation, so
+    that a super().compute() call applies only the parent's adjustment.
+    """
+    names = adjustment_options(update_adj)
 
-    def adjusted(func, gsim, ctx, imts, mean, sig, tau, phi):
+    def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         adj = central_adjustments(
-            func, gsim, ctx, imts, mean, sig, tau, phi)
-        return apply_options(gsim, ctx, adj, imts, (mean, sig, tau, phi),
-                             apply_adjustment, names)
+            compute_adj, self, ctx, imts, mean, sig, tau, phi)
+        apply_options(self, ctx, adj, imts, (mean, sig, tau, phi),
+                      update_adj, names)
 
-    return decorate(compute_func, adjusted)
+    compute.__doc__ = ("Compute mean, sig, tau and phi: the central "
+                       "computation followed by the adjustment")
+    return compute
 
 
 def fix_toml(v, basedir=''):
@@ -134,7 +141,7 @@ def get_central_key(gsim):
     Return a TOML representation of the central constructor options.
 
     Parameters following ``gsim, ctx, adj, imts, mean_stds`` in the
-    GSIM's ``apply_adjustment`` method are omitted from the key.
+    GSIM's ``update_adj`` method are omitted from the key.
     Constructor options are assumed to stay fixed after instantiation.
     The key is None for an ordinary compute method or a GSIM instance
     that disables sharing.
@@ -151,10 +158,10 @@ def get_central_key(gsim):
     [KothaEtAl2020ESHM20]
     c3_epsilon = 1.732051
     """
-    apply_adjustment = getattr(type(gsim), 'apply_adjustment', None)
-    if apply_adjustment is None:
+    update_adj = getattr(type(gsim), 'update_adj', None)
+    if update_adj is None:
         return None
-    exclusions = adjustment_options(apply_adjustment)
+    exclusions = adjustment_options(update_adj)
     if not getattr(gsim, 'share_central', True):
         return None
     options = tuple((name, value) for name, value in gsim.kwargs.items()

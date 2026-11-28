@@ -234,10 +234,9 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 self.__class__.REQUIRES_SITES_PARAMETERS
 
 
-    apply_adjustment = apply_sigma_mu
+    update_adj = apply_sigma_mu
 
-    # meta-adjusted
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

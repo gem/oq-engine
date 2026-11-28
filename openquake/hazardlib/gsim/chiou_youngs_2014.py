@@ -753,10 +753,9 @@ class ChiouYoungs2014(GMPE):
         if not hasattr(self, "COEFFS_EMME"):
             self.COEFFS_EMME = False
 
-    apply_adjustment = apply_nshm_shift
+    update_adj = apply_nshm_shift
 
-    # meta-adjusted
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

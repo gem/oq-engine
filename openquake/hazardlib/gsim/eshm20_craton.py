@@ -246,10 +246,9 @@ class ESHM20Craton(GMPE):
         self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
                                              self.phi_ss_quantile)
 
-    apply_adjustment = apply_sigma_mu
+    update_adj = apply_sigma_mu
 
-    # meta-adjusted
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations
         """

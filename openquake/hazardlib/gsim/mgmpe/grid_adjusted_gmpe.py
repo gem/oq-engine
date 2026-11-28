@@ -857,7 +857,6 @@ class GridAdjustedGMPE(GMPE):
                     "but the underlying GSIM does not support "
                     "random-effects residuals.")
 
-    apply_adjustment = apply_epsilons
+    update_adj = apply_epsilons
 
-    # meta-adjusted
-    compute = compute_central
+    compute_adj = compute_central

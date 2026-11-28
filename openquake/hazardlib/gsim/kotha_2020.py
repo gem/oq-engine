@@ -533,10 +533,9 @@ class KothaEtAl2020(GMPE):
         else:
             self.c3 = None
 
-    apply_adjustment = _apply_mean_shift
+    update_adj = _apply_mean_shift
 
-    # meta-adjusted
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

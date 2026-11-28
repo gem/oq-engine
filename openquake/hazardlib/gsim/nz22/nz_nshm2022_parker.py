@@ -311,10 +311,9 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
 
-    apply_adjustment = apply_sigma_mu
+    update_adj = apply_sigma_mu
 
-    # meta-adjusted
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

@@ -1706,42 +1706,40 @@ class ContextMaker(object):
                 raise NotImplementedError(
                     f'{gsim} was not instantiated with a '
                     f'ModifiableGMPE, please read {url}')
-            # the raw body of a shareable compute is kept in __wrapped__
-            compute_central = getattr(type(gsim).compute, '__wrapped__', None)
-            apply_adjustment = type(gsim).apply_adjustment
+            compute_adj = type(gsim).compute_adj
+            update_adj = type(gsim).update_adj
             key = getattr(gsim, 'central_key', None)
-            if (key is None or compute_central is None
-                    or apply_adjustment is None):
+            if key is None or compute_adj is None or update_adj is None:
                 out[:, g] = self.get_4MN(recarrays, gsim)
             else:
-                group_key = (compute_central, apply_adjustment, key)
+                group_key = (compute_adj, update_adj, key)
                 groups.setdefault(group_key, []).append((g, gsim))
-        for (compute_central, apply_adjustment, _), pairs in groups.items():
-            self._compute_group(recarrays, pairs, out, compute_central,
-                                apply_adjustment)
+        for (compute_adj, update_adj, _), pairs in groups.items():
+            self._compute_group(recarrays, pairs, out, compute_adj,
+                                update_adj)
         return out
 
     # Share the backbone and spatial lookups for one context slice at a time.
-    def _compute_group(self, ctxs, g_gsim_pairs, out, compute_central,
-                       apply_adjustment):
+    def _compute_group(self, ctxs, g_gsim_pairs, out, compute_adj,
+                       update_adj):
         # Every branch has the same central_key, so use the first GSIM
         # to compute the shared result.
         first, backbone = g_gsim_pairs[0]
-        names = adjustment_options(apply_adjustment)
+        names = adjustment_options(update_adj)
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
             out_central = out[:, first, :, slc]
             out_central.fill(0)
             adj = central_adjustments(
-                compute_central, backbone, ctx, self.imts, *out_central)
+                compute_adj, backbone, ctx, self.imts, *out_central)
             # Shift the first branch last since its slot holds the backbone.
             for g, gsim in reversed(g_gsim_pairs):
                 branch = out[:, g, :, slc]
                 if g != first:
                     branch[:] = out_central
                 apply_options(gsim, ctx, adj, self.imts, branch,
-                              apply_adjustment, names)
+                              update_adj, names)
             start = slc.stop
         for g, gsim in g_gsim_pairs:
             self._check_conv(out[:, g], gsim)

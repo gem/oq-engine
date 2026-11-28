@@ -113,36 +113,50 @@ Logic trees often contain several branches of the same GSIM differing only in
 an option shifting the median, like ``sigma_mu_epsilon``. Such branches can
 share the expensive part of the computation, which is then performed only once.
 If your model uses the NSHM epistemic shift, set
-``self.sigma_mu_epsilon`` from the constructor, then declare an
-``apply_adjustment`` method on the class. Its final argument names the
-branch option that changes the result:
+``self.sigma_mu_epsilon`` from the constructor, then declare two methods on
+the class:
+
+- ``compute_adj(self, ctx, imts, mean, sig, tau, phi)`` computes the central
+  part, which is shared by the branches with the same options. It fills
+  ``mean``, ``sig``, ``tau`` and ``phi`` in place and returns a dictionary
+  mapping names to arrays. It can return ``None``, meaning an empty
+  dictionary.
+- ``update_adj(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon)`` applies
+  the adjustment of a single branch. Its final argument names the branch
+  option that changes the result:
 
 ```python
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 
 class MyGMPE(GMPE):
-    def apply_adjustment(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
-        if sigma_mu_epsilon:
-            mean_stds[0][:] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
-
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         ...  # fill the central mean and standard deviations
         return {}  # the central adjustments, as a dictionary term -> array
+
+    def update_adj(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
+        if sigma_mu_epsilon:
+            mean_stds[0][:] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
 ```
 
-The callback signature starts with ``gsim, ctx, adj, imts, mean_stds``.
-``ctx`` is the input context. ``adj`` is the dictionary returned by
-``compute`` (an empty dictionary if ``compute`` returns ``None``), mapping
-the names of the precomputed adjustments to arrays. ``mean_stds`` holds
-the output arrays as ``(mean, sig, tau, phi)``, so ``mean_stds[0]`` is the
-mean. The callback modifies the output arrays in place. Parameters after
-these five standard arguments must name constructor options used by the
-adjustment.
-The engine omits those options from the central computation key, so branches
-with different values can share the central computation.
+The arguments of ``update_adj`` are the input context ``ctx``, the
+dictionary ``adj`` returned by ``compute_adj``, the ``imts``, and
+``mean_stds``, which holds the output arrays as ``(mean, sig, tau, phi)``,
+so ``mean_stds[0]`` is the mean. The method modifies the output arrays in
+place. Parameters after these five standard arguments must name constructor
+options used by the adjustment. The engine omits those options from the
+central computation key, so branches with different values can share the
+central computation.
 
-``MetaGSIM`` wraps ``compute`` so direct calls still apply the adjustment.
-Inside ``ContextMaker``, the original ``compute`` body runs once for branches
-with matching central options, then each branch's ``apply_adjustment`` runs.
-If a subclass overrides ``compute``, it must declare its own
-``apply_adjustment`` to opt into sharing.
+You do not write ``compute`` in this case: ``MetaGSIM`` generates it from the
+two methods, so direct calls run ``compute_adj`` followed by ``update_adj``.
+Inside ``ContextMaker``, ``compute_adj`` runs once for the branches with
+matching central options, then each branch's ``update_adj`` runs.
+
+Both methods must be declared together, either on the class or inherited
+from a parent class; declaring only one of them is an error, and so is
+declaring ``compute`` in the same class as ``compute_adj`` or
+``update_adj``. A class that declares a plain ``compute`` opts out of the
+sharing, and then the branches are computed one by one. A subclass can
+override ``compute_adj`` or ``update_adj`` and call the parent's method with
+``super()``: the generated ``compute`` of the parent still applies only the
+adjustment of the parent.

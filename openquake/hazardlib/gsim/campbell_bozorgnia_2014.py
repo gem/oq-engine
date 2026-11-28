@@ -521,10 +521,9 @@ class CampbellBozorgnia2014(GMPE):
         self.usgs_basin_scaling = usgs_basin_scaling
         self.cybershake_basin_adj = cybershake_basin_adj
 
-    apply_adjustment = apply_nshm_shift
+    update_adj = apply_nshm_shift
 
-    # meta-adjusted
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

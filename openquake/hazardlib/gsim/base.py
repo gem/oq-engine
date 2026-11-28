@@ -36,7 +36,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.const import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.gsim.backbone import (
-    adjusted_compute, adjustment_options, fix_toml, get_central_key,
+    adjustment_options, fix_toml, generate_compute, get_central_key,
     _normalize_option)
 
 
@@ -118,7 +118,7 @@ def warn_adapted(cls):
         warnings.warn(msg, AdaptedWarning)
 
 
-OK_METHODS = ('compute', 'apply_adjustment', 'set_poes', 'requires',
+OK_METHODS = ('compute', 'compute_adj', 'update_adj', 'set_poes', 'requires',
               'set_parameters')
 
 
@@ -139,8 +139,8 @@ class MetaGSIM(abc.ABCMeta):
     """
     A metaclass converting set class attributes into frozensets, to avoid
     mutability bugs without having to change already written GSIMs. It also
-    wraps compute methods for classes declaring ``apply_adjustment`` and
-    performs some checks against typos.
+    generates the compute method of the classes declaring ``compute_adj``
+    and ``update_adj`` and performs some checks against typos.
     """
     def __new__(meta, name, bases, dic):
         if len(bases) > 1:
@@ -167,19 +167,27 @@ class MetaGSIM(abc.ABCMeta):
                     if missing:
                         raise ValueError('Unknown distance %s in %s' %
                                          (missing, name))
-        adjustment = dic.get('apply_adjustment')
         if 'compute' in dic:
-            # An overridden compute method must opt into sharing again:
-            # without an adjustment it stays unwrapped.
-            if adjustment is not None:
-                dic['compute'] = adjusted_compute(dic['compute'], adjustment)
-        elif adjustment is not None and bases:
-            # A new adjustment for an inherited compute wraps its raw body,
-            # so direct calls match the shared computation in ContextMaker.
-            inherited = getattr(bases[0], 'compute', None)
-            raw = getattr(inherited, '__wrapped__', None)
-            if raw is not None:
-                dic['compute'] = adjusted_compute(raw, adjustment)
+            if 'compute_adj' in dic or 'update_adj' in dic:
+                raise TypeError(f'{name} cannot define both compute and '
+                                'compute_adj or update_adj')
+            # A plain compute method opts out of sharing the computation.
+            # update_adj is kept, since the inherited compute of a parent
+            # still needs the options of its adjustment in kwargs.
+            dic['compute_adj'] = None
+        elif bases and ('compute_adj' in dic or 'update_adj' in dic):
+            # Generate compute from the methods, inheriting the missing one
+            base = bases[0]
+            compute_adj = dic.get('compute_adj',
+                                  getattr(base, 'compute_adj', None))
+            update_adj = dic.get('update_adj',
+                                 getattr(base, 'update_adj', None))
+            if compute_adj is None or update_adj is None:
+                raise TypeError(f'{name} must define both compute_adj and '
+                                'update_adj to share its computation')
+            dic['compute_adj'] = compute_adj
+            dic['update_adj'] = update_adj
+            dic['compute'] = generate_compute(compute_adj, update_adj)
         cls = super().__new__(meta, name, bases, dic)
         return cls
 
@@ -211,12 +219,12 @@ class MetaGSIM(abc.ABCMeta):
             table = self.gmpe_table
             self.kwargs['gmpe_table'] = (
                 os.fspath(table) if table is not None else None)
-        if cls.apply_adjustment is not None:
+        if cls.update_adj is not None:
             # Store the constructor defaults of the adjustment options,
             # which kwargs lacks when the caller omits them. Options that
             # the constructor does not name (ModifiableGMPE) get None.
             params = inspect.signature(cls.__init__).parameters
-            for name in adjustment_options(cls.apply_adjustment):
+            for name in adjustment_options(cls.update_adj):
                 default = params[name].default if name in params else None
                 kwargs.setdefault(name, default)
             # Snapshot constructor options before callers can reuse them.
@@ -333,7 +341,9 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     adapted = False
     conditional = False  # must be instantiated from ModifiableGMPE
     from_mgmpe = False  # instantiated using ModifiableGMPE
-    apply_adjustment = None  # set by classes sharing compute across branches
+    # Set by the classes sharing their computation across branches
+    compute_adj = None
+    update_adj = None
 
     @classmethod
     def __init_subclass__(cls):

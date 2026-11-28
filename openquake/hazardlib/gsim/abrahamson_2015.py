@@ -381,10 +381,9 @@ class AbrahamsonEtAl2015SInter(GMPE):
         else:
             self.faba_model = None
 
-    apply_adjustment = apply_sigma_mu
+    update_adj = apply_sigma_mu
 
-    # meta-adjusted
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

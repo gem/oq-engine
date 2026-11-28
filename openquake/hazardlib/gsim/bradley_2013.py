@@ -442,10 +442,9 @@ class Bradley2013(GMPE):
     def __init__(self, sigma_mu_epsilon=0.0):
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
-    apply_adjustment = apply_nshm_shift
+    update_adj = apply_nshm_shift
 
-    # meta-adjusted
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

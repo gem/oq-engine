@@ -75,10 +75,37 @@ def apply_test_shift(gsim, ctx, adj, imts, mean_stds, shift):
 
 
 class ShiftedGMPE(TGMPE):
-    apply_adjustment = apply_test_shift
+    update_adj = apply_test_shift
 
-    def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         pass
+
+
+class GeneratedComputeTestCase(unittest.TestCase):
+    def test_plain_compute_opts_out(self):
+        class Plain(ShiftedGMPE):
+            def compute(self, ctx: numpy.recarray, imts, mean, sig, tau,
+                        phi):
+                pass
+        self.assertIsNone(Plain.compute_adj)
+
+    def test_compute_with_compute_adj_is_an_error(self):
+        with self.assertRaises(TypeError):
+            class Bad(TGMPE):
+                def compute(self, ctx: numpy.recarray, imts, mean, sig, tau,
+                            phi):
+                    pass
+
+                def compute_adj(self, ctx: numpy.recarray, imts, mean, sig,
+                                tau, phi):
+                    pass
+
+    def test_compute_adj_without_update_adj_is_an_error(self):
+        with self.assertRaises(TypeError):
+            class Bad(TGMPE):
+                def compute_adj(self, ctx: numpy.recarray, imts, mean, sig,
+                                tau, phi):
+                    pass
 
 
 class CentralKeyTestCase(unittest.TestCase):
