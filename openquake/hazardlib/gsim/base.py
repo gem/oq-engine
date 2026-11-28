@@ -24,6 +24,7 @@ different kinds of :class:`ground shaking intensity models
 import os
 import sys
 import abc
+import ast
 import pathlib
 import inspect
 import warnings
@@ -117,8 +118,8 @@ def warn_adapted(cls):
 
 def fix_toml(v):
     """
-    The kwargs dictionary of a GSIM can contain Python objects convertible
-    to TOML (arrays, CoeffsTables) and we implement the conversion here.
+    Convert paths and Python objects such as arrays and CoeffsTables
+    for TOML serialization.
     """
     if isinstance(v, str) and pathlib.PurePath(v).is_absolute():
         return os.path.basename(v)
@@ -133,6 +134,22 @@ def fix_toml(v):
     elif isinstance(v, list):
         return [fix_toml(x) for x in v]
     return v
+
+
+# Convert filenames and NumPy values to their Python equivalents.
+def _normalize_option(value):
+    if isinstance(value, pathlib.PurePath):
+        return os.fspath(value)
+    if isinstance(value, numpy.ndarray):
+        return _normalize_option(value.tolist())
+    if isinstance(value, numpy.generic):
+        return value.item()
+    if type(value) is dict:
+        return {_normalize_option(key): _normalize_option(item)
+                for key, item in value.items()}
+    if type(value) in (list, tuple):
+        return type(value)(_normalize_option(item) for item in value)
+    return value
 
 
 OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
@@ -188,10 +205,17 @@ class MetaGSIM(abc.ABCMeta):
     def __call__(cls, **kwargs):
         mixture_model = kwargs.pop('mixture_model', None)
         for name, value in kwargs.items():
+            kwargs[name] = value = _normalize_option(value)
             if value is None:
                 raise TypeError(
                     f"{cls.__name__}.{name} must use '' instead of None "
                     "for TOML serialization")
+            try:
+                if ast.literal_eval(repr(value)) == value:
+                    continue
+            except (ValueError, SyntaxError, RecursionError):
+                pass
+            raise ValueError(f'{cls.__name__}.{name} must be a Python literal')
         if 'weight' in kwargs:  # AvgPoeGMPE
             w = kwargs.pop('weight')
             self = type.__call__(cls, **kwargs)
@@ -202,7 +226,9 @@ class MetaGSIM(abc.ABCMeta):
         self._toml = toml.dumps({cls.__name__: fix_toml(kwargs)}).strip()
         if hasattr(self, 'gmpe_table'):
             # used in NGAEast to set the full pathname
-            self.kwargs['gmpe_table'] = self.gmpe_table
+            table = self.gmpe_table
+            self.kwargs['gmpe_table'] = (
+                os.fspath(table) if table is not None else None)
         if mixture_model is not None:
             self.mixture_model = mixture_model
 

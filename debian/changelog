@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Require literal GSIM constructor options
   * Reject None in GSIM constructor options and use empty strings as defaults
   * Split the magnitudes of the big simple and complex faults in pieces,
     depending on the number and size of the ruptures, to avoid slow tasks
