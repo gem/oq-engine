@@ -121,7 +121,7 @@ the class:
   ``mean_stds`` in place, which holds the arrays ``(mean, sig, tau, phi)``,
   and returns a dictionary mapping names to arrays. It can return ``None``,
   meaning an empty dictionary.
-- ``update_adj(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon)`` applies
+- ``update_adj(self, ctx, adj, imts, mean_stds, sigma_mu_epsilon)`` applies
   the adjustment of a single branch. Its final argument names the branch
   option that changes the result:
 
@@ -134,7 +134,8 @@ class MyGMPE(GMPE):
         ...  # fill the central mean and standard deviations
         return {}  # the central adjustments, as a dictionary term -> array
 
-    def update_adj(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon):
+    def update_adj(self, ctx: np.recarray, adj, imts, mean_stds,
+                   sigma_mu_epsilon):
         if sigma_mu_epsilon:
             mean_stds[0][:] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
 ```

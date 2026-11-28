@@ -24,7 +24,7 @@ mean_stds)`` computes the central part, which is shared by the branches with
 the same constructor options. It fills ``mean_stds``, the mean, sig, tau and
 phi arrays, in place and returns a dictionary term -> array (None means an
 empty dictionary).
-``update_adj(gsim, ctx, adj, imts, mean_stds, *options)`` applies the
+``update_adj(self, ctx, adj, imts, mean_stds, *options)`` applies the
 adjustment of a single branch, where ``options`` are the constructor options
 that vary by branch and ``mean_stds`` holds the mean, sig, tau and phi
 arrays. MetaGSIM generates ``compute`` from the two methods, so direct calls
@@ -61,10 +61,11 @@ def apply_options(gsim, ctx, adj, imts, mean_stds, update_adj, names):
 def adjustment_options(update_adj):
     # Extra callback arguments explicitly list branch-varying options.
     params = list(inspect.signature(update_adj).parameters.values())
-    names = tuple(param.name for param in params[:5])
-    if names != ('gsim', 'ctx', 'adj', 'imts', 'mean_stds'):
-        raise TypeError('update_adj must start with gsim, ctx, adj, imts, '
-                        'mean_stds')
+    # the first argument is the GSIM, whatever its name
+    names = tuple(param.name for param in params[1:5])
+    if names != ('ctx', 'adj', 'imts', 'mean_stds'):
+        raise TypeError('update_adj must start with a GSIM argument, then '
+                        'ctx, adj, imts, mean_stds')
     if any(param.kind not in (param.POSITIONAL_ONLY,
                               param.POSITIONAL_OR_KEYWORD)
            for param in params):
