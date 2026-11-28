@@ -111,7 +111,8 @@ def _normalize_option(value):
         return _normalize_option(value.tolist())
     if isinstance(value, numpy.generic):
         return value.item()
-    if type(value) is dict:
+    # TOML tables are dict subclasses which cannot be pickled
+    if isinstance(value, dict):
         return {_normalize_option(key): _normalize_option(item)
                 for key, item in value.items()}
     if type(value) in (list, tuple):
