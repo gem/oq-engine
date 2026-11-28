@@ -643,7 +643,7 @@ def apply_epsilons(gsim, ctx, imts, mean_stds, adj, epsilons, path_cap):
     :param ctx: the context
     :param adj: the dictionary returned by compute
     :param imts: sequence of IMT instances, in output array row order
-    :param mean_stds: mean, sig, tau and phi arrays of shape (len(imts), N)
+    :param mean_stds: mean, sig, tau and phi arrays of shape (M, N)
     """
     mean = mean_stds[0]
     # The option is '' when the caller omits it

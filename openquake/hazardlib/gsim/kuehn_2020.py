@@ -742,7 +742,7 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
 
 def get_sigma_mu_adjustments(gsim, ctx, imts):
     """
-    Returns the sigma_mu adjustments as an array of shape (len(imts), N)
+    Returns the sigma_mu adjustments as an array of shape (M, N)
     """
     return np.array([get_sigma_mu_adjustment(
         gsim.sigma_mu_model, imt, ctx.mag, ctx.rrup) for imt in imts])
