@@ -77,6 +77,11 @@ class GsimInstantiationTestCase(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "option must use ''"):
             TGMPE(option=None)
 
+    def test_non_literal_options_are_rejected(self):
+        with self.assertRaisesRegex(
+                ValueError, 'TGMPE.option must be a Python literal'):
+            TGMPE(option={'unsupported': object()})
+
     def test_deprecated(self):
         # check that a deprecation warning is raised when a deprecated
         # GSIM is instantiated
