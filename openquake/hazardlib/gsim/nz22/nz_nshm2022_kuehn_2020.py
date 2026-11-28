@@ -51,7 +51,7 @@ from openquake.hazardlib.gsim.kuehn_2020 import (
     _get_ln_z_ref,
     _infer_z,
     get_mean_values,
-    with_kuehn_shift,
+    apply_sigma_mu,
     KuehnEtAl2020SInter,
     CONSTS,
     REGION_TERMS_IF,
@@ -233,7 +233,8 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 self.__class__.REQUIRES_SITES_PARAMETERS
 
 
-    @with_kuehn_shift
+    apply_adjustment = apply_sigma_mu
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

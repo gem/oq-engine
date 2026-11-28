@@ -36,6 +36,8 @@ from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import const
 from openquake.hazardlib.const import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
+from openquake.hazardlib.gsim.backbone import (
+    adjusted_compute, adjustment_options)
 
 
 ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
@@ -165,6 +167,8 @@ def get_central_key(gsim):
     """
     Return a TOML representation of the central constructor options.
 
+    Parameters following ``gsim, ctx, imts, mean, sig, tau, phi`` in the
+    GSIM's ``apply_adjustment`` method are omitted from the key.
     Constructor options are assumed to stay fixed after instantiation.
     The key is None for an ordinary compute method or a GSIM instance
     that disables sharing.
@@ -181,8 +185,11 @@ def get_central_key(gsim):
     [KothaEtAl2020ESHM20]
     c3_epsilon = 1.732051
     """
-    exclusions = getattr(type(gsim).compute, 'central_key_excluded', None)
-    if exclusions is None or not getattr(gsim, 'share_central', True):
+    apply_adjustment = getattr(type(gsim), 'apply_adjustment', None)
+    if apply_adjustment is None:
+        return None
+    exclusions = adjustment_options(apply_adjustment)
+    if not getattr(gsim, 'share_central', True):
         return None
     options = tuple((name, value) for name, value in gsim.kwargs.items()
                     if name != 'weight' and name not in exclusions)
@@ -192,7 +199,8 @@ def get_central_key(gsim):
     return toml.dumps(key).strip()
 
 
-OK_METHODS = ('compute', 'set_poes', 'requires', 'set_parameters')
+OK_METHODS = ('compute', 'apply_adjustment', 'set_poes', 'requires',
+              'set_parameters')
 
 
 def bad_methods(clsdict):
@@ -211,8 +219,9 @@ def bad_methods(clsdict):
 class MetaGSIM(abc.ABCMeta):
     """
     A metaclass converting set class attributes into frozensets, to avoid
-    mutability bugs without having to change already written GSIMs. Moreover
-    it performs some checks against typos.
+    mutability bugs without having to change already written GSIMs. It also
+    wraps compute methods for classes declaring ``apply_adjustment`` and
+    performs some checks against typos.
     """
     def __new__(meta, name, bases, dic):
         if len(bases) > 1:
@@ -239,6 +248,15 @@ class MetaGSIM(abc.ABCMeta):
                     if missing:
                         raise ValueError('Unknown distance %s in %s' %
                                          (missing, name))
+        if 'compute' in dic:
+            if 'apply_adjustment' in dic:
+                adjustment_options(dic['apply_adjustment'])
+                dic['compute_central'] = staticmethod(dic['compute'])
+                dic['compute'] = adjusted_compute(dic['compute'])
+            else:
+                # An overridden compute method must opt into sharing again.
+                dic['compute_central'] = None
+                dic['apply_adjustment'] = None
         cls = super().__new__(meta, name, bases, dic)
         return cls
 
@@ -270,7 +288,7 @@ class MetaGSIM(abc.ABCMeta):
             table = self.gmpe_table
             self.kwargs['gmpe_table'] = (
                 os.fspath(table) if table is not None else None)
-        if hasattr(cls.compute, 'central_key_excluded'):
+        if cls.apply_adjustment is not None:
             # Snapshot constructor options before callers can reuse them.
             # NB: the key is computed once, at construction time, so a
             # GSIM must not be modified after it is built, otherwise

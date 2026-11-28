@@ -23,7 +23,6 @@ import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
@@ -127,11 +126,11 @@ def get_stddevs(ergodic, tau_model, TAU, PHI_SS, imt, ctx):
     return [sigma, tau, phi]
 
 
-def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi, epsilon):
     """Apply the final epistemic mean shift for this branch."""
-    if gsim.epsilon:
+    if epsilon:
         for m, imt in enumerate(imts):
-            mean[m] += gsim.epsilon * gsim.COEFFS[imt]["sigma_mu"]
+            mean[m] += epsilon * gsim.COEFFS[imt]["sigma_mu"]
 
 
 class ESHM20Craton(GMPE):
@@ -246,7 +245,8 @@ class ESHM20Craton(GMPE):
         self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
                                              self.phi_ss_quantile)
 
-    @shifted_compute(apply_sigma_mu, 'epsilon')
+    apply_adjustment = apply_sigma_mu
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Returns the mean and standard deviations

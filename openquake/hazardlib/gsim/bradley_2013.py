@@ -33,7 +33,7 @@ import numpy as np
 import shapely
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim.abrahamson_2014 import with_nshm_shift
+from openquake.hazardlib.gsim.abrahamson_2014 import apply_nshm_shift
 from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -442,7 +442,8 @@ class Bradley2013(GMPE):
     def __init__(self, sigma_mu_epsilon=0.0):
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
-    @with_nshm_shift
+    apply_adjustment = apply_nshm_shift
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

@@ -24,7 +24,7 @@ Module exports :class:`CampbellBozorgnia2014`
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
-from openquake.hazardlib.gsim.abrahamson_2014 import with_nshm_shift
+from openquake.hazardlib.gsim.abrahamson_2014 import apply_nshm_shift
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -521,7 +521,8 @@ class CampbellBozorgnia2014(GMPE):
         self.usgs_basin_scaling = usgs_basin_scaling
         self.cybershake_basin_adj = cybershake_basin_adj
 
-    @with_nshm_shift
+    apply_adjustment = apply_nshm_shift
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

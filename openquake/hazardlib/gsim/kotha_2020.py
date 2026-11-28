@@ -33,7 +33,6 @@ from shapely.geometry import shape
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.geo.packager import fiona
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA, from_string
@@ -403,21 +402,22 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
 
 
 # Apply the final epistemic mean shift for this branch.
-def _apply_mean_shift(gsim, resolved, imts, mean, *_stddevs):
-    ctx, tec_feat_idx = resolved
-    if gsim.dl2l:
+def _apply_mean_shift(gsim, ctx, imts, mean, sig, tau, phi,
+                      sigma_mu_epsilon, dl2l):
+    context, tec_feat_idx = ctx
+    if dl2l:
         # The source-region parameter is specified explicitly.
         for m, imt in enumerate(imts):
-            mean[m] += gsim.dl2l[imt]["dl2l"]
+            mean[m] += dl2l[imt]["dl2l"]
     elif gsim.kind == 'regional':
         for m, imt in enumerate(imts):
             mean[m] += get_dl2l(gsim.tec_vals, tec_feat_idx, str(imt),
                                 gsim.delta_l2l_epsilon)
-    elif gsim.sigma_mu_epsilon:
+    elif sigma_mu_epsilon:
         for m, imt in enumerate(imts):
             sigma_mu = get_sigma_mu_adjustment(
-                gsim.kind, gsim.COEFFS[imt], imt, ctx)
-            mean[m] += gsim.sigma_mu_epsilon * sigma_mu
+                gsim.kind, gsim.COEFFS[imt], imt, context)
+            mean[m] += sigma_mu_epsilon * sigma_mu
 
 
 class KothaEtAl2020(GMPE):
@@ -531,7 +531,8 @@ class KothaEtAl2020(GMPE):
         else:
             self.c3 = None
 
-    @shifted_compute(_apply_mean_shift, ('sigma_mu_epsilon', 'dl2l'))
+    apply_adjustment = _apply_mean_shift
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

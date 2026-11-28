@@ -26,7 +26,7 @@ import numpy as np
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
-from openquake.hazardlib.gsim.abrahamson_2014 import with_nshm_shift
+from openquake.hazardlib.gsim.abrahamson_2014 import apply_nshm_shift
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -753,7 +753,8 @@ class ChiouYoungs2014(GMPE):
         if not hasattr(self, "COEFFS_EMME"):
             self.COEFFS_EMME = False
 
-    @with_nshm_shift
+    apply_adjustment = apply_nshm_shift
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

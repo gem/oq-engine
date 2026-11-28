@@ -29,7 +29,6 @@ from scipy.special import erf
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -423,16 +422,17 @@ def get_stddevs(C, rrup, vs30):
     return [np.sqrt(C["Tau"] ** 2 + phi_tot ** 2), C["Tau"], phi_tot]
 
 
-def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi,
+                   sigma_mu_epsilon):
     """Apply the final epistemic mean shift for this branch."""
-    if gsim.sigma_mu_epsilon:
+    if sigma_mu_epsilon:
         trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
         for m, imt in enumerate(imts):
             # The epistemic adjustment excludes PGV.
             if imt.string != 'PGV':
                 sigma_mu = _get_sigma_mu_adjustment(
                     gsim.saturation_region, trt, imt, gsim.epi_adjs_table)
-                mean[m] += sigma_mu * gsim.sigma_mu_epsilon
+                mean[m] += sigma_mu * sigma_mu_epsilon
 
 
 class ParkerEtAl2020SInter(GMPE):
@@ -533,7 +533,8 @@ class ParkerEtAl2020SInter(GMPE):
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
-    @shifted_compute(apply_sigma_mu, 'sigma_mu_epsilon')
+    apply_adjustment = apply_sigma_mu
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

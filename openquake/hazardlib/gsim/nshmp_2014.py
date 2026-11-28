@@ -23,7 +23,6 @@ import numpy as np
 import inspect
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim import base
 
 
@@ -49,9 +48,9 @@ def nga_west2_epistemic_adjustment(mag, dist):
 
 
 # Apply this branch's signed adjustment to every IMT.
-def _apply_shift(gsim, adjustment, imts, mean, *_stddevs):
-    mean[:] += gsim.sgn * adjustment
-    return adjustment
+def _apply_shift(gsim, ctx, imts, mean, sig, tau, phi, sgn):
+    mean[:] += sgn * ctx
+    return ctx
 
 
 class NSHMP2014(base.GMPE):
@@ -98,7 +97,8 @@ class NSHMP2014(base.GMPE):
             setattr(self.gsim, kwarg, kwargs[kwarg])
             
 
-    @shifted_compute(_apply_shift, 'sgn')
+    apply_adjustment = _apply_shift
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """Compute mean, sig, tau and phi, and return the adjustment."""
         self.gsim.compute(ctx, imts, mean, sig, tau, phi)

@@ -22,7 +22,6 @@ import numpy
 
 from openquake.baselib.general import duplicated, gen_subclasses
 from openquake.hazardlib import const, valid
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import (
     GMPE, GroundShakingIntensityModel, gsim_aliases, NotVerifiedWarning,
     DeprecationWarning, get_central_key)
@@ -71,12 +70,13 @@ class TGMPE(GMPE):
     REQUIRES_DISTANCES = ()
 
 
-def apply_test_shift(gsim, ctx, imts, mean, *_stddevs):
+def apply_test_shift(gsim, ctx, imts, mean, sig, tau, phi, shift):
     pass
 
 
 class ShiftedGMPE(TGMPE):
-    @shifted_compute(apply_test_shift, 'shift')
+    apply_adjustment = apply_test_shift
+
     def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         pass
 

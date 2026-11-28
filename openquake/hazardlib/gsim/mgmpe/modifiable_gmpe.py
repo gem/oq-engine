@@ -23,7 +23,6 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 import toml
 import numpy as np
 from openquake.hazardlib.imt import PGA
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
@@ -676,8 +675,12 @@ INDEPENDENT_SCALING = {
 
 
 # Apply the original modifiers in the order specified by the branch.
-def _apply_modifiers(gsim, resolved, imts, mean, sig, tau, phi):
-    ctx, ref = resolved
+def _apply_modifiers(gsim, ctx, imts, mean, sig, tau, phi,
+                     set_scale_median_scalar=None,
+                     set_scale_median_vector=None,
+                     set_scale_total_sigma_scalar=None,
+                     set_scale_total_sigma_vector=None):
+    context, ref = ctx
     for name, kwargs in gsim.params.items():
         # CEUS 2020 site term needs ref PGA stored.
         if name == 'ceus2020_site_term':
@@ -685,7 +688,7 @@ def _apply_modifiers(gsim, resolved, imts, mean, sig, tau, phi):
 
         modify = globals()[name]
         for m, imt in enumerate(imts):
-            modify(ctx, imt, mean[m], sig[m], tau[m], phi[m], **kwargs)
+            modify(context, imt, mean[m], sig[m], tau[m], phi[m], **kwargs)
 
 
 class ModifiableGMPE(GMPE):
@@ -763,7 +766,8 @@ class ModifiableGMPE(GMPE):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
 
-    @shifted_compute(_apply_modifiers, INDEPENDENT_SCALING)
+    apply_adjustment = _apply_modifiers
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

@@ -47,7 +47,6 @@ import math
 import numpy as np
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
@@ -280,12 +279,13 @@ def get_backarc_term(trt, imt, ctx):
         return np.zeros_like(dists)
 
 
-def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi,
+                   sigma_mu_epsilon):
     """Apply the final epistemic mean shift for this branch."""
-    if gsim.sigma_mu_epsilon:
+    if sigma_mu_epsilon:
         trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
         for m, imt in enumerate(imts):
-            mean[m] += gsim.sigma_mu_epsilon * get_sigma_epistemic(
+            mean[m] += sigma_mu_epsilon * get_sigma_epistemic(
                 trt, gsim.region, imt)
 
 
@@ -311,7 +311,8 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
 
-    @shifted_compute(apply_sigma_mu, 'sigma_mu_epsilon')
+    apply_adjustment = apply_sigma_mu
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

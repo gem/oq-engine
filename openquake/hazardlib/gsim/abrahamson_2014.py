@@ -25,7 +25,6 @@ Module exports :class:`AbrahamsonEtAl2014`
 import numpy as np
 from scipy import interpolate
 
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -525,13 +524,11 @@ def get_epistemic_sigma(ctx):
     return sigma_epi
 
 
-def apply_nshm_shift(gsim, ctx, imts, mean, *_stddevs):
+def apply_nshm_shift(gsim, ctx, imts, mean, sig, tau, phi,
+                     sigma_mu_epsilon):
     """Apply the same epistemic factor to every IMT in a branch."""
-    if len(imts) and gsim.sigma_mu_epsilon:
-        mean[:len(imts)] += gsim.sigma_mu_epsilon * get_epistemic_sigma(ctx)
-
-
-with_nshm_shift = shifted_compute(apply_nshm_shift, 'sigma_mu_epsilon')
+    if len(imts) and sigma_mu_epsilon:
+        mean[:len(imts)] += sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
 
 class AbrahamsonEtAl2014(GMPE):
@@ -587,7 +584,8 @@ class AbrahamsonEtAl2014(GMPE):
         self.usgs_basin_scaling = usgs_basin_scaling
         self.cybershake_basin_adj = cybershake_basin_adj
 
-    @with_nshm_shift
+    apply_adjustment = apply_nshm_shift
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

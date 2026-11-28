@@ -35,7 +35,6 @@ from openquake.hazardlib import const
 from openquake.baselib.general import gen_slices
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import npoints_between, geodetic_distance
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
@@ -627,12 +626,13 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
     return resolved
 
 
-def apply_epsilons(gsim, resolved, imts, mean, *_stddevs):
+def apply_epsilons(gsim, ctx, imts, mean, sig, tau, phi,
+                   epsilons, path_cap):
     """
     Add this branch's eps * mean_se shift to the central mean.
 
     :param gsim: GridAdjustedGMPE instance
-    :param resolved: the dictionary returned by compute_central
+    :param ctx: the dictionary returned by compute
     :param imts: sequence of IMT instances, in output array row order
     :param mean: central mean array of shape (len(imts), N)
     """
@@ -640,8 +640,8 @@ def apply_epsilons(gsim, resolved, imts, mean, *_stddevs):
     # and are omitted from resolved. For path terms with path_cap set,
     # clip the per-branch total (central + eps*SE) so no single LT
     # realisation's path contribution can exceed the physical bound
-    for (m, term), (mean_adj, se_adj) in resolved.items():
-        eps = gsim.epsilons.get(term, 0.0)
+    for (m, term), (mean_adj, se_adj) in ctx.items():
+        eps = epsilons.get(term, 0.0)
         if eps != 0.0 and se_adj is None:
             raise ValueError(
                 f"Non-zero epsilon requested for term '{term}' but "
@@ -649,11 +649,11 @@ def apply_epsilons(gsim, resolved, imts, mean, *_stddevs):
                 f"IMT '{imts[m]}'.")
         shift = eps * se_adj if eps != 0.0 else 0.0
         cfg = gsim.grid_data["res_terms"][term]
-        if cfg["location"] == "path" and gsim.path_cap:
+        if cfg["location"] == "path" and path_cap:
             # mean_adj was already added uncapped in compute_central;
             # replace it with the capped (central + eps*SE) total
             shift = np.clip(mean_adj + shift,
-                            -gsim.path_cap, gsim.path_cap) - mean_adj
+                            -path_cap, path_cap) - mean_adj
         mean[m] += shift
 
 
@@ -844,7 +844,8 @@ class GridAdjustedGMPE(GMPE):
                     "but the underlying GSIM does not support "
                     "random-effects residuals.")
 
-    @shifted_compute(apply_epsilons, ('epsilons', 'path_cap'))
+    apply_adjustment = apply_epsilons
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

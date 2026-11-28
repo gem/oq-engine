@@ -41,7 +41,6 @@ import os
 import h5py
 from scipy.interpolate import RegularGridInterpolator
 
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -739,22 +738,19 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
     return sig, tau, phi
 
 
-def apply_sigma_mu(gsim, resolved, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi,
+                   sigma_mu_epsilon):
     """
     Apply the final epistemic mean shift for this branch, resolving
     each IMT on the first branch with a nonzero epsilon
     """
-    ctx, adjustments = resolved
-    if gsim.sigma_mu_epsilon:
+    context, adjustments = ctx
+    if sigma_mu_epsilon:
         for m, imt in enumerate(imts):
             if imt not in adjustments:
                 adjustments[imt] = get_sigma_mu_adjustment(
-                    gsim.sigma_mu_model, imt, ctx.mag, ctx.rrup)
-            mean[m] += gsim.sigma_mu_epsilon * adjustments[imt]
-
-
-with_kuehn_shift = shifted_compute(
-    apply_sigma_mu, 'sigma_mu_epsilon')
+                    gsim.sigma_mu_model, imt, context.mag, context.rrup)
+            mean[m] += sigma_mu_epsilon * adjustments[imt]
 
 
 class KuehnEtAl2020SInter(GMPE):
@@ -902,7 +898,8 @@ class KuehnEtAl2020SInter(GMPE):
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
-    @with_kuehn_shift
+    apply_adjustment = apply_sigma_mu
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

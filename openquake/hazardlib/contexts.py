@@ -46,6 +46,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 from openquake.hazardlib.gsim.nshmp_2014 import nga_west2_epistemic_adjustment
+from openquake.hazardlib.gsim.backbone import adjustment_values
 from openquake.hazardlib.site_amplification import get_poes_site
 
 U8 = numpy.uint8
@@ -1704,9 +1705,8 @@ class ContextMaker(object):
                 raise NotImplementedError(
                     f'{gsim} was not instantiated with a '
                     f'ModifiableGMPE, please read {url}')
-            compute = type(gsim).compute
-            compute_central = getattr(compute, 'compute_central', None)
-            apply_adjustment = getattr(compute, 'apply_adjustment', None)
+            compute_central = type(gsim).compute_central
+            apply_adjustment = type(gsim).apply_adjustment
             key = getattr(gsim, 'central_key', None)
             if (key is None or compute_central is None
                     or apply_adjustment is None):
@@ -1731,12 +1731,16 @@ class ContextMaker(object):
             central = out[:, first, :, slc]
             central.fill(0)
             resolved = compute_central(backbone, ctx, self.imts, *central)
+            if resolved is None:
+                resolved = ctx
             # Shift the first branch last since its slot holds the backbone.
             for g, gsim in reversed(g_gsim_pairs):
                 branch = out[:, g, :, slc]
                 if g != first:
                     branch[:] = central
-                apply_adjustment(gsim, resolved, self.imts, *branch)
+                apply_adjustment(
+                    gsim, resolved, self.imts, *branch,
+                    *adjustment_values(gsim))
             start = slc.stop
         for g, gsim in g_gsim_pairs:
             self._check_conv(out[:, g], gsim)

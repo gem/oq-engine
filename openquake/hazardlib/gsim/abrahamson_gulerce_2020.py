@@ -24,7 +24,6 @@ Module exports :class:`AbrahamsonGulerce2020SInter`,
 import os
 import numpy as np
 
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -545,16 +544,14 @@ def get_epistemic_adjustment(C, rrup):
     return C["e1"] + C["e2"] * rrup_norm + C["e3"] * (rrup_norm ** 2.0)
 
 
-def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi,
+                   sigma_mu_epsilon):
     """Apply the final epistemic mean shift for this branch."""
-    if gsim.sigma_mu_epsilon:
+    if sigma_mu_epsilon:
         for m, imt in enumerate(imts):
-            sigma_mu = get_epistemic_adjustment(gsim.COEFFS[imt], ctx.rrup)
-            mean[m] += gsim.sigma_mu_epsilon * sigma_mu
-
-
-with_abrahamson_gulerce_shift = shifted_compute(
-    apply_sigma_mu, 'sigma_mu_epsilon')
+            sigma_mu = get_epistemic_adjustment(
+                gsim.COEFFS[imt], ctx.rrup)
+            mean[m] += sigma_mu_epsilon * sigma_mu
 
 
 class AbrahamsonGulerce2020SInter(GMPE):
@@ -688,7 +685,8 @@ class AbrahamsonGulerce2020SInter(GMPE):
             with open(AK_BIAS) as f:
                 self.ak23_adjs_table = CoeffsTable(table=f.read())
 
-    @with_abrahamson_gulerce_shift
+    apply_adjustment = apply_sigma_mu
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

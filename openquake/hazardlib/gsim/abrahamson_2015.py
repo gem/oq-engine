@@ -28,7 +28,6 @@ Module exports :class:`AbrahamsonEtAl2015`
 """
 import numpy as np
 
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -283,12 +282,13 @@ def _compute_site_response_term(C, ctx, pga1000):
     return site_resp_term
 
 
-def apply_sigma_mu(gsim, ctx, imts, mean, *_stddevs):
+def apply_sigma_mu(gsim, ctx, imts, mean, sig, tau, phi,
+                   sigma_mu_epsilon):
     """Apply the final epistemic mean shift for this branch."""
-    if gsim.sigma_mu_epsilon:
+    if sigma_mu_epsilon:
         slab = gsim.trt == const.TRT.SUBDUCTION_INTRASLAB
         for m, imt in enumerate(imts):
-            mean[m] += get_stress_factor(imt, slab) * gsim.sigma_mu_epsilon
+            mean[m] += get_stress_factor(imt, slab) * sigma_mu_epsilon
 
 
 class AbrahamsonEtAl2015SInter(GMPE):
@@ -381,7 +381,8 @@ class AbrahamsonEtAl2015SInter(GMPE):
         else:
             self.faba_model = None
 
-    @shifted_compute(apply_sigma_mu, 'sigma_mu_epsilon')
+    apply_adjustment = apply_sigma_mu
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

@@ -36,7 +36,6 @@ import numpy as np
 
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.bayless_abrahamson_2018 import (
     _path_scaling, _ztor_scaling, _linear_site_response)
@@ -289,21 +288,21 @@ def compute_central(gsim, ctx, imts, mean, sigma, tau, phi):
     return idx_all, csids
 
 
-def apply_branch_shift(gsim, central, imts, mean, *_stddevs):
+def apply_branch_shift(gsim, ctx, imts, mean, sig, tau, phi, rlz_id):
     """
     Branch-specific shift: for each unique custom_site_id in the batch,
     add Delta-mu from that site's rlz column into the central mean.
     """
-    idx_all, csids = central
+    idx_all, csids = ctx
     for site in np.unique(csids):
         mask = csids == site
         nidx = idx_all[mask]
         for m, imt in enumerate(imts):
             dat = gsim.dat[(site, imt.frequency)]
-            if gsim.rlz_id == 'mean':
+            if rlz_id == 'mean':
                 mean[m, mask] += dat['mean'][nidx]
             else:
-                mean[m, mask] += dat['rlz'][nidx, int(gsim.rlz_id)]
+                mean[m, mask] += dat['rlz'][nidx, int(rlz_id)]
 
 
 class SungEtAl2022NonErgodic(SungEtAl2022):
@@ -372,7 +371,8 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
 
     # Branches share the backbone and nearest-neighbour lookup. The
     # non-ergodic backbone derives phi from total sigma and tau.
-    @shifted_compute(apply_branch_shift, 'rlz_id')
+    apply_adjustment = apply_branch_shift
+
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         """Compute the non-ergodic backbone and resolve adjustment indices."""
         return compute_central(self, ctx, imts, mean, sigma, tau, phi)

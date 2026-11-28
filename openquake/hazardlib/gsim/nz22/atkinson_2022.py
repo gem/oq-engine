@@ -27,7 +27,6 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.backbone import shifted_compute
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.nz22.const import (
     periods_AG20,
@@ -264,7 +263,8 @@ def get_backarc_term(trt, imt, ctx):
 
 
 # Apply the selected epistemic mean shift.
-def _apply_epistemic_shift(gsim, ctx, imts, mean, *_stddevs):
+def _apply_epistemic_shift(gsim, ctx, imts, mean, sig, tau, phi,
+                           epistemic):
     # In her email and slack post Gail mentioned that her
     # upper and lower branches are as 1.28 times of the delta.
     # So as to represent 10th and 90th percentile.
@@ -274,7 +274,7 @@ def _apply_epistemic_shift(gsim, ctx, imts, mean, *_stddevs):
     # epistemic uncertainty when no perfect correlation is
     # assumed between rupture scenarios. See the note of Peter
     # and Brendon on slack.
-    branch = gsim.epistemic.lower()
+    branch = epistemic.lower()
     if branch == "lower":
         adjustment, sign = _epistemic_adjustment_lower, -1
     elif branch == "upper":
@@ -329,7 +329,8 @@ class Atkinson2022Crust(GMPE):
         self.epistemic = epistemic
         self.modified_sigma = modified_sigma
 
-    @shifted_compute(_apply_epistemic_shift, 'epistemic')
+    apply_adjustment = _apply_epistemic_shift
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]

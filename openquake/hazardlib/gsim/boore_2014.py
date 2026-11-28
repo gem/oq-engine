@@ -25,7 +25,7 @@ import numpy as np
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
-from openquake.hazardlib.gsim.abrahamson_2014 import with_nshm_shift
+from openquake.hazardlib.gsim.abrahamson_2014 import apply_nshm_shift
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
@@ -345,7 +345,8 @@ class BooreEtAl2014(GMPE):
         if region != "nobasin":  # z1pt0 is used if period >= 0.65
             self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
 
-    @with_nshm_shift
+    apply_adjustment = apply_nshm_shift
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
