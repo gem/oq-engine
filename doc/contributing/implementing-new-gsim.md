@@ -109,7 +109,7 @@ an option shifting the median, like ``sigma_mu_epsilon``. Such branches can
 share the expensive part of the computation, which is then performed only once.
 If your model uses the NSHM epistemic shift, set
 ``self.sigma_mu_epsilon`` from the constructor and use ``with_nshm_shift``
-on a ``compute`` body that fills the central mean and standard deviations.
+on a ``compute`` method that fills the central mean and standard deviations.
 
 ```python
 from openquake.hazardlib.gsim.abrahamson_2014 import with_nshm_shift

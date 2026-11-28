@@ -19,7 +19,8 @@
 """
 Share the central computation across compatible branches of a GSIM.
 
-Decorate the central body of ``compute`` with :func:`shifted_compute`.
+Use :func:`shifted_compute` on the ``compute`` function that calculates
+the central predictions.
 A direct call computes the central predictions and applies the branch
 adjustment. ContextMaker computes the central part once per group and
 context slice, copies its output to each branch, then applies each
@@ -35,7 +36,7 @@ from functools import partial
 from decorator import decorate
 
 
-# Use the context when the central body has no extra data for the shift.
+# Pass the context to the adjustment if compute_func returns None.
 def _compute_central(compute_func, gsim, ctx, imts, mean, sig, tau, phi):
     resolved = compute_func(gsim, ctx, imts, mean, sig, tau, phi)
     return ctx if resolved is None else resolved
@@ -57,10 +58,11 @@ def _compute_adjusted(compute_func, apply_adjustment, central_key_excluded):
 
 def shifted_compute(apply_adjustment, central_key_excluded):
     """
-    Apply a branch adjustment after the body of ``compute``.
+    Apply a branch adjustment after the central calculation.
 
-    The body fills the four output arrays and can return data for the
-    adjustment. If it returns None, the adjustment receives the context.
+    The original ``compute`` function (``compute_func``) fills the four
+    output arrays and can return data for the adjustment. If it returns
+    None, the adjustment receives the context.
     The adjustment takes ``(gsim, resolved, imts, mean, sig, tau, phi)``,
     modifies the outputs in place, and supplies the public return value
     of ``compute``. Shared data is local to a group and context slice.
