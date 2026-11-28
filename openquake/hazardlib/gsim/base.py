@@ -141,7 +141,8 @@ def get_central_key(gsim):
     GSIMs with ``central_functions`` list in ``shifted_options`` the
     options which only shift the central computation; branches differing
     only in such options share the same key, so that
-    ContextMaker.get_mean_stds performs the central computation once.
+    ContextMaker.get_mean_stds performs the central computation once
+    (see :mod:`openquake.hazardlib.gsim.backbone`).
 
     :returns:
         (class name, repr of the other options) or None if the GSIM cannot

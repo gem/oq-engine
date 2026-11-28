@@ -101,3 +101,31 @@ This will apparently work well for most GSIMs, but as soon as one of the underly
 operation at instantiation time, like reading an .onnx file of several megabytes, the performance of the
 engine will be destroyed, since the ``compute`` method is called millions of times (at worse it will
 correspond to the number of ruptures in the model).
+
+## Sharing the computation across logic tree branches
+
+Logic trees often contain several branches of the same GSIM differing only in
+an option shifting the median, like ``sigma_mu_epsilon``. Such branches can
+share the expensive part of the computation, which is then performed only once.
+To enable that for a GSIM:
+
+1. add an ``apply_shift=True`` argument to the ``compute`` method and apply
+   the shift at its end only if ``apply_shift`` is true;
+2. write the shift as a module-level function with signature
+   ``(gsim, ctx, imts, mean, *_stddevs)``, modifying ``mean`` in place;
+3. declare ``central_functions`` and the options which only shift the
+   result in the class:
+
+```python
+from openquake.hazardlib.gsim.backbone import compute_without_shift
+
+class MyGMPE(GMPE):
+    central_functions = (compute_without_shift, apply_sigma_mu)
+    shifted_options = ('sigma_mu_epsilon',)
+```
+
+The branches differing only in the ``shifted_options`` will share the
+computation. Subclasses overriding ``compute`` must declare
+``shifted_options`` again, otherwise they are computed independently.
+The full contract, and how the engine performs the computation, are explained
+in the docstring of the module ``openquake.hazardlib.gsim.backbone``.

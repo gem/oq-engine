@@ -1708,6 +1708,7 @@ class ContextMaker(object):
             # GSIMs opt in with two module-level functions and a key that
             # identifies the inputs to their shared computation. The branch
             # callback receives the shared result and the four output arrays.
+            # See the docstring of openquake.hazardlib.gsim.backbone
             central_functions = getattr(gsim, 'central_functions', None)
             key = getattr(gsim, 'central_key', None)
             if not central_functions or key is None:
