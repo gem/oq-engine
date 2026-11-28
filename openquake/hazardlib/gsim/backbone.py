@@ -54,21 +54,17 @@ def adjustment_options(apply_adjustment):
     return tuple(param.name for param in params[7:])
 
 
-def adjustment_values(gsim, apply_adjustment):
-    # The constructor options, including the defaults stored by MetaGSIM.
-    return [gsim.kwargs[name]
-            for name in adjustment_options(apply_adjustment)]
-
-
 def adjusted_compute(compute_func, apply_adjustment):
     # Wrap direct calls with the adjustment of the class defining compute,
     # so a super().compute() call applies only the parent's adjustment.
     # ContextMaker calls the original method separately.
+    names = adjustment_options(apply_adjustment)
+
     def adjusted(func, gsim, ctx, imts, mean, sig, tau, phi):
         adj = _compute_central(func, gsim, ctx, imts, mean, sig, tau,
                                phi)
         return apply_adjustment(
             gsim, adj, imts, mean, sig, tau, phi,
-            *adjustment_values(gsim, apply_adjustment))
+            *[gsim.kwargs[name] for name in names])
 
     return decorate(compute_func, adjusted)
