@@ -510,11 +510,17 @@ class KothaEtAl2020(GMPE):
         self.c3_epsilon = c3_epsilon
         self.ergodic = ergodic
         if dl2l:
-            # Check that the input is a dictionary
+            # Check that the input is a dictionary and parse it
             if not isinstance(dl2l, dict):
                 raise IOError("For Kotha et al. (2020) GMM, source-region "
                               "scaling parameter (dl2l) must be input in the "
                               "form of a dictionary, if specified")
+            self.dl2l = {}
+            for key in dl2l:
+                self.dl2l[from_string(key)] = {"dl2l": dl2l[key]}
+            self.dl2l = CoeffsTable.fromdict(self.dl2l)
+        else:
+            self.dl2l = None
         if c3:
             if not isinstance(c3, dict):
                 raise IOError("For Kotha et al. (2020) GMM, residual "
