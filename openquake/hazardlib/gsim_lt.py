@@ -20,7 +20,7 @@ import os
 import ast
 import copy
 import json
-import shutil
+import hashlib
 import logging
 import operator
 import tempfile
@@ -30,7 +30,7 @@ from collections import defaultdict
 import toml
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import config, hdf5
 from openquake.baselib.general import decode
 from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import (
@@ -192,6 +192,31 @@ class IMTWeigher:
             # the default weight is stored in the last index
             i = len(self.imti) - 1
         return weights[:, i]
+
+
+def write_data_files(data):
+    """
+    Write the data files of a saved logic tree, given as a dictionary
+    {(key, name): content}, in a directory named after their content, so
+    that the same files always go to the same path and are written only once.
+
+    :returns: the absolute path of the directory
+    """
+    digest = hashlib.sha256()
+    for key, name in sorted(data):
+        digest.update(f'{name}\0'.encode() + data[key, name])
+    base = config.directory.custom_tmp or tempfile.gettempdir()
+    dirname = os.path.abspath(
+        os.path.join(base, 'oq-gsim-data', digest.hexdigest()))
+    for key, name in data:
+        fname = os.path.join(dirname, name)
+        if not os.path.exists(fname):
+            os.makedirs(os.path.dirname(fname), exist_ok=True)
+            tmp = f'{fname}.{os.getpid()}'  # avoid clashes between processes
+            with open(tmp, 'wb') as f:
+                f.write(data[key, name])
+            os.replace(tmp, fname)
+    return dirname
 
 
 class GsimLogicTree(lt.AbstractLogicTree):
@@ -418,22 +443,15 @@ class GsimLogicTree(lt.AbstractLogicTree):
 
     def __fromh5__(self, array, dic):
         # Here is a smart trick to retrieve the data files from the
-        # dictionary of attributes and store them in a temporary directory,
-        # so that file-dependent GMPEs can be instantiated even if the datastore
-        # is moved to a different machine.
+        # dictionary of attributes and store them in a directory named after
+        # their content, so that file-dependent GMPEs can be instantiated even
+        # if the datastore is moved to a different machine.
         # NB: the approach may break on macOS for large files since there is
         # a limit on the attribute size (unknown at the moment)
         data = {tuple(k.split(':')): v for k, v in dic.items() if ':' in k}
         if data:
-            # i.e. {'gmpe_table:Wcrust.hdf5': bytes} in scenario/case_35
-            dirname = tempfile.mkdtemp()
-            for key, name in data:
-                fname = os.path.abspath(os.path.join(dirname, name))
-                dname = os.path.dirname(fname)
-                if not os.path.exists(dname):
-                    os.makedirs(dname)
-                with open(fname, 'wb') as f:
-                    f.write(data[key, name])
+            # i.e. {('gmpe_table', 'Wcrust.hdf5'): bytes} in scenario/case_35
+            dirname = write_data_files(data)
         else:
             dirname = os.path.dirname(dic['filename'])
         self.bsetdict = json.loads(dic['bsetdict'])
@@ -452,8 +470,6 @@ class GsimLogicTree(lt.AbstractLogicTree):
                 bt = GsimBranch(branch['trt'], br_id, gsim, weight, True)
                 self.branches.append(bt)
                 self.shortener[br_id] = keyno(br_id, bsno, brno)
-        if data:
-            shutil.rmtree(dirname)
 
     # tested in LogicTreeTestCase::test_case_12
     def reduce(self, trts):

@@ -20,9 +20,7 @@ Module :mod:`openquake.hazardlib.mgmpe.grid_adjusted_gmpe` implements
 """
 import json
 import os
-import hashlib
 import ctypes
-from functools import lru_cache
 import h5py
 import h3
 from h3.api import basic_int as h3_int
@@ -215,38 +213,30 @@ def load_residual_grids(hdf5_path):
             "res_terms": res_terms}
 
 
-# {SHA256 content digest: grid_data}, shared by GridAdjustedGMPE instances
-# reading identical files, including copies extracted from saved logic trees.
+# {(path, mtime, ctime, size): grid_data}, shared by GridAdjustedGMPE instances
+# reading the same file, including the files written from saved logic trees,
+# which always go to the same path for the same content.
 # Values contain the correction grids, sigma scalars, term metadata and
 # lazily filled raytrace masks. For the SAM job, two files occupy about
 # 8 MB after loading, or 20 MB with masks for all 26 IMTs. These sizes are
-# per process; the cache has no size limit and retains distinct file contents
+# per process; the cache has no size limit and retains the loaded files
 # until the process exits, so larger grids or more files can use much more.
 _GRID_CACHE = {}
 
 
-# Avoid hashing the same file for every branch. The stat signature
-# invalidates the digest when a file changes; only small metadata is cached.
-@lru_cache(maxsize=128)
-def _grid_digest(path, stamp):
-    with open(path, 'rb') as f:
-        return hashlib.file_digest(f, 'sha256').digest()
-
-
 def get_residual_grids(hdf5_path):
     """
-    Same as load_residual_grids, but identical file contents are loaded
-    only once per process, even from different paths. The result is shared
-    between callers, which must not modify it (except for the lazily filled
-    raytrace_masks).
+    Same as load_residual_grids, but the file is loaded only once per process
+    (the stat signature of the file is part of the key, so a changed file is
+    loaded again). The result is shared between callers, which must not
+    modify it (except for the lazily filled raytrace_masks).
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.
     """
     path = os.path.abspath(hdf5_path)
     stat = os.stat(path)
-    key = _grid_digest(
-        path, (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size))
+    key = (path, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
     if key not in _GRID_CACHE:
         _GRID_CACHE[key] = load_residual_grids(path)
     return _GRID_CACHE[key]
