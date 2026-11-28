@@ -33,7 +33,7 @@ import numpy as np
 import shapely
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim.abrahamson_2014 import _apply_nshm_shift
+from openquake.hazardlib.gsim.abrahamson_2014 import apply_nshm_shift
 from openquake.hazardlib.gsim.backbone import compute_without_shift
 from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
 from openquake.hazardlib import const
@@ -468,9 +468,9 @@ class Bradley2013(GMPE):
                         sig[m], tau[m], phi[m])
 
         if apply_shift:
-            _apply_nshm_shift(self, ctx, imts, mean)
+            apply_nshm_shift(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_nshm_shift)
+    central_functions = (compute_without_shift, apply_nshm_shift)
     shifted_options = ('sigma_mu_epsilon',)
 
     #: Coefficient tables are constructed from values in tables 1, 2 and 3

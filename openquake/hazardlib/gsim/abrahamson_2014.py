@@ -525,8 +525,8 @@ def get_epistemic_sigma(ctx):
     return sigma_epi
 
 
-# Apply the same epistemic factor to every IMT in a branch.
-def _apply_nshm_shift(gsim, ctx, imts, mean, *_stddevs):
+def apply_nshm_shift(gsim, ctx, imts, mean, *_stddevs):
+    """Apply the same epistemic factor to every IMT in a branch."""
     if len(imts) and gsim.sigma_mu_epsilon:
         mean[:len(imts)] += gsim.sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
@@ -620,9 +620,9 @@ class AbrahamsonEtAl2014(GMPE):
                 self.region, C, imt, ctx, sa1180)
 
         if apply_shift:
-            _apply_nshm_shift(self, ctx, imts, mean)
+            apply_nshm_shift(self, ctx, imts, mean)
 
-    central_functions = (compute_without_shift, _apply_nshm_shift)
+    central_functions = (compute_without_shift, apply_nshm_shift)
     shifted_options = ('sigma_mu_epsilon',)
 
     #: Coefficient tables as per annex B of Abrahamson et al. (2014)

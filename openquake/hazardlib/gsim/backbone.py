@@ -32,7 +32,7 @@ Opting in
 A GSIM opts in with two class attributes::
 
     class BooreEtAl2014(GMPE):
-        central_functions = (compute_without_shift, _apply_nshm_shift)
+        central_functions = (compute_without_shift, apply_nshm_shift)
         shifted_options = ('sigma_mu_epsilon',)
 
 ``central_functions`` is a pair of functions:
