@@ -40,7 +40,7 @@ import numpy
 import toml
 
 
-def apply_options(gsim, ctx, imts, mean_stds, adj, update_adj, names):
+def apply_adjustments(gsim, ctx, imts, mean_stds, adj, update_adj, names):
     """
     Applies update_adj, passing the values of the constructor options named
     by names (as returned by adjustment_options) from kwargs
@@ -75,7 +75,7 @@ def generate_compute(compute_adj, update_adj):
     def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         mean_stds = (mean, sig, tau, phi)
         adj = compute_adj(self, ctx, imts, mean_stds)
-        apply_options(self, ctx, imts, mean_stds, adj, update_adj, names)
+        apply_adjustments(self, ctx, imts, mean_stds, adj, update_adj, names)
 
     compute.__doc__ = ("Compute mean, sig, tau and phi: the central "
                        "computation followed by the adjustment")
