@@ -755,12 +755,13 @@ class ChiouYoungs2014(GMPE):
 
     update_adj = apply_nshm_shift
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(

@@ -535,12 +535,13 @@ class KothaEtAl2020(GMPE):
 
     update_adj = _apply_mean_shift
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         # Point-in-polygon assignments do not depend on IMT, so compute them
         # once per compute call and reuse across all IMTs.
         tec_feat_idx = None

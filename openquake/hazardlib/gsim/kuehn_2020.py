@@ -903,12 +903,13 @@ class KuehnEtAl2020SInter(GMPE):
 
     update_adj = apply_sigma_mu
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         if self.m_b:
             # Take the user define magnitude scaling breakpoint

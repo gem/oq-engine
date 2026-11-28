@@ -767,12 +767,13 @@ class ModifiableGMPE(GMPE):
 
     update_adj = _apply_modifiers
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         # Set reference Vs30 if required
         ctx_copy = set_ref_ctx(ctx, self.params)
 

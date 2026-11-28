@@ -248,10 +248,11 @@ class ESHM20Craton(GMPE):
 
     update_adj = apply_sigma_mu
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         Returns the mean and standard deviations
         """
+        mean, sig, tau, phi = mean_stds
         C_ROCK = self.COEFFS[PGA()]
         pga_r = get_hard_rock_mean(C_ROCK, ctx)
         for m, imt in enumerate(imts):

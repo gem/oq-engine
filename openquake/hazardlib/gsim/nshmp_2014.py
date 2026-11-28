@@ -98,8 +98,9 @@ class NSHMP2014(base.GMPE):
 
     update_adj = _apply_shift
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """Compute mean, sig, tau and phi, and return the adjustment."""
+        mean, sig, tau, phi = mean_stds
         self.gsim.compute(ctx, imts, mean, sig, tau, phi)
         return {'shift': nga_west2_epistemic_adjustment(ctx.mag, ctx.rrup)}
 

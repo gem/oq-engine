@@ -383,12 +383,13 @@ class AbrahamsonEtAl2015SInter(GMPE):
 
     update_adj = apply_sigma_mu
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         C_PGA = self.COEFFS[PGA()]
         dc1_pga = self.delta_c1 or self.COEFFS_MAG_SCALE[PGA()]["dc1"]
         # compute median pga on rock (vs30=1000), needed for site response

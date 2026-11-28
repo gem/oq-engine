@@ -564,7 +564,7 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx):
     return grid_lookup(entry, lats, lons, grid_data["h3_res"])
 
 
-def compute_central(gsim, ctx: np.recarray, imts, mean, sig, tau, phi):
+def compute_central(gsim, ctx: np.recarray, imts, mean_stds):
     """
     Compute the backbone and the central grid corrections, i.e. the
     part of the result which is independent from the epsilons.
@@ -594,6 +594,7 @@ def compute_central(gsim, ctx: np.recarray, imts, mean, sig, tau, phi):
         mean data. Each adjustment has shape (len(ctx),); se_adj is None
         when that term/IMT has no SE data.
     """
+    mean, sig, tau, phi = mean_stds
     grid_data = gsim.grid_data
     gsim.gmpe.compute(ctx, imts, mean, sig, tau, phi)
     # term -> (mean_adj, se_adj), arrays of shape (len(imts), len(ctx)),

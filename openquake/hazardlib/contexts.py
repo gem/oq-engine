@@ -1732,7 +1732,7 @@ class ContextMaker(object):
             out_central = out[:, first, :, slc]
             out_central.fill(0)
             adj = central_adjustments(
-                compute_adj, backbone, ctx, self.imts, *out_central)
+                compute_adj, backbone, ctx, self.imts, out_central)
             # Shift the first branch last since its slot holds the backbone.
             for g, gsim in reversed(g_gsim_pairs):
                 branch = out[:, g, :, slc]

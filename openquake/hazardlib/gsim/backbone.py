@@ -20,9 +20,10 @@
 Utilities for sharing central GSIM computations across branches.
 
 A shifted GSIM class declares two methods. ``compute_adj(self, ctx, imts,
-mean, sig, tau, phi)`` computes the central part, which is shared by the
-branches with the same constructor options. It fills mean, sig, tau and phi
-and returns a dictionary term -> array (None means an empty dictionary).
+mean_stds)`` computes the central part, which is shared by the branches with
+the same constructor options. It fills ``mean_stds``, the mean, sig, tau and
+phi arrays, in place and returns a dictionary term -> array (None means an
+empty dictionary).
 ``update_adj(gsim, ctx, adj, imts, mean_stds, *options)`` applies the
 adjustment of a single branch, where ``options`` are the constructor options
 that vary by branch and ``mean_stds`` holds the mean, sig, tau and phi
@@ -39,12 +40,12 @@ import numpy
 import toml
 
 
-def central_adjustments(compute_adj, gsim, ctx, imts, mean, sig, tau, phi):
+def central_adjustments(compute_adj, gsim, ctx, imts, mean_stds):
     """
     Returns the dictionary computed by compute_adj, which is empty when
     compute_adj returns None
     """
-    result = compute_adj(gsim, ctx, imts, mean, sig, tau, phi)
+    result = compute_adj(gsim, ctx, imts, mean_stds)
     return {} if result is None else result
 
 
@@ -80,10 +81,9 @@ def generate_compute(compute_adj, update_adj):
     names = adjustment_options(update_adj)
 
     def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
-        adj = central_adjustments(
-            compute_adj, self, ctx, imts, mean, sig, tau, phi)
-        apply_options(self, ctx, adj, imts, (mean, sig, tau, phi),
-                      update_adj, names)
+        mean_stds = (mean, sig, tau, phi)
+        adj = central_adjustments(compute_adj, self, ctx, imts, mean_stds)
+        apply_options(self, ctx, adj, imts, mean_stds, update_adj, names)
 
     compute.__doc__ = ("Compute mean, sig, tau and phi: the central "
                        "computation followed by the adjustment")

@@ -127,12 +127,13 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
 
     update_adj = apply_sigma_mu
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
         pga1000 = get_acceleration_on_reference_rock_ba(

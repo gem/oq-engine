@@ -116,11 +116,11 @@ If your model uses the NSHM epistemic shift, set
 ``self.sigma_mu_epsilon`` from the constructor, then declare two methods on
 the class:
 
-- ``compute_adj(self, ctx, imts, mean, sig, tau, phi)`` computes the central
-  part, which is shared by the branches with the same options. It fills
-  ``mean``, ``sig``, ``tau`` and ``phi`` in place and returns a dictionary
-  mapping names to arrays. It can return ``None``, meaning an empty
-  dictionary.
+- ``compute_adj(self, ctx, imts, mean_stds)`` computes the central part,
+  which is shared by the branches with the same options. It fills
+  ``mean_stds`` in place, which holds the arrays ``(mean, sig, tau, phi)``,
+  and returns a dictionary mapping names to arrays. It can return ``None``,
+  meaning an empty dictionary.
 - ``update_adj(gsim, ctx, adj, imts, mean_stds, sigma_mu_epsilon)`` applies
   the adjustment of a single branch. Its final argument names the branch
   option that changes the result:
@@ -129,7 +129,8 @@ the class:
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 
 class MyGMPE(GMPE):
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
+        mean, sig, tau, phi = mean_stds
         ...  # fill the central mean and standard deviations
         return {}  # the central adjustments, as a dictionary term -> array
 

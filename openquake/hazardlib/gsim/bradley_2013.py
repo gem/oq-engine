@@ -444,12 +444,13 @@ class Bradley2013(GMPE):
 
     update_adj = apply_nshm_shift
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]

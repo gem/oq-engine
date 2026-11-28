@@ -77,7 +77,7 @@ def apply_test_shift(gsim, ctx, adj, imts, mean_stds, shift):
 class ShiftedGMPE(TGMPE):
     update_adj = apply_test_shift
 
-    def compute_adj(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: numpy.recarray, imts, mean_stds):
         pass
 
 
@@ -96,15 +96,13 @@ class GeneratedComputeTestCase(unittest.TestCase):
                             phi):
                     pass
 
-                def compute_adj(self, ctx: numpy.recarray, imts, mean, sig,
-                                tau, phi):
+                def compute_adj(self, ctx: numpy.recarray, imts, mean_stds):
                     pass
 
     def test_compute_adj_without_update_adj_is_an_error(self):
         with self.assertRaises(TypeError):
             class Bad(TGMPE):
-                def compute_adj(self, ctx: numpy.recarray, imts, mean, sig,
-                                tau, phi):
+                def compute_adj(self, ctx: numpy.recarray, imts, mean_stds):
                     pass
 
 

@@ -217,13 +217,14 @@ EAS(5.0) -4.042505531 1.27 -0.041712502 -2.165 7.487714222 0.476000074 -0.007202
 """)
 
 
-def compute_central(gsim, ctx, imts, mean, sigma, tau, phi):
+def compute_central(gsim, ctx, imts, mean_stds):
     """
     Branch-independent work: ergodic backbone + nearest-node index +
     per-row site-name decode. Returns {'idx_all': idx_all, 'csids': csids}
     so apply_branch_shift() can pull the per-rlz column for the right
     site without redoing the work.
     """
+    mean, sigma, tau, phi = mean_stds
     missing = sorted({imt.frequency for imt in imts} - set(gsim.freqs))
     if missing:
         raise ValueError(
@@ -374,9 +375,9 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     # non-ergodic backbone derives phi from total sigma and tau.
     update_adj = apply_branch_shift
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """Compute the non-ergodic backbone and resolve adjustment indices."""
-        return compute_central(self, ctx, imts, mean, sigma, tau, phi)
+        return compute_central(self, ctx, imts, mean_stds)
 
     # The Coefficients used here are the same of the ergodic model BUT the
     # standard deviations differ given they are for the non-ergodic variant

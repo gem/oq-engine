@@ -523,12 +523,13 @@ class CampbellBozorgnia2014(GMPE):
 
     update_adj = apply_nshm_shift
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mean, sig, tau, phi = mean_stds
         if (self.estimate_ztor or self.estimate_width or
                 self.estimate_hypo_depth):
             ctx = ctx.copy()

@@ -331,7 +331,8 @@ class Atkinson2022Crust(GMPE):
 
     update_adj = _apply_epistemic_shift
 
-    def compute_adj(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+    def compute_adj(self, ctx: np.recarray, imts, mean_stds):
+        mean, sig, tau, phi = mean_stds
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
         pga_rock = _get_pga_on_rock(self.suffix, C_PGA, ctx) * np.exp(
